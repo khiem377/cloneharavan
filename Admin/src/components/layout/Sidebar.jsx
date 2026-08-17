@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Image, ImagePlay, Tag, ShoppingBag,
-  Settings, LogOut
+  Settings, LogOut, X
 } from 'lucide-react';
 import useAuthStore from '@/store/authStore';
 import { authService } from '@/services/auth.service';
@@ -16,7 +16,7 @@ const navItems = [
   { to: '/settings',  icon: Settings,        label: 'Cài đặt'   },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ open, onClose }) {
   const navigate = useNavigate();
   const clearAuth = useAuthStore((s) => s.clearAuth);
   const user = useAuthStore((s) => s.user);
@@ -29,11 +29,14 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar ${open ? 'open' : ''}`}>
       {/* Logo */}
       <div className="sidebar-logo">
         <div className="logo-mark">H</div>
         <span className="logo-text">Haravan</span>
+        <button className="sidebar-mobile-close" onClick={onClose}>
+          <X size={18} />
+        </button>
       </div>
 
       {/* Nav */}
@@ -43,6 +46,7 @@ export default function Sidebar() {
             key={to}
             to={to}
             className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
+            onClick={onClose}
           >
             <Icon size={16} />
             <span>{label}</span>

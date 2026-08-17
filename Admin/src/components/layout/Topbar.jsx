@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Bell, User, KeyRound, LogOut, Eye, EyeOff, Loader2, ChevronRight, X } from 'lucide-react';
+import { Bell, User, KeyRound, LogOut, Eye, EyeOff, Loader2, ChevronRight, X, Menu } from 'lucide-react';
 import useAuthStore from '@/store/authStore';
 import { authService } from '@/services/auth.service';
 import { toast } from '@/providers/ToastProvider';
@@ -192,7 +192,7 @@ function ProfileModal({ user, onClose }) {
 }
 
 // ── Main Topbar ───────────────────────────────────────────────────────────────
-export default function Topbar({ title }) {
+export default function Topbar({ title, onToggleSidebar }) {
   const navigate = useNavigate();
   const { user, clearAuth } = useAuthStore();
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -221,7 +221,12 @@ export default function Topbar({ title }) {
   return (
     <>
       <header className="topbar">
-        <h1 className="topbar-title">{title}</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <button className="mobile-menu-btn" onClick={onToggleSidebar} aria-label="Toggle Menu">
+            <Menu size={20} />
+          </button>
+          <h1 className="topbar-title">{title}</h1>
+        </div>
         <div className="topbar-actions">
           <button className="icon-btn" aria-label="Thông báo">
             <Bell size={18} />

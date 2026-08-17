@@ -1,7 +1,7 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Topbar from './Topbar';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 const pageTitles = {
   '/media': 'Thư viện ảnh',
@@ -16,17 +16,35 @@ export default function AdminLayout() {
   const { pathname } = useLocation();
   const title = pageTitles[pathname] ?? 'Admin';
   const navigate = useNavigate();
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   useEffect(() => {
     window.__navigate__ = navigate;
     return () => { delete window.__navigate__; };
   }, [navigate]);
 
+  // Auto-close mobile sidebar on page navigation
+  useEffect(() => {
+    setMobileSidebarOpen(false);
+  }, [pathname]);
+
   return (
     <div className="admin-shell">
-      <Sidebar />
+      {/* Mobile Backdrop */}
+      {mobileSidebarOpen && (
+        <div
+          className="sidebar-backdrop"
+          onClick={() => setMobileSidebarOpen(false)}
+        />
+      )}
+
+      <Sidebar open={mobileSidebarOpen} onClose={() => setMobileSidebarOpen(false)} />
+
       <div className="admin-content">
-        <Topbar title={title} />
+        <Topbar
+          title={title}
+          onToggleSidebar={() => setMobileSidebarOpen(prev => !prev)}
+        />
         <main className="admin-main">
           <Outlet />
         </main>
