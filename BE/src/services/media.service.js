@@ -12,15 +12,18 @@ const { getOrCreateDateSubFolder } = require('./folder.service');
 const uploadMedia = async (file, folderId) => {
   if (!file) throw new AppError('Vui lòng chọn file', 400);
 
-  // Lấy thông tin folder cha
-  const parentFolder = await Folder.findById(folderId);
-  if (!parentFolder) throw new AppError('Không tìm thấy folder', 404);
+  const targetFolder = await Folder.findById(folderId);
+  if (!targetFolder) throw new AppError('Không tìm thấy folder', 404);
 
-  // Tự tạo sub-folder tháng/năm dưới folder cha
-  const subFolder = await getOrCreateDateSubFolder(parentFolder._id);
+  let uploadFolder = targetFolder;
+  let cloudinaryFolder = targetFolder.slug;
 
-  // Build Cloudinary folder path: banners/2026-08
-  const cloudinaryFolder = `${parentFolder.slug}/${subFolder.slug}`;
+  // Chỉ auto-tạo date subfolder nếu đây là ROOT folder (không có parentId)
+  if (!targetFolder.parentId) {
+    const subFolder = await getOrCreateDateSubFolder(targetFolder._id);
+    uploadFolder = subFolder;
+    cloudinaryFolder = `${targetFolder.slug}/${subFolder.slug}`;
+  }
 
   const result = await uploadToCloudinary(file.buffer, cloudinaryFolder);
 
@@ -28,128 +31,153 @@ const uploadMedia = async (file, folderId) => {
     filename: file.originalname,
     url: result.secure_url,
     publicId: result.public_id,
-    folderId: subFolder._id,
+    folderId: uploadFolder._id,
     mimeType: file.mimetype,
     size: result.bytes,
     width: result.width,
     height: result.height,
   });
 
+  await saved.populate({ path: 'folderId', populate: { path: 'parentId', select: 'name slug _id' } });
+  return saved;
+};
+
+/**
+ * Upload ảnh từ URL – fetch → upload Cloudinary
+ */
+const uploadMediaFromUrl = async (url, folderId) => {
+  if (!url) throw new AppError('URL không được để trống', 400);
+
+  const targetFolder = await Folder.findById(folderId);
+  if (!targetFolder) throw new AppError('Không tìm thấy folder', 404);
+
+  let uploadFolder = targetFolder;
+  let cloudinaryFolder = targetFolder.slug;
+  if (!targetFolder.parentId) {
+    const subFolder = await getOrCreateDateSubFolder(targetFolder._id);
+    uploadFolder = subFolder;
+    cloudinaryFolder = `${targetFolder.slug}/${subFolder.slug}`;
+  }
+
+  // Fetch ảnh từ URL
+  const axios = require('axios');
+  const resp = await axios.get(url, { responseType: 'arraybuffer', timeout: 15000 });
+  const buffer = Buffer.from(resp.data);
+  const mimeType = resp.headers['content-type'] || 'image/jpeg';
+  if (!mimeType.startsWith('image/')) throw new AppError('URL không phải là ảnh', 400);
+
+  const filename = url.split('/').pop().split('?')[0] || 'image.jpg';
+
+  // Upload lên Cloudinary dùng hàm đã có sẵn
+  const result = await uploadToCloudinary(buffer, cloudinaryFolder);
+
+  const saved = await Media.create({
+    filename,
+    url: result.secure_url,
+    publicId: result.public_id,
+    folderId: uploadFolder._id,
+    mimeType,
+    size: result.bytes,
+    width: result.width,
+    height: result.height,
+  });
 
   await saved.populate({ path: 'folderId', populate: { path: 'parentId', select: 'name slug _id' } });
   return saved;
 };
 
 
-const browseMedia = async ({ folderId, page = 1, limit = 20 }) => {
+const browseMedia = async ({ folderId, page = 1, limit = 20, sortBy = 'createdAt', sortDir = 'desc' }) => {
+  const sort = { [sortBy]: sortDir === 'asc' ? 1 : -1 };
+
   if (folderId) {
     const subFolders = await Folder.find({ parentId: folderId }, 'name slug position').sort('position');
 
     if (subFolders.length > 0) {
-
       const skip = (page - 1) * limit;
       const total = await Media.countDocuments({ folderId });
-      const items = await Media.find({ folderId })
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit);
-
+      const items = await Media.find({ folderId }).sort(sort).skip(skip).limit(limit);
       return {
         type: 'parent',
         subFolders: subFolders.map((f) => ({ _id: f._id, name: f.name, slug: f.slug })),
         media: items,
-        total,
-        page,
-        limit,
+        total, page, limit,
         totalPages: Math.ceil(total / limit),
       };
     }
 
-
     const skip = (page - 1) * limit;
     const total = await Media.countDocuments({ folderId });
-    const items = await Media.find({ folderId })
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
-
+    const items = await Media.find({ folderId }).sort(sort).skip(skip).limit(limit);
     return { type: 'leaf', media: items, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
-
 
   const skip = (page - 1) * limit;
   const total = await Media.countDocuments({});
   const items = await Media.find()
     .populate('folderId', 'name slug')
-    .sort({ createdAt: -1 })
-    .skip(skip)
-    .limit(limit);
-
+    .sort(sort).skip(skip).limit(limit);
   return { type: 'all', media: items, total, page, limit, totalPages: Math.ceil(total / limit) };
 };
 
 
-const searchMedia = async ({ q, page = 1, limit = 20 }) => {
+const searchMedia = async ({ q, page = 1, limit = 20, sortBy = 'createdAt', sortDir = 'desc' }) => {
   if (!q) return { folders: [], media: [], total: 0 };
 
   const regex = { $regex: q, $options: 'i' };
+  const sort = { [sortBy]: sortDir === 'asc' ? 1 : -1 };
 
-  const [folders, mediaTotal, mediaItems] = await Promise.all([
-    Folder.find({ $or: [{ name: regex }, { slug: regex }] }, 'name slug parentId').limit(20),
+  const [folders, total, mediaItems] = await Promise.all([
+    Folder.find({ $or: [{ name: regex }, { slug: regex }] }, 'name slug parentId').limit(10),
     Media.countDocuments({ filename: regex }),
     Media.find({ filename: regex })
-      .populate('folderId', 'name slug')
-      .sort({ createdAt: -1 })
+      .populate('folderId', 'name slug _id')
+      .sort(sort)
       .skip((page - 1) * limit)
       .limit(limit),
   ]);
 
-  return {
-    folders,
-    media: mediaItems,
-    mediaTotal,
-    page,
-    limit,
-    totalPages: Math.ceil(mediaTotal / limit),
-  };
+  return { folders, media: mediaItems, total, page, limit, totalPages: Math.ceil(total / limit) };
 };
 
 
 /**
- * Xóa 1 media – chặn nếu đang được dùng
+ * Xóa 1 media – luôn cho phép, trả về usedBy info nếu có
  */
 const deleteMedia = async (id) => {
   const media = await Media.findById(id);
   if (!media) throw new AppError('Không tìm thấy file', 404);
 
-  if (media.usedBy?.length > 0) {
-    throw new AppError(
-      `File đang được sử dụng bởi ${media.usedBy.length} tài nguyên, không thể xóa`,
-      400
-    );
-  }
-
+  const usedBy = media.usedBy ?? [];
   await deleteFromCloudinary(media.publicId);
   await media.deleteOne();
+
+  return { usedBy }; // trả về để frontend hiển thị thông báo
 };
 
 /**
- * Xóa nhiều – bỏ qua file đang dùng
+ * Xóa nhiều – xóa tất cả, kể cả file đang dùng
  */
 const deleteMediaBulk = async (ids) => {
   const medias = await Media.find({ _id: { $in: ids } });
 
-  const deletable = medias.filter((m) => !m.usedBy?.length);
-  const skipped = medias.filter((m) => m.usedBy?.length);
+  let usedModels = [];
+  for (const m of medias) {
+    if (m.usedBy?.length) usedModels.push(...m.usedBy.map(u => u.model));
+    await deleteFromCloudinary(m.publicId).catch(() => {}); // ignore cloudinary err
+  }
+  await Media.deleteMany({ _id: { $in: medias.map(m => m._id) } });
 
-  await Media.deleteMany({ _id: { $in: deletable.map((m) => m._id) } });
-  await Promise.all(deletable.map((m) => deleteFromCloudinary(m.publicId)));
-
+  const uniqueModels = [...new Set(usedModels)];
   return {
-    deleted: deletable.length,
-    skipped: skipped.length,
-    skippedFiles: skipped.map((m) => m.filename),
+    deleted: medias.length,
+    skipped: 0,
+    usedNote: uniqueModels.length ? `(có ${usedModels.length} file đã được dùng bởi: ${uniqueModels.join(', ')})` : '',
   };
 };
 
-module.exports = { uploadMedia, browseMedia, searchMedia, deleteMedia, deleteMediaBulk };
+module.exports = {
+  uploadMedia, uploadMediaFromUrl,
+  browseMedia, searchMedia,
+  deleteMedia, deleteMediaBulk,
+};

@@ -6,24 +6,34 @@ const routes = require('./routes');
 
 const app = express();
 
-// ─── Core Middleware ───────────────────────────────────────────────────────────
+
+const ALLOWED_ORIGINS = [
+  process.env.CLIENT_URL || 'http://localhost:3000',
+  process.env.ADMIN_URL || 'http://localhost:5173',
+  process.env.STOREFRONT_URL || 'http://localhost:3001',
+];
+
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:3000',
-  credentials: true, // Bắt buộc để gửi/nhận cookie cross-origin
+  origin: (origin, cb) => {
+
+    if (!origin || ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
+    cb(new Error(`CORS: origin "${origin}" không được phép`));
+  },
+  credentials: true,
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser()); // Parse HTTP-only cookie
+app.use(cookieParser());
 
-// ─── Health Check ──────────────────────────────────────────────────────────────
+
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
-// ─── API Routes ────────────────────────────────────────────────────────────────
+
 app.use('/api/v1', routes);
 
-// ─── Error Handling ────────────────────────────────────────────────────────────
+
 app.use(notFound);
 app.use(errorHandler);
 
