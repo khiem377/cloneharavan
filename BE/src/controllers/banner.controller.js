@@ -24,10 +24,15 @@ const getAll = async (req, res, next) => {
 
 const create = async (req, res, next) => {
   try {
-    const banner = await createBanner(req.file, req.body);
-    res.status(201).json({ status: 'success', statusCode: 201, message: 'Tạo banner thành công', data: { banner } });
+    const { banner, media } = await createBanner(req.file, req.body);
+    res.status(201).json({
+      status: 'success', statusCode: 201,
+      message: 'Tạo banner thành công',
+      data: { banner, media },
+    });
   } catch (error) { next(error); }
 };
+
 
 const update = async (req, res, next) => {
   try {

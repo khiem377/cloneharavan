@@ -2,10 +2,7 @@ const User = require('../models/user.model');
 const { generateToken } = require('../utils/jwt');
 const { AppError } = require('../utils/AppError');
 
-/**
- * @desc  Register new user
- * @route POST /api/v1/users/register
- */
+
 const register = async (req, res, next) => {
   try {
     const { name, email, password } = req.body;
@@ -30,10 +27,7 @@ const register = async (req, res, next) => {
   }
 };
 
-/**
- * @desc  Login user
- * @route POST /api/v1/users/login
- */
+
 const login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
@@ -58,10 +52,7 @@ const login = async (req, res, next) => {
   }
 };
 
-/**
- * @desc  Get current user profile
- * @route GET /api/v1/users/me
- */
+
 const getMe = async (req, res, next) => {
   try {
     const user = await User.findById(req.user._id);
@@ -71,10 +62,7 @@ const getMe = async (req, res, next) => {
   }
 };
 
-/**
- * @desc  Get all users (admin)
- * @route GET /api/v1/users
- */
+
 const getAllUsers = async (req, res, next) => {
   try {
     const users = await User.find();
