@@ -1,31 +1,35 @@
-﻿{
+{
   "info": {
-    "name": "MY-PROJECT API",
+    "name": "MY-PROJECT - Full User & Auth API Collection",
+    "description": "Collection đầy đủ các API về Authentication, Profile, Avatar, Sổ địa chỉ, và Quản lý User cho Admin.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "baseUrl",      "value": "http://localhost:5000/api/v1" },
-    { "key": "accessToken",  "value": "" },
+    { "key": "baseUrl", "value": "http://localhost:5000/api/v1" },
+    { "key": "accessToken", "value": "" },
     { "key": "refreshToken", "value": "" },
-    { "key": "userId",       "value": "" }
+    { "key": "userId", "value": "" },
+    { "key": "addressId", "value": "" },
+    { "key": "resetToken", "value": "" },
+    { "key": "verifyToken", "value": "" }
   ],
   "item": [
     {
-      "name": "Auth",
+      "name": "1. Authentication & Recovery",
       "item": [
         {
-          "name": "Register",
+          "name": "1.1 Đăng ký (Register)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
                   "const res = pm.response.json();",
-                  "if (res.success) {",
-                  "  pm.collectionVariables.set(\"accessToken\",  res.accessToken);",
-                  "  pm.collectionVariables.set(\"refreshToken\", res.refreshToken);",
-                  "  pm.collectionVariables.set(\"userId\",       res.data._id);",
-                  "  console.log(\"Tokens saved!\");",
+                  "if (res.data?.accessToken) {",
+                  "  pm.collectionVariables.set('accessToken', res.data.accessToken);",
+                  "  pm.collectionVariables.set('refreshToken', res.data.refreshToken);",
+                  "  pm.collectionVariables.set('userId', res.data.user._id);",
+                  "  console.log('Tokens & User ID saved!');",
                   "}"
                 ]
               }
@@ -37,23 +41,23 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Nguyen Van A\",\n  \"email\": \"test@gmail.com\",\n  \"password\": \"123456\"\n}"
+              "raw": "{\n  \"fullName\": \"Nguyen Van A\",\n  \"email\": \"user@example.com\",\n  \"phone\": \"0987654321\",\n  \"gender\": \"male\",\n  \"password\": \"Password123\"\n}"
             }
           }
         },
         {
-          "name": "Login",
+          "name": "1.2 Đăng nhập (Login)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
                   "const res = pm.response.json();",
-                  "if (res.success) {",
-                  "  pm.collectionVariables.set(\"accessToken\",  res.accessToken);",
-                  "  pm.collectionVariables.set(\"refreshToken\", res.refreshToken);",
-                  "  pm.collectionVariables.set(\"userId\",       res.data._id);",
-                  "  console.log(\"Tokens saved!\");",
+                  "if (res.data?.accessToken) {",
+                  "  pm.collectionVariables.set('accessToken', res.data.accessToken);",
+                  "  pm.collectionVariables.set('refreshToken', res.data.refreshToken);",
+                  "  pm.collectionVariables.set('userId', res.data.user._id);",
+                  "  console.log('Tokens & User ID saved!');",
                   "}"
                 ]
               }
@@ -65,12 +69,12 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"test@gmail.com\",\n  \"password\": \"123456\"\n}"
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"Password123\"\n}"
             }
           }
         },
         {
-          "name": "Get Profile (me)",
+          "name": "1.3 Thông tin tài khoản (Auth Me)",
           "request": {
             "method": "GET",
             "url": "{{baseUrl}}/auth/me",
@@ -78,17 +82,17 @@
           }
         },
         {
-          "name": "Refresh Token",
+          "name": "1.4 Làm mới Token (Refresh Token)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
                   "const res = pm.response.json();",
-                  "if (res.success) {",
-                  "  pm.collectionVariables.set(\"accessToken\",  res.accessToken);",
-                  "  pm.collectionVariables.set(\"refreshToken\", res.refreshToken);",
-                  "  console.log(\"Tokens rotated!\");",
+                  "if (res.data?.accessToken) {",
+                  "  pm.collectionVariables.set('accessToken', res.data.accessToken);",
+                  "  pm.collectionVariables.set('refreshToken', res.data.refreshToken);",
+                  "  console.log('Tokens refreshed!');",
                   "}"
                 ]
               }
@@ -105,18 +109,31 @@
           }
         },
         {
-          "name": "Logout",
+          "name": "1.5 Đổi mật khẩu (Change Password)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/change-password",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"Password123\",\n  \"newPassword\": \"NewPassword123\",\n  \"confirmPassword\": \"NewPassword123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "1.6 Quên mật khẩu (Forgot Password)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
                   "const res = pm.response.json();",
-                  "if (res.success) {",
-                  "  pm.collectionVariables.set(\"accessToken\",  \"\");",
-                  "  pm.collectionVariables.set(\"refreshToken\", \"\");",
-                  "  pm.collectionVariables.set(\"userId\",       \"\");",
-                  "  console.log(\"Logged out!\");",
+                  "if (res.data?.resetToken) {",
+                  "  pm.collectionVariables.set('resetToken', res.data.resetToken);",
+                  "  console.log('Reset token saved:', res.data.resetToken);",
                   "}"
                 ]
               }
@@ -124,7 +141,284 @@
           ],
           "request": {
             "method": "POST",
+            "url": "{{baseUrl}}/auth/forgot-password",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\"\n}"
+            }
+          }
+        },
+        {
+          "name": "1.7 Đặt lại mật khẩu (Reset Password)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/reset-password/{{resetToken}}",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"password\": \"Password123\",\n  \"confirmPassword\": \"Password123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "1.8 Gửi email xác minh (Send Verify Email)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.data?.verifyToken) {",
+                  "  pm.collectionVariables.set('verifyToken', res.data.verifyToken);",
+                  "  console.log('Verify token saved:', res.data.verifyToken);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/send-verify-email",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+          }
+        },
+        {
+          "name": "1.9 Xác minh Email qua Token",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/verify-email/{{verifyToken}}"
+          }
+        },
+        {
+          "name": "1.10 Gửi OTP xác minh số điện thoại",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/send-verify-phone",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+          }
+        },
+        {
+          "name": "1.11 Xác minh số điện thoại qua OTP",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/verify-phone",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"otp\": \"123456\"\n}"
+            }
+          }
+        },
+        {
+          "name": "1.12 Đăng xuất (Logout)",
+          "request": {
+            "method": "POST",
             "url": "{{baseUrl}}/auth/logout",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. User Profile & Avatar",
+      "item": [
+        {
+          "name": "2.1 Lấy thông tin Profile",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/users/profile",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+          }
+        },
+        {
+          "name": "2.2 Cập nhật thông tin cá nhân",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/users/profile",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Nguyen Van B\",\n  \"gender\": \"male\",\n  \"dateOfBirth\": \"1998-05-20\"\n}"
+            }
+          }
+        },
+        {
+          "name": "2.3 Đổi Avatar (Upload Cloudinary & Xóa ảnh cũ)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/users/avatar",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "avatar",
+                  "type": "file",
+                  "src": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "2.4 Xóa Avatar",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/users/avatar",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. User Address Book",
+      "item": [
+        {
+          "name": "3.1 Lấy danh sách địa chỉ",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/users/addresses",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+          }
+        },
+        {
+          "name": "3.2 Thêm địa chỉ mới",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.data?.address?._id) {",
+                  "  pm.collectionVariables.set('addressId', res.data.address._id);",
+                  "  console.log('Address ID saved:', res.data.address._id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/users/addresses",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Nguyen Van A\",\n  \"phone\": \"0987654321\",\n  \"province\": \"Hà Nội\",\n  \"district\": \"Cầu Giấy\",\n  \"ward\": \"Dịch Vọng\",\n  \"detailAddress\": \"Số 10 Phạm Văn Bạch\",\n  \"isDefault\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "3.3 Sửa địa chỉ",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/users/addresses/{{addressId}}",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"detailAddress\": \"Số 10 Phạm Văn Bạch (Tầng 5)\",\n  \"isDefault\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "3.4 Đặt làm địa chỉ mặc định",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/users/addresses/{{addressId}}/default",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+          }
+        },
+        {
+          "name": "3.5 Xóa địa chỉ",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/users/addresses/{{addressId}}",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+          }
+        },
+        {
+          "name": "3.6 Tự động lưu/đồng bộ địa chỉ khi đặt hàng",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/users/addresses/sync-order",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Người Nhận Đặt Hàng\",\n  \"phone\": \"0911223344\",\n  \"province\": \"TP Hồ Chí Minh\",\n  \"district\": \"Quận 1\",\n  \"ward\": \"Bến Nghé\",\n  \"detailAddress\": \"Số 1 Lê Duẩn\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Admin User Management",
+      "item": [
+        {
+          "name": "4.1 Danh sách người dùng (Tìm kiếm & Phân trang)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/users?q=&page=1&limit=10&role=&isActive=",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+          }
+        },
+        {
+          "name": "4.2 Chi tiết 1 người dùng",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/users/{{userId}}",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+          }
+        },
+        {
+          "name": "4.3 Khóa / Mở khóa tài khoản user",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/users/{{userId}}/status",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isActive\": false\n}"
+            }
+          }
+        },
+        {
+          "name": "4.4 Phân quyền vai trò (Role)",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/users/{{userId}}/role",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"admin\"\n}"
+            }
+          }
+        },
+        {
+          "name": "4.5 Xóa người dùng",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/users/{{userId}}",
             "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
           }
         }

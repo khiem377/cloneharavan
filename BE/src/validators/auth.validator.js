@@ -41,4 +41,36 @@ const changePasswordSchema = z
     path:    ['confirmPassword'],
   });
 
-module.exports = { registerSchema, loginSchema, changePasswordSchema };
+const forgotPasswordSchema = z.object({
+  email: z.string().email('Email không đúng định dạng'),
+});
+
+const resetPasswordSchema = z
+  .object({
+    token: z.string().min(1, 'Token đặt lại mật khẩu là bắt buộc').optional(),
+    password: passwordRule,
+    confirmPassword: z.string().min(1, 'Vui lòng xác nhận mật khẩu mới'),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: 'Mật khẩu xác nhận không khớp',
+    path: ['confirmPassword'],
+  });
+
+const verifyEmailSchema = z.object({
+  token: z.string().min(1, 'Mã token xác minh email là bắt buộc'),
+});
+
+const verifyPhoneSchema = z.object({
+  otp: z.string().length(6, 'Mã OTP phải gồm đúng 6 chữ số'),
+});
+
+module.exports = {
+  passwordRule,
+  registerSchema,
+  loginSchema,
+  changePasswordSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+  verifyEmailSchema,
+  verifyPhoneSchema,
+};
