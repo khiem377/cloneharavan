@@ -43,7 +43,7 @@ export default function LoginPage() {
       <div className="login-card">
         {/* Header */}
         <div className="login-header">
-          <div className="login-logo">A</div>
+          {/* <div className="login-logo">A</div> */}
           <div className="login-title">Admin Dashboard</div>
           <p className="login-subtitle">Đăng nhập để tiếp tục</p>
         </div>
