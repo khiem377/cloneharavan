@@ -10,11 +10,11 @@ const getUserById = async (id) => {
 
 
 const updateUser = async (id, updateData) => {
-  const user = await User.findByIdAndUpdate(id, updateData, {
-    new: true,
-    runValidators: true,
-  });
+  const user = await User.findById(id);
   if (!user) throw new AppError('User not found', 404);
+
+  Object.assign(user, updateData);
+  await user.save();
   return user;
 };
 
