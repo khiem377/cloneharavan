@@ -12,6 +12,7 @@ const getUserById = async (id) => {
 
 /**
  * Update user profile
+ * 
  */
 const updateUser = async (id, updateData) => {
   const user = await User.findByIdAndUpdate(id, updateData, {
@@ -32,3 +33,4 @@ const deleteUser = async (id) => {
 };
 
 module.exports = { getUserById, updateUser, deleteUser };
+

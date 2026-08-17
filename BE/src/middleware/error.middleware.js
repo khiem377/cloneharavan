@@ -1,50 +1,42 @@
 const { AppError } = require('../utils/AppError');
 
-/**
- * 404 Not Found handler
- */
 const notFound = (req, res, next) => {
-  next(new AppError(`Route not found: ${req.originalUrl}`, 404));
+  next(new AppError(`Không tìm thấy route: ${req.originalUrl}`, 404));
 };
 
-/**
- * Global error handler
- */
 const errorHandler = (err, req, res, next) => {
   let statusCode = err.statusCode || 500;
-  let message = err.message || 'Internal Server Error';
+  let message    = err.message    || 'Lỗi máy chủ nội bộ';
 
-  // Mongoose bad ObjectId
   if (err.name === 'CastError') {
-    message = `Resource not found`;
     statusCode = 404;
+    message    = 'Không tìm thấy tài nguyên';
   }
 
-  // Mongoose duplicate key
   if (err.code === 11000) {
     const field = Object.keys(err.keyValue)[0];
-    message = `Duplicate value for field: ${field}`;
-    statusCode = 400;
+    statusCode  = 400;
+    message     = `Giá trị đã tồn tại cho trường: ${field}`;
   }
 
-  // Mongoose validation error
   if (err.name === 'ValidationError') {
-    message = Object.values(err.errors).map((e) => e.message).join(', ');
     statusCode = 400;
+    message    = Object.values(err.errors).map((e) => e.message).join(', ');
   }
 
-  // JWT errors
   if (err.name === 'JsonWebTokenError') {
-    message = 'Invalid token';
     statusCode = 401;
+    message    = 'Token không hợp lệ';
   }
+
   if (err.name === 'TokenExpiredError') {
-    message = 'Token expired';
     statusCode = 401;
+    message    = 'Token đã hết hạn';
   }
 
   res.status(statusCode).json({
-    success: false,
+    status:     'error',
+    statusCode,
     message,
     ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
   });
