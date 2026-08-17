@@ -67,7 +67,7 @@ function FolderCtxMenu({ x, y, folder, folderMap, onClose, onAddChild, onRename,
     <div
       ref={ref}
       className="ctx-menu"
-      style={{ position: 'fixed', top: y, left: x, zIndex: 9999 }}
+      style={{ position: 'fixed', top: y, left: x, zIndex: 10060 }}
       onClick={e => e.stopPropagation()}
       onContextMenu={e => e.preventDefault()}
     >
@@ -344,7 +344,7 @@ export default function MediaPickerModal({ onSelect, onClose }) {
 
   return (
     <>
-      <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-overlay" style={{ zIndex: 10050 }} onClick={onClose}>
         <div className="picker-modal" onClick={e => e.stopPropagation()}>
 
           {/* Header */}

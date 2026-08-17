@@ -1,20 +1,8 @@
 import { useState } from 'react';
-import { Image, ExternalLink, Loader2 } from 'lucide-react';
+import { Image, ExternalLink, Loader2, X } from 'lucide-react';
 import { useCreateBanner, useUpdateBanner } from '@/hooks/useBanners';
 import MediaPickerModal from '@/components/ui/MediaPickerModal';
 import { toast } from '@/providers/ToastProvider';
-
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 
 export default function BannerFormModal({ banner, onClose }) {
   const isEdit = !!banner;
@@ -31,7 +19,8 @@ export default function BannerFormModal({ banner, onClose }) {
   const { mutate: updateBanner, isPending: updating  } = useUpdateBanner();
   const isPending = creating || updating;
 
-  const handleSubmit = () => {
+  const handleSubmit = (e) => {
+    e.preventDefault();
     if (!media) { toast.error('Vui lòng chọn ảnh banner'); return; }
     const payload = {
       title:     title.trim() || undefined,
@@ -55,91 +44,94 @@ export default function BannerFormModal({ banner, onClose }) {
 
   return (
     <>
-      <Dialog open onOpenChange={(v) => { if (!v) onClose(); }}>
-        <DialogContent className="sm:max-w-[480px]">
-          <DialogHeader>
-            <DialogTitle>{isEdit ? 'Cập nhật banner' : 'Thêm banner mới'}</DialogTitle>
-          </DialogHeader>
-
-          <div className="grid gap-5 py-1">
-            {/* Image picker */}
-            <div className="grid gap-1.5">
-              <Label>Ảnh banner <span className="text-red-500">*</span></Label>
-              {media ? (
-                <div className="relative rounded-lg overflow-hidden border">
-                  <img src={media.url} alt="preview"
-                    className="w-full max-h-48 object-cover" />
-                  <button
-                    type="button"
-                    onClick={() => setShowPicker(true)}
-                    className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-3 py-1.5 rounded-md hover:bg-black/80 transition"
-                  >
-                    Đổi ảnh
-                  </button>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setShowPicker(true)}
-                  className="flex flex-col items-center gap-2 py-8 rounded-lg border-2 border-dashed text-muted-foreground hover:border-foreground/40 hover:text-foreground transition"
-                >
-                  <Image size={24} />
-                  <span className="text-sm">Chọn từ thư viện ảnh</span>
-                </button>
-              )}
-            </div>
-
-            {/* Title */}
-            <div className="grid gap-1.5">
-              <Label htmlFor="b-title">Tiêu đề</Label>
-              <Input
-                id="b-title"
-                value={title}
-                onChange={e => setTitle(e.target.value)}
-                placeholder="Tiêu đề banner (tuỳ chọn)"
-              />
-            </div>
-
-            {/* Link */}
-            <div className="grid gap-1.5">
-              <Label htmlFor="b-link">Đường dẫn (link)</Label>
-              <div className="relative flex items-center">
-                <ExternalLink size={14} className="absolute left-3 text-muted-foreground pointer-events-none" />
-                <Input
-                  id="b-link"
-                  className="pl-9"
-                  value={link}
-                  onChange={e => setLink(e.target.value)}
-                  placeholder="https://example.com (tuỳ chọn)"
-                />
-              </div>
-            </div>
-
-            {/* Visible toggle */}
-            <div className="flex items-center justify-between rounded-lg border p-3">
-              <div>
-                <Label htmlFor="b-visible" className="text-sm font-medium cursor-pointer">Hiển thị</Label>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Banner sẽ hiển thị trên trang chủ storefront
-                </p>
-              </div>
-              <Switch
-                id="b-visible"
-                checked={isVisible}
-                onCheckedChange={setIsVisible}
-              />
-            </div>
+      <div className="custom-modal-overlay" onClick={onClose}>
+        <div className="custom-modal-box" style={{ width: 480 }} onClick={(e) => e.stopPropagation()}>
+          <div className="custom-modal-header">
+            <h3 className="custom-modal-title">{isEdit ? 'Cập nhật banner' : 'Thêm banner mới'}</h3>
+            <button className="custom-modal-close" onClick={onClose}><X size={16} /></button>
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={onClose} disabled={isPending}>Hủy</Button>
-            <Button onClick={handleSubmit} disabled={isPending}>
-              {isPending && <Loader2 size={14} className="mr-1.5 animate-spin" />}
-              {isEdit ? 'Cập nhật' : 'Tạo banner'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          <form onSubmit={handleSubmit}>
+            <div className="custom-modal-body">
+              {/* Image Picker */}
+              <div className="form-group">
+                <label className="form-label">Ảnh banner <span className="req">*</span></label>
+                {media ? (
+                  <div className="banner-preview-wrap">
+                    <img src={media.url} alt="preview" className="banner-preview-img" />
+                    <button
+                      type="button"
+                      className="banner-preview-change"
+                      onClick={() => setShowPicker(true)}
+                    >
+                      Đổi ảnh
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    className="banner-pick-btn"
+                    onClick={() => setShowPicker(true)}
+                  >
+                    <Image size={20} />
+                    <span>Chọn từ thư viện ảnh</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Title */}
+              <div className="form-group">
+                <label className="form-label">Tiêu đề</label>
+                <input
+                  className="field-input"
+                  value={title}
+                  onChange={e => setTitle(e.target.value)}
+                  placeholder="Tiêu đề banner (tuỳ chọn)"
+                />
+              </div>
+
+              {/* Link */}
+              <div className="form-group">
+                <label className="form-label">Đường dẫn (link)</label>
+                <div className="input-with-icon">
+                  <ExternalLink size={14} className="input-icon" />
+                  <input
+                    className="field-input"
+                    value={link}
+                    onChange={e => setLink(e.target.value)}
+                    placeholder="https://example.com (tuỳ chọn)"
+                  />
+                </div>
+              </div>
+
+              {/* Visible Toggle */}
+              <div className="form-group form-row">
+                <div>
+                  <label className="form-label">Hiển thị</label>
+                  <p className="form-hint">Banner sẽ hiển thị trên trang chủ storefront</p>
+                </div>
+                <button
+                  type="button"
+                  className={`toggle-switch ${isVisible ? 'on' : ''}`}
+                  onClick={() => setIsVisible(!isVisible)}
+                  aria-checked={isVisible}
+                  role="switch"
+                >
+                  <span className="toggle-knob" />
+                </button>
+              </div>
+            </div>
+
+            <div className="custom-modal-footer">
+              <button type="button" className="btn-ghost-sm" onClick={onClose} disabled={isPending}>Hủy</button>
+              <button type="submit" className="btn-primary-sm" disabled={isPending}>
+                {isPending ? <Loader2 size={13} className="spin" /> : null}
+                {isEdit ? 'Cập nhật' : 'Tạo banner'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
 
       {showPicker && (
         <MediaPickerModal

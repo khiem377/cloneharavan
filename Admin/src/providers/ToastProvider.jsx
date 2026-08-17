@@ -1,44 +1,59 @@
-import { createContext, useContext, useRef } from 'react';
-import { useToast } from '@astryxdesign/core';
-import { ToastViewport } from '@astryxdesign/core/dist/Toast/ToastViewport';
+import { useState, useEffect } from 'react';
+import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
 
-const ToastContext = createContext(null);
+let toastListener = null;
 
-
-function ToastBridge({ children }) {
-  const showToast = useToast();
-  const ref = useRef(showToast);
-  ref.current = showToast;
-
-
-  if (typeof window !== 'undefined') {
-    window.__astryx_toast__ = (opts) => ref.current(opts);
-  }
-
-  return <ToastContext.Provider value={showToast}>{children}</ToastContext.Provider>;
-}
+export const toast = {
+  success: (msg) => toastListener?.({ id: Date.now(), message: msg, type: 'success' }),
+  error:   (msg) => toastListener?.({ id: Date.now(), message: msg, type: 'error' }),
+  info:    (msg) => toastListener?.({ id: Date.now(), message: msg, type: 'info' }),
+};
 
 export function ToastProvider({ children }) {
-  return (
+  const [toasts, setToasts] = useState([]);
 
-    <ToastViewport position="topEnd" maxVisible={4} inset={{ top: 16, end: 16 }}>
-      <ToastBridge>{children}</ToastBridge>
-    </ToastViewport>
+  useEffect(() => {
+    toastListener = (newToast) => {
+      setToasts((prev) => [...prev.slice(-4), newToast]);
+    };
+    return () => { toastListener = null; };
+  }, []);
+
+  const removeToast = (id) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  };
+
+  return (
+    <>
+      {children}
+      <div className="toast-container">
+        {toasts.map((t) => (
+          <ToastItem key={t.id} toast={t} onClose={() => removeToast(t.id)} />
+        ))}
+      </div>
+    </>
   );
 }
 
+function ToastItem({ toast, onClose }) {
+  useEffect(() => {
+    const timer = setTimeout(onClose, toast.type === 'error' ? 3500 : 2500);
+    return () => clearTimeout(timer);
+  }, [toast, onClose]);
 
-export function useAppToast() {
-  return useContext(ToastContext);
+  const icons = {
+    success: <CheckCircle2 size={16} className="toast-icon success" />,
+    error:   <AlertCircle  size={16} className="toast-icon error" />,
+    info:    <Info         size={16} className="toast-icon info" />,
+  };
+
+  return (
+    <div className={`toast-card toast-${toast.type}`}>
+      {icons[toast.type]}
+      <span className="toast-message">{toast.message}</span>
+      <button className="toast-close" onClick={onClose}>
+        <X size={13} />
+      </button>
+    </div>
+  );
 }
-
-
-
-export const toast = {
-  success: (message) =>
-    window.__astryx_toast__?.({ body: message, type: 'info', autoHideDuration: 2500 }),
-  error: (message) =>
-    window.__astryx_toast__?.({ body: message, type: 'error', autoHideDuration: 3000 }),
-  info: (message) =>
-    window.__astryx_toast__?.({ body: message, type: 'info', autoHideDuration: 2500 }),
-};

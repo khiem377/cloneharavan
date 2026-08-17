@@ -1,12 +1,4 @@
-import { AlertTriangle } from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+import { AlertTriangle, X } from 'lucide-react';
 
 export default function ConfirmDialog({
   title = 'Xác nhận',
@@ -17,39 +9,39 @@ export default function ConfirmDialog({
   variant = 'danger',
 }) {
   return (
-    <Dialog open onOpenChange={(open) => { if (!open) onCancel(); }}>
-      <DialogContent className="sm:max-w-[400px]">
-        <DialogHeader className="flex flex-row items-center gap-3 space-y-0">
-          <div
-            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
-              variant === 'danger'
-                ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
-                : 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
-            }`}
-          >
-            <AlertTriangle className="h-5 w-5" />
+    <div className="custom-modal-overlay" style={{ zIndex: 10100 }} onClick={onCancel}>
+      <div className="custom-modal-box" style={{ width: 400 }} onClick={(e) => e.stopPropagation()}>
+        <div className="custom-modal-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{
+              width: 32, height: 32, borderRadius: '50%',
+              background: variant === 'danger' ? '#fef2f2' : '#eff6ff',
+              color: variant === 'danger' ? '#dc2626' : '#2563eb',
+              display: 'flex', alignItems: 'center', justify: 'center', flexShrink: 0
+            }}>
+              <AlertTriangle size={17} />
+            </div>
+            <h3 className="custom-modal-title" style={{ fontSize: 15 }}>{title}</h3>
           </div>
-          <div>
-            <DialogTitle className="text-base font-semibold">{title}</DialogTitle>
-          </div>
-        </DialogHeader>
+          <button className="custom-modal-close" onClick={onCancel}><X size={16} /></button>
+        </div>
 
-        <div className="py-2 text-sm text-muted-foreground">
+        <div className="custom-modal-body" style={{ padding: '16px 20px', fontSize: 13.5, color: '#334155', lineHeight: 1.5 }}>
           {message}
         </div>
 
-        <DialogFooter className="gap-2 sm:gap-0">
-          <Button variant="outline" onClick={onCancel}>
-            Hủy
-          </Button>
-          <Button
-            variant={variant === 'danger' ? 'destructive' : 'default'}
+        <div className="custom-modal-footer">
+          <button type="button" className="btn-ghost-sm" onClick={onCancel}>Hủy</button>
+          <button
+            type="button"
+            className={variant === 'danger' ? 'btn-danger-sm' : 'btn-primary-sm'}
             onClick={onConfirm}
+            style={variant === 'danger' ? { background: '#dc2626', color: '#fff' } : {}}
           >
             {confirmText}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
