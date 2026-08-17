@@ -8,6 +8,14 @@ const errorHandler = (err, req, res, next) => {
   let statusCode = err.statusCode || 500;
   let message    = err.message    || 'Lỗi máy chủ nội bộ';
 
+  if (process.env.NODE_ENV === 'development') {
+    console.error(`\n❌ [${req.method}] ${req.originalUrl}`);
+    console.error(`   Status: ${statusCode}`);
+    console.error(`   Message: ${err.message}`);
+    console.error(`   Stack: ${err.stack}\n`);
+  }
+
+
   if (err.name === 'CastError') {
     statusCode = 404;
     message    = 'Không tìm thấy tài nguyên';
