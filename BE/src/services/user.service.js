@@ -351,7 +351,15 @@ const toggleUserStatus = async (adminUserId, targetUserId, isActive) => {
 
   user.isActive = isActive !== undefined ? isActive : !user.isActive;
   await user.save();
+  return user;
+};
 
+const updateUser = async (id, updateData) => {
+  const user = await User.findById(id);
+  if (!user) throw new AppError('User not found', 404);
+
+  Object.assign(user, updateData);
+  await user.save();
   return user;
 };
 

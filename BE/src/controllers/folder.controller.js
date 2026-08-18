@@ -2,6 +2,7 @@ const {
   getFolderTree,
   getFolderContents,
   createFolder,
+  renameFolder,
   reorderFolders,
   deleteFolder,
 } = require('../services/folder.service');
@@ -34,6 +35,13 @@ const remove = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
+const rename = async (req, res, next) => {
+  try {
+    const folder = await renameFolder(req.params.id, req.body.name);
+    res.json({ status: 'success', statusCode: 200, message: 'Đổi tên thành công', data: { folder } });
+  } catch (error) { next(error); }
+};
+
 const getContents = async (req, res, next) => {
   try {
     const { q, page, limit } = req.query;
@@ -46,4 +54,4 @@ const getContents = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
-module.exports = { getTree, getContents, create, reorder, remove };
+module.exports = { getTree, getContents, create, rename, reorder, remove };

@@ -84,11 +84,23 @@ const getFolderTree = async () => {
 
 const createFolder = async ({ name, parentId }) => {
   const slug = slugify(name);
-  const existing = await Folder.findOne({ slug, parentId: parentId || null });
-  if (existing) {
-    const { AppError } = require('../utils/AppError');
-    throw new AppError('Tên folder đã tồn tại', 400);
+  const { AppError } = require('../utils/AppError');
+
+  // Kiểm tra giới hạn 3 cấp: cha → con → cháu
+  if (parentId) {
+    const parent = await Folder.findById(parentId);
+    if (!parent) throw new AppError('Folder cha không tồn tại', 404);
+    if (parent.parentId) {
+      // parent đã là cấp 2 → thêm vào sẽ thành cấp 3 là tối đa
+      const grandParent = await Folder.findById(parent.parentId);
+      if (grandParent?.parentId) {
+        throw new AppError('Chỉ cho phép tối đa 3 cấp thư mục', 400);
+      }
+    }
   }
+
+  const existing = await Folder.findOne({ slug, parentId: parentId || null });
+  if (existing) throw new AppError('Tên folder đã tồn tại', 400);
 
   const count = await Folder.countDocuments({ parentId: parentId || null });
   return Folder.create({ name, slug, parentId: parentId || null, position: count });
@@ -108,12 +120,28 @@ const deleteFolder = async (id) => {
   const { AppError } = require('../utils/AppError');
 
   const hasMedia = await Media.exists({ folderId: id });
-  if (hasMedia) throw new AppError('Folder còn file bên trong, không thể xóa', 400);
+  if (hasMedia) throw new AppError('Folder đang chứa file ảnh, không thể xóa', 400);
 
   const hasChildren = await Folder.exists({ parentId: id });
   if (hasChildren) throw new AppError('Folder còn thư mục con, không thể xóa', 400);
 
   await Folder.findByIdAndDelete(id);
+};
+
+const renameFolder = async (id, name) => {
+  const { AppError } = require('../utils/AppError');
+  if (!name?.trim()) throw new AppError('Tên folder không được để trống', 400);
+
+  const folder = await Folder.findById(id);
+  if (!folder) throw new AppError('Folder không tồn tại', 404);
+
+  const slug = slugify(name);
+  const dup = await Folder.findOne({ slug, parentId: folder.parentId, _id: { $ne: id } });
+  if (dup) throw new AppError('Tên folder đã tồn tại trong cùng cấp', 400);
+
+  folder.name = name.trim();
+  folder.slug = slug;
+  return folder.save();
 };
 
 module.exports = {
@@ -122,6 +150,7 @@ module.exports = {
   getFolderContents,
   getFolderTree,
   createFolder,
+  renameFolder,
   reorderFolders,
   deleteFolder,
 };

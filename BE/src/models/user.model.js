@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
-const crypto = require('crypto');
+const argon2   = require('argon2');
+const bcrypt   = require('bcryptjs');
+const crypto   = require('crypto');
 
 const userSchema = new mongoose.Schema(
   {
@@ -182,20 +183,46 @@ const userSchema = new mongoose.Schema(
 );
 
 // =========================
-// HASH PASSWORD
+// HASH PASSWORD (ARGON2)
 // =========================
+const ARGON2_OPTIONS = {
+  type: argon2.argon2id,
+  memoryCost: 2 ** 16,
+  timeCost: 3,
+  parallelism: 1,
+};
+
 userSchema.pre('save', async function () {
-  if (this.isModified('password')) {
-    const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
-  }
+  if (!this.isModified('password')) return;
+  this.password = await argon2.hash(this.password, ARGON2_OPTIONS);
 });
 
 // =========================
-// CHECK PASSWORD
+// CHECK PASSWORD (ARGON2 + BCRYPT FALLBACK)
 // =========================
 userSchema.methods.matchPassword = async function (enteredPassword) {
-  return bcrypt.compare(enteredPassword, this.password);
+  if (!this.password) return false;
+
+  if (this.password.startsWith('$argon2')) {
+    try {
+      return await argon2.verify(this.password, enteredPassword);
+    } catch (err) {
+      return false;
+    }
+  }
+
+  if (this.password.startsWith('$2a$') || this.password.startsWith('$2b$')) {
+    const isMatch = await bcrypt.compare(enteredPassword, this.password);
+    if (isMatch) {
+      try {
+        this.password = enteredPassword;
+        await this.save();
+      } catch (e) {}
+    }
+    return isMatch;
+  }
+
+  return false;
 };
 
 // =========================
@@ -204,7 +231,7 @@ userSchema.methods.matchPassword = async function (enteredPassword) {
 userSchema.methods.createPasswordResetToken = function () {
   const resetToken = crypto.randomBytes(32).toString('hex');
   this.resetPasswordToken = crypto.createHash('sha256').update(resetToken).digest('hex');
-  this.resetPasswordExpires = Date.now() + 15 * 60 * 1000; // 15 phút
+  this.resetPasswordExpires = Date.now() + 15 * 60 * 1000;
   return resetToken;
 };
 
@@ -214,7 +241,7 @@ userSchema.methods.createPasswordResetToken = function () {
 userSchema.methods.createEmailVerificationToken = function () {
   const verifyToken = crypto.randomBytes(32).toString('hex');
   this.emailVerificationToken = crypto.createHash('sha256').update(verifyToken).digest('hex');
-  this.emailVerificationExpires = Date.now() + 24 * 60 * 60 * 1000; // 24 giờ
+  this.emailVerificationExpires = Date.now() + 24 * 60 * 60 * 1000;
   return verifyToken;
 };
 
@@ -222,12 +249,11 @@ userSchema.methods.createEmailVerificationToken = function () {
 // CREATE PHONE OTP
 // =========================
 userSchema.methods.createPhoneOtp = function () {
-  const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6 chữ số
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
   this.phoneOtp = crypto.createHash('sha256').update(otp).digest('hex');
-  this.phoneOtpExpires = Date.now() + 5 * 60 * 1000; // 5 phút
+  this.phoneOtpExpires = Date.now() + 5 * 60 * 1000;
   return otp;
 };
 
 const User = mongoose.model('User', userSchema);
-
 module.exports = User;
