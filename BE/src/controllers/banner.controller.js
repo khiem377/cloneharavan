@@ -43,7 +43,8 @@ const update = async (req, res, next) => {
 
 const reorder = async (req, res, next) => {
   try {
-    await reorderBanners(req.body);
+    const items = Array.isArray(req.body) ? req.body : req.body.items;
+    await reorderBanners(items);
     res.json({ status: 'success', statusCode: 200, message: 'Cập nhật vị trí thành công' });
   } catch (error) { next(error); }
 };

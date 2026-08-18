@@ -59,7 +59,7 @@ function InlineActions({ banner, onEdit, onDelete, onToggleVisible }) {
   );
 }
 
-function SortableBannerRow({ banner, selected, onToggle, onEdit, onDelete, onToggleVisible }) {
+function SortableBannerRow({ banner, index, selected, onToggle, onEdit, onDelete, onToggleVisible }) {
   const {
     attributes, listeners, setNodeRef,
     transform, transition, isDragging,
@@ -73,6 +73,8 @@ function SortableBannerRow({ banner, selected, onToggle, onEdit, onDelete, onTog
   };
 
   const stopDrag = (e) => e.stopPropagation();
+
+  const displayPosition = banner.position > 0 ? banner.position : index + 1;
 
   return (
     <tr
@@ -120,7 +122,7 @@ function SortableBannerRow({ banner, selected, onToggle, onEdit, onDelete, onTog
       <td className="px-3.5 py-3 align-middle"><VisibleBadge isVisible={banner.isVisible} /></td>
       <td className="px-3.5 py-3 align-middle text-center">
         <span className="inline-flex items-center justify-center min-w-6 h-5 px-1.5 bg-muted border border-border rounded text-xs font-mono font-semibold text-muted-foreground">
-          {banner.position}
+          {displayPosition}
         </span>
       </td>
       <td className="px-3.5 py-3 align-middle text-xs text-muted-foreground">{new Date(banner.createdAt).toLocaleDateString('vi-VN')}</td>
@@ -200,11 +202,14 @@ export default function BannerPage() {
 
     const oldIndex = banners.findIndex(b => b._id === active.id);
     const newIndex = banners.findIndex(b => b._id === over.id);
-    const reordered = arrayMove(banners, oldIndex, newIndex);
+    const reordered = arrayMove(banners, oldIndex, newIndex).map((b, i) => ({
+      ...b,
+      position: i + 1,
+    }));
 
     setLocalOrder(reordered);
 
-    const items = reordered.map((b, i) => ({ id: b._id, position: i }));
+    const items = reordered.map((b) => ({ id: b._id, position: b.position }));
     try {
       await bannerService.reorder(items);
       qc.invalidateQueries({ queryKey: BANNERS_KEY });
@@ -328,9 +333,9 @@ export default function BannerPage() {
                 </thead>
                 <tbody>
                   <SortableContext items={banners.map(b => b._id)} strategy={verticalListSortingStrategy}>
-                    {banners.map(b => (
+                    {banners.map((b, idx) => (
                       <SortableBannerRow
-                        key={b._id} banner={b}
+                        key={b._id} banner={b} index={idx}
                         selected={selectedIds.has(b._id)}
                         onToggle={toggleSelect}
                         onEdit={() => setFormTarget(b)}

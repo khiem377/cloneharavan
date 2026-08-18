@@ -6,12 +6,17 @@ const updateBannerSchema = z.object({
   isVisible: z.boolean().optional(),
 });
 
-const reorderSchema = z.array(
+const bannerItemSchema = z.object({
+  id:       z.string().min(1, 'ID không hợp lệ'),
+  position: z.number().int().min(0, 'Vị trí phải là số nguyên không âm'),
+});
+
+const reorderSchema = z.union([
+  z.array(bannerItemSchema).min(1, 'Danh sách không được rỗng'),
   z.object({
-    id:       z.string().min(1, 'ID không hợp lệ'),
-    position: z.number().int().min(0, 'Vị trí phải là số nguyên không âm'),
-  })
-).min(1, 'Danh sách không được rỗng');
+    items: z.array(bannerItemSchema).min(1, 'Danh sách không được rỗng'),
+  }),
+]);
 
 const deleteBulkSchema = z.object({
   ids: z.array(z.string().min(1)).min(1, 'Vui lòng chọn ít nhất 1 banner'),
