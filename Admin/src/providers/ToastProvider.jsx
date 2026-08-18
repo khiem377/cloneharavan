@@ -26,7 +26,7 @@ export function ToastProvider({ children }) {
   return (
     <>
       {children}
-      <div className="toast-container">
+      <div className="fixed top-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none max-w-sm w-[calc(100vw-32px)]">
         {toasts.map((t) => (
           <ToastItem key={t.id} toast={t} onClose={() => removeToast(t.id)} />
         ))}
@@ -41,17 +41,23 @@ function ToastItem({ toast, onClose }) {
     return () => clearTimeout(timer);
   }, [toast, onClose]);
 
+  const styles = {
+    success: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
+    error:   'border-destructive/30 bg-destructive/10 text-destructive',
+    info:    'border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-300',
+  };
+
   const icons = {
-    success: <CheckCircle2 size={16} className="toast-icon success" />,
-    error:   <AlertCircle  size={16} className="toast-icon error" />,
-    info:    <Info         size={16} className="toast-icon info" />,
+    success: <CheckCircle2 size={16} className="shrink-0 text-emerald-600 dark:text-emerald-400" />,
+    error:   <AlertCircle size={16} className="shrink-0 text-destructive" />,
+    info:    <Info size={16} className="shrink-0 text-blue-600 dark:text-blue-400" />,
   };
 
   return (
-    <div className={`toast-card toast-${toast.type}`}>
+    <div className={`pointer-events-auto flex items-center gap-2.5 rounded-lg border p-3.5 shadow-lg backdrop-blur-xs text-xs font-medium ${styles[toast.type]}`}>
       {icons[toast.type]}
-      <span className="toast-message">{toast.message}</span>
-      <button className="toast-close" onClick={onClose}>
+      <span className="flex-1 leading-normal">{toast.message}</span>
+      <button className="shrink-0 text-muted-foreground hover:text-foreground transition-colors cursor-pointer" onClick={onClose}>
         <X size={13} />
       </button>
     </div>

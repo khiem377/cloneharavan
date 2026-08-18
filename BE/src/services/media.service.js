@@ -60,11 +60,12 @@ const uploadMediaFromUrl = async (url, folderId) => {
   }
 
   // Fetch ảnh từ URL
-  const axios = require('axios');
-  const resp = await axios.get(url, { responseType: 'arraybuffer', timeout: 15000 });
-  const buffer = Buffer.from(resp.data);
-  const mimeType = resp.headers['content-type'] || 'image/jpeg';
+  const resp = await fetch(url, { signal: AbortSignal.timeout(15000) });
+  if (!resp.ok) throw new AppError('Không thể tải ảnh từ URL', 400);
+  const mimeType = resp.headers.get('content-type') || 'image/jpeg';
   if (!mimeType.startsWith('image/')) throw new AppError('URL không phải là ảnh', 400);
+  const arrayBuffer = await resp.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
 
   const filename = url.split('/').pop().split('?')[0] || 'image.jpg';
 

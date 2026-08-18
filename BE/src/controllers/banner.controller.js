@@ -17,8 +17,8 @@ const getPublic = async (req, res, next) => {
 
 const getAll = async (req, res, next) => {
   try {
-    const banners = await getAllBanners();
-    res.json({ status: 'success', statusCode: 200, message: 'Lấy danh sách banner thành công', data: { banners } });
+    const result = await getAllBanners(req.query);
+    res.json({ status: 'success', statusCode: 200, message: 'Lấy danh sách banner thành công', data: result.data, pagination: result.pagination });
   } catch (error) { next(error); }
 };
 

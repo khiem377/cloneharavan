@@ -3,10 +3,10 @@ import { bannerService } from '@/services/banner.service';
 
 export const BANNERS_KEY = ['banners'];
 
-export const useBanners = () =>
+export const useBanners = (params) =>
   useQuery({
-    queryKey: BANNERS_KEY,
-    queryFn: () => bannerService.getAll().then((r) => r.data.data.banners ?? []),
+    queryKey: [...BANNERS_KEY, params],
+    queryFn: () => bannerService.getAll(params).then((r) => r.data),
     staleTime: 30_000,
   });
 

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import {
   DndContext, closestCenter, PointerSensor,
   useSensor, useSensors, DragOverlay,
@@ -19,40 +19,46 @@ import BannerFormModal from './BannerFormModal';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { useQueryClient } from '@tanstack/react-query';
 import { BANNERS_KEY } from '@/hooks/useBanners';
+import DataTablePagination from '@/components/ui/DataTablePagination';
 
-// ── Visible Badge ──────────────────────────────────────────────────────────────
 function VisibleBadge({ isVisible }) {
   return (
-    <span className={`status-badge ${isVisible ? 'active' : 'inactive'}`}>
-      <span className={`status-dot ${isVisible ? 'dot-active' : 'dot-inactive'}`} />
+    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium border ${isVisible ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20' : 'bg-muted text-muted-foreground border-border'}`}>
+      <span className={`size-1.5 rounded-full ${isVisible ? 'bg-emerald-500' : 'bg-muted-foreground'}`} />
       {isVisible ? 'Hiển thị' : 'Đang ẩn'}
     </span>
   );
 }
 
-// ── Inline Actions ─────────────────────────────────────────────────────────────
 function InlineActions({ banner, onEdit, onDelete, onToggleVisible }) {
   return (
-    <div className="inline-actions">
-      <button className="ia-btn ia-edit" title="Sửa"
-        onClick={(e) => { e.stopPropagation(); onEdit(); }}>
+    <div className="flex items-center gap-1">
+      <button
+        className="inline-flex items-center gap-1 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 px-2 py-1 text-xs font-medium transition-colors cursor-pointer"
+        title="Sửa"
+        onClick={(e) => { e.stopPropagation(); onEdit(); }}
+      >
         <Pencil size={13} /><span>Sửa</span>
       </button>
-      <button className="ia-btn ia-toggle"
+      <button
+        className="inline-flex items-center gap-1 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400 hover:bg-purple-500/20 px-2 py-1 text-xs font-medium transition-colors cursor-pointer"
         title={banner.isVisible ? 'Ẩn banner' : 'Hiện banner'}
-        onClick={(e) => { e.stopPropagation(); onToggleVisible(); }}>
+        onClick={(e) => { e.stopPropagation(); onToggleVisible(); }}
+      >
         {banner.isVisible ? <EyeOff size={13} /> : <Eye size={13} />}
         <span>{banner.isVisible ? 'Ẩn' : 'Hiện'}</span>
       </button>
-      <button className="ia-btn ia-delete" title="Xóa"
-        onClick={(e) => { e.stopPropagation(); onDelete(); }}>
+      <button
+        className="inline-flex items-center gap-1 rounded-md bg-destructive/10 text-destructive hover:bg-destructive/20 px-2 py-1 text-xs font-medium transition-colors cursor-pointer"
+        title="Xóa"
+        onClick={(e) => { e.stopPropagation(); onDelete(); }}
+      >
         <Trash2 size={13} /><span>Xóa</span>
       </button>
     </div>
   );
 }
 
-// ── Sortable Table Row ─────────────────────────────────────────────────────────
 function SortableBannerRow({ banner, selected, onToggle, onEdit, onDelete, onToggleVisible }) {
   const {
     attributes, listeners, setNodeRef,
@@ -66,101 +72,122 @@ function SortableBannerRow({ banner, selected, onToggle, onEdit, onDelete, onTog
     cursor: isDragging ? 'grabbing' : 'grab',
   };
 
-  // Stop pointer events on interactive cells so buttons/links still work
   const stopDrag = (e) => e.stopPropagation();
 
   return (
     <tr
       ref={setNodeRef}
       style={style}
-      className={`data-row sortable-row ${selected ? 'tr-selected' : ''} ${!banner.isVisible ? 'tr-hidden' : ''}`}
+      className={`border-b border-border/60 transition-colors hover:bg-muted/40 ${selected ? 'bg-muted/70' : ''} ${!banner.isVisible ? 'opacity-60' : ''}`}
       {...attributes}
       {...listeners}
     >
-      {/* Checkbox – stop drag propagation */}
-      <td className="td-check" onPointerDown={stopDrag}>
-        <button className={`row-checkbox ${selected ? 'checked' : ''}`} onClick={() => onToggle(banner._id)}>
+      <td className="px-3.5 py-3 align-middle w-10" onPointerDown={stopDrag}>
+        <button
+          className={`flex size-4 items-center justify-center rounded border border-input bg-background transition-colors cursor-pointer ${selected ? 'bg-primary border-primary text-primary-foreground' : ''}`}
+          onClick={() => onToggle(banner._id)}
+        >
           {selected && <Check size={10} />}
         </button>
       </td>
 
-      <td className="td-img">
-        <div className="banner-thumb-wrap">
-          <img src={banner.imageUrl} alt={banner.title || 'banner'} className="banner-thumb" />
-          {!banner.isVisible && <div className="thumb-dim" />}
+      <td className="px-3.5 py-3 align-middle w-24">
+        <div className="relative inline-block">
+          <img src={banner.imageUrl} alt={banner.title || 'banner'} className="h-12 w-20 object-cover rounded border border-border bg-muted" />
+          {!banner.isVisible && <div className="absolute inset-0 rounded bg-background/60" />}
         </div>
       </td>
 
-      <td className="td-title">
-        <span className={`banner-title-text ${!banner.isVisible ? 'dim' : ''}`}>
-          {banner.title || <span className="text-muted">Chưa đặt tiêu đề</span>}
+      <td className="px-3.5 py-3 align-middle">
+        <span className={`text-sm font-medium text-foreground ${!banner.isVisible ? 'opacity-50' : ''}`}>
+          {banner.title || <span className="text-muted-foreground italic text-xs">Chưa đặt tiêu đề</span>}
         </span>
       </td>
 
-      <td className="td-link" onPointerDown={stopDrag}>
+      <td className="px-3.5 py-3 align-middle" onPointerDown={stopDrag}>
         {banner.link ? (
-          <a href={banner.link} target="_blank" rel="noreferrer"
-            className="banner-link-cell" onClick={e => e.stopPropagation()}>
+          <a
+            href={banner.link} target="_blank" rel="noreferrer"
+            className="inline-flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:underline truncate max-w-xs"
+            onClick={e => e.stopPropagation()}
+          >
             <ExternalLink size={11} />
             <span>{banner.link.length > 38 ? banner.link.slice(0, 38) + '…' : banner.link}</span>
           </a>
-        ) : <span className="text-muted">—</span>}
+        ) : <span className="text-muted-foreground italic text-xs">—</span>}
       </td>
 
-      <td className="td-status"><VisibleBadge isVisible={banner.isVisible} /></td>
-      <td className="td-pos"><span className="pos-chip">{banner.position}</span></td>
-      <td className="td-date">{new Date(banner.createdAt).toLocaleDateString('vi-VN')}</td>
+      <td className="px-3.5 py-3 align-middle"><VisibleBadge isVisible={banner.isVisible} /></td>
+      <td className="px-3.5 py-3 align-middle text-center">
+        <span className="inline-flex items-center justify-center min-w-6 h-5 px-1.5 bg-muted border border-border rounded text-xs font-mono font-semibold text-muted-foreground">
+          {banner.position}
+        </span>
+      </td>
+      <td className="px-3.5 py-3 align-middle text-xs text-muted-foreground">{new Date(banner.createdAt).toLocaleDateString('vi-VN')}</td>
 
-      <td className="td-actions-inline" onPointerDown={stopDrag}>
+      <td className="px-3.5 py-3 align-middle" onPointerDown={stopDrag}>
         <InlineActions banner={banner} onEdit={onEdit} onDelete={onDelete} onToggleVisible={onToggleVisible} />
       </td>
     </tr>
   );
 }
 
-// ── Banner Card (Grid) ─────────────────────────────────────────────────────────
 function BannerCard({ banner, selected, onToggle, onEdit, onDelete, onToggleVisible }) {
   return (
-    <div className={`banner-card ${selected ? 'selected' : ''}`}>
-      <div className="banner-card-img" onClick={() => onToggle(banner._id)}>
-        <img src={banner.imageUrl} alt={banner.title || 'banner'} />
-        {selected && <div className="banner-card-check"><Check size={14} /></div>}
-        {!banner.isVisible && <div className="banner-card-hidden-overlay"><EyeOff size={14} /> Đang ẩn</div>}
+    <div className={`rounded-xl border border-border bg-card text-card-foreground shadow-2xs overflow-hidden transition-all hover:border-primary/50 ${selected ? 'border-primary ring-2 ring-primary/30' : ''}`}>
+      <div className="relative aspect-video w-full bg-muted cursor-pointer overflow-hidden" onClick={() => onToggle(banner._id)}>
+        <img src={banner.imageUrl} alt={banner.title || 'banner'} className="size-full object-cover" />
+        {selected && (
+          <div className="absolute top-2 right-2 size-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-xs z-10">
+            <Check size={12} />
+          </div>
+        )}
+        {!banner.isVisible && (
+          <div className="absolute inset-0 bg-background/70 backdrop-blur-xs flex items-center justify-center gap-1.5 text-xs font-medium text-muted-foreground">
+            <EyeOff size={14} /> Đang ẩn
+          </div>
+        )}
       </div>
-      <div className="banner-card-info">
-        <span className="banner-card-title">{banner.title || <span className="text-muted">Chưa đặt tiêu đề</span>}</span>
+      <div className="p-3 flex flex-col gap-2">
+        <span className="font-semibold text-sm text-foreground line-clamp-1">
+          {banner.title || <span className="text-muted-foreground italic text-xs">Chưa đặt tiêu đề</span>}
+        </span>
         <VisibleBadge isVisible={banner.isVisible} />
-        <div className="banner-card-actions">
-          <button className="ia-btn ia-edit" onClick={onEdit}><Pencil size={12} /></button>
-          <button className="ia-btn ia-toggle" onClick={onToggleVisible}>
+        <div className="flex items-center justify-end gap-1 pt-2 border-t border-border">
+          <button className="inline-flex items-center gap-1 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 px-2 py-1 text-xs font-medium transition-colors cursor-pointer" onClick={onEdit}><Pencil size={12} /></button>
+          <button className="inline-flex items-center gap-1 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400 hover:bg-purple-500/20 px-2 py-1 text-xs font-medium transition-colors cursor-pointer" onClick={onToggleVisible}>
             {banner.isVisible ? <EyeOff size={12} /> : <Eye size={12} />}
           </button>
-          <button className="ia-btn ia-delete" onClick={onDelete}><Trash2 size={12} /></button>
+          <button className="inline-flex items-center gap-1 rounded-md bg-destructive/10 text-destructive hover:bg-destructive/20 px-2 py-1 text-xs font-medium transition-colors cursor-pointer" onClick={onDelete}><Trash2 size={12} /></button>
         </div>
       </div>
     </div>
   );
 }
 
-// ── Main BannerPage ────────────────────────────────────────────────────────────
 export default function BannerPage() {
   const qc = useQueryClient();
-  const [viewMode,     setViewMode]     = useState('table');
-  const [selectedIds,  setSelectedIds]  = useState(new Set());
-  const [formTarget,   setFormTarget]   = useState(undefined);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [viewMode, setViewMode] = useState('table');
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [formTarget, setFormTarget] = useState(undefined);
   const [deleteTarget, setDeleteTarget] = useState(null);
-  const [showBulkDel,  setShowBulkDel]  = useState(false);
-  const [activeId,     setActiveId]     = useState(null); // DnD active item
-  const [localOrder,   setLocalOrder]   = useState(null); // optimistic order
+  const [showBulkDel, setShowBulkDel] = useState(false);
+  const [activeId, setActiveId] = useState(null);
+  const [localOrder, setLocalOrder] = useState(null);
 
-  const { data: remoteBanners = [], isLoading } = useBanners();
+  const res = useBanners({ page, limit });
+  const bannerData = res.data;
+  const remoteBanners = bannerData?.data ?? (Array.isArray(bannerData) ? bannerData : []);
+  const pagination = bannerData?.pagination;
+  const isLoading = res.isLoading;
   const banners = localOrder ?? remoteBanners;
 
-  const { mutate: deleteBanner }  = useDeleteBanner();
-  const { mutate: deleteBulk }    = useDeleteBulkBanners();
-  const { mutate: updateBanner }  = useUpdateBanner();
+  const { mutate: deleteBanner } = useDeleteBanner();
+  const { mutate: deleteBulk } = useDeleteBulkBanners();
+  const { mutate: updateBanner } = useUpdateBanner();
 
-  // DnD sensors – small activation distance to avoid accidental drag
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
   );
@@ -175,7 +202,6 @@ export default function BannerPage() {
     const newIndex = banners.findIndex(b => b._id === over.id);
     const reordered = arrayMove(banners, oldIndex, newIndex);
 
-    // Optimistic update
     setLocalOrder(reordered);
 
     const items = reordered.map((b, i) => ({ id: b._id, position: i }));
@@ -185,15 +211,9 @@ export default function BannerPage() {
       toast.success('Đã cập nhật thứ tự banner');
     } catch {
       toast.error('Lỗi cập nhật thứ tự');
-      setLocalOrder(null); // rollback
+      setLocalOrder(null);
     }
   };
-
-  // Sync local order when remote data changes (after invalidate)
-  const prevRemote = remoteBanners;
-  if (localOrder && JSON.stringify(remoteBanners.map(b => b._id)) !== JSON.stringify(localOrder.map(b => b._id))) {
-    // Remote updated → clear optimistic
-  }
 
   const toggleSelect = (id) => setSelectedIds(prev => {
     const next = new Set(prev);
@@ -235,78 +255,75 @@ export default function BannerPage() {
   const activeItem = activeId ? banners.find(b => b._id === activeId) : null;
 
   return (
-    <div className="page-container">
-      {/* Header */}
-      <div className="page-header">
+    <div className="p-6 flex flex-col gap-6 w-full max-w-7xl mx-auto min-h-full bg-background text-foreground">
+      <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-border">
         <div>
-          <h1 className="page-title">Banners</h1>
-          <p className="page-subtitle">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Banners</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">
             {banners.length} banner &nbsp;·&nbsp;
-            <span className="subtitle-green">{visibleCount} đang hiển thị</span>
-            {viewMode === 'table' && <span className="subtitle-hint"> · Kéo ⠿ để sắp xếp</span>}
+            <span className="text-emerald-600 dark:text-emerald-400 font-medium">{visibleCount} đang hiển thị</span>
+            {viewMode === 'table' && <span className="text-muted-foreground text-xs"> · Kéo ⠿ để sắp xếp</span>}
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div className="flex items-center gap-2">
           {selectedIds.size > 0 && (
             <>
-              <span className="selected-badge">{selectedIds.size} đã chọn</span>
-              <button className="btn-danger-sm" onClick={() => setShowBulkDel(true)}>
+              <span className="inline-flex items-center rounded-full bg-accent px-2.5 py-0.5 text-xs font-medium text-accent-foreground">{selectedIds.size} đã chọn</span>
+              <button className="inline-flex h-8 items-center justify-center gap-1 rounded-md bg-destructive/10 text-destructive px-3 text-xs font-medium hover:bg-destructive/20 transition-colors cursor-pointer" onClick={() => setShowBulkDel(true)}>
                 <Trash2 size={13} /> Xóa
               </button>
-              <button className="btn-ghost-sm" onClick={() => setSelectedIds(new Set())}>Bỏ chọn</button>
+              <button className="inline-flex h-8 items-center justify-center gap-1 rounded-md px-3 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer" onClick={() => setSelectedIds(new Set())}>Bỏ chọn</button>
             </>
           )}
-          <div className="view-toggle">
-            <button className={`view-btn ${viewMode === 'table' ? 'active' : ''}`} onClick={() => setViewMode('table')} title="Bảng">
+          <div className="flex items-center rounded-md border border-border bg-muted p-0.5">
+            <button className={`p-1.5 rounded transition-colors cursor-pointer ${viewMode === 'table' ? 'bg-background text-foreground font-semibold shadow-2xs' : 'text-muted-foreground hover:text-foreground'}`} onClick={() => setViewMode('table')} title="Bảng">
               <List size={14} />
             </button>
-            <button className={`view-btn ${viewMode === 'grid' ? 'active' : ''}`} onClick={() => setViewMode('grid')} title="Lưới">
+            <button className={`p-1.5 rounded transition-colors cursor-pointer ${viewMode === 'grid' ? 'bg-background text-foreground font-semibold shadow-2xs' : 'text-muted-foreground hover:text-foreground'}`} onClick={() => setViewMode('grid')} title="Lưới">
               <LayoutGrid size={14} />
             </button>
           </div>
-          <button className="btn-primary" onClick={() => setFormTarget(null)}>
+          <button className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground shadow-xs hover:bg-primary/90 transition-colors cursor-pointer" onClick={() => setFormTarget(null)}>
             <Plus size={15} /> Tạo mới
           </button>
         </div>
       </div>
 
-      {/* Content */}
-      <div className="page-card">
+      <div className="rounded-xl border border-border bg-card text-card-foreground shadow-2xs overflow-hidden">
         {isLoading ? (
-          <div className="page-loading">Đang tải...</div>
+          <div className="flex justify-center items-center py-20 text-sm text-muted-foreground">Đang tải...</div>
         ) : banners.length === 0 ? (
-          <div className="page-empty">
-            <Image size={40} style={{ color: 'var(--text-3)' }} />
+          <div className="flex flex-col items-center justify-center gap-3 py-20 text-center text-sm text-muted-foreground">
+            <Image size={40} className="text-muted-foreground/60" />
             <p>Chưa có banner nào</p>
-            <button className="btn-primary" onClick={() => setFormTarget(null)}>
+            <button className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground shadow-xs hover:bg-primary/90 transition-colors cursor-pointer" onClick={() => setFormTarget(null)}>
               <Plus size={14} /> Tạo banner đầu tiên
             </button>
           </div>
         ) : viewMode === 'table' ? (
-          /* TABLE with DnD */
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
           >
-            <div className="table-wrap">
-              <table className="data-table">
+            <div className="w-full overflow-x-auto">
+              <table className="w-full text-left text-sm border-collapse">
                 <thead>
-                  <tr>
-                    <th className="th-check">
-                      <button className={`row-checkbox ${allSelected ? 'checked' : ''}`} onClick={toggleAll}>
+                  <tr className="border-b border-border bg-muted/50 text-xs uppercase font-semibold text-muted-foreground tracking-wider">
+                    <th className="px-3.5 py-3 w-10">
+                      <button className={`flex size-4 items-center justify-center rounded border border-input bg-background transition-colors cursor-pointer ${allSelected ? 'bg-primary border-primary text-primary-foreground' : ''}`} onClick={toggleAll}>
                         {allSelected && <Check size={10} />}
                       </button>
                     </th>
-                    <th>Ảnh</th>
-                    <th>Tiêu đề</th>
-                    <th>Link</th>
-                    <th>Trạng thái</th>
-                    <th style={{ textAlign: 'center' }}>Vị trí</th>
-                    <th>Ngày tạo</th>
-                    <th></th>
+                    <th className="px-3.5 py-3">Ảnh</th>
+                    <th className="px-3.5 py-3">Tiêu đề</th>
+                    <th className="px-3.5 py-3">Link</th>
+                    <th className="px-3.5 py-3">Trạng thái</th>
+                    <th className="px-3.5 py-3 text-center">Vị trí</th>
+                    <th className="px-3.5 py-3">Ngày tạo</th>
+                    <th className="px-3.5 py-3"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -326,18 +343,17 @@ export default function BannerPage() {
               </table>
             </div>
 
-            {/* Drag overlay */}
             <DragOverlay>
               {activeItem && (
-                <table className="data-table drag-overlay-table">
+                <table className="w-full text-left text-sm border-collapse bg-background shadow-xl rounded-lg border border-border">
                   <tbody>
-                    <tr style={{ background: 'var(--surface)' }}>
-                      <td className="td-check" />
-                      <td className="td-img">
-                        <img src={activeItem.imageUrl} alt="" className="banner-thumb" />
+                    <tr className="bg-background">
+                      <td className="px-3.5 py-3 w-10" />
+                      <td className="px-3.5 py-3 w-24">
+                        <img src={activeItem.imageUrl} alt="" className="h-12 w-20 object-cover rounded border border-border bg-muted" />
                       </td>
-                      <td className="td-title">
-                        <span className="banner-title-text">{activeItem.title || '—'}</span>
+                      <td className="px-3.5 py-3">
+                        <span className="text-sm font-medium text-foreground">{activeItem.title || '—'}</span>
                       </td>
                       <td colSpan={5} />
                     </tr>
@@ -347,8 +363,7 @@ export default function BannerPage() {
             </DragOverlay>
           </DndContext>
         ) : (
-          /* GRID */
-          <div className="banner-grid">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4">
             {banners.map(b => (
               <BannerCard
                 key={b._id} banner={b}
@@ -362,6 +377,15 @@ export default function BannerPage() {
           </div>
         )}
       </div>
+
+      <DataTablePagination
+        page={page}
+        pageSize={limit}
+        total={pagination?.total ?? 0}
+        totalPages={pagination?.totalPages ?? 1}
+        onPageChange={setPage}
+        onPageSizeChange={setLimit}
+      />
 
       {formTarget !== undefined && (
         <BannerFormModal banner={formTarget} onClose={() => { setFormTarget(undefined); setLocalOrder(null); }} />
