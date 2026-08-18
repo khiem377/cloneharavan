@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Image, ImagePlay, Tag, ShoppingBag,
   Settings, LogOut, ChevronRight, List, Plus,
   Download, FolderTree, Layers, ChevronsUpDown,
-  KeyRound, User, Sparkles
+  KeyRound, User, Sparkles, TicketPercent, Gift, Percent,
 } from 'lucide-react';
 import useAuthStore from '@/store/authStore';
 import { authService } from '@/services/auth.service';
@@ -55,6 +55,20 @@ const NAV_GROUPS = [
     ],
   },
   {
+    label: 'Khuyến mãi',
+    items: [
+      {
+        icon: TicketPercent,
+        label: 'Khuyến mãi',
+        children: [
+          { to: '/promotions/coupons',   icon: TicketPercent, label: 'Mã giảm giá'           },
+          { to: '/promotions/discounts', icon: Percent,       label: 'Chương trình khuyến mãi' },
+          { to: '/promotions/gifts',     icon: Gift,          label: 'Chương trình tặng kèm'  },
+        ],
+      },
+    ],
+  },
+  {
     label: 'Hệ thống',
     items: [
       { to: '/settings', icon: Settings, label: 'Cài đặt' },
@@ -62,7 +76,6 @@ const NAV_GROUPS = [
   },
 ];
 
-const CHILD_ROUTES = ['/products', '/products/new', '/products/import', '/categories', '/brands'];
 
 function NavGroupItem({ item }) {
   const location = useLocation();
@@ -71,18 +84,18 @@ function NavGroupItem({ item }) {
   const isCollapsed = state === 'collapsed';
 
   if (item.children) {
-    const isAnyActive = CHILD_ROUTES.some(r =>
-      r === '/products' ? location.pathname === r : location.pathname.startsWith(r)
-    );
+    const childRoutes = item.children.map((c) => c.to);
+    const isAnyActive = childRoutes.some((r) => location.pathname.startsWith(r));
     const [open, setOpen] = useState(isAnyActive);
     const Icon = item.icon;
+    const firstChild = item.children[0]?.to ?? '/';
 
     if (isCollapsed) {
       return (
         <SidebarMenuItem>
           <SidebarMenuButton
             isActive={isAnyActive}
-            onClick={() => navigate('/products')}
+            onClick={() => navigate(firstChild)}
             title={item.label}
           >
             <Icon className="size-4 shrink-0" />
@@ -109,9 +122,7 @@ function NavGroupItem({ item }) {
           <SidebarMenuSub>
             {item.children.map(child => {
               const CIcon = child.icon;
-              const isActive = child.to === '/products'
-                ? location.pathname === child.to
-                : location.pathname.startsWith(child.to);
+              const isActive = location.pathname.startsWith(child.to);
               return (
                 <SidebarMenuSubItem key={child.to}>
                   <SidebarMenuSubButton

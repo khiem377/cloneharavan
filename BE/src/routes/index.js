@@ -9,6 +9,7 @@ const folderRoutes   = require('./folder.routes');
 const categoryRoutes = require('./category.routes');
 const brandRoutes    = require('./brand.routes');
 const productRoutes  = require('./product.routes');
+const couponRoutes   = require('./coupon.routes');
 
 router.use('/auth',       authRoutes);
 router.use('/users',      userRoutes);
@@ -18,5 +19,6 @@ router.use('/folders',    folderRoutes);
 router.use('/categories', categoryRoutes);
 router.use('/brands',     brandRoutes);
 router.use('/products',   productRoutes);
+router.use('/coupons',    couponRoutes);
 
 module.exports = router;
