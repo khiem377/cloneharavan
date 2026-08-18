@@ -27,7 +27,6 @@ function formatSize(b) {
   return (b / (1024 * 1024)).toFixed(1) + ' MB';
 }
 
-// Flatten folder tree
 function buildFolderMap(folders) {
   const map = {};
   const walk = (items) => items.forEach(f => {
@@ -51,11 +50,10 @@ function getDepth(map, id) {
   return depth;
 }
 
-// ── Folder Context Menu ────────────────────────────────────────────────────────
 function FolderCtxMenu({ x, y, folder, folderMap, onClose, onAddChild, onRename, onDelete }) {
   const ref = useRef(null);
   const depth = getDepth(folderMap, folder._id);
-  const canAddChild = depth < 2; // max 3 levels (0,1,2)
+  const canAddChild = depth < 2;
 
   useEffect(() => {
     const handleClick = () => onClose();
@@ -66,28 +64,27 @@ function FolderCtxMenu({ x, y, folder, folderMap, onClose, onAddChild, onRename,
   return (
     <div
       ref={ref}
-      className="ctx-menu"
-      style={{ position: 'fixed', top: y, left: x, zIndex: 10060 }}
+      className="fixed z-[10060] min-w-44 rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-md text-sm"
+      style={{ position: 'fixed', top: y, left: x }}
       onClick={e => e.stopPropagation()}
       onContextMenu={e => e.preventDefault()}
     >
       {canAddChild && (
-        <button className="ctx-item" onClick={() => { onClose(); onAddChild(folder._id); }}>
+        <button className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer text-left" onClick={() => { onClose(); onAddChild(folder._id); }}>
           <FolderPlus size={13} /> Tạo thư mục con
         </button>
       )}
-      <button className="ctx-item" onClick={() => { onClose(); onRename(folder); }}>
+      <button className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer text-left" onClick={() => { onClose(); onRename(folder); }}>
         <Pencil size={13} /> Đổi tên
       </button>
-      <div className="ctx-divider" />
-      <button className="ctx-item danger" onClick={() => { onClose(); onDelete(folder); }}>
+      <div className="my-1 h-px bg-border" />
+      <button className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive transition-colors cursor-pointer text-left" onClick={() => { onClose(); onDelete(folder); }}>
         <Trash2 size={13} /> Xóa thư mục
       </button>
     </div>
   );
 }
 
-// ── Folder Tree item ───────────────────────────────────────────────────────────
 function FolderNode({ folder, depth = 0, selectedId, folderMap, onSelect, onCtxMenu }) {
   const [open, setOpen] = useState(depth === 0);
   const hasChildren = folder.children?.length > 0;
@@ -96,17 +93,19 @@ function FolderNode({ folder, depth = 0, selectedId, folderMap, onSelect, onCtxM
   return (
     <div>
       <div
-        className={`picker-folder-node ${isActive ? 'active' : ''}`}
+        className={`flex items-center gap-1.5 w-full rounded-md px-2 py-1 text-xs transition-colors cursor-pointer select-none ${isActive ? 'bg-accent font-semibold text-foreground' : 'text-muted-foreground hover:bg-accent/60 hover:text-foreground'}`}
         style={{ paddingLeft: 8 + depth * 14 }}
         onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); onCtxMenu(e, folder); }}
       >
-        <button className="picker-chevron" style={{ visibility: hasChildren ? 'visible' : 'hidden' }}
-          onClick={() => setOpen(!open)}>
-          <ChevronRight size={11} style={{ transform: open ? 'rotate(90deg)' : '', transition: 'transform .15s' }} />
+        <button
+          className={`shrink-0 p-0.5 rounded hover:bg-muted text-muted-foreground ${!hasChildren ? 'invisible' : ''}`}
+          onClick={() => setOpen(!open)}
+        >
+          <ChevronRight size={11} className={`transition-transform ${open ? 'rotate-90' : ''}`} />
         </button>
-        <button className="picker-folder-btn" onClick={() => onSelect(folder._id)}>
-          <FolderOpen size={12} />
-          <span>{folder.name}</span>
+        <button className="flex flex-1 items-center gap-1.5 text-left truncate cursor-pointer" onClick={() => onSelect(folder._id)}>
+          <FolderOpen size={13} className="shrink-0 text-muted-foreground" />
+          <span className="truncate">{folder.name}</span>
         </button>
       </div>
       {open && hasChildren && folder.children.map(c => (
@@ -117,7 +116,6 @@ function FolderNode({ folder, depth = 0, selectedId, folderMap, onSelect, onCtxM
   );
 }
 
-// ── New Folder Input ───────────────────────────────────────────────────────────
 function NewFolderInput({ parentId, folderMap, onCreated, onCancel }) {
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
@@ -128,9 +126,9 @@ function NewFolderInput({ parentId, folderMap, onCreated, onCancel }) {
 
   if (blocked) {
     return (
-      <div className="new-folder-row">
-        <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Đã đạt tối đa 3 cấp</span>
-        <button className="btn-ghost-sm" onClick={onCancel}>Đóng</button>
+      <div className="flex items-center gap-2 p-2 text-xs text-muted-foreground">
+        <span>Đã đạt tối đa 3 cấp</span>
+        <button className="inline-flex h-7 items-center justify-center rounded px-2 text-xs font-medium hover:bg-accent cursor-pointer" onClick={onCancel}>Đóng</button>
       </div>
     );
   }
@@ -150,28 +148,26 @@ function NewFolderInput({ parentId, folderMap, onCreated, onCancel }) {
   };
 
   return (
-    <div className="new-folder-row">
-      <FolderPlus size={13} style={{ color: 'var(--text-3)', flexShrink: 0 }} />
+    <div className="flex items-center gap-1.5 p-2 bg-muted/40 rounded-md border border-border my-1">
+      <FolderPlus size={13} className="text-muted-foreground shrink-0" />
       <input
-        className="new-folder-input"
+        className="h-7 flex-1 rounded border border-input bg-background px-2 text-xs text-foreground outline-none focus:border-ring"
         autoFocus
         value={name}
         onChange={e => setName(e.target.value)}
         placeholder="Tên thư mục..."
         onKeyDown={e => { if (e.key === 'Enter') handleCreate(); if (e.key === 'Escape') onCancel(); }}
       />
-      <button className="btn-primary-sm" onClick={handleCreate} disabled={loading || !name.trim()}>
-        {loading ? <Loader2 size={12} className="spin" /> : 'Tạo'}
+      <button className="inline-flex h-7 items-center justify-center rounded bg-primary px-2.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 cursor-pointer disabled:opacity-50" onClick={handleCreate} disabled={loading || !name.trim()}>
+        {loading ? <Loader2 size={12} className="animate-spin" /> : 'Tạo'}
       </button>
-      <button className="btn-ghost-sm" onClick={onCancel}>×</button>
+      <button className="inline-flex h-7 items-center justify-center rounded px-2 text-xs font-medium text-muted-foreground hover:bg-accent cursor-pointer" onClick={onCancel}>×</button>
     </div>
   );
 }
 
-// ── Upload Panel ───────────────────────────────────────────────────────────────
 function UploadPanel({ folderId, onClose }) {
   const qc = useQueryClient();
-  const [files, setFiles] = useState([]);
   const [urlMode, setUrlMode] = useState(false);
   const [url, setUrl] = useState('');
   const [uploading, setUploading] = useState(false);
@@ -219,56 +215,53 @@ function UploadPanel({ folderId, onClose }) {
   };
 
   return (
-    <div className="picker-upload-panel">
-      <div className="picker-upload-tabs">
-        <button className={`pup-tab ${!urlMode ? 'active' : ''}`} onClick={() => setUrlMode(false)}>
+    <div className="p-4 border-b border-border bg-muted/20 flex flex-col gap-3">
+      <div className="flex border-b border-border gap-2 pb-2">
+        <button className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded cursor-pointer ${!urlMode ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-accent'}`} onClick={() => setUrlMode(false)}>
           <Upload size={13} /> Tải lên
         </button>
-        <button className={`pup-tab ${urlMode ? 'active' : ''}`} onClick={() => setUrlMode(true)}>
+        <button className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded cursor-pointer ${urlMode ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-accent'}`} onClick={() => setUrlMode(true)}>
           <Link size={13} /> Từ URL
         </button>
       </div>
 
       {!urlMode ? (
-        <div {...getRootProps()} className={`picker-dropzone ${isDragActive ? 'active' : ''}`}>
+        <div {...getRootProps()} className={`flex flex-col items-center justify-center p-6 rounded-lg border-2 border-dashed transition-colors cursor-pointer text-center ${isDragActive ? 'border-primary bg-primary/10' : 'border-border bg-background hover:border-primary/50'}`}>
           <input {...getInputProps()} />
-          {uploading ? <Loader2 size={24} className="spin" /> : <Upload size={24} />}
-          <p>{uploading ? 'Đang upload...' : isDragActive ? 'Thả ảnh vào đây' : 'Kéo thả hoặc click để chọn ảnh'}</p>
-          {!folderId && <span style={{ color: 'var(--danger)', fontSize: 12 }}>⚠ Chọn thư mục trước</span>}
+          {uploading ? <Loader2 size={24} className="animate-spin text-primary" /> : <Upload size={24} className="text-muted-foreground" />}
+          <p className="text-xs font-medium text-foreground mt-2">{uploading ? 'Đang upload...' : isDragActive ? 'Thả ảnh vào đây' : 'Kéo thả hoặc click để chọn ảnh'}</p>
+          {!folderId && <span className="text-[11px] text-destructive font-medium mt-1">⚠ Chọn thư mục trước</span>}
         </div>
       ) : (
-        <div className="picker-url-form">
-          <input className="field-input" value={url} onChange={e => setUrl(e.target.value)}
+        <div className="flex gap-2">
+          <input className="h-8 flex-1 rounded border border-input bg-background px-2.5 text-xs text-foreground outline-none focus:border-ring" value={url} onChange={e => setUrl(e.target.value)}
             placeholder="https://example.com/image.jpg"
             onKeyDown={e => e.key === 'Enter' && handleUrlUpload()} />
-          <button className="btn-primary-sm" onClick={handleUrlUpload} disabled={uploading || !url.trim()}>
-            {uploading ? <Loader2 size={13} className="spin" /> : <Upload size={13} />}
+          <button className="inline-flex h-8 items-center justify-center gap-1 rounded bg-primary px-3 text-xs font-medium text-primary-foreground hover:bg-primary/90 cursor-pointer disabled:opacity-50" onClick={handleUrlUpload} disabled={uploading || !url.trim()}>
+            {uploading ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
             Upload
           </button>
         </div>
       )}
 
-      <button className="btn-ghost-sm" style={{ alignSelf: 'flex-end' }} onClick={onClose}>Đóng</button>
+      <button className="inline-flex h-7 items-center justify-center rounded px-2.5 text-xs font-medium text-muted-foreground hover:bg-accent cursor-pointer self-end" onClick={onClose}>Đóng</button>
     </div>
   );
 }
 
-// ── Main MediaPickerModal ──────────────────────────────────────────────────────
-export default function MediaPickerModal({ onSelect, onClose }) {
+export default function MediaPickerModal({ onSelect, onClose, isMultiple = false }) {
   const qc = useQueryClient();
   const [selectedFolder, setSelectedFolder] = useState(null);
-  const [picked,         setPicked]         = useState(null);
-  const [search,         setSearch]         = useState('');
-  const [page,           setPage]           = useState(1);
-  const [showNewFolder,  setShowNewFolder]  = useState(false);
-  const [newFolderParent,setNewFolderParent]= useState(null);
-  const [showUpload,     setShowUpload]     = useState(false);
-  // Context menu
-  const [ctxMenu, setCtxMenu] = useState(null); // { x, y, folder }
-  // Rename
+  const [pickedSingle, setPickedSingle] = useState(null);
+  const [pickedMultiple, setPickedMultiple] = useState([]);
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [showNewFolder, setShowNewFolder] = useState(false);
+  const [newFolderParent, setNewFolderParent] = useState(null);
+  const [showUpload, setShowUpload] = useState(false);
+  const [ctxMenu, setCtxMenu] = useState(null);
   const [renameTarget, setRenameTarget] = useState(null);
-  const [renameName,   setRenameName]   = useState('');
-  // Delete folder
+  const [renameName, setRenameName] = useState('');
   const [deleteFolder, setDeleteFolder] = useState(null);
 
   const { data: folders = [] } = useFolders();
@@ -280,12 +273,11 @@ export default function MediaPickerModal({ onSelect, onClose }) {
   const { data: searchData, isLoading: ls } = useMediaSearch({ q: search, page: 1, limit: 24 });
 
   const displayData = isSearching ? searchData : browseData;
-  const mediaItems  = displayData?.media ?? [];
-  const total       = displayData?.total ?? 0;
-  const totalPages  = displayData?.totalPages ?? 1;
-  const isLoading   = isSearching ? ls : lb;
+  const mediaItems = displayData?.media ?? [];
+  const total = displayData?.total ?? 0;
+  const totalPages = displayData?.totalPages ?? 1;
+  const isLoading = isSearching ? ls : lb;
 
-  // Search cũng trả về folders từ backend
   const searchFolders = isSearching ? (searchData?.folders ?? []) : [];
   const crumbs = selectedFolder ? buildBreadcrumb(folderMap, selectedFolder) : [];
 
@@ -298,249 +290,304 @@ export default function MediaPickerModal({ onSelect, onClose }) {
     setSelectedFolder(id);
     setPage(1);
     setSearch('');
-    setShowUpload(false);
   };
 
-  // Context menu handlers
-  const handleCtxMenu = useCallback((e, folder) => {
-    setCtxMenu({ x: e.clientX, y: e.clientY, folder });
-  }, []);
-
-  const handleAddChild = (parentId) => {
-    setNewFolderParent(parentId);
-    setShowNewFolder(true);
+  const handleCardClick = (item) => {
+    if (isMultiple) {
+      setPickedMultiple((prev) => {
+        const exists = prev.some((x) => x._id === item._id);
+        if (exists) return prev.filter((x) => x._id !== item._id);
+        return [...prev, item];
+      });
+    } else {
+      setPickedSingle(item);
+    }
   };
 
-  const handleStartRename = (folder) => {
-    setRenameTarget(folder);
-    setRenameName(folder.name);
+  const isSelected = (id) => {
+    if (isMultiple) return pickedMultiple.some((x) => x._id === id);
+    return pickedSingle?._id === id;
   };
 
-  const handleRename = async () => {
-    if (!renameName.trim() || renameName === renameTarget.name) { setRenameTarget(null); return; }
+  const handleConfirmRename = async () => {
+    if (!renameName.trim() || !renameTarget) return;
     try {
       await folderService.rename(renameTarget._id, renameName.trim());
       invalidateFolders();
-      toast.success('Đổi tên thành công');
+      toast.success('Đổi tên thư mục thành công');
+      setRenameTarget(null);
     } catch (e) {
       toast.error(e.response?.data?.message || 'Lỗi');
-    } finally { setRenameTarget(null); }
+    }
   };
 
-  const handleDeleteFolder = async () => {
+  const handleConfirmDeleteFolder = async () => {
+    if (!deleteFolder) return;
     try {
       await folderService.delete(deleteFolder._id);
-      invalidateFolders();
       if (selectedFolder === deleteFolder._id) setSelectedFolder(null);
-      toast.success('Đã xóa thư mục');
+      invalidateFolders();
+      toast.success('Xóa thư mục thành công');
+      setDeleteFolder(null);
     } catch (e) {
-      toast.error(e.response?.data?.message || 'Xóa thất bại (thư mục có ảnh)');
-    } finally { setDeleteFolder(null); }
+      toast.error(e.response?.data?.message || 'Lỗi');
+    }
   };
 
-  const handleConfirm = () => {
-    if (picked) { onSelect(picked); onClose(); }
+  const handleConfirmPick = () => {
+    if (isMultiple) {
+      if (pickedMultiple.length > 0) {
+        onSelect(pickedMultiple);
+        onClose();
+      }
+    } else {
+      if (pickedSingle) {
+        onSelect(pickedSingle);
+        onClose();
+      }
+    }
   };
 
   return (
-    <>
-      <div className="modal-overlay" style={{ zIndex: 10050 }} onClick={onClose}>
-        <div className="picker-modal" onClick={e => e.stopPropagation()}>
+    <Dialog open onOpenChange={() => onClose()}>
+      <DialogContent className="max-w-4xl w-[92vw] h-[85vh] p-0 flex flex-col overflow-hidden gap-0 rounded-xl border border-border bg-background shadow-2xl">
+        <DialogHeader className="px-5 py-3.5 border-b border-border flex flex-row items-center justify-between space-y-0 shrink-0 pr-12">
+          <DialogTitle className="text-base font-bold text-foreground">Chọn ảnh từ thư viện</DialogTitle>
+          <div className="flex items-center gap-2 mr-6">
+            <button
+              className="inline-flex h-8 items-center justify-center gap-1 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer"
+              onClick={() => setShowUpload(!showUpload)}
+            >
+              <Upload size={13} /> Upload ảnh
+            </button>
+          </div>
+        </DialogHeader>
 
-          {/* Header */}
-          <div className="picker-header">
-            <h3>Thư viện ảnh</h3>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <button className="btn-primary-sm" onClick={() => setShowUpload(!showUpload)}>
-                <Upload size={13} /> Thêm file
+        {showUpload && (
+          <UploadPanel folderId={selectedFolder} onClose={() => setShowUpload(false)} />
+        )}
+
+        <div className="flex flex-1 min-h-0 overflow-hidden">
+          <div className="w-52 shrink-0 border-r border-border bg-muted/20 p-2 overflow-y-auto flex flex-col gap-1">
+            <div className="flex items-center justify-between px-2 py-1 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+              <span>THƯ MỤC</span>
+              <button
+                className="inline-flex size-5 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer"
+                title="Tạo thư mục gốc"
+                onClick={() => { setNewFolderParent(null); setShowNewFolder(true); }}
+              >
+                <FolderPlus size={13} />
               </button>
-              <button className="icon-btn" onClick={onClose}><X size={16} /></button>
             </div>
-          </div>
 
-          {/* Search bar */}
-          <div className="picker-search-bar">
-            <Search size={14} className="picker-search-icon" />
-            <input className="picker-search-input" placeholder="Tìm ảnh hoặc thư mục..."
-              value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
-            {search && <button className="picker-search-clear" onClick={() => setSearch('')}><X size={12} /></button>}
-          </div>
+            <button
+              className={`flex items-center gap-1.5 w-full rounded-md px-2 py-1 text-xs transition-colors cursor-pointer text-left select-none ${!selectedFolder ? 'bg-accent font-semibold text-foreground' : 'text-muted-foreground hover:bg-accent/60 hover:text-foreground'}`}
+              onClick={() => handleFolderSelect(null)}
+            >
+              <Home size={13} className="shrink-0 text-muted-foreground" />
+              <span className="truncate">Tất cả</span>
+            </button>
 
-          {/* Upload panel (collapsible) */}
-          {showUpload && (
-            <UploadPanel folderId={selectedFolder} onClose={() => setShowUpload(false)} />
-          )}
-
-          {/* Body */}
-          <div className="picker-body">
-            {/* Sidebar */}
-            {!isSearching && (
-              <div className="picker-sidebar">
-                <div className="picker-folder-header">
-                  THƯ MỤC
-                  <button className="picker-new-folder-btn" title="Tạo thư mục" onClick={() => {setNewFolderParent(null); setShowNewFolder(true);}}>
-                    <FolderPlus size={13} />
-                  </button>
-                </div>
-
-                {showNewFolder && (
-                  <div style={{ padding: '4px 8px' }}>
-                    <NewFolderInput
-                      parentId={newFolderParent ?? selectedFolder}
-                      folderMap={folderMap}
-                      onCreated={() => { setShowNewFolder(false); setNewFolderParent(null); }}
-                      onCancel={() => { setShowNewFolder(false); setNewFolderParent(null); }}
-                    />
-                  </div>
-                )}
-
-                {/* Tất cả */}
-                <div
-                  className={`picker-folder-node ${!selectedFolder ? 'active' : ''}`}
-                  style={{ paddingLeft: 8 }}
-                  onClick={() => handleFolderSelect(null)}
-                >
-                  <span style={{ width: 15 }} />
-                  <span className="picker-folder-btn"><Home size={12} /><span>Tất cả</span></span>
-                </div>
-                {folders.map(f => (
-                  <FolderNode key={f._id} folder={f} selectedId={selectedFolder}
-                    folderMap={folderMap} onSelect={handleFolderSelect} onCtxMenu={handleCtxMenu} />
-                ))}
-              </div>
+            {showNewFolder && !newFolderParent && (
+              <NewFolderInput
+                parentId={null}
+                folderMap={folderMap}
+                onCreated={() => setShowNewFolder(false)}
+                onCancel={() => setShowNewFolder(false)}
+              />
             )}
 
-            {/* Main */}
-            <div className="picker-main">
-              {/* Topbar */}
-              <div className="picker-topbar">
-                {isSearching ? (
-                  <span className="picker-search-label">
-                    {searchFolders.length > 0 && <>{searchFolders.length} thư mục · </>}{total} ảnh
-                  </span>
-                ) : (
-                  <div className="picker-breadcrumb">
-                    <button className="bc-link" onClick={() => handleFolderSelect(null)}><Home size={11} /></button>
-                    {crumbs.map((c, i) => (
-                      <span key={c._id} style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <ChevronRight size={10} style={{ color: 'var(--text-3)' }} />
-                        {i === crumbs.length - 1
-                          ? <span style={{ fontSize: 12, fontWeight: 500 }}>{c.name}</span>
-                          : <button className="bc-link" onClick={() => handleFolderSelect(c._id)}>{c.name}</button>}
-                      </span>
-                    ))}
-                  </div>
+            {folders.map(f => (
+              <div key={f._id}>
+                <FolderNode
+                  folder={f}
+                  selectedId={selectedFolder}
+                  folderMap={folderMap}
+                  onSelect={handleFolderSelect}
+                  onCtxMenu={(e, folder) => setCtxMenu({ x: e.clientX, y: e.clientY, folder })}
+                />
+                {showNewFolder && newFolderParent === f._id && (
+                  <NewFolderInput
+                    parentId={f._id}
+                    folderMap={folderMap}
+                    onCreated={() => setShowNewFolder(false)}
+                    onCancel={() => setShowNewFolder(false)}
+                  />
                 )}
-                <span className="media-count">{total} ảnh</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-background">
+            <div className="flex items-center justify-between gap-3 p-3 border-b border-border bg-muted/10 shrink-0">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <button className="hover:text-foreground transition-colors cursor-pointer" onClick={() => handleFolderSelect(null)}>
+                  <Home size={13} />
+                </button>
+                {crumbs.map((c, i) => (
+                  <span key={c._id} className="flex items-center gap-1.5">
+                    <ChevronRight size={11} className="text-muted-foreground/60" />
+                    <button className="hover:text-foreground transition-colors cursor-pointer font-medium text-foreground" onClick={() => handleFolderSelect(c._id)}>
+                      {c.name}
+                    </button>
+                  </span>
+                ))}
               </div>
 
-              {/* Search folder results */}
-              {isSearching && searchFolders.length > 0 && (
-                <div className="picker-folder-results">
-                  <p className="picker-result-label">Thư mục tìm thấy</p>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, padding: '0 12px 10px' }}>
-                    {searchFolders.map(f => (
-                      <button key={f._id} className="folder-chip" onClick={() => handleFolderSelect(f._id)}>
-                        <FolderOpen size={12} /> {f.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
+              <div className="relative flex items-center w-56">
+                <Search size={14} className="absolute left-2.5 text-muted-foreground pointer-events-none" />
+                <input
+                  className="h-8 w-full rounded-md border border-input bg-background pl-8 pr-7 text-xs text-foreground placeholder:text-muted-foreground outline-none focus:border-ring"
+                  value={search}
+                  onChange={e => { setSearch(e.target.value); setPage(1); }}
+                  placeholder="Tìm tên file..."
+                />
+                {search && (
+                  <button className="absolute right-2 text-muted-foreground hover:text-foreground cursor-pointer" onClick={() => setSearch('')}>
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
+            </div>
 
-              {/* Image grid */}
+            <div className="flex-1 overflow-y-auto p-4">
               {isLoading ? (
-                <div className="picker-grid">
-                  {Array.from({ length: 16 }).map((_, i) => <div key={i} className="picker-item skeleton" />)}
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+                  {Array.from({ length: 12 }).map((_, i) => (
+                    <div key={i} className="aspect-square rounded-lg bg-muted animate-pulse border border-border" />
+                  ))}
                 </div>
-              ) : mediaItems.length === 0 ? (
-                <div className="picker-empty">Chưa có ảnh{selectedFolder ? ' trong thư mục này' : ''}</div>
-              ) : (
-                <div className="picker-grid">
-                  {mediaItems.map(item => (
-                    <button key={item._id}
-                      className={`picker-item ${picked?._id === item._id ? 'selected' : ''}`}
-                      onClick={() => setPicked(prev => prev?._id === item._id ? null : item)}
-                      title={`${item.filename}\n${formatSize(item.size)}`}
+              ) : (browseData?.type === 'parent' && browseData?.subFolders?.length > 0 && mediaItems.length === 0) ? (
+                <div className="flex flex-wrap gap-2.5 p-2">
+                  {browseData.subFolders.map((sf) => (
+                    <button
+                      key={sf._id}
+                      className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-2 text-xs font-medium text-foreground hover:border-primary/50 hover:bg-accent transition-colors cursor-pointer"
+                      onClick={() => handleFolderSelect(sf._id)}
                     >
-                      <img src={item.url} alt={item.filename} loading="lazy" />
-                      {picked?._id === item._id && (
-                        <div className="picker-check"><Check size={13} /></div>
-                      )}
+                      <FolderOpen size={15} className="text-primary" />
+                      <span>{sf.name}</span>
                     </button>
                   ))}
                 </div>
-              )}
-
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="picker-pagination">
-                  <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="btn-ghost-sm">←</button>
-                  <span>Trang {page} / {totalPages}</span>
-                  <button disabled={page === totalPages} onClick={() => setPage(p => p + 1)} className="btn-ghost-sm">→</button>
+              ) : mediaItems.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground">
+                  <p className="text-xs font-medium">Không có ảnh nào trong thư mục này</p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-4">
+                  {browseData?.subFolders?.length > 0 && (
+                    <div className="flex flex-wrap gap-2 pb-3 border-b border-border">
+                      {browseData.subFolders.map((sf) => (
+                        <button
+                          key={sf._id}
+                          className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground hover:border-primary/50 hover:bg-accent transition-colors cursor-pointer"
+                          onClick={() => handleFolderSelect(sf._id)}
+                        >
+                          <FolderOpen size={14} className="text-primary" />
+                          <span>{sf.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3 align-content-start">
+                    {mediaItems.map(item => {
+                      const active = isSelected(item._id);
+                      return (
+                        <div
+                          key={item._id}
+                          className={`relative aspect-square rounded-lg border-2 overflow-hidden cursor-pointer transition-all bg-card ${active ? 'border-primary ring-2 ring-primary/30 shadow-md' : 'border-border hover:border-primary/50'}`}
+                          onClick={() => handleCardClick(item)}
+                          onDoubleClick={() => {
+                            if (!isMultiple) { onSelect(item); onClose(); }
+                          }}
+                        >
+                          <img src={item.url} alt={item.filename} loading="lazy" className="size-full object-cover" />
+                          {active && (
+                            <div className="absolute top-1.5 right-1.5 size-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-xs z-10 font-bold text-[10px]">
+                              {isMultiple ? (pickedMultiple.findIndex((x) => x._id === item._id) + 1) : <Check size={12} />}
+                            </div>
+                          )}
+                          <div className="absolute inset-x-0 bottom-0 bg-black/60 p-1 text-[10px] text-white truncate px-1.5 font-medium">
+                            {item.filename}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </div>
-          </div>
 
-          {/* Footer */}
-          <div className="picker-footer">
-            <span className="picker-selection-info">
-              {picked ? `✓ Đã chọn: ${picked.filename}` : 'Chưa chọn ảnh nào'}
-            </span>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button className="btn-ghost-sm" onClick={onClose}>Hủy</button>
-              <button className="btn-primary-sm" disabled={!picked} onClick={handleConfirm}>
-                Chọn ảnh
-              </button>
-            </div>
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between px-4 py-2 border-t border-border bg-muted/20 shrink-0 text-xs">
+                <button disabled={page <= 1} onClick={() => setPage(page - 1)} className="inline-flex h-7 items-center justify-center rounded px-2.5 font-medium text-muted-foreground hover:bg-accent disabled:opacity-50 cursor-pointer">← Trước</button>
+                <span className="text-muted-foreground">{page} / {totalPages}</span>
+                <button disabled={page >= totalPages} onClick={() => setPage(page + 1)} className="inline-flex h-7 items-center justify-center rounded px-2.5 font-medium text-muted-foreground hover:bg-accent disabled:opacity-50 cursor-pointer">Sau →</button>
+              </div>
+            )}
           </div>
         </div>
-      </div>
 
-      {/* Context Menu */}
+        <DialogFooter className="px-5 py-3 border-t border-border bg-muted/30 flex items-center justify-between shrink-0">
+          <div className="text-xs text-muted-foreground">
+            {isMultiple ? (
+              pickedMultiple.length > 0 ? <span className="font-semibold text-foreground">Đã chọn {pickedMultiple.length} ảnh</span> : 'Click chọn 1 hoặc nhiều ảnh'
+            ) : (
+              pickedSingle ? <span className="font-semibold text-foreground">Đã chọn: {pickedSingle.filename}</span> : 'Click chọn ảnh hoặc nhấp đôi để xác nhận'
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={onClose}>Hủy</Button>
+            <Button size="sm" disabled={isMultiple ? pickedMultiple.length === 0 : !pickedSingle} onClick={handleConfirmPick}>
+              {isMultiple ? `Chọn ${pickedMultiple.length} ảnh` : 'Chọn ảnh này'}
+            </Button>
+          </div>
+        </DialogFooter>
+      </DialogContent>
+
       {ctxMenu && (
         <FolderCtxMenu
-          x={ctxMenu.x} y={ctxMenu.y} folder={ctxMenu.folder} folderMap={folderMap}
+          x={ctxMenu.x}
+          y={ctxMenu.y}
+          folder={ctxMenu.folder}
+          folderMap={folderMap}
           onClose={() => setCtxMenu(null)}
-          onAddChild={handleAddChild}
-          onRename={handleStartRename}
+          onAddChild={(id) => { setNewFolderParent(id); setShowNewFolder(true); }}
+          onRename={(f) => { setRenameTarget(f); setRenameName(f.name); }}
           onDelete={(f) => setDeleteFolder(f)}
         />
       )}
 
-      {/* Rename dialog */}
-      <Dialog open={!!renameTarget} onOpenChange={(open) => { if (!open) setRenameTarget(null); }}>
-        <DialogContent className="sm:max-w-[360px]">
-          <DialogHeader>
-            <DialogTitle>Đổi tên “{renameTarget?.name}”</DialogTitle>
-          </DialogHeader>
-          <div className="py-2">
+      {renameTarget && (
+        <Dialog open onOpenChange={() => setRenameTarget(null)}>
+          <DialogContent className="max-w-xs p-5">
+            <DialogHeader>
+              <DialogTitle className="text-sm">Đổi tên thư mục</DialogTitle>
+            </DialogHeader>
             <Input
-              autoFocus
               value={renameName}
               onChange={e => setRenameName(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') handleRename(); if (e.key === 'Escape') setRenameTarget(null); }}
-              placeholder="Tên thư mục mới..."
+              placeholder="Tên mới..."
+              autoFocus
             />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setRenameTarget(null)}>Hủy</Button>
-            <Button onClick={handleRename}>Lưu</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <DialogFooter className="gap-2 sm:gap-0 mt-2">
+              <Button variant="ghost" size="sm" onClick={() => setRenameTarget(null)}>Hủy</Button>
+              <Button size="sm" onClick={handleConfirmRename}>Lưu</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
-      {/* Delete folder confirm */}
       {deleteFolder && (
         <ConfirmDialog
+          open
           title="Xóa thư mục"
-          message={`Xóa “${deleteFolder.name}”? Thư mục có ảnh sẽ không xóa được.`}
-          confirmText="Xóa" variant="danger"
-          onConfirm={handleDeleteFolder}
+          description={`Xóa thư mục "${deleteFolder.name}"?`}
+          onConfirm={handleConfirmDeleteFolder}
           onCancel={() => setDeleteFolder(null)}
         />
       )}
-    </>
+    </Dialog>
   );
 }

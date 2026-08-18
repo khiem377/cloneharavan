@@ -8,8 +8,29 @@ const { uploadMedia } = require('./media.service');
 const getPublicBanners = () =>
   Banner.find({ isVisible: true }).sort('position');
 
-const getAllBanners = () =>
-  Banner.find().sort('position').populate('mediaId', 'url folderId size');
+const getAllBanners = async (query = {}) => {
+  const filter = {};
+  if (query.isVisible !== undefined) filter.isVisible = query.isVisible === 'true';
+
+  const page = Math.max(1, parseInt(query.page) || 1);
+  const limit = Math.max(1, parseInt(query.limit) || 10);
+  const skip = (page - 1) * limit;
+
+  const [data, total] = await Promise.all([
+    Banner.find(filter).sort('position').skip(skip).limit(limit).populate('mediaId', 'url folderId size'),
+    Banner.countDocuments(filter),
+  ]);
+
+  return {
+    data,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit) || 1,
+    },
+  };
+};
 
 
 const createBanner = async (file, data) => {

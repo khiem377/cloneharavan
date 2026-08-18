@@ -7,6 +7,7 @@ import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { toast } from '@/providers/ToastProvider';
 import { authService } from '@/services/auth.service';
 import useAuthStore from '@/store/authStore';
+import { cn } from '@/lib/utils';
 
 const schema = z.object({
   email: z.string().email('Email không hợp lệ'),
@@ -39,48 +40,59 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="login-page">
-      <div className="login-card">
-        {/* Header */}
-        <div className="login-header">
-          {/* <div className="login-logo">A</div> */}
-          <div className="login-title">Admin Dashboard</div>
-          <p className="login-subtitle">Đăng nhập để tiếp tục</p>
+    <div className="flex min-h-svh items-center justify-center bg-background p-4 md:p-6">
+      <div className="w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-sm text-card-foreground">
+        <div className="flex flex-col gap-1 text-center mb-6">
+          <h1 className="text-xl font-bold tracking-tight text-foreground">Admin Dashboard</h1>
+          <p className="text-xs text-muted-foreground">Đăng nhập để tiếp tục</p>
         </div>
 
-        {/* Form */}
-        <form className="login-form" onSubmit={handleSubmit(onSubmit)} noValidate>
-          <div className="field">
-            <label className="field-label">Email</label>
+        <form className="flex flex-col gap-4" onSubmit={handleSubmit(onSubmit)} noValidate>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-medium text-foreground">Email</label>
             <input
               {...register('email')}
               type="email"
               placeholder="admin@example.com"
-              className={`field-input ${errors.email ? 'error' : ''}`}
+              className={cn(
+                'h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/20',
+                errors.email && 'border-destructive focus:border-destructive focus:ring-destructive/20'
+              )}
               autoComplete="email"
             />
-            {errors.email && <span className="field-error">{errors.email.message}</span>}
+            {errors.email && <span className="text-xs text-destructive">{errors.email.message}</span>}
           </div>
 
-          <div className="field">
-            <label className="field-label">Mật khẩu</label>
-            <div className="input-with-icon">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-medium text-foreground">Mật khẩu</label>
+            <div className="relative">
               <input
                 {...register('password')}
                 type={showPass ? 'text' : 'password'}
                 placeholder="••••••••"
-                className={`field-input ${errors.password ? 'error' : ''}`}
+                className={cn(
+                  'h-9 w-full rounded-md border border-input bg-background pl-3 pr-9 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/20',
+                  errors.password && 'border-destructive focus:border-destructive focus:ring-destructive/20'
+                )}
                 autoComplete="current-password"
               />
-              <button type="button" className="input-icon-btn" onClick={() => setShowPass(!showPass)}>
+              <button
+                type="button"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                onClick={() => setShowPass(!showPass)}
+              >
                 {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
-            {errors.password && <span className="field-error">{errors.password.message}</span>}
+            {errors.password && <span className="text-xs text-destructive">{errors.password.message}</span>}
           </div>
 
-          <button type="submit" className="btn-primary login-submit" disabled={isSubmitting}>
-            {isSubmitting ? <Loader2 size={18} className="spin" /> : null}
+          <button
+            type="submit"
+            className="mt-2 inline-flex h-9 items-center justify-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground shadow-xs hover:bg-primary/90 transition-colors disabled:pointer-events-none disabled:opacity-50"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : null}
             {isSubmitting ? 'Đang đăng nhập...' : 'Đăng nhập'}
           </button>
         </form>

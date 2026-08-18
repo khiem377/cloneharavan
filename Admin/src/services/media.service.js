@@ -9,6 +9,7 @@ export const mediaService = {
       onUploadProgress: (e) => onProgress?.(Math.round((e.loaded / e.total) * 100)),
     }),
   uploadUrl: (data) => api.post('/media/upload-url', data), // upload từ URL
+  move: (id, targetFolderId) => api.patch(`/media/${id}/move`, { targetFolderId }),
   deleteOne: (id) => api.delete(`/media/${id}`),
   deleteBulk: (ids) => api.delete('/media/bulk', { data: { ids } }),
 };
