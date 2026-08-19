@@ -1,14 +1,13 @@
 import { useState } from 'react';
-import { Check, Trash2, ExternalLink, Copy, Eye, FolderInput, Folder, Loader2 } from 'lucide-react';
+import { Check, Trash2, ExternalLink, Copy, Eye, FolderInput, Folder, Loader2 } from '@/components/ui/Icons';
 import { toast } from '@/providers/ToastProvider';
-import ImageLightbox from '@/components/ui/ImageLightbox';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { mediaService } from '@/services/media.service';
 
 function formatSize(bytes) {
   if (!bytes) return '';
   if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
@@ -61,9 +60,27 @@ function MoveModal({ item, folders, onClose, onMoved }) {
   );
 }
 
-function MediaCard({ item, selected, onToggle, onDelete, onPreview, onMove }) {
+/* ── Wave-in animation ── */
+const WAVE_CSS = `
+@keyframes media-wave-in {
+  from { opacity: 0; transform: translateY(6px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)   scale(1);    }
+}
+.media-wave-in { animation: media-wave-in 0.22s cubic-bezier(.22,.68,0,1.2) both; }
+`;
+let _waveInjected = false;
+function injectWave() {
+  if (_waveInjected) return;
+  _waveInjected = true;
+  const s = document.createElement('style');
+  s.textContent = WAVE_CSS;
+  document.head.appendChild(s);
+}
+
+function MediaCard({ item, selected, onToggle, onDelete, onPreview, onMove, animDelay = 0 }) {
   const [imgError, setImgError] = useState(false);
   const isUsed = item.usedBy?.length > 0;
+  injectWave();
 
   const copyUrl = (e) => {
     e.stopPropagation();
@@ -78,56 +95,62 @@ function MediaCard({ item, selected, onToggle, onDelete, onPreview, onMove }) {
 
   return (
     <div
-      className={`group relative flex flex-col rounded-xl border-2 transition-all bg-card overflow-hidden cursor-pointer select-none ${selected ? 'border-primary ring-2 ring-primary/30 shadow-md' : 'border-border hover:border-primary/50 shadow-2xs'}`}
+      className={`media-wave-in group relative flex flex-col rounded-lg border transition-all bg-card overflow-hidden cursor-pointer select-none ${selected ? 'border-primary ring-2 ring-primary/25 shadow-md' : 'border-border hover:border-primary/40 shadow-2xs hover:shadow-sm'}`}
+      style={{ animationDelay: `${animDelay}ms` }}
       onClick={() => onToggle(item._id)}
       draggable
       onDragStart={handleDragStart}
     >
-      <div className="relative aspect-square w-full overflow-hidden bg-muted">
+      {/* Thumbnail — fixed 80px height, compact */}
+      <div className="relative overflow-hidden bg-muted" style={{ height: 80 }}>
         {imgError ? (
-          <div className="flex size-full items-center justify-center text-xs text-muted-foreground">Lỗi ảnh</div>
+          <div className="flex size-full items-center justify-center text-[10px] text-muted-foreground">Lỗi</div>
         ) : (
-          <img src={item.url} alt={item.filename} loading="lazy" className="size-full object-cover" onError={() => setImgError(true)} />
+          <img src={item.url} alt={item.filename} loading="lazy" className="size-full object-cover transition-transform duration-200 group-hover:scale-105" onError={() => setImgError(true)} />
         )}
         {selected && (
-          <div className="absolute top-2 right-2 size-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-xs z-10">
-            <Check size={12} />
+          <div className="absolute top-1 right-1 size-4 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-xs z-10">
+            <Check size={10} />
           </div>
         )}
         {isUsed && (
-          <span className="absolute top-2 left-2 rounded bg-amber-500/90 text-amber-950 px-1.5 py-0.5 text-[9px] font-bold tracking-wider uppercase z-10" title={`Đang dùng bởi: ${[...new Set(item.usedBy.map(u => u.model))].join(', ')}`}>
+          <span className="absolute top-1 left-1 rounded bg-amber-500/85 text-amber-950 px-1 py-px text-[8px] font-bold tracking-wide uppercase z-10">
             Đang dùng
           </span>
         )}
+        {/* Hover actions overlay */}
+        <div className="absolute inset-x-0 bottom-0 flex items-center justify-around bg-black/60 py-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+          <button className="text-white/80 hover:text-white cursor-pointer p-0.5" title="Preview" onClick={(e) => { e.stopPropagation(); onPreview(item); }}>
+            <Eye size={11} />
+          </button>
+          <button className="text-white/80 hover:text-white cursor-pointer p-0.5" title="Di chuyển" onClick={(e) => { e.stopPropagation(); onMove(item); }}>
+            <FolderInput size={11} />
+          </button>
+          <button className="text-white/80 hover:text-white cursor-pointer p-0.5" title="Copy URL" onClick={copyUrl}>
+            <Copy size={11} />
+          </button>
+          <a href={item.url} target="_blank" rel="noreferrer" className="text-white/80 hover:text-white cursor-pointer p-0.5" title="Mở tab mới" onClick={e => e.stopPropagation()}>
+            <ExternalLink size={11} />
+          </a>
+          <button className="text-red-300 hover:text-red-200 cursor-pointer p-0.5" title="Xóa" onClick={(e) => { e.stopPropagation(); onDelete(item); }}>
+            <Trash2 size={11} />
+          </button>
+        </div>
       </div>
 
-      <div className="p-2.5 flex flex-col gap-0.5 border-t border-border">
-        <p className="font-semibold text-xs text-foreground truncate" title={item.filename}>{item.filename}</p>
-        <span className="text-[11px] text-muted-foreground">{formatSize(item.size)}</span>
-      </div>
-
-      <div className="flex items-center justify-around p-1.5 border-t border-border bg-muted/40 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button className="inline-flex size-6 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer" title="Preview" onClick={(e) => { e.stopPropagation(); onPreview(item); }}>
-          <Eye size={12} />
-        </button>
-        <button className="inline-flex size-6 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer" title="Di chuyển" onClick={(e) => { e.stopPropagation(); onMove(item); }}>
-          <FolderInput size={12} />
-        </button>
-        <button className="inline-flex size-6 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer" onClick={copyUrl} title="Copy URL"><Copy size={12} /></button>
-        <a href={item.url} target="_blank" rel="noreferrer" className="inline-flex size-6 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer" title="Mở tab mới" onClick={e => e.stopPropagation()}>
-          <ExternalLink size={12} />
-        </a>
-        <button className="inline-flex size-6 items-center justify-center rounded text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors cursor-pointer" title="Xóa" onClick={(e) => { e.stopPropagation(); onDelete(item); }}>
-          <Trash2 size={12} />
-        </button>
+      {/* Filename + size */}
+      <div className="px-1.5 py-1 flex flex-col gap-px">
+        <p className="text-[10px] font-medium text-foreground truncate leading-snug" title={item.filename}>{item.filename}</p>
+        <span className="text-[9px] text-muted-foreground">{formatSize(item.size)}</span>
       </div>
     </div>
   );
 }
 
-function MediaRow({ item, selected, onToggle, onDelete, onPreview, onMove }) {
+function MediaRow({ item, selected, onToggle, onDelete, onPreview, onMove, animDelay = 0 }) {
   const [imgError, setImgError] = useState(false);
   const isUsed = item.usedBy?.length > 0;
+  injectWave();
 
   const copyUrl = (e) => {
     e.stopPropagation();
@@ -142,12 +165,13 @@ function MediaRow({ item, selected, onToggle, onDelete, onPreview, onMove }) {
 
   return (
     <div
-      className={`flex items-center gap-3 p-2.5 rounded-lg border transition-colors cursor-pointer ${selected ? 'border-primary bg-primary/5 ring-1 ring-primary/30' : 'border-border bg-card hover:bg-muted/40'}`}
+      className={`media-wave-in flex items-center gap-3 px-2.5 py-1.5 rounded-lg border transition-colors cursor-pointer ${selected ? 'border-primary bg-primary/5 ring-1 ring-primary/20' : 'border-border bg-card hover:bg-muted/40'}`}
+      style={{ animationDelay: `${animDelay}ms` }}
       onClick={() => onToggle(item._id)}
       draggable
       onDragStart={handleDragStart}
     >
-      <div className="size-10 rounded-md border border-border overflow-hidden bg-muted shrink-0">
+      <div className="size-9 rounded-md border border-border overflow-hidden bg-muted shrink-0">
         {imgError
           ? <div className="flex size-full items-center justify-center text-xs text-muted-foreground">!</div>
           : <img src={item.url} alt={item.filename} loading="lazy" className="size-full object-cover" onError={() => setImgError(true)} />}
@@ -155,35 +179,45 @@ function MediaRow({ item, selected, onToggle, onDelete, onPreview, onMove }) {
       <div className="flex flex-1 items-center gap-2 min-w-0">
         <span className="font-medium text-xs text-foreground truncate">{item.filename}</span>
         {isUsed && (
-          <span className="rounded bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20 px-1.5 py-0.5 text-[10px] font-semibold shrink-0" title={`Dùng bởi: ${[...new Set(item.usedBy.map(u => u.model))].join(', ')}`}>
-            đang dùng
-          </span>
+          <span className="rounded bg-amber-500/10 text-amber-700 border border-amber-500/20 px-1.5 py-px text-[9px] font-semibold shrink-0">đang dùng</span>
         )}
       </div>
-      <span className="text-xs text-muted-foreground w-20 shrink-0">{formatSize(item.size)}</span>
-      <span className="text-xs text-muted-foreground w-24 shrink-0">{item.width ? `${item.width}×${item.height}` : '—'}</span>
-      <span className="text-xs text-muted-foreground w-24 shrink-0">{formatDate(item.createdAt)}</span>
-      <div className="flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
-        <button className="inline-flex size-7 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer" title="Preview" onClick={() => onPreview(item)}><Eye size={12} /></button>
-        <button className="inline-flex size-7 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer" title="Move" onClick={() => onMove(item)}><FolderInput size={12} /></button>
-        <button className="inline-flex size-7 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer" onClick={copyUrl} title="Copy"><Copy size={12} /></button>
-        <a href={item.url} target="_blank" rel="noreferrer" className="inline-flex size-7 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer" title="Mở"><ExternalLink size={12} /></a>
-        <button className="inline-flex size-7 items-center justify-center rounded text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors cursor-pointer" title="Xóa" onClick={() => onDelete(item)}><Trash2 size={12} /></button>
+      <span className="text-[10px] text-muted-foreground w-16 shrink-0">{formatSize(item.size)}</span>
+      <span className="text-[10px] text-muted-foreground w-20 shrink-0 hidden lg:block">{item.width ? `${item.width}×${item.height}` : '—'}</span>
+      <span className="text-[10px] text-muted-foreground w-20 shrink-0 hidden lg:block">{formatDate(item.createdAt)}</span>
+      <div className="flex items-center gap-0.5 shrink-0" onClick={e => e.stopPropagation()}>
+        <button className="inline-flex size-6 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer" title="Preview" onClick={() => onPreview(item)}><Eye size={11} /></button>
+        <button className="inline-flex size-6 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer" title="Move" onClick={() => onMove(item)}><FolderInput size={11} /></button>
+        <button className="inline-flex size-6 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer" onClick={copyUrl} title="Copy"><Copy size={11} /></button>
+        <a href={item.url} target="_blank" rel="noreferrer" className="inline-flex size-6 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer" title="Mở"><ExternalLink size={11} /></a>
+        <button className="inline-flex size-6 items-center justify-center rounded text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors cursor-pointer" title="Xóa" onClick={() => onDelete(item)}><Trash2 size={11} /></button>
       </div>
     </div>
   );
 }
 
-export default function MediaGrid({ items = [], selectedIds, onToggle, onDeleteConfirmed, onRefresh, isLoading, viewMode = 'grid', allFolders = [] }) {
-  const [preview, setPreview] = useState(null);
+/**
+ * MediaGrid — onPreview is called with the full item object to show the side panel.
+ * ImageLightbox removed: preview is handled by the parent page's PreviewPanel.
+ */
+export default function MediaGrid({
+  items = [], selectedIds, onToggle, onPreview,
+  onDeleteConfirmed, onRefresh, isLoading, viewMode = 'grid', allFolders = [],
+  columns = 6,
+}) {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [moveTarget, setMoveTarget] = useState(null);
 
+  // Internal preview handler: bubble up to parent if prop provided, else noop
+  const handlePreview = (item) => {
+    if (onPreview) onPreview(item);
+  };
+
   if (isLoading) {
     return (
-      <div className="flex-1 p-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-        {Array.from({ length: 12 }).map((_, i) => (
-          <div key={i} className="aspect-square rounded-xl bg-muted animate-pulse border border-border" />
+      <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fill, 120px)' }}>
+        {Array.from({ length: 18 }).map((_, i) => (
+          <div key={i} className="rounded-lg bg-muted animate-pulse border border-border" style={{ height: 100 }} />
         ))}
       </div>
     );
@@ -191,7 +225,7 @@ export default function MediaGrid({ items = [], selectedIds, onToggle, onDeleteC
 
   if (!items.length) {
     return (
-      <div className="flex flex-col items-center justify-center gap-2 py-20 text-center text-muted-foreground flex-1">
+      <div className="flex flex-col items-center justify-center gap-2 py-20 text-center text-muted-foreground">
         <p className="font-semibold text-sm text-foreground">Chưa có ảnh nào</p>
         <span className="text-xs">Upload ảnh để bắt đầu</span>
       </div>
@@ -201,30 +235,32 @@ export default function MediaGrid({ items = [], selectedIds, onToggle, onDeleteC
   return (
     <>
       {viewMode === 'grid' ? (
-        <div className="flex-1 overflow-y-auto p-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 align-content-start">
-          {items.map((item) => (
+        <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fill, 120px)' }}>
+          {items.map((item, idx) => (
             <MediaCard key={item._id} item={item} selected={selectedIds.has(item._id)}
-              onToggle={onToggle} onPreview={setPreview} onDelete={setDeleteTarget} onMove={setMoveTarget} />
+              onToggle={onToggle} onPreview={handlePreview} onDelete={setDeleteTarget} onMove={setMoveTarget}
+              animDelay={Math.min(idx * 15, 300)}
+            />
           ))}
         </div>
       ) : (
-        <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-2">
-          <div className="flex items-center gap-3 px-2 py-1 text-xs font-semibold text-muted-foreground uppercase border-b border-border mb-1">
-            <span className="w-10 shrink-0" />
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-3 px-2.5 py-1 text-[10px] font-semibold text-muted-foreground uppercase border-b border-border mb-1">
+            <span className="w-9 shrink-0" />
             <span className="flex-1">Tên file</span>
-            <span className="w-20 shrink-0">Kích thước</span>
-            <span className="w-24 shrink-0">Độ phân giải</span>
-            <span className="w-24 shrink-0">Ngày upload</span>
-            <span className="w-36 shrink-0 text-right">Thao tác</span>
+            <span className="w-16 shrink-0">Kích thước</span>
+            <span className="w-20 shrink-0 hidden lg:block">Phân giải</span>
+            <span className="w-20 shrink-0 hidden lg:block">Ngày</span>
+            <span className="w-32 shrink-0 text-right">Thao tác</span>
           </div>
-          {items.map((item) => (
+          {items.map((item, idx) => (
             <MediaRow key={item._id} item={item} selected={selectedIds.has(item._id)}
-              onToggle={onToggle} onPreview={setPreview} onDelete={setDeleteTarget} onMove={setMoveTarget} />
+              onToggle={onToggle} onPreview={handlePreview} onDelete={setDeleteTarget} onMove={setMoveTarget}
+              animDelay={Math.min(idx * 18, 220)}
+            />
           ))}
         </div>
       )}
-
-      {preview && <ImageLightbox image={preview} onClose={() => setPreview(null)} />}
 
       {deleteTarget && (
         <ConfirmDialog

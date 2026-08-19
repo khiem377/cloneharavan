@@ -21,10 +21,13 @@ const productSchema = new mongoose.Schema(
       uppercase: true,
       trim: true,
     },
-    category: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Category',
+    categories: {
+      type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Category' }],
       required: [true, 'Danh mục sản phẩm là bắt buộc'],
+      validate: {
+        validator: (v) => Array.isArray(v) && v.length > 0,
+        message: 'Sản phẩm phải có ít nhất 1 danh mục',
+      },
     },
     brand: {
       type: mongoose.Schema.Types.ObjectId,
@@ -87,6 +90,18 @@ const productSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    options: [
+      {
+        name: { type: String, required: [true, 'Tên thuộc tính là bắt buộc'] },
+        type: { type: String, enum: ['color', 'text'], default: 'text' },
+        values: [
+          {
+            value: { type: String, required: [true, 'Giá trị thuộc tính là bắt buộc'] },
+            colorCode: { type: String, default: '' },
+          },
+        ],
+      },
+    ],
   },
   { timestamps: true }
 );

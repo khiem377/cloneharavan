@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight, Loader2, Copy, Check, TicketPercent } from 'lucide-react';
+import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight, Loader2, Copy, Check, TicketPercent } from '@/components/ui/Icons';
 import { toast } from '@/providers/ToastProvider';
 import {
   useCoupons,

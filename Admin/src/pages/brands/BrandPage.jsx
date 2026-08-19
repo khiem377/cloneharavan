@@ -1,13 +1,9 @@
 import React, { useState } from 'react';
 import {
-  Plus,
-  Pencil,
-  Trash2,
-  ToggleLeft,
-  ToggleRight,
-  Loader2,
-  Globe,
-} from 'lucide-react';
+  Plus, Pencil, Trash2,
+  ToggleLeft, ToggleRight,
+  Loader2, Globe,
+} from '@/components/ui/Icons';
 import { toast } from '@/providers/ToastProvider';
 import {
   useBrands,

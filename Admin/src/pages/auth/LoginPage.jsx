@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Loader2 } from '@/components/ui/Icons';
 import { toast } from '@/providers/ToastProvider';
 import { authService } from '@/services/auth.service';
 import useAuthStore from '@/store/authStore';
@@ -67,6 +67,7 @@ export default function LoginPage() {
             <label className="text-xs font-medium text-foreground">Mật khẩu</label>
             <div className="relative">
               <input
+
                 {...register('password')}
                 type={showPass ? 'text' : 'password'}
                 placeholder="••••••••"

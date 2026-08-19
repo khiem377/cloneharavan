@@ -3,7 +3,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import {
   Search, X, Check, ChevronRight, Home, FolderOpen,
   FolderPlus, Upload, Link, Loader2, Pencil, Trash2,
-} from 'lucide-react';
+  Copy,
+} from '@/components/ui/Icons';
 import { useMedia, useMediaSearch } from '@/hooks/useMedia';
 import { useFolders, FOLDERS_KEY } from '@/hooks/useFolders';
 import { mediaService } from '@/services/media.service';
@@ -11,6 +12,7 @@ import { folderService } from '@/services/folder.service';
 import { useDropzone } from 'react-dropzone';
 import { toast } from '@/providers/ToastProvider';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import DataTablePagination from '@/components/ui/DataTablePagination';
 import {
   Dialog,
   DialogContent,
@@ -263,6 +265,7 @@ export default function MediaPickerModal({ onSelect, onClose, isMultiple = false
   const [renameTarget, setRenameTarget] = useState(null);
   const [renameName, setRenameName] = useState('');
   const [deleteFolder, setDeleteFolder] = useState(null);
+  const [pickerPreview, setPickerPreview] = useState(null);
 
   const { data: folders = [] } = useFolders();
   const folderMap = buildFolderMap(folders);
@@ -290,9 +293,11 @@ export default function MediaPickerModal({ onSelect, onClose, isMultiple = false
     setSelectedFolder(id);
     setPage(1);
     setSearch('');
+    setPickerPreview(null);
   };
 
   const handleCardClick = (item) => {
+    setPickerPreview(item);
     if (isMultiple) {
       setPickedMultiple((prev) => {
         const exists = prev.some((x) => x._id === item._id);
@@ -367,7 +372,7 @@ export default function MediaPickerModal({ onSelect, onClose, isMultiple = false
           <UploadPanel folderId={selectedFolder} onClose={() => setShowUpload(false)} />
         )}
 
-        <div className="flex flex-1 min-h-0 overflow-hidden">
+        <div className="flex flex-1 min-h-0 overflow-hidden" style={{ minWidth: 0 }}>
           <div className="w-52 shrink-0 border-r border-border bg-muted/20 p-2 overflow-y-auto flex flex-col gap-1">
             <div className="flex items-center justify-between px-2 py-1 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
               <span>THƯ MỤC</span>
@@ -418,6 +423,7 @@ export default function MediaPickerModal({ onSelect, onClose, isMultiple = false
             ))}
           </div>
 
+          <div className="flex flex-1 min-w-0 overflow-hidden">
           <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-background">
             <div className="flex items-center justify-between gap-3 p-3 border-b border-border bg-muted/10 shrink-0">
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -490,7 +496,7 @@ export default function MediaPickerModal({ onSelect, onClose, isMultiple = false
                       ))}
                     </div>
                   )}
-                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3 align-content-start">
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3 content-start">
                     {mediaItems.map(item => {
                       const active = isSelected(item._id);
                       return (
@@ -519,13 +525,68 @@ export default function MediaPickerModal({ onSelect, onClose, isMultiple = false
               )}
             </div>
 
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between px-4 py-2 border-t border-border bg-muted/20 shrink-0 text-xs">
-                <button disabled={page <= 1} onClick={() => setPage(page - 1)} className="inline-flex h-7 items-center justify-center rounded px-2.5 font-medium text-muted-foreground hover:bg-accent disabled:opacity-50 cursor-pointer">← Trước</button>
-                <span className="text-muted-foreground">{page} / {totalPages}</span>
-                <button disabled={page >= totalPages} onClick={() => setPage(page + 1)} className="inline-flex h-7 items-center justify-center rounded px-2.5 font-medium text-muted-foreground hover:bg-accent disabled:opacity-50 cursor-pointer">Sau →</button>
+            <div className="px-3 pb-3 shrink-0">
+              <DataTablePagination
+                page={page}
+                pageSize={20}
+                total={total}
+                totalPages={totalPages}
+                onPageChange={setPage}
+                showPageSize={false}
+                showJumpToPage={totalPages > 5}
+              />
+            </div>
+          </div>
+
+          {/* Preview panel inside modal */}
+          {pickerPreview && (
+            <div className="w-56 shrink-0 border-l border-border bg-muted/10 flex flex-col overflow-hidden">
+              <div className="flex items-center justify-between px-3 py-2 border-b border-border shrink-0">
+                <span className="text-[11px] font-semibold text-foreground">Preview</span>
+                <button onClick={() => setPickerPreview(null)} className="size-5 flex items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer">
+                  <X size={11} />
+                </button>
               </div>
-            )}
+              <div
+                className="flex items-center justify-center bg-[repeating-conic-gradient(#80808015_0%_25%,transparent_0%_50%)] bg-[length:12px_12px] border-b border-border shrink-0"
+                style={{ height: 150 }}
+              >
+                {pickerPreview.mimetype?.startsWith('image/') ? (
+                  <img src={pickerPreview.url} alt={pickerPreview.filename} className="max-h-[146px] max-w-full object-contain" />
+                ) : (
+                  <span className="text-3xl font-extrabold text-muted-foreground/20">
+                    {pickerPreview.filename?.split('.').pop()?.toUpperCase()}
+                  </span>
+                )}
+              </div>
+              <div className="flex-1 overflow-y-auto px-3 py-3 flex flex-col gap-3">
+                <p className="text-[11px] font-semibold text-foreground break-all leading-relaxed">{pickerPreview.filename}</p>
+                <div className="flex flex-col gap-0 rounded-md border border-border overflow-hidden">
+                  {[
+                    ['Loại', pickerPreview.mimetype || '—'],
+                    ['Size', pickerPreview.size ? (pickerPreview.size < 1024*1024 ? (pickerPreview.size/1024).toFixed(0)+' KB' : (pickerPreview.size/1024/1024).toFixed(1)+' MB') : '—'],
+                    ['Ngày', pickerPreview.createdAt ? new Date(pickerPreview.createdAt).toLocaleDateString('vi-VN') : '—'],
+                  ].map(([label, value]) => (
+                    <div key={label} className="flex items-start gap-2 px-2.5 py-1.5 border-b border-border last:border-0">
+                      <span className="text-[10px] text-muted-foreground font-medium w-10 shrink-0">{label}</span>
+                      <span className="text-[10px] text-foreground break-all flex-1">{value}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <div className="rounded-md bg-muted/60 border border-border px-2 py-1.5">
+                    <p className="text-[9px] text-muted-foreground break-all leading-relaxed font-mono">{pickerPreview.url}</p>
+                  </div>
+                  <button
+                    onClick={() => { navigator.clipboard.writeText(pickerPreview.url); toast.success('Đã copy URL'); }}
+                    className="inline-flex h-7 w-full items-center justify-center gap-1 rounded-md border border-border text-[10px] font-medium text-foreground hover:bg-accent transition-colors cursor-pointer"
+                  >
+                    <Copy size={11} /> Copy URL
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
           </div>
         </div>
 

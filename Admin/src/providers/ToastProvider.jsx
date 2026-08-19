@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
+import { CheckCircle2Icon, AlertCircleIcon, InfoIcon, XIcon } from '@/components/ui/Icons';
 
 let toastListener = null;
 
@@ -48,9 +48,9 @@ function ToastItem({ toast, onClose }) {
   };
 
   const icons = {
-    success: <CheckCircle2 size={16} className="shrink-0 text-emerald-600 dark:text-emerald-400" />,
-    error:   <AlertCircle size={16} className="shrink-0 text-destructive" />,
-    info:    <Info size={16} className="shrink-0 text-blue-600 dark:text-blue-400" />,
+    success: <CheckCircle2Icon size={16} className="shrink-0 text-emerald-600 dark:text-emerald-400" />,
+    error:   <AlertCircleIcon size={16} className="shrink-0 text-destructive" />,
+    info:    <InfoIcon size={16} className="shrink-0 text-blue-600 dark:text-blue-400" />,
   };
 
   return (
@@ -58,7 +58,7 @@ function ToastItem({ toast, onClose }) {
       {icons[toast.type]}
       <span className="flex-1 leading-normal">{toast.message}</span>
       <button className="shrink-0 text-muted-foreground hover:text-foreground transition-colors cursor-pointer" onClick={onClose}>
-        <X size={13} />
+        <XIcon size={13} />
       </button>
     </div>
   );

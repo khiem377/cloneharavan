@@ -66,6 +66,15 @@ const getProductsToCompare = async (req, res, next) => {
   }
 };
 
+const getProductDeals = async (req, res, next) => {
+  try {
+    const result = await productService.getProductDeals(req.params.id);
+    res.status(200).json({ status: 'success', data: result });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const updateProduct = async (req, res, next) => {
   try {
     const validatedData = updateProductSchema.parse(req.body);
@@ -125,6 +134,7 @@ module.exports = {
   getProductsAdmin,
   getProductById,
   getProductsToCompare,
+  getProductDeals,
   updateProduct,
   toggleProductStatus,
   deleteProduct,

@@ -10,7 +10,7 @@ import { CSS } from '@dnd-kit/utilities';
 import {
   ChevronRight, ChevronDown, Folder, FolderOpen,
   Plus, FolderPlus, Pencil, Trash2,
-} from 'lucide-react';
+} from '@/components/ui/Icons';
 import { useFolders, FOLDERS_KEY } from '@/hooks/useFolders';
 import { folderService } from '@/services/folder.service';
 import { mediaService } from '@/services/media.service';

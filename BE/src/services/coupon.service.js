@@ -1,7 +1,6 @@
 const Coupon = require('../models/coupon.model');
 const { AppError } = require('../utils/AppError');
 
-// Tính số tiền giảm dựa trên coupon và tổng đơn hàng
 const calcDiscount = (coupon, orderTotal) => {
   if (coupon.type === 'percent') {
     const discount = Math.round((orderTotal * coupon.value) / 100);
@@ -61,8 +60,7 @@ const toggleCouponStatus = async (id, isActive) => {
   return coupon;
 };
 
-// Validate mã khi user nhập ở checkout — trả về số tiền giảm
-const validateCoupon = async (code, orderTotal, userId) => {
+const validateCoupon = async (code, orderTotal) => {
   const coupon = await Coupon.findOne({ code: code.toUpperCase() });
 
   if (!coupon) throw new AppError('Mã giảm giá không tồn tại', 404);
@@ -99,9 +97,29 @@ const validateCoupon = async (code, orderTotal, userId) => {
   };
 };
 
-// Đánh dấu đã dùng sau khi đặt hàng thành công
-const applyCoupon = async (couponId) => {
-  await Coupon.findByIdAndUpdate(couponId, { $inc: { usedCount: 1 } });
+const applyCoupon = async (couponId, orderTotal) => {
+  const now = new Date();
+
+  const coupon = await Coupon.findOneAndUpdate(
+    {
+      _id: couponId,
+      isActive: true,
+      startDate: { $lte: now },
+      endDate: { $gte: now },
+      $or: [
+        { usageLimit: null },
+        { $expr: { $lt: ['$usedCount', '$usageLimit'] } },
+      ],
+    },
+    { $inc: { usedCount: 1 } },
+    { new: true }
+  );
+
+  if (!coupon) {
+    throw new AppError('Coupon đã hết lượt hoặc không còn hiệu lực', 400);
+  }
+
+  return calcDiscount(coupon, orderTotal);
 };
 
 // Xóa nhiều mã cùng lúc

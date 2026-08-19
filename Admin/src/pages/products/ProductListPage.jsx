@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight, Loader2, LayoutList, LayoutGrid, Eye } from 'lucide-react';
+import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight, Loader2, LayoutList, LayoutGrid, Eye, Layers } from '@/components/ui/Icons';
 import { toast } from '@/providers/ToastProvider';
 import { useProducts, useToggleProductStatus, useDeleteProduct, useDeleteBulkProducts } from '@/hooks/useProducts';
 import { useCategories } from '@/hooks/useCategories';
-import { useBrands } from '@/hooks/useBrands';
+import { useBrands, useAllBrands } from '@/hooks/useBrands';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import DataTablePagination from '@/components/ui/DataTablePagination';
 
@@ -39,7 +39,7 @@ export default function ProductListPage() {
   const pagination = data?.pagination;
 
   const { data: categories = [] } = useCategories({ tree: 'false' });
-  const { data: brands = [] } = useBrands({});
+  const { data: brands = [] } = useAllBrands();
   const toggleMut = useToggleProductStatus();
   const deleteMut = useDeleteProduct();
   const bulkDeleteMut = useDeleteBulkProducts();
@@ -213,6 +213,7 @@ export default function ProductListPage() {
                     <div className="flex items-center gap-1">
                       <button className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer" title="Xem" onClick={() => window.open(`/products/${p.slug}`, '_blank')}><Eye size={15} /></button>
                       <button className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer" title="Sửa" onClick={() => navigate(`/products/${p._id}/edit`)}><Pencil size={15} /></button>
+                      <button className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-violet-500/10 hover:text-violet-500 transition-colors cursor-pointer" title="Quản lý biến thể" onClick={() => navigate(`/products/${p._id}/variants`)}><Layers size={15} /></button>
                       <button className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer" title={p.isActive ? 'Ẩn' : 'Hiện'} onClick={() => handleToggle(p)}>
                         {p.isActive ? <ToggleRight size={15} className="text-emerald-600 dark:text-emerald-400" /> : <ToggleLeft size={15} />}
                       </button>
@@ -240,6 +241,7 @@ export default function ProductListPage() {
               </div>
               <div className="flex items-center justify-end gap-1 p-2 border-t border-border bg-muted/30">
                 <button className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer" title="Sửa" onClick={() => navigate(`/products/${p._id}/edit`)}><Pencil size={14} /></button>
+                <button className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-violet-500/10 hover:text-violet-500 transition-colors cursor-pointer" title="Biến thể" onClick={() => navigate(`/products/${p._id}/variants`)}><Layers size={14} /></button>
                 <button className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer" title={p.isActive ? 'Ẩn' : 'Hiện'} onClick={() => handleToggle(p)}>
                   {p.isActive ? <ToggleRight size={14} className="text-emerald-600 dark:text-emerald-400" /> : <ToggleLeft size={14} />}
                 </button>

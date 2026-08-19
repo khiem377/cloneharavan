@@ -1,6 +1,6 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { Bell, X, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Bell, X, Eye, EyeOff, Loader2 } from '@/components/ui/Icons';
 import AppSidebar from './Sidebar';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { Separator } from '@/components/ui/separator';

@@ -1,6 +1,5 @@
 const mongoose = require('mongoose');
 
-// Chương trình khuyến mãi tự động (mua X tặng Y, mua X trả tiền Y, giảm theo số lượng)
 const promotionSchema = new mongoose.Schema(
   {
     name: {
@@ -13,31 +12,21 @@ const promotionSchema = new mongoose.Schema(
       default: '',
       trim: true,
     },
-    // buy_x_get_y: mua X sản phẩm tặng Y sản phẩm miễn phí (cùng sản phẩm)
-    // buy_x_pay_y: mua X sản phẩm chỉ tính tiền Y sản phẩm
-    // quantity_discount: giảm % hoặc số tiền cố định khi mua đủ số lượng
     type: {
       type: String,
-      enum: ['buy_x_get_y', 'buy_x_pay_y', 'quantity_discount'],
+      enum: ['percent_discount', 'fixed_discount', 'buy_x_pay_y', 'quantity_discount'],
       required: [true, 'Loại chương trình là bắt buộc'],
     },
-    // Số lượng cần mua để kích hoạt (VD: mua 3)
     triggerQty: {
       type: Number,
-      required: true,
-      min: 1,
-    },
-    // Số lượng được tặng miễn phí (dùng cho buy_x_get_y)
-    rewardQty: {
-      type: Number,
       default: null,
+      min: [1, 'Số lượng kích hoạt phải lớn hơn 0'],
     },
-    // Số lượng phải trả tiền (dùng cho buy_x_pay_y, VD: mua 3 trả 2 thì payQty = 2)
     payQty: {
       type: Number,
       default: null,
+      min: [1, 'Số lượng phải trả phải lớn hơn 0'],
     },
-    // Giảm giá áp dụng khi type = quantity_discount
     discountType: {
       type: String,
       enum: ['percent', 'fixed'],
@@ -46,8 +35,13 @@ const promotionSchema = new mongoose.Schema(
     discountValue: {
       type: Number,
       default: null,
+      min: [0, 'Giá trị giảm không được âm'],
     },
-    // Phạm vi áp dụng
+    maxDiscountValue: {
+      type: Number,
+      default: null,
+      min: [0, 'Giới hạn giảm giá không được âm'],
+    },
     scope: {
       type: {
         type: String,
@@ -57,13 +51,27 @@ const promotionSchema = new mongoose.Schema(
       productIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
       categoryIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Category' }],
     },
+    minOrderValue: {
+      type: Number,
+      default: null,
+      min: [0, 'Giá trị đơn hàng tối thiểu không được âm'],
+    },
+    usageLimit: {
+      type: Number,
+      default: null,
+      min: [1, 'Giới hạn sử dụng phải lớn hơn 0'],
+    },
+    usedCount: {
+      type: Number,
+      default: 0,
+    },
     startDate: {
       type: Date,
-      required: true,
+      required: [true, 'Ngày bắt đầu là bắt buộc'],
     },
     endDate: {
       type: Date,
-      required: true,
+      required: [true, 'Ngày kết thúc là bắt buộc'],
     },
     isActive: {
       type: Boolean,
@@ -72,6 +80,8 @@ const promotionSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+promotionSchema.index({ isActive: 1, startDate: 1, endDate: 1 });
 
 const Promotion = mongoose.model('Promotion', promotionSchema);
 module.exports = Promotion;

@@ -1,11 +1,27 @@
 import { useState } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import {
-  LayoutDashboard, Image, ImagePlay, Tag, ShoppingBag,
-  Settings, LogOut, ChevronRight, List, Plus,
-  Download, FolderTree, Layers, ChevronsUpDown,
-  KeyRound, User, Sparkles, TicketPercent, Gift, Percent,
-} from 'lucide-react';
+  DashboardIcon,
+  MediaIcon,
+  BannersIcon,
+  ProductsIcon,
+  SettingsIcon,
+  LogOutIcon,
+  ChevronRightIcon,
+  ListIcon,
+  PlusIcon,
+  ImportIcon,
+  CategoriesIcon,
+  BrandsIcon,
+  ChevronsUpDownIcon,
+  KeyIcon,
+  UserIcon,
+  SparklesIcon,
+  CouponsIcon,
+  GiftIcon,
+  DiscountIcon,
+  Layers as VariantsIcon,
+} from '@/components/ui/Icons';
 import useAuthStore from '@/store/authStore';
 import { authService } from '@/services/auth.service';
 import { toast } from '@/providers/ToastProvider';
@@ -33,23 +49,24 @@ const NAV_GROUPS = [
   {
     label: 'Quản lý',
     items: [
-      { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-      { to: '/media',     icon: Image,           label: 'Media'     },
-      { to: '/banners',   icon: ImagePlay,       label: 'Banners'   },
+      { to: '/dashboard', icon: DashboardIcon, label: 'Dashboard' },
+      { to: '/media', icon: MediaIcon, label: 'Media' },
+      { to: '/banners', icon: BannersIcon, label: 'Banners' },
     ],
   },
   {
     label: 'Sản phẩm',
     items: [
       {
-        icon: ShoppingBag,
+        icon: ProductsIcon,
         label: 'Sản phẩm',
         children: [
-          { to: '/products',        icon: List,       label: 'Danh sách'     },
-          { to: '/products/new',    icon: Plus,       label: 'Tạo mới'       },
-          { to: '/products/import', icon: Download,   label: 'Import / Export'},
-          { to: '/categories',      icon: FolderTree, label: 'Danh mục'      },
-          { to: '/brands',          icon: Layers,     label: 'Thương hiệu'   },
+          { to: '/products', icon: ListIcon, label: 'Danh sách' },
+          { to: '/products/new', icon: PlusIcon, label: 'Tạo mới' },
+          { to: '/products/import', icon: ImportIcon, label: 'Import / Export' },
+          { to: '/categories', icon: CategoriesIcon, label: 'Danh mục' },
+          { to: '/brands', icon: BrandsIcon, label: 'Thương hiệu' },
+          { to: '/products?view=variants', icon: VariantsIcon, label: 'Biến thể' },
         ],
       },
     ],
@@ -58,12 +75,12 @@ const NAV_GROUPS = [
     label: 'Khuyến mãi',
     items: [
       {
-        icon: TicketPercent,
+        icon: CouponsIcon,
         label: 'Khuyến mãi',
         children: [
-          { to: '/promotions/coupons',   icon: TicketPercent, label: 'Mã giảm giá'           },
-          { to: '/promotions/discounts', icon: Percent,       label: 'Chương trình khuyến mãi' },
-          { to: '/promotions/gifts',     icon: Gift,          label: 'Chương trình tặng kèm'  },
+          { to: '/promotions/coupons', icon: CouponsIcon, label: 'Mã giảm giá' },
+          { to: '/promotions/discounts', icon: DiscountIcon, label: 'Chương trình khuyến mãi' },
+          { to: '/promotions/gifts', icon: GiftIcon, label: 'Chương trình tặng kèm' },
         ],
       },
     ],
@@ -71,7 +88,7 @@ const NAV_GROUPS = [
   {
     label: 'Hệ thống',
     items: [
-      { to: '/settings', icon: Settings, label: 'Cài đặt' },
+      { to: '/settings', icon: SettingsIcon, label: 'Cài đặt' },
     ],
   },
 ];
@@ -113,8 +130,9 @@ function NavGroupItem({ item }) {
         >
           <Icon className="size-4 shrink-0" />
           <span className="flex-1 text-left">{item.label}</span>
-          <ChevronRight
-            className={cn('size-4 text-sidebar-foreground/50 transition-transform duration-200', open && 'rotate-90')}
+          <ChevronRightIcon
+            size={15}
+            className={cn('text-sidebar-foreground/50 transition-transform duration-200', open && 'rotate-90')}
           />
         </SidebarMenuButton>
 
@@ -166,9 +184,10 @@ function UserFooterMenu({ onProfile, onChangePass }) {
   const user = useAuthStore(s => s.user);
   const [open, setOpen] = useState(false);
   const initials = (user?.fullName?.[0] || user?.email?.[0] || 'A').toUpperCase();
+  // icons used inline below come from Icons.jsx via named imports above
 
   const handleLogout = async () => {
-    try { await authService.logout(); } catch {}
+    try { await authService.logout(); } catch { }
     clearAuth();
     navigate('/login');
     toast.info('Đã đăng xuất');
@@ -189,7 +208,7 @@ function UserFooterMenu({ onProfile, onChangePass }) {
             <span className="truncate text-[10px] text-sidebar-foreground/60">{user?.email || ''}</span>
           </div>
         </div>
-        <ChevronsUpDown className="size-3.5 shrink-0 text-sidebar-foreground/40" />
+        <ChevronsUpDownIcon size={14} className="shrink-0 text-sidebar-foreground/40" />
       </SidebarMenuButton>
 
       {open && (
@@ -210,14 +229,14 @@ function UserFooterMenu({ onProfile, onChangePass }) {
               onClick={() => { setOpen(false); onProfile(); }}
               className="flex w-full items-center gap-2 px-3 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
             >
-              <User className="size-4 text-muted-foreground" />
+              <UserIcon size={15} className="text-muted-foreground shrink-0" />
               Thông tin tài khoản
             </button>
             <button
               onClick={() => { setOpen(false); onChangePass(); }}
               className="flex w-full items-center gap-2 px-3 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
             >
-              <KeyRound className="size-4 text-muted-foreground" />
+              <KeyIcon size={15} className="text-muted-foreground shrink-0" />
               Đổi mật khẩu
             </button>
             <div className="h-px bg-border my-1" />
@@ -225,7 +244,7 @@ function UserFooterMenu({ onProfile, onChangePass }) {
               onClick={() => { setOpen(false); handleLogout(); }}
               className="flex w-full items-center gap-2 px-3 py-1.5 text-sm text-destructive hover:bg-destructive/10 transition-colors"
             >
-              <LogOut className="size-4" />
+              <LogOutIcon size={15} className="shrink-0" />
               Đăng xuất
             </button>
           </div>
@@ -241,10 +260,10 @@ export default function AppSidebar({ onProfile, onChangePass }) {
       <SidebarHeader className="flex flex-row items-center justify-between">
         <div className="flex items-center gap-2.5 overflow-hidden">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Sparkles className="size-4" />
+            <SparklesIcon size={16} />
           </div>
           <div className="flex flex-col text-left overflow-hidden group-data-[collapsible=icon]:hidden">
-            <span className="truncate text-sm font-semibold text-sidebar-foreground">EGA Admin</span>
+            <span className="truncate text-sm font-semibold text-sidebar-foreground"> Admin Panel</span>
             <span className="truncate text-[11px] text-sidebar-foreground/60">Quản trị hệ thống</span>
           </div>
         </div>
