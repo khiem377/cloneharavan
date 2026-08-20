@@ -404,6 +404,46 @@ const deleteUser = async (adminUserId, targetUserId) => {
   return user;
 };
 
+/**
+ * Tạo tài khoản Admin mới (do Admin quản lý tạo)
+ */
+const createAdminUser = async (data) => {
+  const emailTaken = await User.findOne({ email: data.email.toLowerCase().trim() });
+  if (emailTaken) {
+    throw new AppError('Email đã được sử dụng', 400);
+  }
+
+  const phoneTaken = await User.findOne({ phone: data.phone.trim() });
+  if (phoneTaken) {
+    throw new AppError('Số điện thoại đã được sử dụng', 400);
+  }
+
+  const newAdmin = await User.create({
+    fullName: data.fullName.trim(),
+    email: data.email.toLowerCase().trim(),
+    password: data.password,
+    phone: data.phone.trim(),
+    gender: data.gender,
+    dateOfBirth: data.dateOfBirth || null,
+    role: 'admin',
+    isActive: data.isActive !== undefined ? data.isActive : true,
+    isEmailVerified: data.isEmailVerified !== undefined ? data.isEmailVerified : true,
+    isPhoneVerified: data.isPhoneVerified !== undefined ? data.isPhoneVerified : true,
+  });
+
+  const userObj = newAdmin.toObject();
+  delete userObj.password;
+  delete userObj.refreshToken;
+  delete userObj.resetPasswordToken;
+  delete userObj.resetPasswordExpires;
+  delete userObj.emailVerificationToken;
+  delete userObj.emailVerificationExpires;
+  delete userObj.phoneOtp;
+  delete userObj.phoneOtpExpires;
+
+  return userObj;
+};
+
 module.exports = {
   // Avatar
   updateAvatar,
@@ -424,5 +464,7 @@ module.exports = {
   toggleUserStatus,
   updateUserRole,
   deleteUser,
+  createAdminUser,
 };
+
 

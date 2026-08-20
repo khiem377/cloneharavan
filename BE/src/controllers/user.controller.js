@@ -18,6 +18,7 @@ const {
   toggleUserStatus: toggleUserStatusService,
   updateUserRole: updateUserRoleService,
   deleteUser: deleteUserService,
+  createAdminUser: createAdminUserService,
 } = require('../services/user.service');
 
 // ==========================================
@@ -243,6 +244,20 @@ const deleteUser = async (req, res, next) => {
   }
 };
 
+const createAdmin = async (req, res, next) => {
+  try {
+    const user = await createAdminUserService(req.body);
+    res.status(201).json({
+      status: 'success',
+      statusCode: 201,
+      message: 'Tạo tài khoản admin thành công',
+      data: { user },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   // Profile & Avatar
   getProfile,
@@ -262,4 +277,6 @@ module.exports = {
   toggleUserStatus,
   updateUserRole,
   deleteUser,
+  createAdmin,
 };
+

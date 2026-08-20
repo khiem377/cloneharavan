@@ -3,6 +3,7 @@ const router = express.Router();
 
 const {
   register,
+  registerAdmin,
   login,
   refreshToken,
   getProfile,
@@ -20,6 +21,7 @@ const { protect } = require('../middleware/auth.middleware');
 const { validate } = require('../middleware/validate.middleware');
 const {
   registerSchema,
+  registerAdminSchema,
   loginSchema,
   changePasswordSchema,
   forgotPasswordSchema,
@@ -30,10 +32,12 @@ const {
 
 // Auth cơ bản
 router.post('/register', validate(registerSchema), register);
+router.post('/register-admin', validate(registerAdminSchema), registerAdmin);
 router.post('/login', validate(loginSchema), login);
 router.post('/refresh-token', refreshToken);
 router.get('/me', protect, getProfile);
 router.post('/logout', protect, logout);
+
 
 // Đổi & Khôi phục mật khẩu
 router.post('/change-password', protect, validate(changePasswordSchema), changePassword);

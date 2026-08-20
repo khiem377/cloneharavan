@@ -3,6 +3,7 @@ const { AppError } = require('../utils/AppError');
 const {
   buildTokenResponse,
   registerUser,
+  registerAdmin: registerAdminService,
   loginUser,
   rotateRefreshToken,
   changeUserPassword,
@@ -235,8 +236,36 @@ const verifyPhone = async (req, res, next) => {
   }
 };
 
+const registerAdmin = async (req, res, next) => {
+  try {
+    const user = await registerAdminService(req.body);
+    const { accessToken, refreshToken } = await buildTokenResponse(user, res);
+
+    res.status(201).json({
+      status:     'success',
+      statusCode: 201,
+      message:    'Tạo tài khoản admin thành công',
+      data: {
+        accessToken,
+        refreshToken,
+        user: {
+          _id:      user._id,
+          fullName: user.fullName,
+          email:    user.email,
+          phone:    user.phone,
+          gender:   user.gender,
+          role:     user.role,
+        },
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   register,
+  registerAdmin,
   login,
   refreshToken,
   getProfile,
@@ -249,3 +278,4 @@ module.exports = {
   sendVerifyPhone,
   verifyPhone,
 };
+
