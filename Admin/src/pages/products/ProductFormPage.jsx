@@ -1,17 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Plus, Trash2, Loader2, Image, Upload } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Loader2, Image, ChevronDown, Layers } from '@/components/ui/Icons';
 import { toast } from '@/providers/ToastProvider';
 import { useProduct, useCreateProduct, useUpdateProduct } from '@/hooks/useProducts';
 import { useCategories } from '@/hooks/useCategories';
-import { useBrands } from '@/hooks/useBrands';
+import { useBrands, useAllBrands } from '@/hooks/useBrands';
 import RichTextEditor from '@/components/ui/RichTextEditor';
 import MediaPickerModal from '@/components/ui/MediaPickerModal';
 
 const DEFAULT_FORM = {
   name: '',
   sku: '',
-  category: '',
+  categories: [],
   brand: '',
   price: '',
   salePrice: '',
@@ -22,6 +22,7 @@ const DEFAULT_FORM = {
   isFeatured: false,
   isHot: false,
   specifications: [],
+  options: [],
   thumbnailMediaId: '',
   thumbnailUrl: '',
   imageMediaIds: [],
@@ -62,6 +63,154 @@ function PriceInput({ value, onChange, placeholder = '0', className = '' }) {
   );
 }
 
+function buildTree(flat) {
+  const map = Object.fromEntries((flat || []).map((c) => [c._id, { ...c, children: [] }]));
+  const roots = [];
+  (flat || []).forEach((c) => {
+    const pid = c.parentId?._id || c.parentId;
+    if (pid && map[pid]) map[pid].children.push(map[c._id]);
+    else roots.push(map[c._id]);
+  });
+  return roots;
+}
+
+function CategoryTreeMultiPicker({ categories, value = [], onChange }) {
+  const [open, setOpen] = useState(false);
+  const [expanded, setExpanded] = useState({});
+  const ref = useRef(null);
+
+  const tree = buildTree(categories);
+
+  const parentMap = Object.fromEntries(
+    (categories || []).map((c) => [c._id, c.parentId?._id || c.parentId || null])
+  );
+  const childrenMap = (() => {
+    const m = {};
+    (categories || []).forEach((c) => {
+      const pid = c.parentId?._id || c.parentId;
+      if (pid) { if (!m[pid]) m[pid] = []; m[pid].push(c._id); }
+    });
+    return m;
+  })();
+
+  const getAncestors = (id) => {
+    const result = [];
+    let cur = parentMap[id];
+    while (cur) { result.push(cur); cur = parentMap[cur]; }
+    return result;
+  };
+
+  const getDescendants = (id) => {
+    const kids = childrenMap[id] || [];
+    return [...kids, ...kids.flatMap((kid) => getDescendants(kid))];
+  };
+
+  useEffect(() => {
+    if (!value?.length || !categories?.length) return;
+    const toExpand = {};
+    value.forEach((id) => { getAncestors(id).forEach((aid) => { toExpand[aid] = true; }); });
+    setExpanded((prev) => ({ ...prev, ...toExpand }));
+  }, [value?.join(','), categories?.length]);
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const toggleExpand = (id, e) => {
+    e.stopPropagation();
+    setExpanded((p) => ({ ...p, [id]: !p[id] }));
+  };
+
+  const toggleCheck = (id) => {
+    const isChecked = value.includes(id);
+    if (isChecked) {
+      const desc = getDescendants(id);
+      onChange(value.filter((v) => v !== id && !desc.includes(v)));
+    } else {
+      const ancestors = getAncestors(id);
+      onChange([...new Set([...value, id, ...ancestors])]);
+    }
+  };
+
+  const removeCat = (id, e) => {
+    e.stopPropagation();
+    const desc = getDescendants(id);
+    onChange(value.filter((v) => v !== id && !desc.includes(v)));
+  };
+
+  const selectedCats = value.map((id) => categories.find((c) => c._id === id)).filter(Boolean);
+
+  const renderNode = (node, depth = 0) => {
+    const hasChildren = node.children?.length > 0;
+    const isChecked = value.includes(node._id);
+    const isExpanded = expanded[node._id];
+    return (
+      <div key={node._id}>
+        <div
+          style={{ paddingLeft: `${depth * 16 + 6}px` }}
+          className={`flex items-center gap-2 py-1.5 pr-2 rounded-md transition-colors ${isChecked ? 'bg-primary/5' : 'hover:bg-muted'}`}
+        >
+          <button
+            type="button"
+            className={`size-4 flex items-center justify-center shrink-0 text-muted-foreground transition-transform ${hasChildren ? 'hover:text-foreground cursor-pointer' : 'opacity-0 pointer-events-none'}`}
+            onClick={(e) => toggleExpand(node._id, e)}
+          >
+            <ChevronDown size={12} className={isExpanded ? '' : '-rotate-90'} />
+          </button>
+          <label className="flex items-center gap-2 flex-1 cursor-pointer select-none min-w-0">
+            <input
+              type="checkbox"
+              className="size-3.5 rounded border-input cursor-pointer accent-primary shrink-0"
+              checked={isChecked}
+              onChange={() => toggleCheck(node._id)}
+            />
+            <span className={`text-sm truncate ${isChecked ? 'font-medium text-primary' : 'text-foreground'}`}>
+              {node.name}
+            </span>
+          </label>
+        </div>
+        {hasChildren && isExpanded && (
+          <div>{node.children.map((child) => renderNode(child, depth + 1))}</div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        className="min-h-9 w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-left text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 transition-colors cursor-pointer flex flex-wrap items-center gap-1.5"
+        onClick={() => setOpen((v) => !v)}
+      >
+        {selectedCats.length === 0 ? (
+          <span className="text-muted-foreground py-0.5">-- Chọn danh mục --</span>
+        ) : (
+          selectedCats.map((c) => (
+            <span key={c._id} className="inline-flex items-center gap-1 rounded-md bg-primary/10 border border-primary/20 text-primary px-2 py-0.5 text-xs font-medium">
+              {c.name}
+              <button type="button" className="hover:text-destructive cursor-pointer leading-none" onClick={(e) => removeCat(c._id, e)}>×</button>
+            </span>
+          ))
+        )}
+        <ChevronDown size={14} className={`ml-auto shrink-0 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div className="absolute top-full left-0 right-0 z-50 mt-1 max-h-64 overflow-y-auto rounded-md border border-border bg-background shadow-lg p-1">
+          {tree.length === 0 ? (
+            <p className="px-3 py-2 text-xs text-muted-foreground">Không có danh mục</p>
+          ) : tree.map((node) => renderNode(node))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+
+
 export default function ProductFormPage() {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -72,8 +221,8 @@ export default function ProductFormPage() {
   const [pickerMode, setPickerMode] = useState(null);
 
   const { data: productData, isLoading: productLoading } = useProduct(id);
-  const { data: categories = [] } = useCategories({ tree: 'false' });
-  const { data: brands = [] } = useBrands({});
+  const { data: categories = [] } = useCategories({});
+  const { data: brands = [] } = useAllBrands();
 
   const createMut = useCreateProduct();
   const updateMut = useUpdateProduct();
@@ -84,7 +233,7 @@ export default function ProductFormPage() {
       setForm({
         name: p.name || '',
         sku: p.sku || '',
-        category: p.category?._id || p.category || '',
+        categories: (p.categories || []).map((c) => c._id || c),
         brand: p.brand?._id || p.brand || '',
         price: p.price || 0,
         salePrice: p.salePrice || 0,
@@ -95,6 +244,7 @@ export default function ProductFormPage() {
         isFeatured: p.isFeatured ?? false,
         isHot: p.isHot ?? false,
         specifications: p.specifications || [],
+        options: p.options || [],
         thumbnailMediaId: p.thumbnail?.mediaId || '',
         thumbnailUrl: p.thumbnail?.url || '',
         imageMediaIds: p.images?.map((i) => i.mediaId) || [],
@@ -149,14 +299,14 @@ export default function ProductFormPage() {
   const handleSubmit = () => {
     if (!form.name.trim()) return toast.error('Vui lòng nhập tên sản phẩm');
     if (!form.sku.trim()) return toast.error('Vui lòng nhập mã SKU');
-    if (!form.category) return toast.error('Vui lòng chọn danh mục');
+    if (!form.categories.length) return toast.error('Vui lòng chọn ít nhất 1 danh mục');
     if (!form.price) return toast.error('Vui lòng nhập giá niêm yết');
 
     const payload = {
       name: form.name.trim(),
       sku: form.sku.trim(),
-      category: form.category,
-      brand: form.brand || null,
+      categories: form.categories,
+      brand: form.brand || undefined,
       price: Number(form.price),
       salePrice: Number(form.salePrice) || 0,
       stock: Number(form.stock),
@@ -166,6 +316,7 @@ export default function ProductFormPage() {
       isFeatured: form.isFeatured,
       isHot: form.isHot,
       specifications: form.specifications.filter((s) => s.key && s.value),
+      options: form.options,
       thumbnailMediaId: form.thumbnailMediaId,
       imageMediaIds: form.imageMediaIds,
     };
@@ -198,7 +349,15 @@ export default function ProductFormPage() {
         >
           <ArrowLeft size={16} /> Quay lại
         </button>
-        <h1 className="text-xl font-bold tracking-tight text-foreground">{isEdit ? 'Sửa sản phẩm' : 'Thêm sản phẩm'}</h1>
+        <h1 className="text-xl font-bold tracking-tight text-foreground flex-1">{isEdit ? 'Sửa sản phẩm' : 'Thêm sản phẩm'}</h1>
+        {isEdit && (
+          <button
+            className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-violet-500/40 px-3.5 text-sm font-medium text-violet-600 dark:text-violet-400 hover:bg-violet-500/10 transition-colors cursor-pointer"
+            onClick={() => navigate(`/products/${id}/variants`)}
+          >
+            <Layers size={15} /> Quản lý biến thể
+          </button>
+        )}
         <button
           className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground shadow-xs hover:bg-primary/90 transition-colors cursor-pointer disabled:pointer-events-none disabled:opacity-50"
           onClick={handleSubmit}
@@ -212,7 +371,7 @@ export default function ProductFormPage() {
         <div className="lg:col-span-2 flex flex-col gap-6">
           <div className="rounded-xl border border-border bg-card p-5 text-card-foreground shadow-2xs flex flex-col gap-4">
             <h3 className="text-base font-semibold text-foreground pb-2 border-b border-border">Thông tin cơ bản</h3>
-            
+
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium text-foreground">Tên sản phẩm <span className="text-destructive ml-0.5">*</span></label>
               <input
@@ -364,7 +523,7 @@ export default function ProductFormPage() {
         <div className="flex flex-col gap-6">
           <div className="rounded-xl border border-border bg-card p-5 text-card-foreground shadow-2xs flex flex-col gap-4">
             <h3 className="text-base font-semibold text-foreground pb-2 border-b border-border">Ảnh sản phẩm</h3>
-            
+
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium text-foreground">Ảnh đại diện <span className="text-destructive ml-0.5">*</span></label>
               {form.thumbnailUrl ? (
@@ -421,16 +580,14 @@ export default function ProductFormPage() {
 
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium text-foreground">Danh mục <span className="text-destructive ml-0.5">*</span></label>
-              <select
-                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 transition-colors cursor-pointer"
-                value={form.category}
-                onChange={(e) => setField('category', e.target.value)}
-              >
-                <option value="">-- Chọn danh mục --</option>
-                {(Array.isArray(categories) ? categories : []).map((c) => (
-                  <option key={c._id} value={c._id}>{c.name}</option>
-                ))}
-              </select>
+              <CategoryTreeMultiPicker
+                categories={Array.isArray(categories) ? categories : []}
+                value={form.categories}
+                onChange={(v) => setField('categories', v)}
+              />
+              {form.categories.length === 0 && (
+                <p className="text-xs text-muted-foreground">Có thể chọn nhiều danh mục. Khi chọn danh mục con, danh mục cha sẽ tự động được chọn.</p>
+              )}
             </div>
 
             <div className="flex flex-col gap-1.5">
@@ -448,7 +605,9 @@ export default function ProductFormPage() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-foreground">Trạng thái bài viết</label>
+              <label className="text-xs font-medium text-foreground">Trạng thái sản phẩm
+
+              </label>
               <select
                 className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 transition-colors cursor-pointer"
                 value={form.status}

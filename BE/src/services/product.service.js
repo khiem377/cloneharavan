@@ -2,6 +2,9 @@ const Product = require('../models/product.model');
 const Category = require('../models/category.model');
 const Brand = require('../models/brand.model');
 const Media = require('../models/media.model');
+const Promotion = require('../models/promotion.model');
+const GiftProgram = require('../models/gift-program.model');
+const Coupon = require('../models/coupon.model');
 const { AppError } = require('../utils/AppError');
 const { slugify } = require('../utils/slugify');
 
@@ -21,11 +24,18 @@ const createProduct = async (data) => {
   const existingSlug = await Product.findOne({ slug: generatedSlug });
   if (existingSlug) throw new AppError('Tên sản phẩm hoặc slug đã tồn tại', 400);
 
-  const categoryExists = await Category.findById(data.category);
-  if (!categoryExists) throw new AppError('Danh mục sản phẩm không tồn tại', 404);
+  if (!data.categories || data.categories.length === 0)
+    throw new AppError('Sản phẩm phải có ít nhất 1 danh mục', 400);
 
-  const brandExists = await Brand.findById(data.brand);
-  if (!brandExists) throw new AppError('Thương hiệu sản phẩm không tồn tại', 404);
+  for (const catId of data.categories) {
+    const exists = await Category.findById(catId);
+    if (!exists) throw new AppError(`Danh mục ${catId} không tồn tại`, 404);
+  }
+
+  if (data.brand) {
+    const brandExists = await Brand.findById(data.brand);
+    if (!brandExists) throw new AppError('Thương hiệu sản phẩm không tồn tại', 404);
+  }
 
   const thumbnail = await resolveMedia(data.thumbnailMediaId);
   if (!thumbnail) throw new AppError('Ảnh đại diện sản phẩm là bắt buộc', 400);
@@ -42,7 +52,7 @@ const createProduct = async (data) => {
     name: data.name,
     slug: generatedSlug,
     sku: data.sku.toUpperCase(),
-    category: data.category,
+    categories: data.categories,
     brand: data.brand,
     price: data.price,
     salePrice: data.salePrice,
@@ -68,7 +78,7 @@ const createProduct = async (data) => {
   }
 
   return Product.findById(product._id)
-    .populate('category', 'name slug parentId icon brandId')
+    .populate('categories', 'name slug parentId')
     .populate('brand', 'name slug logo');
 };
 
@@ -96,8 +106,8 @@ const getAllProducts = async (query = {}) => {
   ];
   if (category) {
     const ids = await getCategoryIds(category);
-    if (ids && ids.length > 0) filter.category = { $in: ids };
-    else if (ids !== null) filter.category = null;
+    if (ids && ids.length > 0) filter.categories = { $in: ids };
+    else if (ids !== null) filter.categories = { $in: [] };
   }
   if (brand) filter.brand = brand;
   if (isFeatured !== undefined) filter.isFeatured = isFeatured === 'true';
@@ -114,7 +124,7 @@ const getAllProducts = async (query = {}) => {
 
   const [products, total] = await Promise.all([
     Product.find(filter)
-      .populate('category', 'name slug parentId icon brandId')
+      .populate('categories', 'name slug parentId')
       .populate('brand', 'name slug logo')
       .sort(sort)
       .skip((pageNum - 1) * limitNum)
@@ -136,7 +146,7 @@ const getAllProductsAdmin = async (query = {}) => {
   ];
   if (category) {
     const ids = await getCategoryIds(category);
-    if (ids && ids.length > 0) filter.category = { $in: ids };
+    if (ids && ids.length > 0) filter.categories = { $in: ids };
   }
   if (brand) filter.brand = brand;
   if (status) filter.status = status;
@@ -148,7 +158,7 @@ const getAllProductsAdmin = async (query = {}) => {
 
   const [products, total] = await Promise.all([
     Product.find(filter)
-      .populate('category', 'name slug parentId icon brandId')
+      .populate('categories', 'name slug parentId')
       .populate('brand', 'name slug logo')
       .sort(sort)
       .skip((pageNum - 1) * limitNum)
@@ -164,7 +174,7 @@ const getProductById = async (idOrSlug) => {
   const filter = isObjectId ? { _id: idOrSlug } : { slug: idOrSlug };
 
   const product = await Product.findOne(filter)
-    .populate('category', 'name slug parentId icon brandId')
+    .populate('categories', 'name slug parentId')
     .populate('brand', 'name slug logo');
 
   if (!product) throw new AppError('Không tìm thấy sản phẩm', 404);
@@ -176,7 +186,7 @@ const getProductsToCompare = async (productIds) => {
     throw new AppError('Danh sách sản phẩm so sánh không được để trống', 400);
   }
   return Product.find({ _id: { $in: productIds }, isActive: true })
-    .populate('category', 'name slug parentId icon brandId')
+    .populate('categories', 'name slug parentId')
     .populate('brand', 'name slug logo');
 };
 
@@ -197,9 +207,12 @@ const updateProduct = async (id, data) => {
     data.slug = generatedSlug;
   }
 
-  if (data.category) {
-    const categoryExists = await Category.findById(data.category);
-    if (!categoryExists) throw new AppError('Danh mục sản phẩm không tồn tại', 404);
+  if (data.categories !== undefined) {
+    if (!data.categories.length) throw new AppError('Sản phẩm phải có ít nhất 1 danh mục', 400);
+    for (const catId of data.categories) {
+      const exists = await Category.findById(catId);
+      if (!exists) throw new AppError(`Danh mục ${catId} không tồn tại`, 404);
+    }
   }
 
   if (data.brand) {
@@ -247,7 +260,7 @@ const updateProduct = async (id, data) => {
   await product.save();
 
   return Product.findById(product._id)
-    .populate('category', 'name slug parentId icon brandId')
+    .populate('categories', 'name slug parentId')
     .populate('brand', 'name slug logo');
 };
 
@@ -299,12 +312,64 @@ const deleteBulkProducts = async (ids) => {
   return { message: `Đã xóa thành công ${result.deletedCount} sản phẩm` };
 };
 
+const getProductDeals = async (idOrSlug) => {
+  const isObjectId = /^[0-9a-fA-F]{24}$/.test(idOrSlug);
+  const filter = isObjectId ? { _id: idOrSlug } : { slug: idOrSlug };
+
+  const product = await Product.findOne(filter).populate('categories', '_id');
+  if (!product) throw new AppError('Không tìm thấy sản phẩm', 404);
+
+  const now = new Date();
+  const categoryIds = (product.categories || []).map((c) => c._id || c);
+
+  const activeFilter = {
+    isActive: true,
+    startDate: { $lte: now },
+    endDate: { $gte: now },
+    $or: [
+      { 'scope.type': 'all' },
+      { 'scope.type': 'products', 'scope.productIds': product._id },
+      { 'scope.type': 'categories', 'scope.categoryIds': { $in: categoryIds } },
+    ],
+  };
+
+  const [promotions, giftPrograms, coupons] = await Promise.all([
+    Promotion.find(activeFilter).sort({ createdAt: -1 }),
+    GiftProgram.find(activeFilter).sort({ createdAt: -1 }),
+    Coupon.find({
+      isActive: true,
+      startDate: { $lte: now },
+      endDate: { $gte: now },
+      $or: [{ usageLimit: null }, { $expr: { $lt: ['$usedCount', '$usageLimit'] } }],
+    }).sort({ createdAt: -1 }).limit(10),
+  ]);
+
+  let effectivePrice = product.salePrice > 0 ? product.salePrice : product.price;
+  let bestPromotion = null;
+
+  for (const promo of promotions) {
+    if (promo.type === 'percent_discount' && promo.discountValue > 0) {
+      let discounted = product.price * (1 - promo.discountValue / 100);
+      if (promo.maxDiscountValue) discounted = Math.max(product.price - promo.maxDiscountValue, discounted);
+      discounted = Math.round(discounted);
+      if (discounted < effectivePrice) { effectivePrice = discounted; bestPromotion = promo; }
+    }
+    if (promo.type === 'fixed_discount' && promo.discountValue > 0) {
+      const discounted = Math.max(0, product.price - promo.discountValue);
+      if (discounted < effectivePrice) { effectivePrice = discounted; bestPromotion = promo; }
+    }
+  }
+
+  return { promotions, giftPrograms, coupons, effectivePrice, bestPromotion };
+};
+
 module.exports = {
   createProduct,
   getAllProducts,
   getAllProductsAdmin,
   getProductById,
   getProductsToCompare,
+  getProductDeals,
   updateProduct,
   toggleProductStatus,
   deleteProduct,

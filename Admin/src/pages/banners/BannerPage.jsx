@@ -11,7 +11,7 @@ import { CSS } from '@dnd-kit/utilities';
 import {
   Plus, Pencil, Trash2, Eye, EyeOff,
   LayoutGrid, List, Check, ExternalLink, Image,
-} from 'lucide-react';
+} from '@/components/ui/Icons';
 import { useBanners, useDeleteBanner, useDeleteBulkBanners, useUpdateBanner } from '@/hooks/useBanners';
 import { bannerService } from '@/services/banner.service';
 import { toast } from '@/providers/ToastProvider';

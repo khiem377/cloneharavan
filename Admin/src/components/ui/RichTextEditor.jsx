@@ -1,6 +1,6 @@
 import { useRef, useState, useCallback } from 'react';
 import { Editor } from '@tinymce/tinymce-react';
-import { Upload, Image as ImageIcon } from 'lucide-react';
+import { Upload, Image as ImageIcon } from '@/components/ui/Icons';
 import MediaPickerModal from '@/components/ui/MediaPickerModal';
 
 export default function RichTextEditor({ value, onChange }) {

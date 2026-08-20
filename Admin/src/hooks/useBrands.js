@@ -10,6 +10,13 @@ export const useBrands = (params) =>
     staleTime: 30_000,
   });
 
+export const useAllBrands = () =>
+  useQuery({
+    queryKey: [...BRANDS_KEY, 'all'],
+    queryFn: () => brandService.getAll({ all: 'true' }).then((r) => r.data.data),
+    staleTime: 60_000,
+  });
+
 export const useCreateBrand = () => {
   const qc = useQueryClient();
   return useMutation({

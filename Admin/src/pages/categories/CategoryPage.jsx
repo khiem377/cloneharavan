@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { Plus, Pencil, Trash2, ChevronRight, ChevronDown, ToggleLeft, ToggleRight, Loader2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, ChevronRight, ChevronDown, ToggleLeft, ToggleRight, Loader2 } from '@/components/ui/Icons';
 import { toast } from '@/providers/ToastProvider';
 import {
   useCategories, useCreateCategory, useUpdateCategory,
   useToggleCategoryStatus, useDeleteCategory, useDeleteBulkCategories,
 } from '@/hooks/useCategories';
-import { useBrands } from '@/hooks/useBrands';
+import { useBrands, useAllBrands } from '@/hooks/useBrands';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import MediaPickerModal from '@/components/ui/MediaPickerModal';
 
@@ -141,7 +141,7 @@ export default function CategoryPage() {
 
   const { data: categories = [], isLoading } = useCategories({ keyword, tree: 'true' });
   const { data: flatCategories = [] } = useCategories({});
-  const { data: brands = [] } = useBrands({});
+  const { data: brands = [] } = useAllBrands();
 
   const createMut = useCreateCategory();
   const updateMut = useUpdateCategory();

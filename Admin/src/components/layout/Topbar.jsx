@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Bell, User, KeyRound, LogOut, Eye, EyeOff, Loader2, ChevronRight, X, Menu } from 'lucide-react';
+import { Bell, User, KeyRound, LogOut, Eye, EyeOff, Loader2, ChevronRight, X, Menu } from '@/components/ui/Icons';
 import useAuthStore from '@/store/authStore';
 import { authService } from '@/services/auth.service';
 import { toast } from '@/providers/ToastProvider';

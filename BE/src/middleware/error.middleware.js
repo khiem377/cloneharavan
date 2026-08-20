@@ -1,4 +1,5 @@
 const { AppError } = require('../utils/AppError');
+const { ZodError } = require('zod');
 
 const notFound = (req, res, next) => {
   next(new AppError(`Không tìm thấy route: ${req.originalUrl}`, 404));
@@ -15,6 +16,11 @@ const errorHandler = (err, req, res, next) => {
     console.error(`   Stack: ${err.stack}\n`);
   }
 
+  if (err instanceof ZodError) {
+    statusCode = 400;
+    const msgs = err.errors.map((e) => e.message).filter(Boolean);
+    message = msgs.length ? msgs[0] : 'Dữ liệu không hợp lệ';
+  }
 
   if (err.name === 'CastError') {
     statusCode = 404;

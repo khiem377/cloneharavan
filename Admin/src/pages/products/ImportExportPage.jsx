@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Download, Upload, RefreshCw, CheckCircle, XCircle, Loader2, FileSpreadsheet, ImageIcon } from 'lucide-react';
+import { ArrowLeft, Download, Upload, RefreshCw, CheckCircle, XCircle, Loader2, FileSpreadsheet, Image as ImageIcon } from '@/components/ui/Icons';
 import { toast } from '@/providers/ToastProvider';
 import { productService } from '@/services/product.service';
 

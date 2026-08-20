@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import {
   Upload, X, CheckCircle, AlertCircle, Loader2, Image, Link,
   FolderOpen, Folder, ChevronDown, Check
-} from 'lucide-react';
+} from '@/components/ui/Icons';
 import { mediaService } from '@/services/media.service';
 import { useFolders, FOLDERS_KEY } from '@/hooks/useFolders';
 import { toast } from '@/providers/ToastProvider';

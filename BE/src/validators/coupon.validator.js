@@ -1,17 +1,23 @@
 const { z } = require('zod');
 
 const baseCouponSchema = z.object({
-  name: z.string().min(2, 'Tên phải có ít nhất 2 ký tự'),
-  code: z.string().min(2, 'Mã code phải có ít nhất 2 ký tự'),
+  name: z.string({ required_error: 'Vui lòng nhập tên mã giảm giá' }).min(2, 'Tên phải có ít nhất 2 ký tự'),
+  code: z.string({ required_error: 'Vui lòng nhập mã giảm giá' }).min(2, 'Mã code phải có ít nhất 2 ký tự'),
   description: z.string().optional().default(''),
-  type: z.enum(['percent', 'fixed'], { required_error: 'Loại giảm giá là bắt buộc' }),
-  value: z.number({ required_error: 'Giá trị giảm là bắt buộc' }).positive('Giá trị phải lớn hơn 0'),
-  maxDiscount: z.number().positive().nullable().optional().default(null),
-  minOrderValue: z.number().min(0).optional().default(0),
-  startDate: z.coerce.date({ required_error: 'Ngày bắt đầu là bắt buộc' }),
-  endDate: z.coerce.date({ required_error: 'Ngày kết thúc là bắt buộc' }),
+  type: z.enum(['percent', 'fixed'], {
+    required_error: 'Vui lòng chọn loại giảm giá',
+    invalid_type_error: 'Loại giảm giá không hợp lệ',
+  }),
+  value: z.number({
+    required_error: 'Vui lòng nhập giá trị giảm',
+    invalid_type_error: 'Giá trị giảm phải là số',
+  }).positive('Giá trị giảm phải lớn hơn 0'),
+  maxDiscount: z.number({ invalid_type_error: 'Giảm tối đa phải là số' }).positive('Giảm tối đa phải lớn hơn 0').nullable().optional().default(null),
+  minOrderValue: z.number({ invalid_type_error: 'Giá trị đơn tối thiểu phải là số' }).min(0, 'Giá trị đơn tối thiểu không được âm').optional().default(0),
+  startDate: z.coerce.date({ required_error: 'Vui lòng chọn ngày bắt đầu', invalid_type_error: 'Ngày bắt đầu không hợp lệ' }),
+  endDate: z.coerce.date({ required_error: 'Vui lòng chọn ngày kết thúc', invalid_type_error: 'Ngày kết thúc không hợp lệ' }),
   isActive: z.boolean().optional().default(true),
-  usageLimit: z.number().positive().nullable().optional().default(null),
+  usageLimit: z.number({ invalid_type_error: 'Giới hạn sử dụng phải là số' }).positive('Giới hạn sử dụng phải lớn hơn 0').nullable().optional().default(null),
 });
 
 const createCouponSchema = baseCouponSchema

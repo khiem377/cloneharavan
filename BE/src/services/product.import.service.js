@@ -10,19 +10,19 @@ const { slugify } = require('../utils/slugify');
 const { uploadToCloudinary } = require('../config/cloudinary');
 
 const COLS = [
-  { key: 'name',          header: 'Tên sản phẩm *',   width: 35 },
-  { key: 'sku',           header: 'Mã SKU *',           width: 18 },
-  { key: 'price',         header: 'Giá niêm yết *',     width: 15 },
-  { key: 'salePrice',     header: 'Giá khuyến mãi',     width: 15 },
-  { key: 'stock',         header: 'Tồn kho *',          width: 10 },
-  { key: 'category',      header: 'Danh mục *',         width: 25 },
-  { key: 'brand',         header: 'Thương hiệu *',      width: 20 },
-  { key: 'status',        header: 'Trạng thái',         width: 15 },
-  { key: 'isFeatured',    header: 'Nổi bật',            width: 10 },
-  { key: 'isHot',         header: 'Hot',                width: 10 },
+  { key: 'name', header: 'Tên sản phẩm *', width: 35 },
+  { key: 'sku', header: 'Mã SKU *', width: 18 },
+  { key: 'price', header: 'Giá niêm yết *', width: 15 },
+  { key: 'salePrice', header: 'Giá khuyến mãi', width: 15 },
+  { key: 'stock', header: 'Tồn kho *', width: 10 },
+  { key: 'category', header: 'Danh mục *', width: 25 },
+  { key: 'brand', header: 'Thương hiệu *', width: 20 },
+  { key: 'status', header: 'Trạng thái', width: 15 },
+  { key: 'isFeatured', header: 'Nổi bật', width: 10 },
+  { key: 'isHot', header: 'Hot', width: 10 },
   { key: 'thumbnail_url', header: 'Ảnh đại diện (URL)', width: 50 },
-  { key: 'gallery_urls',  header: 'Ảnh bộ sưu tập (URL, cách nhau dấu phẩy)', width: 60 },
-  { key: 'description',   header: 'Mô tả',              width: 40 },
+  { key: 'gallery_urls', header: 'Ảnh bộ sưu tập (URL, cách nhau dấu phẩy)', width: 60 },
+  { key: 'description', header: 'Mô tả', width: 40 },
 ];
 
 const generateTemplate = async () => {
@@ -32,7 +32,7 @@ const generateTemplate = async () => {
   ]);
 
   const wb = new ExcelJS.Workbook();
-  wb.creator = 'EGA Admin';
+  wb.creator = 'Admin';
 
   const ws = wb.addWorksheet('Sản phẩm');
 
@@ -121,19 +121,19 @@ const exportProducts = async (query = {}) => {
 
   products.forEach((p) => {
     ws.addRow({
-      name:          p.name,
-      sku:           p.sku,
-      price:         p.price,
-      salePrice:     p.salePrice || '',
-      stock:         p.stock,
-      category:      p.category?.name || '',
-      brand:         p.brand?.name || '',
-      status:        p.status,
-      isFeatured:    p.isFeatured ? 'true' : 'false',
-      isHot:         p.isHot ? 'true' : 'false',
+      name: p.name,
+      sku: p.sku,
+      price: p.price,
+      salePrice: p.salePrice || '',
+      stock: p.stock,
+      category: p.category?.name || '',
+      brand: p.brand?.name || '',
+      status: p.status,
+      isFeatured: p.isFeatured ? 'true' : 'false',
+      isHot: p.isHot ? 'true' : 'false',
       thumbnail_url: p.thumbnail?.url || '',
-      gallery_urls:  p.images?.map((i) => i.url).join(', ') || '',
-      description:   p.description || '',
+      gallery_urls: p.images?.map((i) => i.url).join(', ') || '',
+      description: p.description || '',
     });
   });
 

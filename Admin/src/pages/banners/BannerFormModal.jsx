@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Image, ExternalLink, Loader2, X } from 'lucide-react';
+import { Image, ExternalLink, Loader2, X } from '@/components/ui/Icons';
 import { useCreateBanner, useUpdateBanner } from '@/hooks/useBanners';
 import MediaPickerModal from '@/components/ui/MediaPickerModal';
 import { toast } from '@/providers/ToastProvider';

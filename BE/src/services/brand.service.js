@@ -54,6 +54,10 @@ const getAllBrandsAdmin = async (query = {}) => {
   if (query.keyword) filter.name = { $regex: query.keyword, $options: 'i' };
   if (query.isActive !== undefined) filter.isActive = query.isActive === 'true';
 
+  if (query.all === 'true') {
+    return Brand.find(filter).sort({ order: 1, createdAt: -1 });
+  }
+
   const page = Math.max(1, parseInt(query.page) || 1);
   const limit = Math.max(1, parseInt(query.limit) || 10);
   const skip = (page - 1) * limit;
