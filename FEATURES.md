@@ -27,7 +27,7 @@
 - **Logo** — Link về trang chủ
 - **Thanh tìm kiếm** — Dropdown chọn danh mục + input `Tìm theo tên sản phẩm...` + nút search
 - **Badge LIVE** — Hiển thị trạng thái live stream
-- **Tài khoản / Đăng nhập** — Link đến `/account/login`
+- **Tài khoản / Đăng nhập** — Link đến `/account/login`+
 - **Giỏ hàng** — Mini cart icon kèm số lượng sản phẩm
 
 ### Thanh điều hướng (Navbar)

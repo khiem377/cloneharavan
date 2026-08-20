@@ -3,6 +3,8 @@ const Brand = require('../models/brand.model');
 const Category = require('../models/category.model');
 const Product = require('../models/product.model');
 const ProductVariant = require('../models/productVariant.model');
+const BlogPost = require('../models/blogPost.model');
+const BlogCategory = require('../models/blogCategory.model');
 
 const mediaRegistry = [
   {
@@ -39,6 +41,20 @@ const mediaRegistry = [
     mediaFields: ['thumbnail.mediaId', 'images.mediaId'],
     getEntityName: (doc) => doc.nameOverride || doc.sku || 'Biến thể',
     getAdminUrl: (doc) => `/products/${doc.productId}?tab=variants&highlight=${doc._id}`,
+  },
+  {
+    model: BlogPost,
+    displayName: 'Bài viết',
+    mediaFields: ['thumbnailMediaId'],
+    getEntityName: (doc) => doc.title,
+    getAdminUrl: (doc) => `/blog/posts/${doc._id}/edit`,
+  },
+  {
+    model: BlogCategory,
+    displayName: 'Danh mục Blog',
+    mediaFields: ['thumbnailMediaId'],
+    getEntityName: (doc) => doc.name,
+    getAdminUrl: (doc) => `/blog/categories?highlight=${doc._id}`,
   },
 ];
 

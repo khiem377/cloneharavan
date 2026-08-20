@@ -3,14 +3,17 @@ const validate = (schema) => (req, res, next) => {
 
   if (!result.success) {
     const errors = (result.error.issues ?? result.error.errors ?? []).map((e) => ({
-      field:   e.path.length > 0 ? e.path.join('.') : 'general',
+      field: e.path.length > 0 ? e.path.join('.') : 'general',
       message: e.message,
     }));
 
+
+    const mainMessage = errors[0]?.message || 'Vui lòng kiểm tra lại thông tin';
+
     return res.status(400).json({
-      status:     'error',
+      status: 'error',
       statusCode: 400,
-      message:    'Dữ liệu không hợp lệ',
+      message: mainMessage,
       errors,
     });
   }

@@ -29,8 +29,8 @@ const createVariantSchema = z.object({
     invalid_type_error: 'Số lượng tồn kho phải là số',
   }).min(0, 'Số lượng tồn kho không được nhỏ hơn 0'),
 
-  thumbnailMediaId: z.string().optional().nullable(),
-  imageMediaIds: z.array(z.string()).optional().default([]),
+  thumbnailMediaId: z.string().regex(/^[a-f\d]{24}$/i, 'Ảnh đại diện biến thể không hợp lệ').nullable().optional(),
+  imageMediaIds: z.array(z.string().regex(/^[a-f\d]{24}$/i, 'Ảnh sản phẩm chứa giá trị không hợp lệ')).optional().default([]),
   position: z.number().optional().default(0),
   isActive: z.boolean().optional().default(true),
   nameOverride: z.string().optional().nullable(),
