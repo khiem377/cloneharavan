@@ -115,16 +115,20 @@ function SortableBannerRow({ banner, index, selected, onToggle, onEdit, onDelete
       </td>
 
       <td className="px-3.5 py-3 align-middle" onPointerDown={stopDrag}>
-        {banner.link ? (
-          <a
-            href={banner.link} target="_blank" rel="noreferrer"
-            className="inline-flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:underline truncate max-w-xs"
-            onClick={e => e.stopPropagation()}
-          >
-            <ExternalLink size={11} />
-            <span>{banner.link.length > 38 ? banner.link.slice(0, 38) + '…' : banner.link}</span>
-          </a>
-        ) : <span className="text-muted-foreground italic text-xs">—</span>}
+        {banner.link ? (() => {
+          const FRONTEND = import.meta.env.VITE_FRONTEND_URL || 'http://localhost:3000';
+          const href = banner.link.startsWith('http') ? banner.link : `${FRONTEND}${banner.link}`;
+          return (
+            <a
+              href={href} target="_blank" rel="noreferrer"
+              className="inline-flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:underline truncate max-w-xs"
+              onClick={e => e.stopPropagation()}
+            >
+              <ExternalLink size={11} />
+              <span>{banner.link.length > 38 ? banner.link.slice(0, 38) + '…' : banner.link}</span>
+            </a>
+          );
+        })() : <span className="text-muted-foreground italic text-xs">—</span>}
       </td>
 
       <td className="px-3.5 py-3 align-middle"><VisibleBadge isVisible={banner.isVisible} /></td>

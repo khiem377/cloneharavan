@@ -20,6 +20,7 @@ const {
   toggleUserStatus,
   updateUserRole,
   deleteUser,
+  createAdmin,
 } = require('../controllers/user.controller');
 
 const { protect, authorize } = require('../middleware/auth.middleware');
@@ -31,6 +32,7 @@ const {
   updateAddressSchema,
   updateStatusSchema,
   updateRoleSchema,
+  createAdminSchema,
 } = require('../validators/user.validator');
 
 // ==========================================
@@ -56,6 +58,8 @@ router.post('/addresses/sync-order', protect, validate(addressSchema), syncOrder
 // ==========================================
 // 3. ADMIN MANAGEMENT (Admin Only)
 // ==========================================
+router.post('/admin', protect, authorize('admin'), validate(createAdminSchema), createAdmin);
+router.post('/', protect, authorize('admin'), validate(createAdminSchema), createAdmin);
 router.get('/', protect, authorize('admin'), getAllUsers);
 router.get('/:id', protect, authorize('admin'), getUserById);
 router.patch('/:id/status', protect, authorize('admin'), validate(updateStatusSchema), toggleUserStatus);
@@ -63,3 +67,4 @@ router.patch('/:id/role', protect, authorize('admin'), validate(updateRoleSchema
 router.delete('/:id', protect, authorize('admin'), deleteUser);
 
 module.exports = router;
+

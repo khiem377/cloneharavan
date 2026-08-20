@@ -64,9 +64,37 @@ const verifyPhoneSchema = z.object({
   otp: z.string().length(6, 'Mã OTP phải gồm đúng 6 chữ số'),
 });
 
+const registerAdminSchema = z.object({
+  fullName: z
+    .string({ required_error: 'Họ và tên là bắt buộc' })
+    .min(2, 'Họ và tên phải có ít nhất 2 ký tự')
+    .max(100, 'Họ và tên không được vượt quá 100 ký tự')
+    .regex(/^[\p{L}\s]+$/u, 'Họ và tên chỉ được chứa chữ cái và khoảng trắng'),
+
+  phone: z
+    .string({ required_error: 'Số điện thoại là bắt buộc' })
+    .regex(/^0\d{9}$/, 'Số điện thoại phải có 10 chữ số và bắt đầu bằng 0'),
+
+  gender: z.enum(['male', 'female', 'other'], {
+    errorMap: () => ({ message: 'Giới tính phải là male, female hoặc other' }),
+  }),
+
+  email: z.string({ required_error: 'Email là bắt buộc' }).email('Email không đúng định dạng'),
+  password: passwordRule,
+
+  dateOfBirth: z
+    .string()
+    .or(z.date())
+    .nullable()
+    .optional(),
+
+  adminSecretKey: z.string().optional(),
+});
+
 module.exports = {
   passwordRule,
   registerSchema,
+  registerAdminSchema,
   loginSchema,
   changePasswordSchema,
   forgotPasswordSchema,
@@ -74,3 +102,4 @@ module.exports = {
   verifyEmailSchema,
   verifyPhoneSchema,
 };
+

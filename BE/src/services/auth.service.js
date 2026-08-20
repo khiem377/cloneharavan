@@ -219,10 +219,46 @@ const verifyPhoneOtp = async (userId, otp) => {
   return user;
 };
 
+/**
+ * Đăng ký tài khoản Admin (qua secret key hoặc khi chưa có admin nào trong DB)
+ */
+const registerAdmin = async (data) => {
+  const configuredSecret = process.env.ADMIN_SECRET_KEY || 'admin_secret_key_haravan_2026';
+
+  const existingAdminCount = await User.countDocuments({ role: 'admin' });
+  if (existingAdminCount > 0) {
+    if (!data.adminSecretKey || data.adminSecretKey !== configuredSecret) {
+      throw new AppError('Mã bí mật tạo Admin (adminSecretKey) không chính xác hoặc bị thiếu', 403);
+    }
+  }
+
+  const emailTaken = await User.findOne({ email: data.email.toLowerCase().trim() });
+  if (emailTaken) throw new AppError('Email đã được sử dụng', 400);
+
+  const phoneTaken = await User.findOne({ phone: data.phone.trim() });
+  if (phoneTaken) throw new AppError('Số điện thoại đã được sử dụng', 400);
+
+  const newAdmin = await User.create({
+    fullName: data.fullName.trim(),
+    email: data.email.toLowerCase().trim(),
+    password: data.password,
+    phone: data.phone.trim(),
+    gender: data.gender,
+    dateOfBirth: data.dateOfBirth || null,
+    role: 'admin',
+    isActive: true,
+    isEmailVerified: true,
+    isPhoneVerified: true,
+  });
+
+  return newAdmin;
+};
+
 module.exports = {
   COOKIE_OPTIONS,
   buildTokenResponse,
   registerUser,
+  registerAdmin,
   loginUser,
   rotateRefreshToken,
   changeUserPassword,
@@ -234,3 +270,4 @@ module.exports = {
   sendPhoneOtp,
   verifyPhoneOtp,
 };
+

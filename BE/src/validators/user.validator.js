@@ -55,10 +55,50 @@ const updateRoleSchema = z.object({
   }),
 });
 
+const passwordRule = z
+  .string()
+  .min(8, 'Mật khẩu phải có ít nhất 8 ký tự')
+  .regex(/[A-Z]/, 'Mật khẩu phải chứa ít nhất 1 chữ hoa')
+  .regex(/[0-9]/, 'Mật khẩu phải chứa ít nhất 1 chữ số');
+
+const createAdminSchema = z.object({
+  fullName: z
+    .string({ required_error: 'Họ và tên là bắt buộc' })
+    .min(2, 'Họ và tên phải có ít nhất 2 ký tự')
+    .max(100, 'Họ và tên không được vượt quá 100 ký tự')
+    .regex(/^[\p{L}\s]+$/u, 'Họ và tên chỉ được chứa chữ cái và khoảng trắng'),
+
+  email: z
+    .string({ required_error: 'Email là bắt buộc' })
+    .email('Email không đúng định dạng'),
+
+  password: passwordRule,
+
+  phone: z
+    .string({ required_error: 'Số điện thoại là bắt buộc' })
+    .regex(/^0\d{9}$/, 'Số điện thoại phải có 10 chữ số và bắt đầu bằng 0'),
+
+  gender: z.enum(['male', 'female', 'other'], {
+    errorMap: () => ({ message: 'Giới tính phải là male, female hoặc other' }),
+  }),
+
+  dateOfBirth: z
+    .string()
+    .or(z.date())
+    .nullable()
+    .optional(),
+
+  isActive: z.boolean().optional(),
+  isEmailVerified: z.boolean().optional(),
+  isPhoneVerified: z.boolean().optional(),
+});
+
 module.exports = {
   updateProfileSchema,
   addressSchema,
   updateAddressSchema,
   updateStatusSchema,
   updateRoleSchema,
+  createAdminSchema,
 };
+

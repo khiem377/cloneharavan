@@ -127,6 +127,24 @@
   html {
     @apply font-sans;
   }
+  button,
+  [role="button"],
+  [role="tab"],
+  [role="menuitem"],
+  [role="option"],
+  label,
+  select,
+  summary,
+  a {
+    cursor: pointer;
+  }
+  button:disabled,
+  input:disabled,
+  textarea:disabled,
+  select:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
 }
 
 /* ─── Page Containers & Headers ────────────────────────────────────────────── */

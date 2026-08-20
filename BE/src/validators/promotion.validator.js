@@ -67,19 +67,19 @@ const createPromotionSchema = z
 
 const updatePromotionSchema = z
   .object({
-    name: z.string().min(1).max(200).optional(),
-    description: z.string().optional(),
-    triggerQty: z.number().int().min(1).nullable().optional(),
-    payQty: z.number().int().min(1).nullable().optional(),
-    discountType: z.enum(['percent', 'fixed']).nullable().optional(),
-    discountValue: z.number().min(0).nullable().optional(),
-    maxDiscountValue: z.number().min(0).nullable().optional(),
-    scope: scopeSchema.optional(),
-    minOrderValue: z.number().min(0).nullable().optional(),
-    usageLimit: z.number().int().min(1).nullable().optional(),
-    startDate: z.coerce.date().optional(),
-    endDate: z.coerce.date().optional(),
-    isActive: z.boolean().optional(),
+    name:             z.string({ invalid_type_error: 'Tên chương trình phải là chuỗi' }).min(1, 'Tên chương trình không được để trống').max(200).optional(),
+    description:      z.string().optional(),
+    triggerQty:       z.number({ invalid_type_error: 'Số lượng kích hoạt phải là số' }).int().min(1, 'Số lượng kích hoạt phải lớn hơn 0').nullable().optional(),
+    payQty:           z.number({ invalid_type_error: 'Số lượng phải trả phải là số' }).int().min(1, 'Số lượng phải trả phải lớn hơn 0').nullable().optional(),
+    discountType:     z.enum(['percent', 'fixed'], { errorMap: () => ({ message: 'Kiểu giảm giá không hợp lệ' }) }).nullable().optional(),
+    discountValue:    z.number({ invalid_type_error: 'Giá trị giảm phải là số' }).min(0, 'Giá trị giảm không được âm').nullable().optional(),
+    maxDiscountValue: z.number({ invalid_type_error: 'Giảm tối đa phải là số' }).min(0).nullable().optional(),
+    scope:            scopeSchema.optional(),
+    minOrderValue:    z.number({ invalid_type_error: 'Giá trị đơn hàng tối thiểu phải là số' }).min(0).nullable().optional(),
+    usageLimit:       z.number({ invalid_type_error: 'Giới hạn sử dụng phải là số' }).int().min(1, 'Giới hạn sử dụng phải lớn hơn 0').nullable().optional(),
+    startDate:        z.coerce.date({ invalid_type_error: 'Ngày bắt đầu không hợp lệ' }).optional(),
+    endDate:          z.coerce.date({ invalid_type_error: 'Ngày kết thúc không hợp lệ' }).optional(),
+    isActive:         z.boolean({ invalid_type_error: 'Trạng thái phải là boolean' }).optional(),
   })
   .refine(
     (d) => {

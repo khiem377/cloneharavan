@@ -15,6 +15,10 @@ import CouponPage from '@/pages/promotions/CouponPage';
 import PromotionPage from '@/pages/promotions/PromotionPage';
 import GiftProgramPage from '@/pages/promotions/GiftProgramPage';
 import ComingSoonPage from '@/pages/common/ComingSoonPage';
+import BlogPostListPage from '@/pages/blog/BlogPostListPage';
+import BlogPostFormPage from '@/pages/blog/BlogPostFormPage';
+import BlogCategoryPage from '@/pages/blog/BlogCategoryPage';
+import BlogTagPage from '@/pages/blog/BlogTagPage';
 
 const router = createBrowserRouter([
   {
@@ -43,6 +47,11 @@ const router = createBrowserRouter([
           { path: 'promotions/coupons', element: <CouponPage /> },
           { path: 'promotions/discounts', element: <PromotionPage /> },
           { path: 'promotions/gifts', element: <GiftProgramPage /> },
+          { path: 'blog/posts', element: <BlogPostListPage /> },
+          { path: 'blog/posts/new', element: <BlogPostFormPage /> },
+          { path: 'blog/posts/:id/edit', element: <BlogPostFormPage /> },
+          { path: 'blog/categories', element: <BlogCategoryPage /> },
+          { path: 'blog/tags', element: <BlogTagPage /> },
           { path: 'settings', element: <ComingSoonPage title="Cài đặt hệ thống" /> },
           { path: '*', element: <ComingSoonPage title="Trang không tồn tại" /> },
         ],
