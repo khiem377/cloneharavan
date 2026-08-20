@@ -34,12 +34,6 @@ const createBrand = async (data) => {
     logo: logo || undefined,
   });
 
-  if (logo) {
-    await Media.findByIdAndUpdate(logo.mediaId, {
-      $addToSet: { usedBy: { model: 'Brand', refId: brand._id } },
-    });
-  }
-
   return brand;
 };
 
@@ -99,19 +93,8 @@ const updateBrand = async (id, data) => {
   }
 
   if (data.logoMediaId !== undefined) {
-    const oldMediaId = brand.logo?.mediaId;
-    if (oldMediaId) {
-      await Media.findByIdAndUpdate(oldMediaId, {
-        $pull: { usedBy: { model: 'Brand', refId: brand._id } },
-      });
-    }
     const logo = await resolveLogo(data.logoMediaId);
     brand.logo = logo || { mediaId: null, url: '', publicId: '' };
-    if (logo) {
-      await Media.findByIdAndUpdate(logo.mediaId, {
-        $addToSet: { usedBy: { model: 'Brand', refId: brand._id } },
-      });
-    }
   }
 
   const { logoMediaId, ...rest } = data;
@@ -133,13 +116,6 @@ const toggleBrandStatus = async (id, isActive) => {
 const deleteBrand = async (id) => {
   const brand = await Brand.findById(id);
   if (!brand) throw new AppError('Không tìm thấy thương hiệu', 404);
-
-  if (brand.logo?.mediaId) {
-    await Media.findByIdAndUpdate(brand.logo.mediaId, {
-      $pull: { usedBy: { model: 'Brand', refId: brand._id } },
-    });
-  }
-
   await brand.deleteOne();
   return { message: 'Đã xóa thương hiệu thành công' };
 };
@@ -148,16 +124,6 @@ const deleteBulkBrands = async (ids) => {
   if (!Array.isArray(ids) || ids.length === 0) {
     throw new AppError('Danh sách ID thương hiệu không hợp lệ', 400);
   }
-
-  const brands = await Brand.find({ _id: { $in: ids } });
-  for (const brand of brands) {
-    if (brand.logo?.mediaId) {
-      await Media.findByIdAndUpdate(brand.logo.mediaId, {
-        $pull: { usedBy: { model: 'Brand', refId: brand._id } },
-      });
-    }
-  }
-
   const result = await Brand.deleteMany({ _id: { $in: ids } });
   return { message: `Đã xóa thành công ${result.deletedCount} thương hiệu` };
 };

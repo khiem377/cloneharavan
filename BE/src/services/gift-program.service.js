@@ -119,9 +119,21 @@ const applyGiftPrograms = async (cartItems) => {
 
 const markGiftProgramsUsed = async (giftProgramIds) => {
   if (!giftProgramIds.length) return;
-  await GiftProgram.updateMany(
-    { _id: { $in: giftProgramIds } },
-    { $inc: { giftUsedCount: 1 } }
+  const uniqueIds = [...new Set(giftProgramIds.map(String))];
+
+  await Promise.all(
+    uniqueIds.map((id) =>
+      GiftProgram.findOneAndUpdate(
+        {
+          _id: id,
+          $or: [
+            { giftLimit: null },
+            { $expr: { $lt: ['$giftUsedCount', '$giftLimit'] } },
+          ],
+        },
+        { $inc: { giftUsedCount: 1 } }
+      )
+    )
   );
 };
 

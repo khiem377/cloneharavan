@@ -284,7 +284,6 @@ const syncProductImages = async () => {
           size: result.bytes,
           width: result.width,
           height: result.height,
-          usedBy: [{ model: 'Product', refId: product._id }],
         });
         synced++;
         return { mediaId: media._id, url: result.secure_url, publicId: result.public_id };

@@ -1,7 +1,7 @@
 const express = require('express');
 const router  = express.Router();
 
-const { upload, uploadFromUrl, browse, search, remove, removeBulk } = require('../controllers/media.controller');
+const { upload, uploadFromUrl, browse, search, checkUsages, remove, removeBulk } = require('../controllers/media.controller');
 const { moveMediaCtrl } = require('../controllers/product.import.controller');
 const { protect, authorize }   = require('../middleware/auth.middleware');
 const { validate }             = require('../middleware/validate.middleware');
@@ -10,12 +10,13 @@ const { uploadMediaSchema, deleteMediaSchema } = require('../validators/media.va
 
 router.use(protect, authorize('admin'));
 
-router.get('/search',   search);
-router.get('/',         browse);
-router.post('/',        multerUpload.single('file'), validate(uploadMediaSchema), upload);
-router.post('/upload-url', uploadFromUrl);
-router.patch('/:id/move', moveMediaCtrl);
-router.delete('/bulk',  validate(deleteMediaSchema), removeBulk);
-router.delete('/:id',   remove);
+router.get('/search',       search);
+router.get('/',             browse);
+router.post('/',            multerUpload.single('file'), validate(uploadMediaSchema), upload);
+router.post('/upload-url',  uploadFromUrl);
+router.post('/check-usages', checkUsages);
+router.patch('/:id/move',  moveMediaCtrl);
+router.delete('/bulk',     validate(deleteMediaSchema), removeBulk);
+router.delete('/:id',      remove);
 
 module.exports = router;

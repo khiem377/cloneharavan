@@ -13,7 +13,6 @@ const resolveMedia = async (mediaId) => {
 const getVariantsByProduct = async (productId) => {
   const product = await Product.findById(productId);
   if (!product) throw new AppError('Không tìm thấy sản phẩm', 404);
-
   return ProductVariant.find({ productId }).sort({ position: 1, createdAt: 1 });
 };
 
@@ -32,7 +31,6 @@ const createVariant = async (productId, data) => {
 
   const thumbnail = await resolveMedia(data.thumbnailMediaId);
 
-  // Resolve gallery images
   const images = [];
   if (data.imageMediaIds && data.imageMediaIds.length > 0) {
     for (const mediaId of data.imageMediaIds) {
@@ -54,17 +52,6 @@ const createVariant = async (productId, data) => {
     isActive: data.isActive ?? true,
   });
 
-  if (thumbnail) {
-    await Media.findByIdAndUpdate(thumbnail.mediaId, {
-      $addToSet: { usedBy: { model: 'ProductVariant', refId: variant._id } },
-    });
-  }
-  for (const img of images) {
-    await Media.findByIdAndUpdate(img.mediaId, {
-      $addToSet: { usedBy: { model: 'ProductVariant', refId: variant._id } },
-    });
-  }
-
   return variant;
 };
 
@@ -85,7 +72,7 @@ const bulkCreateVariants = async (productId, variants) => {
   const docs = variants.map((v, idx) => ({
     productId,
     attributes: v.attributes,
-    displayName: v.attributes.map((a) => a.value).join(' / '), // insertMany bypasses pre('save'), compute manually
+    displayName: v.attributes.map((a) => a.value).join(' / '),
     sku: v.sku.toUpperCase(),
     price: v.price ?? null,
     salePrice: v.salePrice ?? null,
@@ -107,42 +94,16 @@ const updateVariant = async (id, data) => {
     data.sku = data.sku.toUpperCase();
   }
 
-  // Handle thumbnail change
   if (data.thumbnailMediaId !== undefined) {
-    if (variant.thumbnail?.mediaId) {
-      await Media.findByIdAndUpdate(variant.thumbnail.mediaId, {
-        $pull: { usedBy: { model: 'ProductVariant', refId: variant._id } },
-      });
-    }
     const thumbnail = await resolveMedia(data.thumbnailMediaId);
     variant.thumbnail = thumbnail || { mediaId: null, url: '', publicId: '' };
-    if (thumbnail) {
-      await Media.findByIdAndUpdate(thumbnail.mediaId, {
-        $addToSet: { usedBy: { model: 'ProductVariant', refId: variant._id } },
-      });
-    }
   }
 
-  // Handle gallery images change
   if (data.imageMediaIds !== undefined) {
-    // Remove old usedBy references
-    for (const img of variant.images || []) {
-      if (img.mediaId) {
-        await Media.findByIdAndUpdate(img.mediaId, {
-          $pull: { usedBy: { model: 'ProductVariant', refId: variant._id } },
-        });
-      }
-    }
-    // Resolve new images
     const images = [];
     for (const mediaId of data.imageMediaIds) {
       const img = await resolveMedia(mediaId);
-      if (img) {
-        images.push(img);
-        await Media.findByIdAndUpdate(img.mediaId, {
-          $addToSet: { usedBy: { model: 'ProductVariant', refId: variant._id } },
-        });
-      }
+      if (img) images.push(img);
     }
     variant.images = images;
   }
@@ -156,36 +117,11 @@ const updateVariant = async (id, data) => {
 const deleteVariant = async (id) => {
   const variant = await ProductVariant.findById(id);
   if (!variant) throw new AppError('Không tìm thấy biến thể sản phẩm', 404);
-
-  // Clean up all media references (thumbnail + images)
-  const allMediaIds = [
-    variant.thumbnail?.mediaId,
-    ...(variant.images || []).map((img) => img.mediaId),
-  ].filter(Boolean);
-
-  for (const mediaId of allMediaIds) {
-    await Media.findByIdAndUpdate(mediaId, {
-      $pull: { usedBy: { model: 'ProductVariant', refId: variant._id } },
-    });
-  }
-
   await variant.deleteOne();
   return { message: 'Đã xóa biến thể thành công' };
 };
 
 const deleteVariantsByProduct = async (productId) => {
-  const variants = await ProductVariant.find({ productId });
-  for (const variant of variants) {
-    const allMediaIds = [
-      variant.thumbnail?.mediaId,
-      ...(variant.images || []).map((img) => img.mediaId),
-    ].filter(Boolean);
-    for (const mediaId of allMediaIds) {
-      await Media.findByIdAndUpdate(mediaId, {
-        $pull: { usedBy: { model: 'ProductVariant', refId: variant._id } },
-      });
-    }
-  }
   const result = await ProductVariant.deleteMany({ productId });
   return { message: `Đã xóa ${result.deletedCount} biến thể của sản phẩm` };
 };

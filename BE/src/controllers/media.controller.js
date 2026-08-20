@@ -1,6 +1,7 @@
 const {
   uploadMedia, uploadMediaFromUrl,
   browseMedia, searchMedia,
+  checkMediaUsages,
   deleteMedia, deleteMediaBulk,
 } = require('../services/media.service');
 
@@ -48,22 +49,29 @@ const search = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
+const checkUsages = async (req, res, next) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.json({ status: 'success', statusCode: 200, data: { usages: {} } });
+    }
+    const usages = await checkMediaUsages(ids);
+    res.json({ status: 'success', statusCode: 200, data: { usages } });
+  } catch (error) { next(error); }
+};
+
 const remove = async (req, res, next) => {
   try {
-    const { usedBy } = await deleteMedia(req.params.id);
-    const usedNote = usedBy.length
-      ? ` (file này đã được dùng bởi: ${[...new Set(usedBy.map(u => u.model))].join(', ')})`
-      : '';
-    res.json({ status: 'success', statusCode: 200, message: `Xóa file thành công${usedNote}`, data: { usedBy } });
+    await deleteMedia(req.params.id);
+    res.json({ status: 'success', statusCode: 200, message: 'Xóa file thành công' });
   } catch (error) { next(error); }
 };
 
 const removeBulk = async (req, res, next) => {
   try {
     const result = await deleteMediaBulk(req.body.ids);
-    const msg = `Đã xóa ${result.deleted} file${result.usedNote ? ' ' + result.usedNote : ''}`;
-    res.json({ status: 'success', statusCode: 200, message: msg, data: result });
+    res.json({ status: 'success', statusCode: 200, message: `Đã xóa ${result.deleted} file`, data: result });
   } catch (error) { next(error); }
 };
 
-module.exports = { upload, uploadFromUrl, browse, search, remove, removeBulk };
+module.exports = { upload, uploadFromUrl, browse, search, checkUsages, remove, removeBulk };

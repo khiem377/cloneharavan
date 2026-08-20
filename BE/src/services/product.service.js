@@ -8,7 +8,7 @@ const Coupon = require('../models/coupon.model');
 const { AppError } = require('../utils/AppError');
 const { slugify } = require('../utils/slugify');
 
-const resolveMedia = async (mediaId, modelName, refId) => {
+const resolveMedia = async (mediaId) => {
   if (!mediaId) return null;
   const media = await Media.findById(mediaId);
   if (!media) throw new AppError('Không tìm thấy ảnh trong Media Library', 404);
@@ -66,16 +66,6 @@ const createProduct = async (data) => {
     status: data.status,
     isActive: data.isActive,
   });
-
-  await Media.findByIdAndUpdate(thumbnail.mediaId, {
-    $addToSet: { usedBy: { model: 'Product', refId: product._id } },
-  });
-
-  for (const img of images) {
-    await Media.findByIdAndUpdate(img.mediaId, {
-      $addToSet: { usedBy: { model: 'Product', refId: product._id } },
-    });
-  }
 
   return Product.findById(product._id)
     .populate('categories', 'name slug parentId')
@@ -221,36 +211,16 @@ const updateProduct = async (id, data) => {
   }
 
   if (data.thumbnailMediaId !== undefined) {
-    if (product.thumbnail?.mediaId) {
-      await Media.findByIdAndUpdate(product.thumbnail.mediaId, {
-        $pull: { usedBy: { model: 'Product', refId: product._id } },
-      });
-    }
     const thumbnail = await resolveMedia(data.thumbnailMediaId);
     if (!thumbnail) throw new AppError('Ảnh đại diện sản phẩm là bắt buộc', 400);
     product.thumbnail = thumbnail;
-    await Media.findByIdAndUpdate(thumbnail.mediaId, {
-      $addToSet: { usedBy: { model: 'Product', refId: product._id } },
-    });
   }
 
   if (data.imageMediaIds !== undefined) {
-    for (const img of product.images) {
-      if (img.mediaId) {
-        await Media.findByIdAndUpdate(img.mediaId, {
-          $pull: { usedBy: { model: 'Product', refId: product._id } },
-        });
-      }
-    }
     const images = [];
     for (const mediaId of data.imageMediaIds) {
       const img = await resolveMedia(mediaId);
-      if (img) {
-        images.push(img);
-        await Media.findByIdAndUpdate(img.mediaId, {
-          $addToSet: { usedBy: { model: 'Product', refId: product._id } },
-        });
-      }
+      if (img) images.push(img);
     }
     product.images = images;
   }
@@ -276,18 +246,6 @@ const toggleProductStatus = async (id, isActive) => {
 const deleteProduct = async (id) => {
   const product = await Product.findById(id);
   if (!product) throw new AppError('Không tìm thấy sản phẩm', 404);
-
-  const allMediaIds = [
-    product.thumbnail?.mediaId,
-    ...product.images.map((img) => img.mediaId),
-  ].filter(Boolean);
-
-  for (const mediaId of allMediaIds) {
-    await Media.findByIdAndUpdate(mediaId, {
-      $pull: { usedBy: { model: 'Product', refId: product._id } },
-    });
-  }
-
   await product.deleteOne();
   return { message: 'Đã xóa sản phẩm thành công' };
 };
@@ -295,18 +253,6 @@ const deleteProduct = async (id) => {
 const deleteBulkProducts = async (ids) => {
   if (!Array.isArray(ids) || ids.length === 0) {
     throw new AppError('Danh sách ID sản phẩm cần xóa không hợp lệ', 400);
-  }
-  const products = await Product.find({ _id: { $in: ids } });
-  for (const product of products) {
-    const allMediaIds = [
-      product.thumbnail?.mediaId,
-      ...product.images.map((img) => img.mediaId),
-    ].filter(Boolean);
-    for (const mediaId of allMediaIds) {
-      await Media.findByIdAndUpdate(mediaId, {
-        $pull: { usedBy: { model: 'Product', refId: product._id } },
-      });
-    }
   }
   const result = await Product.deleteMany({ _id: { $in: ids } });
   return { message: `Đã xóa thành công ${result.deletedCount} sản phẩm` };

@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "5cd55782-c428-43a8-96a7-940da9989079",
     "name": "Clone haravan",
-    "description": "Collection đầy đủ toàn bộ API Backend cho hệ thống Clone Haravan bao gồm: Authentication, User & Sổ địa chỉ, Banners, Media Cloudinary, Folders, Danh mục (Categories), Thương hiệu (Brands), Sản phẩm (Products), Biến thể sản phẩm (Product Variants), Mã giảm giá (Coupons), Khuyến mãi (Promotions), và Chương trình quà tặng (Gift Programs). Mỗi API đều có mô tả chi tiết, mẫu Body đầy đủ và Bearer Auth token.",
+    "description": "Collection đầy đủ toàn bộ API Backend cho hệ thống Clone Haravan bao gồm: Authentication, User & Sổ địa chỉ, Banners, Media (Thư viện ảnh), Folders, Danh mục (Categories), Thương hiệu (Brands), Sản phẩm (Products), Biến thể sản phẩm (Product Variants), Mã giảm giá (Coupons), Khuyến mãi (Promotions), và Chương trình quà tặng (Gift Programs). Mỗi API đều có mô tả chi tiết, mẫu Body đầy đủ và Bearer Auth token.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "33168584"
   },
@@ -785,10 +785,10 @@
       ]
     },
     {
-      "name": "4. Media & Cloudinary",
+      "name": "4. Media",
       "item": [
         {
-          "name": "4.1 Upload File Media (Tải ảnh/media lên Cloudinary)",
+          "name": "4.1 Upload File Media (Tải ảnh/media lên)",
           "request": {
             "auth": {
               "type": "bearer",
@@ -807,7 +807,7 @@
               "raw": "{{url}}media",
               "host": ["{{url}}media"]
             },
-            "description": "Tải file từ máy tính lên Cloudinary và lưu thông tin vào CSDL (key multipart: file, optional: folderId)."
+            "description": "Tải file từ máy tính lên và lưu vào thư viện Media (key multipart: file, optional: folderId)."
           },
           "response": []
         },
@@ -832,7 +832,7 @@
               "host": ["{{url}}media"],
               "path": ["upload-url"]
             },
-            "description": "Tải file media lên Cloudinary trực tiếp từ một đường dẫn URL hình ảnh trực tuyến."
+            "description": "Tải file media lên thư viện trực tiếp từ một đường dẫn URL hình ảnh trực tuyến."
           },
           "response": []
         },
@@ -918,7 +918,7 @@
               "host": ["{{url}}media"],
               "path": ["<id>"]
             },
-            "description": "Xóa 1 file media khỏi Cloudinary và CSDL."
+            "description": "Xóa 1 file media khỏi storage và CSDL."
           },
           "response": []
         },
@@ -944,6 +944,31 @@
               "path": ["bulk"]
             },
             "description": "Xóa nhiều file media cùng lúc."
+          },
+          "response": []
+        },
+        {
+          "name": "4.8 Check Media Usages (Kiểm tra ảnh đang được dùng ở đâu)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ids\": [\"<mediaId1>\", \"<mediaId2>\"]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{url}}media/check-usages",
+              "host": ["{{url}}media"],
+              "path": ["check-usages"]
+            },
+            "description": "(Admin) Kiểm tra 1 hoặc nhiều media ID đang được sử dụng ở đâu trong hệ thống (Banner, Thương hiệu, Danh mục, Sản phẩm, Biến thể). Trả về map { mediaId: [{ model, entityId, entityName, adminUrl }] }. Dùng trước khi xóa ảnh để cảnh báo người dùng."
           },
           "response": []
         }
@@ -1727,7 +1752,7 @@
               "host": ["{{url}}products"],
               "path": ["sync-images"]
             },
-            "description": "(Admin) Tự động quét và lưu các link hình ảnh của sản phẩm vào thư viện Media Cloudinary."
+            "description": "(Admin) Tự động quét và lưu các link hình ảnh của sản phẩm vào thư viện Media."
           },
           "response": []
         }

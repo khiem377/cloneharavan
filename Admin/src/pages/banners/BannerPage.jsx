@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   DndContext, closestCenter, PointerSensor,
   useSensor, useSensors, DragOverlay,
@@ -20,6 +20,7 @@ import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { useQueryClient } from '@tanstack/react-query';
 import { BANNERS_KEY } from '@/hooks/useBanners';
 import DataTablePagination from '@/components/ui/DataTablePagination';
+import { useSearchParams } from 'react-router-dom';
 
 function VisibleBadge({ isVisible }) {
   return (
@@ -59,11 +60,18 @@ function InlineActions({ banner, onEdit, onDelete, onToggleVisible }) {
   );
 }
 
-function SortableBannerRow({ banner, index, selected, onToggle, onEdit, onDelete, onToggleVisible }) {
+function SortableBannerRow({ banner, index, selected, onToggle, onEdit, onDelete, onToggleVisible, highlightId }) {
   const {
     attributes, listeners, setNodeRef,
     transform, transition, isDragging,
   } = useSortable({ id: banner._id });
+
+  const isHighlighted = banner._id === highlightId;
+
+  const setRef = (el) => {
+    setNodeRef(el);
+    if (el && isHighlighted) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -78,9 +86,9 @@ function SortableBannerRow({ banner, index, selected, onToggle, onEdit, onDelete
 
   return (
     <tr
-      ref={setNodeRef}
+      ref={setRef}
       style={style}
-      className={`border-b border-border/60 transition-colors hover:bg-muted/40 ${selected ? 'bg-muted/70' : ''} ${!banner.isVisible ? 'opacity-60' : ''}`}
+      className={`border-b border-border/60 transition-colors hover:bg-muted/40 ${selected || isHighlighted ? 'bg-primary/8 ring-1 ring-inset ring-primary/30' : ''} ${!banner.isVisible ? 'opacity-60' : ''}`}
       {...attributes}
       {...listeners}
     >
@@ -178,6 +186,7 @@ export default function BannerPage() {
   const [showBulkDel, setShowBulkDel] = useState(false);
   const [activeId, setActiveId] = useState(null);
   const [localOrder, setLocalOrder] = useState(null);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const res = useBanners({ page, limit });
   const bannerData = res.data;
@@ -185,6 +194,13 @@ export default function BannerPage() {
   const pagination = bannerData?.pagination;
   const isLoading = res.isLoading;
   const banners = localOrder ?? remoteBanners;
+
+  const highlightId = searchParams.get('highlight');
+  useEffect(() => {
+    if (!highlightId || !banners.length) return;
+    setSelectedIds((prev) => { const n = new Set(prev); n.add(highlightId); return n; });
+    setSearchParams((p) => { p.delete('highlight'); return p; }, { replace: true });
+  }, [highlightId, banners]);
 
   const { mutate: deleteBanner } = useDeleteBanner();
   const { mutate: deleteBulk } = useDeleteBulkBanners();
@@ -341,6 +357,7 @@ export default function BannerPage() {
                         onEdit={() => setFormTarget(b)}
                         onDelete={() => setDeleteTarget(b)}
                         onToggleVisible={() => handleToggleVisible(b)}
+                        highlightId={highlightId}
                       />
                     ))}
                   </SortableContext>

@@ -10,6 +10,7 @@ export const mediaService = {
     }),
   uploadUrl: (data) => api.post('/media/upload-url', data), // upload từ URL
   move: (id, targetFolderId) => api.patch(`/media/${id}/move`, { targetFolderId }),
+  checkUsages: (ids) => api.post('/media/check-usages', { ids }),
   deleteOne: (id) => api.delete(`/media/${id}`),
   deleteBulk: (ids) => api.delete('/media/bulk', { data: { ids } }),
 };

@@ -1,8 +1,6 @@
 import { useState } from 'react';
 import { Check, Trash2, ExternalLink, Copy, Eye, FolderInput, Folder, Loader2 } from '@/components/ui/Icons';
 import { toast } from '@/providers/ToastProvider';
-import ConfirmDialog from '@/components/ui/ConfirmDialog';
-import { mediaService } from '@/services/media.service';
 
 function formatSize(bytes) {
   if (!bytes) return '';
@@ -77,9 +75,8 @@ function injectWave() {
   document.head.appendChild(s);
 }
 
-function MediaCard({ item, selected, onToggle, onDelete, onPreview, onMove, animDelay = 0 }) {
+function MediaCard({ item, selected, onToggle, onDeleteRequest, onPreview, onMove, animDelay = 0, isUsed = false }) {
   const [imgError, setImgError] = useState(false);
-  const isUsed = item.usedBy?.length > 0;
   injectWave();
 
   const copyUrl = (e) => {
@@ -132,7 +129,7 @@ function MediaCard({ item, selected, onToggle, onDelete, onPreview, onMove, anim
           <a href={item.url} target="_blank" rel="noreferrer" className="text-white/80 hover:text-white cursor-pointer p-0.5" title="Mở tab mới" onClick={e => e.stopPropagation()}>
             <ExternalLink size={11} />
           </a>
-          <button className="text-red-300 hover:text-red-200 cursor-pointer p-0.5" title="Xóa" onClick={(e) => { e.stopPropagation(); onDelete(item); }}>
+          <button className="text-red-300 hover:text-red-200 cursor-pointer p-0.5" title="Xóa" onClick={(e) => { e.stopPropagation(); onDeleteRequest(item); }}>
             <Trash2 size={11} />
           </button>
         </div>
@@ -147,9 +144,8 @@ function MediaCard({ item, selected, onToggle, onDelete, onPreview, onMove, anim
   );
 }
 
-function MediaRow({ item, selected, onToggle, onDelete, onPreview, onMove, animDelay = 0 }) {
+function MediaRow({ item, selected, onToggle, onDeleteRequest, onPreview, onMove, animDelay = 0, isUsed = false }) {
   const [imgError, setImgError] = useState(false);
-  const isUsed = item.usedBy?.length > 0;
   injectWave();
 
   const copyUrl = (e) => {
@@ -190,7 +186,7 @@ function MediaRow({ item, selected, onToggle, onDelete, onPreview, onMove, animD
         <button className="inline-flex size-6 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer" title="Move" onClick={() => onMove(item)}><FolderInput size={11} /></button>
         <button className="inline-flex size-6 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer" onClick={copyUrl} title="Copy"><Copy size={11} /></button>
         <a href={item.url} target="_blank" rel="noreferrer" className="inline-flex size-6 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer" title="Mở"><ExternalLink size={11} /></a>
-        <button className="inline-flex size-6 items-center justify-center rounded text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors cursor-pointer" title="Xóa" onClick={() => onDelete(item)}><Trash2 size={11} /></button>
+        <button className="inline-flex size-6 items-center justify-center rounded text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors cursor-pointer" title="Xóa" onClick={() => onDeleteRequest(item)}><Trash2 size={11} /></button>
       </div>
     </div>
   );
@@ -202,10 +198,9 @@ function MediaRow({ item, selected, onToggle, onDelete, onPreview, onMove, animD
  */
 export default function MediaGrid({
   items = [], selectedIds, onToggle, onPreview,
-  onDeleteConfirmed, onRefresh, isLoading, viewMode = 'grid', allFolders = [],
-  columns = 6,
+  onDeleteRequest, onRefresh, isLoading, viewMode = 'grid', allFolders = [],
+  columns = 6, usagesMap = {},
 }) {
-  const [deleteTarget, setDeleteTarget] = useState(null);
   const [moveTarget, setMoveTarget] = useState(null);
 
   // Internal preview handler: bubble up to parent if prop provided, else noop
@@ -238,8 +233,9 @@ export default function MediaGrid({
         <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fill, 120px)' }}>
           {items.map((item, idx) => (
             <MediaCard key={item._id} item={item} selected={selectedIds.has(item._id)}
-              onToggle={onToggle} onPreview={handlePreview} onDelete={setDeleteTarget} onMove={setMoveTarget}
+              onToggle={onToggle} onPreview={handlePreview} onDeleteRequest={onDeleteRequest} onMove={setMoveTarget}
               animDelay={Math.min(idx * 15, 300)}
+              isUsed={!!(usagesMap[item._id]?.length)}
             />
           ))}
         </div>
@@ -255,22 +251,12 @@ export default function MediaGrid({
           </div>
           {items.map((item, idx) => (
             <MediaRow key={item._id} item={item} selected={selectedIds.has(item._id)}
-              onToggle={onToggle} onPreview={handlePreview} onDelete={setDeleteTarget} onMove={setMoveTarget}
+              onToggle={onToggle} onPreview={handlePreview} onDeleteRequest={onDeleteRequest} onMove={setMoveTarget}
               animDelay={Math.min(idx * 18, 220)}
+              isUsed={!!(usagesMap[item._id]?.length)}
             />
           ))}
         </div>
-      )}
-
-      {deleteTarget && (
-        <ConfirmDialog
-          title="Xóa ảnh"
-          message={`Xóa "${deleteTarget.filename}"?${deleteTarget.usedBy?.length ? ` File này đang được dùng bởi ${[...new Set(deleteTarget.usedBy.map(u => u.model))].join(', ')}.` : ''} Hành động không thể hoàn tác.`}
-          confirmText="Xóa ảnh"
-          variant="danger"
-          onConfirm={() => { onDeleteConfirmed(deleteTarget._id); setDeleteTarget(null); }}
-          onCancel={() => setDeleteTarget(null)}
-        />
       )}
 
       {moveTarget && (

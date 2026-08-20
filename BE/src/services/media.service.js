@@ -3,12 +3,8 @@ const Folder = require('../models/folder.model');
 const { AppError } = require('../utils/AppError');
 const { uploadToCloudinary, deleteFromCloudinary } = require('../config/cloudinary');
 const { getOrCreateDateSubFolder } = require('./folder.service');
+const mediaRegistry = require('../config/mediaRegistry');
 
-/**
- * Upload file vào 1 folder cụ thể
- * - Tự tạo sub-folder tháng/năm nếu chưa có
- * - folder path Cloudinary = folderSlugPath
- */
 const uploadMedia = async (file, folderId) => {
   if (!file) throw new AppError('Vui lòng chọn file', 400);
 
@@ -18,7 +14,6 @@ const uploadMedia = async (file, folderId) => {
   let uploadFolder = targetFolder;
   let cloudinaryFolder = targetFolder.slug;
 
-  // Chỉ auto-tạo date subfolder nếu đây là ROOT folder (không có parentId)
   if (!targetFolder.parentId) {
     const subFolder = await getOrCreateDateSubFolder(targetFolder._id);
     uploadFolder = subFolder;
@@ -42,9 +37,6 @@ const uploadMedia = async (file, folderId) => {
   return saved;
 };
 
-/**
- * Upload ảnh từ URL – fetch → upload Cloudinary
- */
 const uploadMediaFromUrl = async (url, folderId) => {
   if (!url) throw new AppError('URL không được để trống', 400);
 
@@ -59,7 +51,6 @@ const uploadMediaFromUrl = async (url, folderId) => {
     cloudinaryFolder = `${targetFolder.slug}/${subFolder.slug}`;
   }
 
-  // Fetch ảnh từ URL
   const resp = await fetch(url, { signal: AbortSignal.timeout(15000) });
   if (!resp.ok) throw new AppError('Không thể tải ảnh từ URL', 400);
   const mimeType = resp.headers.get('content-type') || 'image/jpeg';
@@ -68,8 +59,6 @@ const uploadMediaFromUrl = async (url, folderId) => {
   const buffer = Buffer.from(arrayBuffer);
 
   const filename = url.split('/').pop().split('?')[0] || 'image.jpg';
-
-  // Upload lên Cloudinary dùng hàm đã có sẵn
   const result = await uploadToCloudinary(buffer, cloudinaryFolder);
 
   const saved = await Media.create({
@@ -142,43 +131,78 @@ const searchMedia = async ({ q, page = 1, limit = 20, sortBy = 'createdAt', sort
 };
 
 
-/**
- * Xóa 1 media – luôn cho phép, trả về usedBy info nếu có
- */
+const checkMediaUsages = async (ids) => {
+  if (!ids || ids.length === 0) return {};
+
+  const result = {};
+
+  for (const entry of mediaRegistry) {
+    const { model, displayName, mediaFields, getEntityName, getAdminUrl } = entry;
+
+    const orConditions = mediaFields.map((field) => ({
+      [field]: { $in: ids },
+    }));
+
+    const docs = await model.find({ $or: orConditions }).lean();
+
+    for (const doc of docs) {
+      for (const field of mediaFields) {
+        const parts = field.split('.');
+        let values = [doc];
+        for (const part of parts) {
+          values = values.flatMap((v) => {
+            if (!v) return [];
+            const val = v[part];
+            return Array.isArray(val) ? val : [val];
+          });
+        }
+
+        for (const mediaId of values) {
+          if (!mediaId) continue;
+          const mediaIdStr = mediaId.toString();
+          if (!ids.map(String).includes(mediaIdStr)) continue;
+
+          if (!result[mediaIdStr]) result[mediaIdStr] = [];
+
+          const alreadyAdded = result[mediaIdStr].some(
+            (u) => u.entityId === doc._id.toString() && u.displayName === displayName
+          );
+          if (!alreadyAdded) {
+            result[mediaIdStr].push({
+              displayName,
+              entityId: doc._id.toString(),
+              entityName: getEntityName(doc),
+              adminUrl: getAdminUrl(doc),
+            });
+          }
+        }
+      }
+    }
+  }
+
+  return result;
+};
+
+
 const deleteMedia = async (id) => {
   const media = await Media.findById(id);
   if (!media) throw new AppError('Không tìm thấy file', 404);
-
-  const usedBy = media.usedBy ?? [];
   await deleteFromCloudinary(media.publicId);
   await media.deleteOne();
-
-  return { usedBy }; // trả về để frontend hiển thị thông báo
 };
 
-/**
- * Xóa nhiều – xóa tất cả, kể cả file đang dùng
- */
 const deleteMediaBulk = async (ids) => {
   const medias = await Media.find({ _id: { $in: ids } });
-
-  let usedModels = [];
   for (const m of medias) {
-    if (m.usedBy?.length) usedModels.push(...m.usedBy.map(u => u.model));
-    await deleteFromCloudinary(m.publicId).catch(() => {}); // ignore cloudinary err
+    await deleteFromCloudinary(m.publicId).catch(() => {});
   }
   await Media.deleteMany({ _id: { $in: medias.map(m => m._id) } });
-
-  const uniqueModels = [...new Set(usedModels)];
-  return {
-    deleted: medias.length,
-    skipped: 0,
-    usedNote: uniqueModels.length ? `(có ${usedModels.length} file đã được dùng bởi: ${uniqueModels.join(', ')})` : '',
-  };
+  return { deleted: medias.length };
 };
 
 module.exports = {
   uploadMedia, uploadMediaFromUrl,
   browseMedia, searchMedia,
+  checkMediaUsages,
   deleteMedia, deleteMediaBulk,
 };

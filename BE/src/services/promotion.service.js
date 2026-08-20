@@ -139,9 +139,20 @@ const applyPromotions = async (cartItems, orderTotal) => {
 const markPromotionsUsed = async (promotionIds) => {
   if (!promotionIds || !promotionIds.length) return;
   const uniqueIds = [...new Set(promotionIds.map(String))];
-  await Promotion.updateMany(
-    { _id: { $in: uniqueIds } },
-    { $inc: { usedCount: 1 } }
+
+  await Promise.all(
+    uniqueIds.map((id) =>
+      Promotion.findOneAndUpdate(
+        {
+          _id: id,
+          $or: [
+            { usageLimit: null },
+            { $expr: { $lt: ['$usedCount', '$usageLimit'] } },
+          ],
+        },
+        { $inc: { usedCount: 1 } }
+      )
+    )
   );
 };
 
