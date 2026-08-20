@@ -86,6 +86,21 @@ const NAV_GROUPS = [
     ],
   },
   {
+    label: 'Blog',
+    items: [
+      {
+        icon: SparklesIcon,
+        label: 'Blog',
+        children: [
+          { to: '/blog/posts', icon: ListIcon, label: 'Bài viết' },
+          { to: '/blog/posts/new', icon: PlusIcon, label: 'Tạo bài mới' },
+          { to: '/blog/categories', icon: CategoriesIcon, label: 'Danh mục' },
+          { to: '/blog/tags', icon: KeyIcon, label: 'Tags' },
+        ],
+      },
+    ],
+  },
+  {
     label: 'Hệ thống',
     items: [
       { to: '/settings', icon: SettingsIcon, label: 'Cài đặt' },

@@ -14,13 +14,13 @@ const createProductSchema = z.object({
   }).min(2, 'Mã SKU phải có ít nhất 2 ký tự'),
 
   categories: z.array(
-    z.string({ invalid_type_error: 'ID danh mục không hợp lệ' }).min(24, 'ID danh mục không hợp lệ'),
+    z.string({ invalid_type_error: 'Danh mục không hợp lệ' }).min(24, 'Danh mục không hợp lệ'),
     { required_error: 'Vui lòng chọn ít nhất 1 danh mục', invalid_type_error: 'Danh sách danh mục không hợp lệ' }
   ).min(1, 'Vui lòng chọn ít nhất 1 danh mục'),
 
   brand: z.string({
-    invalid_type_error: 'Vui lòng chọn thương hiệu hợp lệ',
-  }).min(24, 'ID thương hiệu không hợp lệ').nullable().optional(),
+    invalid_type_error: 'Thương hiệu không hợp lệ',
+  }).min(24, 'Vui lòng chọn thương hiệu hợp lệ').nullable().optional(),
 
   price: z.number({
     required_error: 'Vui lòng nhập giá niêm yết',
@@ -38,7 +38,7 @@ const createProductSchema = z.object({
 
   thumbnailMediaId: z.string({
     required_error: 'Vui lòng chọn ảnh đại diện sản phẩm',
-    invalid_type_error: 'ID ảnh đại diện không hợp lệ',
+    invalid_type_error: 'Ảnh đại diện không hợp lệ',
   }),
 
   imageMediaIds: z.array(z.string()).optional(),

@@ -1,8 +1,8 @@
 const { z } = require('zod');
 
 const giftProductSchema = z.object({
-  productId: z.string().min(1, 'productId là bắt buộc'),
-  qty: z.number().int().min(1).default(1),
+  productId: z.string().min(1, 'Vui lòng chọn sản phẩm tặng kèm'),
+  qty: z.number({ invalid_type_error: 'Số lượng tặng phải là số' }).int().min(1, 'Số lượng tặng phải ít nhất là 1').default(1),
 });
 
 const scopeSchema = z
@@ -51,16 +51,16 @@ const createGiftProgramSchema = z
 
 const updateGiftProgramSchema = z
   .object({
-    name: z.string().min(1).max(200).optional(),
-    description: z.string().optional(),
-    scope: scopeSchema.optional(),
-    triggerQty: z.number().int().min(1).optional(),
-    giftQty: z.number().int().min(1).nullable().optional(),
+    name:         z.string({ invalid_type_error: 'Tên chương trình phải là chuỗi' }).min(1, 'Tên chương trình không được để trống').max(200).optional(),
+    description:  z.string().optional(),
+    scope:        scopeSchema.optional(),
+    triggerQty:   z.number({ invalid_type_error: 'Số lượng kích hoạt phải là số' }).int().min(1, 'Số lượng kích hoạt phải lớn hơn 0').optional(),
+    giftQty:      z.number({ invalid_type_error: 'Số lượng tặng phải là số' }).int().min(1, 'Số lượng tặng phải lớn hơn 0').nullable().optional(),
     giftProducts: z.array(giftProductSchema).optional(),
-    giftLimit: z.number().int().min(1).nullable().optional(),
-    startDate: z.coerce.date().optional(),
-    endDate: z.coerce.date().optional(),
-    isActive: z.boolean().optional(),
+    giftLimit:    z.number({ invalid_type_error: 'Giới hạn tặng phải là số' }).int().min(1, 'Giới hạn tặng phải lớn hơn 0').nullable().optional(),
+    startDate:    z.coerce.date({ invalid_type_error: 'Ngày bắt đầu không hợp lệ' }).optional(),
+    endDate:      z.coerce.date({ invalid_type_error: 'Ngày kết thúc không hợp lệ' }).optional(),
+    isActive:     z.boolean({ invalid_type_error: 'Trạng thái phải là boolean' }).optional(),
   })
   .refine(
     (d) => {
