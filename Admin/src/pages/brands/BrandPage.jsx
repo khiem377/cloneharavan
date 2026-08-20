@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Plus, Pencil, Trash2,
   ToggleLeft, ToggleRight,
@@ -16,6 +16,7 @@ import {
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import MediaPickerModal from '@/components/ui/MediaPickerModal';
 import DataTablePagination from '@/components/ui/DataTablePagination';
+import { useSearchParams } from 'react-router-dom';
 
 const DEFAULT_FORM = {
   name: '',
@@ -38,6 +39,8 @@ export default function BrandPage() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [showMediaPicker, setShowMediaPicker] = useState(false);
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
+  const rowRefs = useRef({});
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const res = useBrands({ keyword, page, limit });
 
@@ -46,6 +49,17 @@ export default function BrandPage() {
     brandData?.data ?? (Array.isArray(brandData) ? brandData : []);
   const pagination = brandData?.pagination;
   const isLoading = res.isLoading;
+
+  const highlightId = searchParams.get('highlight');
+  useEffect(() => {
+    if (!highlightId || !brands.length) return;
+    setSelected((prev) => prev.includes(highlightId) ? prev : [...prev, highlightId]);
+    const el = rowRefs.current[highlightId];
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setSearchParams((p) => { p.delete('highlight'); return p; }, { replace: true });
+    }
+  }, [highlightId, brands]);
 
   const createMut = useCreateBrand();
   const updateMut = useUpdateBrand();
@@ -261,10 +275,10 @@ export default function BrandPage() {
                 brands.map((brand) => (
                   <tr
                     key={brand._id}
-                    className={`border-b border-border/60 transition-colors hover:bg-muted/40 ${selected.includes(brand._id)
-                        ? 'bg-muted/70'
-                        : ''
-                      }`}
+                    ref={(el) => { rowRefs.current[brand._id] = el; }}
+                    className={`border-b border-border/60 transition-colors hover:bg-muted/40 ${
+                      selected.includes(brand._id) ? 'bg-primary/8 ring-1 ring-inset ring-primary/30' : ''
+                    }`}
                   >
                     {/* Checkbox */}
                     <td className="px-3.5 py-3 align-middle">

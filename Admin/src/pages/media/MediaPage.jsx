@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ChevronRight, Upload, ExternalLink, Copy, X, Search } from '@/components/ui/Icons';
@@ -12,6 +12,7 @@ import MediaToolbar from './MediaToolbar';
 import UploadZone from './UploadZone';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import DataTablePagination from '@/components/ui/DataTablePagination';
+import MediaUsageModal from '@/components/media/MediaUsageModal';
 
 function formatSize(bytes) {
   if (!bytes) return '—';
@@ -301,6 +302,9 @@ export default function MediaPage() {
   const [sortBy, setSortBy] = useState('createdAt');
   const [sortDir, setSortDir] = useState('desc');
   const [viewMode, setViewMode] = useState('grid');
+  const [usageModal, setUsageModal] = useState(null);
+  const [usagesMap, setUsagesMap] = useState({});
+  const [confirmDeleteItem, setConfirmDeleteItem] = useState(null);
 
   const qc = useQueryClient();
   const { data: allFolders = [] } = useFolders();
@@ -322,22 +326,57 @@ export default function MediaPage() {
 
   const invalidateAll = () => qc.invalidateQueries({ predicate: (q) => q.queryKey[0] === 'media' });
 
-  const { mutate: bulkDelete } = useMutation({
-    mutationFn: () => mediaService.deleteBulk([...selectedIds]),
-    onSuccess: (res) => {
-      toast.success(res.data.message);
+  useEffect(() => {
+    if (!mediaItems.length) { setUsagesMap({}); return; }
+    const ids = mediaItems.map((m) => m._id);
+    mediaService.checkUsages(ids)
+      .then((res) => setUsagesMap(res.data.data.usages || {}))
+      .catch(() => setUsagesMap({}));
+  }, [mediaItems]);
+
+  const { mutate: bulkDelete, isPending: isDeletingBulk } = useMutation({
+    mutationFn: (ids) => mediaService.deleteBulk(ids),
+    onSuccess: () => {
+      toast.success('Đã xóa thành công');
       setSelectedIds(new Set());
       setShowBulkConfirm(false);
+      setUsageModal(null);
       invalidateAll();
     },
-    onError: (err) => { toast.error(err.response?.data?.message || 'Xóa thất bại'); setShowBulkConfirm(false); },
+    onError: (err) => { toast.error(err.response?.data?.message || 'Xóa thất bại'); },
   });
 
-  const { mutate: deleteOne } = useMutation({
+  const { mutate: deleteOne, isPending: isDeletingOne } = useMutation({
     mutationFn: (id) => mediaService.deleteOne(id),
-    onSuccess: (res) => { toast.success(res.data.message); invalidateAll(); },
+    onSuccess: () => { toast.success('Đã xóa thành công'); setUsageModal(null); invalidateAll(); },
     onError: (err) => toast.error(err.response?.data?.message || 'Xóa thất bại'),
   });
+
+  const handleDeleteRequest = (item) => {
+    const usages = usagesMap[item._id];
+    if (usages && usages.length > 0) {
+      setUsageModal({ items: [item], usages: { [item._id]: usages }, type: 'single', ids: [item._id] });
+    } else {
+      setConfirmDeleteItem(item);
+    }
+  };
+
+  const handleBulkDeleteCheck = async () => {
+    const ids = [...selectedIds];
+    try {
+      const res = await mediaService.checkUsages(ids);
+      const usages = res.data.data.usages;
+      if (Object.keys(usages).length > 0) {
+        const usedItems = mediaItems.filter((m) => ids.includes(m._id));
+        setUsageModal({ items: usedItems, usages, type: 'bulk', ids });
+        setShowBulkConfirm(false);
+      } else {
+        setShowBulkConfirm(true);
+      }
+    } catch {
+      setShowBulkConfirm(true);
+    }
+  };
 
   const toggleSelect = useCallback((id) => {
     setSelectedIds((prev) => {
@@ -395,7 +434,7 @@ export default function MediaPage() {
                 onSearch={(q) => { setSearchQuery(q); setPage(1); }}
                 onSearchEnter={(q) => { if (q.trim()) setSearchModal(q.trim()); }}
                 selectedCount={selectedIds.size}
-                onBulkDelete={() => setShowBulkConfirm(true)}
+                onBulkDelete={handleBulkDeleteCheck}
                 onClearSelect={() => setSelectedIds(new Set())}
                 total={total}
                 sortBy={sortBy} sortDir={sortDir}
@@ -417,12 +456,13 @@ export default function MediaPage() {
                 selectedIds={selectedIds}
                 onToggle={toggleSelect}
                 onPreview={setPreviewItem}
-                onDeleteConfirmed={deleteOne}
+                onDeleteRequest={handleDeleteRequest}
                 onRefresh={invalidateAll}
                 isLoading={isLoading}
                 viewMode={viewMode}
                 allFolders={flatFolders}
                 columns={showPreview ? 3 : 6}
+                usagesMap={usagesMap}
               />
             </div>
 
@@ -461,8 +501,33 @@ export default function MediaPage() {
           message={`Xóa ${selectedIds.size} ảnh đã chọn? Hành động này không thể hoàn tác.`}
           confirmText="Xóa tất cả"
           variant="danger"
-          onConfirm={() => bulkDelete()}
+          onConfirm={() => bulkDelete([...selectedIds])}
           onCancel={() => setShowBulkConfirm(false)}
+        />
+      )}
+
+      {confirmDeleteItem && (
+        <ConfirmDialog
+          open={true}
+          title="Xóa ảnh"
+          message={`Xóa ảnh "${confirmDeleteItem.filename}"? Hành động này không thể hoàn tác.`}
+          confirmText="Xóa"
+          variant="danger"
+          onConfirm={() => { deleteOne(confirmDeleteItem._id); setConfirmDeleteItem(null); }}
+          onCancel={() => setConfirmDeleteItem(null)}
+        />
+      )}
+
+      {usageModal && (
+        <MediaUsageModal
+          mediaItems={usageModal.items}
+          usages={usageModal.usages}
+          isDeleting={isDeletingBulk || isDeletingOne}
+          onForceDelete={() => {
+            if (usageModal.type === 'single') deleteOne(usageModal.ids[0]);
+            else bulkDelete(usageModal.ids);
+          }}
+          onCancel={() => setUsageModal(null)}
         />
       )}
 

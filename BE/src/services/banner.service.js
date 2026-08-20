@@ -32,18 +32,14 @@ const getAllBanners = async (query = {}) => {
   };
 };
 
-
 const createBanner = async (file, data) => {
   let media;
 
   if (file) {
-
     const bannerFolder = await Folder.findOne({ slug: 'banners', parentId: null });
     if (!bannerFolder) throw new AppError('Folder "banners" chưa được tạo, vui lòng chạy seed', 500);
-
     media = await uploadMedia(file, bannerFolder._id);
   } else if (data.mediaId) {
-
     media = await Media.findById(data.mediaId);
     if (!media) throw new AppError('Không tìm thấy ảnh trong Media Library', 404);
   } else {
@@ -59,14 +55,7 @@ const createBanner = async (file, data) => {
     isVisible: data.isVisible,
   });
 
-
-  await Media.findByIdAndUpdate(media._id, {
-    $addToSet: { usedBy: { model: 'Banner', refId: banner._id } },
-  });
-
-
   await media.populate({ path: 'folderId', populate: { path: 'parentId', select: 'name slug _id' } });
-
   return { banner, media };
 };
 
@@ -89,33 +78,16 @@ const reorderBanners = async (items) => {
   await Banner.bulkWrite(bulkOps);
 };
 
-
 const deleteBanner = async (id) => {
   const banner = await Banner.findByIdAndDelete(id);
   if (!banner) throw new AppError('Không tìm thấy banner', 404);
-
   await deleteFromCloudinary(banner.publicId);
-
-  if (banner.mediaId) {
-    await Media.findByIdAndUpdate(banner.mediaId, {
-      $pull: { usedBy: { model: 'Banner', refId: banner._id } },
-    });
-  }
 };
 
 const deleteBulkBanners = async (ids) => {
   const banners = await Banner.find({ _id: { $in: ids } });
   await Banner.deleteMany({ _id: { $in: ids } });
-  await Promise.all(
-    banners.map(async (b) => {
-      await deleteFromCloudinary(b.publicId);
-      if (b.mediaId) {
-        await Media.findByIdAndUpdate(b.mediaId, {
-          $pull: { usedBy: { model: 'Banner', refId: b._id } },
-        });
-      }
-    })
-  );
+  await Promise.all(banners.map((b) => deleteFromCloudinary(b.publicId)));
 };
 
 module.exports = {

@@ -72,17 +72,6 @@ const createCategory = async (data) => {
     metaDescription: data.metaDescription,
   });
 
-  if (image) {
-    await Media.findByIdAndUpdate(image.mediaId, {
-      $addToSet: { usedBy: { model: 'Category', refId: category._id } },
-    });
-  }
-  if (icon) {
-    await Media.findByIdAndUpdate(icon.mediaId, {
-      $addToSet: { usedBy: { model: 'Category', refId: category._id } },
-    });
-  }
-
   return category.populate('parentId', 'name slug');
 };
 
@@ -153,33 +142,13 @@ const updateCategory = async (id, data) => {
   }
 
   if (data.imageMediaId !== undefined) {
-    if (category.image?.mediaId) {
-      await Media.findByIdAndUpdate(category.image.mediaId, {
-        $pull: { usedBy: { model: 'Category', refId: category._id } },
-      });
-    }
     const image = await resolveMedia(data.imageMediaId);
     category.image = image || { mediaId: null, url: '', publicId: '' };
-    if (image) {
-      await Media.findByIdAndUpdate(image.mediaId, {
-        $addToSet: { usedBy: { model: 'Category', refId: category._id } },
-      });
-    }
   }
 
   if (data.iconMediaId !== undefined) {
-    if (category.icon?.mediaId) {
-      await Media.findByIdAndUpdate(category.icon.mediaId, {
-        $pull: { usedBy: { model: 'Category', refId: category._id } },
-      });
-    }
     const icon = await resolveMedia(data.iconMediaId);
     category.icon = icon || { mediaId: null, url: '', publicId: '' };
-    if (icon) {
-      await Media.findByIdAndUpdate(icon.mediaId, {
-        $addToSet: { usedBy: { model: 'Category', refId: category._id } },
-      });
-    }
   }
 
   const { imageMediaId, iconMediaId, ...rest } = data;
@@ -209,13 +178,6 @@ const deleteCategory = async (id) => {
   const hasChildren = await Category.exists({ parentId: id });
   if (hasChildren) throw new AppError('Danh mục đang có danh mục con, không thể xóa', 400);
 
-  const mediaIds = [category.image?.mediaId, category.icon?.mediaId].filter(Boolean);
-  for (const mediaId of mediaIds) {
-    await Media.findByIdAndUpdate(mediaId, {
-      $pull: { usedBy: { model: 'Category', refId: category._id } },
-    });
-  }
-
   await category.deleteOne();
   return { message: 'Đã xóa danh mục thành công' };
 };
@@ -223,17 +185,6 @@ const deleteCategory = async (id) => {
 const deleteBulkCategories = async (ids) => {
   if (!Array.isArray(ids) || ids.length === 0) {
     throw new AppError('Danh sách ID danh mục không hợp lệ', 400);
-  }
-
-  const categories = await Category.find({ _id: { $in: ids } });
-
-  for (const cat of categories) {
-    const mediaIds = [cat.image?.mediaId, cat.icon?.mediaId].filter(Boolean);
-    for (const mediaId of mediaIds) {
-      await Media.findByIdAndUpdate(mediaId, {
-        $pull: { usedBy: { model: 'Category', refId: cat._id } },
-      });
-    }
   }
 
   const result = await Category.deleteMany({ _id: { $in: ids } });

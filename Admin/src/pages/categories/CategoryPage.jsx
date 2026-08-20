@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Plus, Pencil, Trash2, ChevronRight, ChevronDown, ToggleLeft, ToggleRight, Loader2 } from '@/components/ui/Icons';
 import { toast } from '@/providers/ToastProvider';
 import {
@@ -8,6 +8,7 @@ import {
 import { useBrands, useAllBrands } from '@/hooks/useBrands';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import MediaPickerModal from '@/components/ui/MediaPickerModal';
+import { useSearchParams } from 'react-router-dom';
 
 const DEFAULT_FORM = {
   name: '',
@@ -29,10 +30,15 @@ const DEFAULT_FORM = {
 const LEVEL_LABELS = ['Cấp 1', 'Cấp 2', 'Cấp 3'];
 const CONNECTORS = ['', '└─', '└──'];
 
-function CategoryRow({ cat, level = 0, selected, onSelect, onEdit, onDelete, onToggle }) {
+function CategoryRow({ cat, level = 0, selected, onSelect, onEdit, onDelete, onToggle, highlightId }) {
   const [expanded, setExpanded] = useState(level === 0);
   const hasChildren = cat.children?.length > 0;
   const isSelected = selected.includes(cat._id);
+  const isHighlighted = cat._id === highlightId;
+
+  const rowRef = (el) => {
+    if (el && isHighlighted) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
 
   const levelBadges = [
     'inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold bg-primary/10 text-primary border border-primary/20',
@@ -42,7 +48,7 @@ function CategoryRow({ cat, level = 0, selected, onSelect, onEdit, onDelete, onT
 
   return (
     <>
-      <tr className={`border-b border-border/60 transition-colors hover:bg-muted/40 ${isSelected ? 'bg-muted/70' : ''}`}>
+      <tr ref={rowRef} className={`border-b border-border/60 transition-colors hover:bg-muted/40 ${isSelected || isHighlighted ? 'bg-primary/8 ring-1 ring-inset ring-primary/30' : ''}`}>
         <td className="px-3.5 py-3 align-middle w-10">
           <input
             type="checkbox"
@@ -123,6 +129,7 @@ function CategoryRow({ cat, level = 0, selected, onSelect, onEdit, onDelete, onT
           onEdit={onEdit}
           onDelete={onDelete}
           onToggle={onToggle}
+          highlightId={highlightId}
         />
       ))}
     </>
@@ -138,10 +145,18 @@ export default function CategoryPage() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [mediaPickerFor, setMediaPickerFor] = useState(null);
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const { data: categories = [], isLoading } = useCategories({ keyword, tree: 'true' });
   const { data: flatCategories = [] } = useCategories({});
   const { data: brands = [] } = useAllBrands();
+
+  const highlightId = searchParams.get('highlight');
+  useEffect(() => {
+    if (!highlightId || !categories.length) return;
+    setSelected((prev) => prev.includes(highlightId) ? prev : [...prev, highlightId]);
+    setSearchParams((p) => { p.delete('highlight'); return p; }, { replace: true });
+  }, [highlightId, categories]);
 
   const createMut = useCreateCategory();
   const updateMut = useUpdateCategory();
@@ -309,6 +324,7 @@ export default function CategoryPage() {
                     onEdit={openEdit}
                     onDelete={setDeleteTarget}
                     onToggle={handleToggle}
+                    highlightId={highlightId}
                   />
                 ))
               )}

@@ -10,12 +10,6 @@ const mediaSchema = new mongoose.Schema(
     size: { type: Number },
     width: { type: Number },
     height: { type: Number },
-    usedBy: [
-      {
-        model: { type: String },
-        refId: { type: mongoose.Schema.Types.ObjectId },
-      },
-    ],
   },
   { timestamps: true }
 );
