@@ -210,9 +210,9 @@ export default function MediaGrid({
 
   if (isLoading) {
     return (
-      <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fill, 120px)' }}>
+      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-2.5 w-full">
         {Array.from({ length: 18 }).map((_, i) => (
-          <div key={i} className="rounded-lg bg-muted animate-pulse border border-border" style={{ height: 100 }} />
+          <div key={i} className="aspect-square rounded-lg bg-muted animate-pulse border border-border" />
         ))}
       </div>
     );
@@ -230,7 +230,7 @@ export default function MediaGrid({
   return (
     <>
       {viewMode === 'grid' ? (
-        <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fill, 120px)' }}>
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-2.5 w-full">
           {items.map((item, idx) => (
             <MediaCard key={item._id} item={item} selected={selectedIds.has(item._id)}
               onToggle={onToggle} onPreview={handlePreview} onDeleteRequest={onDeleteRequest} onMove={setMoveTarget}

@@ -551,7 +551,7 @@ export default function MediaPickerModal({ onSelect, onClose, isMultiple = false
                 className="flex items-center justify-center bg-[repeating-conic-gradient(#80808015_0%_25%,transparent_0%_50%)] bg-[length:12px_12px] border-b border-border shrink-0"
                 style={{ height: 150 }}
               >
-                {pickerPreview.mimetype?.startsWith('image/') ? (
+                {((pickerPreview.mimeType || pickerPreview.mimetype || '').startsWith('image/') || pickerPreview.url) ? (
                   <img src={pickerPreview.url} alt={pickerPreview.filename} className="max-h-[146px] max-w-full object-contain" />
                 ) : (
                   <span className="text-3xl font-extrabold text-muted-foreground/20">

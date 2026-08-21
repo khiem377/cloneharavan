@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ChevronRight, Upload, ExternalLink, Copy, X, Search } from '@/components/ui/Icons';
+import { ChevronRight, Upload, ExternalLink, Copy, X, Search, Folder, ChevronDown } from '@/components/ui/Icons';
 import { toast } from '@/providers/ToastProvider';
 import { useMedia, useMediaSearch } from '@/hooks/useMedia';
 import { useFolders } from '@/hooks/useFolders';
@@ -400,14 +400,22 @@ export default function MediaPage() {
     setSearchQuery('');
   };
 
+  const [showMobileFolders, setShowMobileFolders] = useState(false);
+
+  const currentFolderName = useMemo(() => {
+    if (!selectedFolder) return 'Tất cả';
+    const found = flatFolders.find((f) => f._id === selectedFolder);
+    return found ? found.name : 'Tất cả';
+  }, [selectedFolder, flatFolders]);
+
   const showPreview = !!previewItem;
 
   return (
-    <div className="p-6 w-full max-w-[1600px] mx-auto flex flex-col gap-5">
+    <div className="p-3 sm:p-6 w-full max-w-[1600px] mx-auto flex flex-col gap-5">
       <div className="rounded-xl border border-border bg-card shadow-2xs text-foreground overflow-hidden">
 
         {/* Header */}
-        <div className="flex items-center justify-between gap-4 px-6 py-4 border-b border-border">
+        <div className="flex items-center justify-between gap-4 px-4 sm:px-6 py-4 border-b border-border">
           <h1 className="text-xl font-bold tracking-tight text-foreground">Thư viện ảnh</h1>
           <button
             className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground shadow-xs hover:bg-primary/90 transition-colors cursor-pointer"
@@ -417,11 +425,39 @@ export default function MediaPage() {
           </button>
         </div>
 
-        {/* Body — fixed height flex so each column scrolls independently */}
-        <div className="flex overflow-hidden" style={{ height: 'calc(100vh - 200px)', minHeight: 480 }}>
+        {/* Mobile Folder Selector Bar */}
+        <div className="md:hidden flex items-center justify-between px-4 py-2.5 border-b border-border bg-muted/20">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground truncate">
+            <Folder size={14} className="text-primary shrink-0" />
+            <span>Thư mục: <strong className="text-foreground">{currentFolderName}</strong></span>
+          </div>
+          <button
+            onClick={() => setShowMobileFolders(!showMobileFolders)}
+            className="inline-flex items-center gap-1 text-xs font-medium text-foreground px-2.5 py-1 rounded-md border border-border bg-background hover:bg-accent transition-colors cursor-pointer shrink-0"
+          >
+            <span>Đổi thư mục</span>
+            <ChevronDown size={13} className={`transition-transform ${showMobileFolders ? 'rotate-180' : ''}`} />
+          </button>
+        </div>
 
-          {/* Col 1: Folder Tree — independently scrollable */}
-          <div className="w-52 shrink-0 border-r border-border overflow-y-auto p-2.5 bg-muted/10">
+        {/* Mobile Collapsible Folder Tree */}
+        {showMobileFolders && (
+          <div className="md:hidden border-b border-border p-3 bg-card max-h-64 overflow-y-auto shadow-inner">
+            <FolderTree
+              selectedId={selectedFolder}
+              onSelect={(id) => {
+                handleFolderSelect(id);
+                setShowMobileFolders(false);
+              }}
+            />
+          </div>
+        )}
+
+        {/* Body — fixed height flex so each column scrolls independently */}
+        <div className="flex flex-col md:flex-row overflow-hidden" style={{ minHeight: 480 }}>
+
+          {/* Desktop Col 1: Folder Tree — independently scrollable */}
+          <div className="hidden md:block w-52 shrink-0 border-r border-border overflow-y-auto p-2.5 bg-muted/10">
             <FolderTree selectedId={selectedFolder} onSelect={handleFolderSelect} />
           </div>
 

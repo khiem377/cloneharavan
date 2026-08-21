@@ -73,7 +73,7 @@ export default function BlogPostListPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="p-3 sm:p-6 flex flex-col gap-4 sm:gap-6 w-full max-w-full overflow-x-hidden min-h-full bg-background text-foreground">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Bài viết Blog</h1>

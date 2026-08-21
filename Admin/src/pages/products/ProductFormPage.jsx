@@ -341,8 +341,8 @@ export default function ProductFormPage() {
   }
 
   return (
-    <div className="p-6 flex flex-col gap-6 w-full max-w-6xl mx-auto min-h-full bg-background text-foreground">
-      <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-xs py-3 border-b border-border flex items-center justify-between gap-4">
+    <div className="p-3 sm:p-6 flex flex-col gap-6 w-full max-w-6xl mx-auto min-h-full bg-background text-foreground">
+      <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-xs py-3 border-b border-border flex flex-wrap items-center justify-between gap-2 sm:gap-4">
         <button
           className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg px-3.5 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer"
           onClick={() => navigate('/products')}

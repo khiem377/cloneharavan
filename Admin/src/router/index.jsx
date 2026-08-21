@@ -14,6 +14,7 @@ import ImportExportPage from '@/pages/products/ImportExportPage';
 import CouponPage from '@/pages/promotions/CouponPage';
 import PromotionPage from '@/pages/promotions/PromotionPage';
 import GiftProgramPage from '@/pages/promotions/GiftProgramPage';
+import FlashSalePage from '@/pages/promotions/FlashSalePage';
 import ComingSoonPage from '@/pages/common/ComingSoonPage';
 import BlogPostListPage from '@/pages/blog/BlogPostListPage';
 import BlogPostFormPage from '@/pages/blog/BlogPostFormPage';
@@ -47,6 +48,7 @@ const router = createBrowserRouter([
           { path: 'promotions/coupons', element: <CouponPage /> },
           { path: 'promotions/discounts', element: <PromotionPage /> },
           { path: 'promotions/gifts', element: <GiftProgramPage /> },
+          { path: 'promotions/flash-sales', element: <FlashSalePage /> },
           { path: 'blog/posts', element: <BlogPostListPage /> },
           { path: 'blog/posts/new', element: <BlogPostFormPage /> },
           { path: 'blog/posts/:id/edit', element: <BlogPostFormPage /> },
