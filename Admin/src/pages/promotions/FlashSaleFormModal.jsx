@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { X, Image, Plus, Trash2, Search, Loader2, Sparkles } from '@/components/ui/Icons';
 import { flashSaleService } from '@/services/flashSale.service';
 import { productService } from '@/services/product.service';
+import { productVariantService } from '@/services/productVariant.service';
 import { toast } from '@/providers/ToastProvider';
 import MediaPickerModal from '@/components/ui/MediaPickerModal';
 
@@ -26,12 +27,21 @@ export default function FlashSaleFormModal({ flashSale, onClose, onSuccess }) {
       const fsPrice = item.flashSalePrice || 0;
       const pct = orig > 0 ? Math.round(((orig - fsPrice) / orig) * 100) : 0;
 
+      let vName = '';
+      if (item.variantId) {
+        if (typeof item.variantId === 'object') {
+          vName = item.variantId.attributes?.map(a => `${a.name}: ${a.value}`).join(', ') || item.variantId.sku || item.variantId.nameOverride || '';
+        } else {
+          vName = item.variantId;
+        }
+      }
+
       return {
         productId: typeof item.productId === 'object' ? item.productId._id : item.productId,
         productName: typeof item.productId === 'object' ? item.productId.name : 'Sản phẩm',
         productImage: typeof item.productId === 'object' ? item.productId.thumbnail?.url : '',
         variantId: item.variantId ? (typeof item.variantId === 'object' ? item.variantId._id : item.variantId) : null,
-        variantName: item.variantId ? (typeof item.variantId === 'object' ? (item.variantId.nameOverride || item.variantId.sku) : '') : '',
+        variantName: vName,
         originalPrice: orig,
         discountType: 'percent',
         discountValue: pct,
@@ -60,7 +70,19 @@ export default function FlashSaleFormModal({ flashSale, onClose, onSuccess }) {
       setSearching(true);
       try {
         const res = await productService.getAll({ search: productSearch, limit: 10 });
-        setSearchResults(res.data.data || []);
+        const products = res.data.data || [];
+        const productsWithVariants = await Promise.all(
+          products.map(async (prod) => {
+            try {
+              const varRes = await productVariantService.getByProduct(prod._id);
+              const variants = varRes.data?.data || varRes.data || [];
+              return { ...prod, variants: Array.isArray(variants) ? variants : [] };
+            } catch {
+              return { ...prod, variants: [] };
+            }
+          })
+        );
+        setSearchResults(productsWithVariants);
       } catch (e) {
         console.error(e);
       } finally {
@@ -89,7 +111,7 @@ export default function FlashSaleFormModal({ flashSale, onClose, onSuccess }) {
   const handleSelectProduct = (product) => {
     const exists = items.some((i) => i.productId === product._id && !i.variantId);
     if (exists) {
-      toast.error('Sản phẩm đã có trong danh sách Flash Sale');
+      toast.error('Sản phẩm gốc này đã có trong danh sách Flash Sale');
       return;
     }
 
@@ -115,6 +137,39 @@ export default function FlashSaleFormModal({ flashSale, onClose, onSuccess }) {
     setProductSearch('');
     setShowProductDropdown(false);
   };
+
+  const handleSelectVariant = (product, variant) => {
+    const exists = items.some((i) => i.productId === product._id && i.variantId === variant._id);
+    if (exists) {
+      toast.error('Biến thể này đã có trong danh sách Flash Sale');
+      return;
+    }
+
+    const price = variant.price || product.salePrice || product.price || 0;
+    const defaultPct = 30;
+    const fsPrice = Math.round(price * (1 - defaultPct / 100));
+
+    const attrString = variant.attributes?.map((a) => `${a.name}: ${a.value}`).join(', ') || variant.sku || 'Biến thể';
+
+    const newItem = {
+      productId: product._id,
+      productName: product.name,
+      productImage: variant.image?.url || product.thumbnail?.url || '',
+      variantId: variant._id,
+      variantName: attrString,
+      originalPrice: price,
+      discountType: 'percent',
+      discountValue: defaultPct,
+      flashSalePrice: fsPrice,
+      stockLimit: Math.min(variant.stock || 10, 20),
+      soldCount: 0,
+    };
+
+    setItems((prev) => [...prev, newItem]);
+    setProductSearch('');
+    setShowProductDropdown(false);
+  };
+
 
   const handleDiscountTypeChange = (index, type) => {
     setItems((prev) => {
@@ -380,25 +435,47 @@ export default function FlashSaleFormModal({ flashSale, onClose, onSuccess }) {
                 </div>
 
                 {showProductDropdown && searchResults.length > 0 && (
-                  <div className="absolute top-full left-0 right-0 z-30 mt-1 max-h-60 overflow-y-auto rounded-md border border-border bg-popover shadow-lg py-1">
+                  <div className="absolute top-full left-0 right-0 z-30 mt-1 max-h-72 overflow-y-auto rounded-md border border-border bg-popover shadow-lg py-1">
                     {searchResults.map((prod) => (
-                      <div
-                        key={prod._id}
-                        onClick={() => handleSelectProduct(prod)}
-                        className="flex items-center gap-3 px-3 py-2 hover:bg-accent transition-colors cursor-pointer"
-                      >
-                        {prod.thumbnail?.url ? (
-                          <img src={prod.thumbnail.url} alt="" className="size-8 object-cover rounded border border-border" />
-                        ) : (
-                          <div className="size-8 rounded bg-muted flex items-center justify-center text-xs">SP</div>
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-foreground truncate">{prod.name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            Giá: {(prod.salePrice || prod.price || 0).toLocaleString('vi-VN')}đ | Tồn: {prod.stock || 0}
-                          </p>
+                      <div key={prod._id} className="border-b border-border/40 last:border-0">
+                        <div
+                          onClick={() => handleSelectProduct(prod)}
+                          className="flex items-center gap-3 px-3 py-2 hover:bg-accent transition-colors cursor-pointer"
+                        >
+                          {prod.thumbnail?.url ? (
+                            <img src={prod.thumbnail.url} alt="" className="size-8 object-cover rounded border border-border shrink-0" />
+                          ) : (
+                            <div className="size-8 rounded bg-muted flex items-center justify-center text-xs shrink-0">SP</div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-foreground truncate">
+                              {prod.name} {prod.variants?.length > 0 && <span className="text-xs text-muted-foreground font-normal">(SP Gốc)</span>}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Giá gốc: {(prod.salePrice || prod.price || 0).toLocaleString('vi-VN')}đ | Tồn: {prod.stock || 0}
+                            </p>
+                          </div>
+                          <Plus className="size-4 text-muted-foreground" />
                         </div>
-                        <Plus className="size-4 text-muted-foreground" />
+
+                        {prod.variants?.map((v) => {
+                          const attrStr = v.attributes?.map((a) => `${a.name}: ${a.value}`).join(', ') || v.sku || 'Biến thể';
+                          return (
+                            <div
+                              key={v._id}
+                              onClick={() => handleSelectVariant(prod, v)}
+                              className="flex items-center gap-3 pl-8 pr-3 py-1.5 hover:bg-primary/10 transition-colors cursor-pointer bg-muted/20 border-t border-border/30 text-xs"
+                            >
+                              <div className="flex-1 min-w-0">
+                                <p className="font-semibold text-foreground truncate">↳ Biến thể: {attrStr}</p>
+                                <p className="text-[11px] font-mono text-muted-foreground">
+                                  SKU: {v.sku || '—'} | Giá: {(v.price || prod.price || 0).toLocaleString('vi-VN')}đ | Tồn: {v.stock ?? 0}
+                                </p>
+                              </div>
+                              <Plus className="size-3.5 text-primary" />
+                            </div>
+                          );
+                        })}
                       </div>
                     ))}
                   </div>
@@ -435,7 +512,9 @@ export default function FlashSaleFormModal({ flashSale, onClose, onSuccess }) {
                               )}
                               <div className="truncate max-w-xs">
                                 <p className="font-medium text-foreground truncate">{item.productName}</p>
-                                {item.variantName && <p className="text-[10px] text-muted-foreground">{item.variantName}</p>}
+                                {item.variantName && (
+                                  <p className="text-[11px] font-semibold text-primary truncate">↳ Biến thể: {item.variantName}</p>
+                                )}
                               </div>
                             </div>
                           </td>

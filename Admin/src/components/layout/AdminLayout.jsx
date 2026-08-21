@@ -196,7 +196,7 @@ export default function AdminLayout() {
         onProfile={() => setModal('profile')}
         onChangePass={() => setModal('changepass')}
       />
-      <SidebarInset>
+      <SidebarInset className="h-screen max-h-screen overflow-hidden flex flex-col">
         <Topbar title={title} />
         <main className="flex-1 overflow-y-auto p-3 sm:p-6">
           <Outlet />

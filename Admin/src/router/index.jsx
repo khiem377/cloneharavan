@@ -2,6 +2,7 @@ import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom'
 import ProtectedRoute from './ProtectedRoute';
 import AdminLayout from '@/components/layout/AdminLayout';
 import LoginPage from '@/pages/auth/LoginPage';
+import DashboardPage from '@/pages/DashboardPage';
 import MediaPage from '@/pages/media/MediaPage';
 import BannerPage from '@/pages/banners/BannerPage';
 import CategoryPage from '@/pages/categories/CategoryPage';
@@ -33,8 +34,8 @@ const router = createBrowserRouter([
       {
         element: <AdminLayout />,
         children: [
-          { index: true, element: <Navigate to="/products" replace /> },
-          { path: 'dashboard', element: <ComingSoonPage title="Dashboard" /> },
+          { index: true, element: <Navigate to="/dashboard" replace /> },
+          { path: 'dashboard', element: <DashboardPage /> },
           { path: 'media', element: <MediaPage /> },
           { path: 'banners', element: <BannerPage /> },
           { path: 'categories', element: <CategoryPage /> },

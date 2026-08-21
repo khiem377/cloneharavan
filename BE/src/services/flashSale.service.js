@@ -14,20 +14,32 @@ const resolveBanner = async (bannerMediaId) => {
 };
 
 const checkItemOverlap = async (startDate, endDate, items, excludeId = null) => {
-  const productIds = items.map(i => i.productId);
+  const itemOrConditions = items.map((i) => {
+    if (i.variantId) {
+      return {
+        $or: [
+          { productId: i.productId, variantId: i.variantId },
+          { productId: i.productId, variantId: null },
+        ],
+      };
+    }
+    return { productId: i.productId };
+  });
+
   const filter = {
     isActive: true,
     startDate: { $lt: new Date(endDate) },
     endDate: { $gt: new Date(startDate) },
-    'items.productId': { $in: productIds },
+    $or: itemOrConditions.map((cond) => ({ items: { $elemMatch: cond } })),
   };
+
   if (excludeId) {
     filter._id = { $ne: excludeId };
   }
 
   const overlapping = await FlashSale.find(filter);
   if (overlapping.length > 0) {
-    throw new AppError('Có sản phẩm trùng với khung giờ của chương trình Flash Sale khác đang hoạt động', 400);
+    throw new AppError('Có sản phẩm hoặc biến thể trùng với khung giờ của chương trình Flash Sale khác đang hoạt động', 400);
   }
 };
 
@@ -89,7 +101,7 @@ const getAllFlashSales = async (query = {}) => {
       })
       .populate({
         path: 'items.variantId',
-        select: 'nameOverride sku thumbnail price salePrice stock',
+        select: 'nameOverride sku thumbnail price salePrice stock attributes',
       })
       .sort(sort)
       .skip(skip)
@@ -116,7 +128,7 @@ const getFlashSaleById = async (id) => {
     })
     .populate({
       path: 'items.variantId',
-      select: 'nameOverride sku thumbnail price salePrice stock',
+      select: 'nameOverride sku thumbnail price salePrice stock attributes',
     });
 
   if (!flashSale) throw new AppError('Không tìm thấy chương trình Flash Sale', 404);

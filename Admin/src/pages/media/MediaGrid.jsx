@@ -75,6 +75,24 @@ function injectWave() {
   document.head.appendChild(s);
 }
 
+function FolderCard({ folder, onClick }) {
+  injectWave();
+  return (
+    <div
+      onClick={() => onClick?.(folder._id)}
+      className="media-wave-in group relative flex items-center gap-2.5 p-2.5 rounded-lg border border-border bg-card hover:border-amber-500/60 hover:bg-amber-500/5 transition-all cursor-pointer select-none shadow-2xs"
+    >
+      <div className="size-9 rounded-md bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+        <Folder size={18} />
+      </div>
+      <div className="overflow-hidden flex-1">
+        <p className="text-xs font-semibold text-foreground truncate" title={folder.name}>{folder.name}</p>
+        <span className="text-[10px] text-muted-foreground font-mono">Thư mục</span>
+      </div>
+    </div>
+  );
+}
+
 function MediaCard({ item, selected, onToggle, onDeleteRequest, onPreview, onMove, animDelay = 0, isUsed = false }) {
   const [imgError, setImgError] = useState(false);
   injectWave();
@@ -192,18 +210,13 @@ function MediaRow({ item, selected, onToggle, onDeleteRequest, onPreview, onMove
   );
 }
 
-/**
- * MediaGrid — onPreview is called with the full item object to show the side panel.
- * ImageLightbox removed: preview is handled by the parent page's PreviewPanel.
- */
 export default function MediaGrid({
-  items = [], selectedIds, onToggle, onPreview,
+  items = [], folders = [], selectedIds, onToggle, onPreview,
   onDeleteRequest, onRefresh, isLoading, viewMode = 'grid', allFolders = [],
-  columns = 6, usagesMap = {},
+  columns = 6, usagesMap = {}, onFolderClick,
 }) {
   const [moveTarget, setMoveTarget] = useState(null);
 
-  // Internal preview handler: bubble up to parent if prop provided, else noop
   const handlePreview = (item) => {
     if (onPreview) onPreview(item);
   };
@@ -218,44 +231,67 @@ export default function MediaGrid({
     );
   }
 
-  if (!items.length) {
+  const hasItems = items.length > 0;
+  const hasFolders = folders.length > 0;
+
+  if (!hasItems && !hasFolders) {
     return (
       <div className="flex flex-col items-center justify-center gap-2 py-20 text-center text-muted-foreground">
-        <p className="font-semibold text-sm text-foreground">Chưa có ảnh nào</p>
-        <span className="text-xs">Upload ảnh để bắt đầu</span>
+        <p className="font-semibold text-sm text-foreground">Chưa có kết quả nào</p>
+        <span className="text-xs">Không tìm thấy ảnh hoặc thư mục phù hợp</span>
       </div>
     );
   }
 
   return (
-    <>
-      {viewMode === 'grid' ? (
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-2.5 w-full">
-          {items.map((item, idx) => (
-            <MediaCard key={item._id} item={item} selected={selectedIds.has(item._id)}
-              onToggle={onToggle} onPreview={handlePreview} onDeleteRequest={onDeleteRequest} onMove={setMoveTarget}
-              animDelay={Math.min(idx * 15, 300)}
-              isUsed={!!(usagesMap[item._id]?.length)}
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-3 px-2.5 py-1 text-[10px] font-semibold text-muted-foreground uppercase border-b border-border mb-1">
-            <span className="w-9 shrink-0" />
-            <span className="flex-1">Tên file</span>
-            <span className="w-16 shrink-0">Kích thước</span>
-            <span className="w-20 shrink-0 hidden lg:block">Phân giải</span>
-            <span className="w-20 shrink-0 hidden lg:block">Ngày</span>
-            <span className="w-32 shrink-0 text-right">Thao tác</span>
+    <div className="flex flex-col gap-4 w-full">
+      {/* Folder Cards section at top of search/browse grid */}
+      {hasFolders && (
+        <div className="space-y-2">
+          <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Thư mục ({folders.length})</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5">
+            {folders.map((f) => (
+              <FolderCard key={f._id} folder={f} onClick={onFolderClick} />
+            ))}
           </div>
-          {items.map((item, idx) => (
-            <MediaRow key={item._id} item={item} selected={selectedIds.has(item._id)}
-              onToggle={onToggle} onPreview={handlePreview} onDeleteRequest={onDeleteRequest} onMove={setMoveTarget}
-              animDelay={Math.min(idx * 18, 220)}
-              isUsed={!!(usagesMap[item._id]?.length)}
-            />
-          ))}
+        </div>
+      )}
+
+      {/* Media Image Cards */}
+      {hasItems && (
+        <div className="space-y-2">
+          {hasFolders && (
+            <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Hình ảnh & Video ({items.length})</p>
+          )}
+          {viewMode === 'grid' ? (
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-2.5 w-full">
+              {items.map((item, idx) => (
+                <MediaCard key={item._id} item={item} selected={selectedIds.has(item._id)}
+                  onToggle={onToggle} onPreview={handlePreview} onDeleteRequest={onDeleteRequest} onMove={setMoveTarget}
+                  animDelay={Math.min(idx * 15, 300)}
+                  isUsed={!!(usagesMap[item._id]?.length)}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-3 px-2.5 py-1 text-[10px] font-semibold text-muted-foreground uppercase border-b border-border mb-1">
+                <span className="w-9 shrink-0" />
+                <span className="flex-1">Tên file</span>
+                <span className="w-16 shrink-0">Kích thước</span>
+                <span className="w-20 shrink-0 hidden lg:block">Phân giải</span>
+                <span className="w-20 shrink-0 hidden lg:block">Ngày</span>
+                <span className="w-32 shrink-0 text-right">Thao tác</span>
+              </div>
+              {items.map((item, idx) => (
+                <MediaRow key={item._id} item={item} selected={selectedIds.has(item._id)}
+                  onToggle={onToggle} onPreview={handlePreview} onDeleteRequest={onDeleteRequest} onMove={setMoveTarget}
+                  animDelay={Math.min(idx * 18, 220)}
+                  isUsed={!!(usagesMap[item._id]?.length)}
+                />
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -267,6 +303,6 @@ export default function MediaGrid({
           onMoved={onRefresh}
         />
       )}
-    </>
+    </div>
   );
 }

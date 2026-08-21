@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "e2250323-a58d-4cbe-b016-5ba51f04b606",
     "name": "Clone Haravan API Master Collection",
-    "description": "Tập hợp 100% API Backend của hệ thống Clone Haravan (Auth, User, Banner, Media, Folder, Category, Brand, Product, Product Variant, Coupon, Promotion, Gift Program, Blog Category, Blog Post, Tag, Flash Sale)",
+    "description": "Tập hợp 100% API Backend đầy đủ của hệ thống Clone Haravan (Auth, Users & Address, Dashboard Overview, Products & Product Variants, Categories, Brands, Media Library & Folders, Banners, Coupons, Promotions, Gift Programs, Flash Sales, Blog Posts, Blog Categories, Tags).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -22,3777 +22,1592 @@
       "name": "01. Auth (Xác thực & Tài khoản)",
       "item": [
         {
-          "name": "1.1 Register (Đăng ký)",
+          "name": "1.1 Register (Đăng ký khách hàng)",
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
+              { "key": "Content-Type", "value": "application/json" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Nguyễn Văn A\",\n  \"email\": \"user@example.com\",\n  \"password\": \"Password123!\",\n  \"phone\": \"0987654321\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "raw": "{\n  \"fullName\": \"Nguyễn Văn A\",\n  \"email\": \"user@example.com\",\n  \"password\": \"Password123!\",\n  \"phone\": \"0987654321\"\n}",
+              "options": { "raw": { "language": "json" } }
             },
-            "url": {
-              "raw": "{{url}}auth/register",
-              "host": [
-                "{{url}}auth"
-              ],
-              "path": [
-                "register"
-              ]
-            },
-            "description": "Đăng ký tài khoản người dùng mới."
+            "url": { "raw": "{{url}}auth/register", "host": ["{{url}}auth"], "path": ["register"] },
+            "description": "Đăng ký tài khoản người dùng/khách hàng mới."
           },
           "response": []
         },
         {
-          "name": "1.2 Login (Đăng nhập)",
+          "name": "1.2 Register Admin (Đăng ký Admin ban đầu)",
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Admin System\",\n  \"email\": \"admin@gmail.com\",\n  \"password\": \"password123\",\n  \"phone\": \"0909090909\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{url}}auth/register-admin", "host": ["{{url}}auth"], "path": ["register-admin"] },
+            "description": "Tạo tài khoản Admin hệ thống ban đầu."
+          },
+          "response": []
+        },
+        {
+          "name": "1.3 Login (Đăng nhập)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"admin@gmail.com\",\n  \"password\": \"password123\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "options": { "raw": { "language": "json" } }
             },
-            "url": {
-              "raw": "{{url}}auth/login",
-              "host": [
-                "{{url}}auth"
-              ],
-              "path": [
-                "login"
-              ]
-            },
-            "description": "Đăng nhập và nhận Access Token."
+            "url": { "raw": "{{url}}auth/login", "host": ["{{url}}auth"], "path": ["login"] },
+            "description": "Đăng nhập nhận Access Token & Refresh Token."
           },
           "response": []
         },
         {
-          "name": "1.3 Refresh Token",
+          "name": "1.4 Refresh Token",
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
+              { "key": "Content-Type", "value": "application/json" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"refreshToken\": \"<refreshToken>\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "raw": "{\n  \"refreshToken\": \"<your_refresh_token_here>\"\n}",
+              "options": { "raw": { "language": "json" } }
             },
-            "url": {
-              "raw": "{{url}}auth/refresh-token",
-              "host": [
-                "{{url}}auth"
-              ],
-              "path": [
-                "refresh-token"
-              ]
-            },
-            "description": "Lấy Access Token mới từ Refresh Token."
+            "url": { "raw": "{{url}}auth/refresh-token", "host": ["{{url}}auth"], "path": ["refresh-token"] }
           },
           "response": []
         },
         {
-          "name": "1.4 Logout (Đăng xuất)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{url}}auth/logout",
-              "host": [
-                "{{url}}auth"
-              ],
-              "path": [
-                "logout"
-              ]
-            },
-            "description": "Đăng xuất tài khoản."
-          },
-          "response": []
-        },
-        {
-          "name": "1.5 Get Profile (Me)",
+          "name": "1.5 Get Current User (/me)",
           "request": {
             "method": "GET",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
             ],
-            "url": {
-              "raw": "{{url}}auth/me",
-              "host": [
-                "{{url}}auth"
-              ],
-              "path": [
-                "me"
-              ]
-            },
-            "description": "Lấy thông tin tài khoản hiện tại."
+            "url": { "raw": "{{url}}auth/me", "host": ["{{url}}auth"], "path": ["me"] }
           },
           "response": []
         },
         {
-          "name": "1.6 Update Profile",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Nguyễn Văn A Updated\",\n  \"phone\": \"0912345678\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{url}}auth/profile",
-              "host": [
-                "{{url}}auth"
-              ],
-              "path": [
-                "profile"
-              ]
-            },
-            "description": "Cập nhật thông tin cá nhân."
-          },
-          "response": []
-        },
-        {
-          "name": "1.7 Change Password",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"currentPassword\": \"password123\",\n  \"newPassword\": \"newpassword123\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{url}}auth/change-password",
-              "host": [
-                "{{url}}auth"
-              ],
-              "path": [
-                "change-password"
-              ]
-            },
-            "description": "Đổi mật khẩu tài khoản."
-          },
-          "response": []
-        },
-        {
-          "name": "1.8 Forgot Password",
+          "name": "1.6 Logout (Đăng xuất)",
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": { "raw": "{{url}}auth/logout", "host": ["{{url}}auth"], "path": ["logout"] }
+          },
+          "response": []
+        },
+        {
+          "name": "1.7 Change Password (Đổi mật khẩu)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"password123\",\n  \"newPassword\": \"NewPassword123!\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{url}}auth/change-password", "host": ["{{url}}auth"], "path": ["change-password"] }
+          },
+          "response": []
+        },
+        {
+          "name": "1.8 Forgot Password (Quên mật khẩu)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"user@example.com\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "options": { "raw": { "language": "json" } }
             },
-            "url": {
-              "raw": "{{url}}auth/forgot-password",
-              "host": [
-                "{{url}}auth"
-              ],
-              "path": [
-                "forgot-password"
-              ]
-            },
-            "description": "Gửi yêu cầu quên mật khẩu qua Email."
+            "url": { "raw": "{{url}}auth/forgot-password", "host": ["{{url}}auth"], "path": ["forgot-password"] }
           },
           "response": []
         },
         {
-          "name": "1.9 Reset Password",
+          "name": "1.9 Reset Password (Đặt lại mật khẩu)",
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
+              { "key": "Content-Type", "value": "application/json" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"password\": \"newpassword123\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "raw": "{\n  \"token\": \"<reset_token>\",\n  \"newPassword\": \"NewPassword123!\"\n}",
+              "options": { "raw": { "language": "json" } }
             },
-            "url": {
-              "raw": "{{url}}auth/reset-password/<resetToken>",
-              "host": [
-                "{{url}}auth"
-              ],
-              "path": [
-                "reset-password",
-                "<resetToken>"
-              ]
+            "url": { "raw": "{{url}}auth/reset-password", "host": ["{{url}}auth"], "path": ["reset-password"] }
+          },
+          "response": []
+        },
+        {
+          "name": "1.10 Send Verify Email",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": { "raw": "{{url}}auth/send-verify-email", "host": ["{{url}}auth"], "path": ["send-verify-email"] }
+          },
+          "response": []
+        },
+        {
+          "name": "1.11 Verify Email",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"<email_verify_token>\"\n}",
+              "options": { "raw": { "language": "json" } }
             },
-            "description": "Đặt lại mật khẩu với token khôi phục."
+            "url": { "raw": "{{url}}auth/verify-email", "host": ["{{url}}auth"], "path": ["verify-email"] }
+          },
+          "response": []
+        },
+        {
+          "name": "1.12 Send Verify Phone OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": { "raw": "{{url}}auth/send-verify-phone", "host": ["{{url}}auth"], "path": ["send-verify-phone"] }
+          },
+          "response": []
+        },
+        {
+          "name": "1.13 Verify Phone OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"otp\": \"123456\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{url}}auth/verify-phone", "host": ["{{url}}auth"], "path": ["verify-phone"] }
           },
           "response": []
         }
       ]
     },
     {
-      "name": "02. Users (Quản lý Người dùng - Admin)",
+      "name": "02. Users & Addresses (Người dùng & Sổ địa chỉ)",
       "item": [
         {
-          "name": "2.1 Get All Users (Admin)",
+          "name": "2.1 Get User Profile",
           "request": {
             "method": "GET",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": { "raw": "{{url}}users/profile", "host": ["{{url}}users"], "path": ["profile"] }
+          },
+          "response": []
+        },
+        {
+          "name": "2.2 Update User Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Nguyễn Văn A Updated\",\n  \"phone\": \"0912345678\",\n  \"gender\": \"male\",\n  \"dateOfBirth\": \"1995-05-15\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{url}}users/profile", "host": ["{{url}}users"], "path": ["profile"] }
+          },
+          "response": []
+        },
+        {
+          "name": "2.3 Update Avatar (Upload File)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "avatar", "type": "file", "src": [] }
+              ]
+            },
+            "url": { "raw": "{{url}}users/avatar", "host": ["{{url}}users"], "path": ["avatar"] }
+          },
+          "response": []
+        },
+        {
+          "name": "2.4 Delete Avatar",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": { "raw": "{{url}}users/avatar", "host": ["{{url}}users"], "path": ["avatar"] }
+          },
+          "response": []
+        },
+        {
+          "name": "2.5 Get User Addresses",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": { "raw": "{{url}}users/addresses", "host": ["{{url}}users"], "path": ["addresses"] }
+          },
+          "response": []
+        },
+        {
+          "name": "2.6 Add New Address",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Nguyễn Văn A\",\n  \"phone\": \"0987654321\",\n  \"province\": \"TP. Hồ Chí Minh\",\n  \"district\": \"Quận 1\",\n  \"ward\": \"Phường Bến Nghé\",\n  \"detailAddress\": \"123 Nguyễn Huệ\",\n  \"isDefault\": true\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{url}}users/addresses", "host": ["{{url}}users"], "path": ["addresses"] }
+          },
+          "response": []
+        },
+        {
+          "name": "2.7 Update Address",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Nguyễn Văn B\",\n  \"phone\": \"0987654321\",\n  \"province\": \"Hà Nội\",\n  \"district\": \"Quận Hoàn Kiếm\",\n  \"ward\": \"Phường Hàng Bạc\",\n  \"detailAddress\": \"45 Tràng Tiền\",\n  \"isDefault\": true\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{url}}users/addresses/:addressId", "host": ["{{url}}users"], "path": ["addresses", ":addressId"] }
+          },
+          "response": []
+        },
+        {
+          "name": "2.8 Delete Address",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": { "raw": "{{url}}users/addresses/:addressId", "host": ["{{url}}users"], "path": ["addresses", ":addressId"] }
+          },
+          "response": []
+        },
+        {
+          "name": "2.9 Set Default Address",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": { "raw": "{{url}}users/addresses/:addressId/default", "host": ["{{url}}users"], "path": ["addresses", ":addressId", "default"] }
+          },
+          "response": []
+        },
+        {
+          "name": "2.10 Admin - Get All Users",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
             ],
             "url": {
-              "raw": "{{url}}users?page=1&limit=10&search=&role=&status=",
-              "host": [
-                "{{url}}users"
-              ],
+              "raw": "{{url}}users?page=1&limit=20&search=&role=",
+              "host": ["{{url}}users"],
               "query": [
-                {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "limit",
-                  "value": "10"
-                }
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                { "key": "search", "value": "" },
+                { "key": "role", "value": "" }
               ]
-            },
-            "description": "(Admin) Lấy danh sách người dùng có phân trang và lọc."
+            }
           },
           "response": []
         },
         {
-          "name": "2.2 Get User By ID",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{url}}users/<id>",
-              "host": [
-                "{{url}}users"
-              ],
-              "path": [
-                "<id>"
-              ]
-            },
-            "description": "(Admin) Lấy thông tin chi tiết một người dùng."
-          },
-          "response": []
-        },
-        {
-          "name": "2.3 Create User",
+          "name": "2.11 Admin - Create Staff/Admin Account",
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Nhân viên mới\",\n  \"email\": \"staff@example.com\",\n  \"password\": \"Password123!\",\n  \"role\": \"staff\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "raw": "{\n  \"fullName\": \"Nhân Viên Mới\",\n  \"email\": \"staff@gmail.com\",\n  \"password\": \"Password123!\",\n  \"role\": \"staff\"\n}",
+              "options": { "raw": { "language": "json" } }
             },
-            "url": {
-              "raw": "{{url}}users",
-              "host": [
-                "{{url}}users"
-              ]
-            },
-            "description": "(Admin) Tạo mới tài khoản người dùng / nhân viên."
+            "url": { "raw": "{{url}}users/admin", "host": ["{{url}}users"], "path": ["admin"] }
           },
           "response": []
         },
         {
-          "name": "2.4 Update User",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Cập nhật tên\",\n  \"role\": \"staff\",\n  \"status\": \"active\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{url}}users/<id>",
-              "host": [
-                "{{url}}users"
-              ],
-              "path": [
-                "<id>"
-              ]
-            },
-            "description": "(Admin) Cập nhật thông tin người dùng."
-          },
-          "response": []
-        },
-        {
-          "name": "2.5 Toggle User Status",
+          "name": "2.12 Admin - Toggle User Active Status",
           "request": {
             "method": "PATCH",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"status\": \"blocked\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "raw": "{\n  \"isActive\": false\n}",
+              "options": { "raw": { "language": "json" } }
             },
-            "url": {
-              "raw": "{{url}}users/<id>/status",
-              "host": [
-                "{{url}}users"
-              ],
-              "path": [
-                "<id>",
-                "status"
-              ]
-            },
-            "description": "(Admin) Đổi trạng thái kích hoạt / khóa tài khoản người dùng."
+            "url": { "raw": "{{url}}users/:id/status", "host": ["{{url}}users"], "path": [":id", "status"] }
           },
           "response": []
         },
         {
-          "name": "2.6 Delete User",
+          "name": "2.13 Admin - Update User Role",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"staff\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{url}}users/:id/role", "host": ["{{url}}users"], "path": [":id", "role"] }
+          },
+          "response": []
+        },
+        {
+          "name": "2.14 Admin - Delete User",
           "request": {
             "method": "DELETE",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
             ],
-            "url": {
-              "raw": "{{url}}users/<id>",
-              "host": [
-                "{{url}}users"
-              ],
-              "path": [
-                "<id>"
-              ]
-            },
-            "description": "(Admin) Xóa tài khoản người dùng."
+            "url": { "raw": "{{url}}users/:id", "host": ["{{url}}users"], "path": [":id"] }
           },
           "response": []
         }
       ]
     },
     {
-      "name": "03. Banners (Quản lý Banner & Slider)",
+      "name": "03. Dashboard Overview (Tổng quan Hệ thống)",
       "item": [
         {
-          "name": "3.1 Get Public Banners",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{url}}banners?position=home_main",
-              "host": [
-                "{{url}}banners"
-              ]
-            },
-            "description": "(Public) Lấy danh sách banner đang hiển thị công khai."
-          },
-          "response": []
-        },
-        {
-          "name": "3.2 Get All Banners (Admin)",
+          "name": "3.1 Get Overview Stats (Thống kê Tổng quan)",
           "request": {
             "method": "GET",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
             ],
-            "url": {
-              "raw": "{{url}}banners/admin",
-              "host": [
-                "{{url}}banners"
-              ],
-              "path": [
-                "admin"
-              ]
-            },
-            "description": "(Admin) Lấy danh sách tất cả banner kể cả ẩn."
+            "url": { "raw": "{{url}}dashboard/overview", "host": ["{{url}}dashboard"], "path": ["overview"] },
+            "description": "Lấy thống kê số lượng sản phẩm, biến thể, danh mục, thương hiệu, bài viết blog, tệp & dung lượng media, người dùng thực tế từ Database."
           },
           "response": []
         },
         {
-          "name": "3.3 Create Banner",
+          "name": "3.2 Search Global (Tìm kiếm Toàn hệ thống Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{url}}dashboard/search?q=JBL",
+              "host": ["{{url}}dashboard"],
+              "path": ["search"],
+              "query": [
+                { "key": "q", "value": "JBL" }
+              ]
+            },
+            "description": "Tìm kiếm nhanh sản phẩm, danh mục, thương hiệu, mã giảm giá, bài viết blog và người dùng."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "04. Products & Product Variants (Sản phẩm & Biến thể)",
+      "item": [
+        {
+          "name": "4.1 Get Public Products List",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{url}}products?page=1&limit=20&search=&category=&brand=&status=published",
+              "host": ["{{url}}products"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                { "key": "search", "value": "" },
+                { "key": "category", "value": "" },
+                { "key": "brand", "value": "" },
+                { "key": "status", "value": "published" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4.2 Get Admin Products List",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{url}}products/admin?page=1&limit=20&search=&category=&brand=&status=",
+              "host": ["{{url}}products"],
+              "path": ["admin"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                { "key": "search", "value": "" },
+                { "key": "category", "value": "" },
+                { "key": "brand", "value": "" },
+                { "key": "status", "value": "" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4.3 Download Excel Import Template",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": { "raw": "{{url}}products/template", "host": ["{{url}}products"], "path": ["template"] }
+          },
+          "response": []
+        },
+        {
+          "name": "4.4 Export Products to Excel",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": { "raw": "{{url}}products/export", "host": ["{{url}}products"], "path": ["export"] }
+          },
+          "response": []
+        },
+        {
+          "name": "4.5 Import Products from Excel",
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
             ],
             "body": {
               "mode": "formdata",
               "formdata": [
-                {
-                  "key": "title",
-                  "value": "Banner Siêu Khuyến Mãi",
-                  "type": "text"
-                },
-                {
-                  "key": "position",
-                  "value": "home_main",
-                  "type": "text"
-                },
-                {
-                  "key": "link",
-                  "value": "/collections/all",
-                  "type": "text"
-                },
-                {
-                  "key": "image",
-                  "type": "file",
-                  "src": ""
-                }
+                { "key": "file", "type": "file", "src": [] }
               ]
             },
-            "url": {
-              "raw": "{{url}}banners/admin",
-              "host": [
-                "{{url}}banners"
-              ],
-              "path": [
-                "admin"
-              ]
-            },
-            "description": "(Admin) Tạo mới banner kèm file ảnh tải lên."
+            "url": { "raw": "{{url}}products/import", "host": ["{{url}}products"], "path": ["import"] }
           },
           "response": []
         },
         {
-          "name": "3.4 Update Banner",
+          "name": "4.6 Sync Images from Media Library",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": { "raw": "{{url}}products/sync-images", "host": ["{{url}}products"], "path": ["sync-images"] }
+          },
+          "response": []
+        },
+        {
+          "name": "4.7 Compare Products",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productIds\": [\"<product_id_1>\", \"<product_id_2>\"]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{url}}products/compare", "host": ["{{url}}products"], "path": ["compare"] }
+          },
+          "response": []
+        },
+        {
+          "name": "4.8 Get Product Deals & Promotions",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{url}}products/:id/deals", "host": ["{{url}}products"], "path": [":id", "deals"] }
+          },
+          "response": []
+        },
+        {
+          "name": "4.9 Get Product By ID / Slug",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{url}}products/:id", "host": ["{{url}}products"], "path": [":id"] }
+          },
+          "response": []
+        },
+        {
+          "name": "4.10 Create New Product",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Loa Bluetooth JBL Charge 5\",\n  \"sku\": \"JBL-CHA-500\",\n  \"categories\": [\"<category_id>\"],\n  \"brand\": \"<brand_id>\",\n  \"price\": 3990000,\n  \"salePrice\": 3490000,\n  \"stock\": 50,\n  \"description\": \"<p>Loa bluetooth cao cấp kháng nước IP67</p>\",\n  \"thumbnailMediaId\": \"<media_id>\",\n  \"imageMediaIds\": [\"<media_id_1>\", \"<media_id_2>\"],\n  \"status\": \"published\",\n  \"isActive\": true,\n  \"isFeatured\": true,\n  \"specifications\": [\n    { \"key\": \"Công suất\", \"value\": \"40W RMS\" },\n    { \"key\": \"Thời lượng pin\", \"value\": \"20 giờ\" }\n  ],\n  \"options\": [\n    {\n      \"name\": \"Màu sắc\",\n      \"type\": \"text\",\n      \"values\": [\n        { \"value\": \"Đen\" },\n        { \"value\": \"Đỏ\" }\n      ]\n    }\n  ]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{url}}products", "host": ["{{url}}products"] }
+          },
+          "response": []
+        },
+        {
+          "name": "4.11 Update Product",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Loa Bluetooth JBL Charge 5 Updated\",\n  \"sku\": \"JBL-CHA-500\",\n  \"price\": 3890000,\n  \"salePrice\": 3390000,\n  \"stock\": 60,\n  \"status\": \"published\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{url}}products/:id", "host": ["{{url}}products"], "path": [":id"] }
+          },
+          "response": []
+        },
+        {
+          "name": "4.12 Toggle Product Status",
           "request": {
             "method": "PATCH",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Banner mới cập nhật\",\n  \"isActive\": true\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "raw": "{\n  \"status\": \"published\"\n}",
+              "options": { "raw": { "language": "json" } }
             },
-            "url": {
-              "raw": "{{url}}banners/admin/<id>",
-              "host": [
-                "{{url}}banners"
-              ],
-              "path": [
-                "admin",
-                "<id>"
-              ]
-            },
-            "description": "(Admin) Cập nhật thông tin banner."
+            "url": { "raw": "{{url}}products/:id/status", "host": ["{{url}}products"], "path": [":id", "status"] }
           },
           "response": []
         },
         {
-          "name": "3.5 Reorder Banners",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"orders\": [\n    {\n      \"id\": \"<bannerId1>\",\n      \"order\": 1\n    },\n    {\n      \"id\": \"<bannerId2>\",\n      \"order\": 2\n    }\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{url}}banners/admin/reorder",
-              "host": [
-                "{{url}}banners"
-              ],
-              "path": [
-                "admin",
-                "reorder"
-              ]
-            },
-            "description": "(Admin) Sắp xếp lại thứ tự hiển thị banner."
-          },
-          "response": []
-        },
-        {
-          "name": "3.6 Bulk Delete Banners",
+          "name": "4.13 Bulk Delete Products",
           "request": {
             "method": "DELETE",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"ids\": [\n    \"<bannerId1>\",\n    \"<bannerId2>\"\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "raw": "{\n  \"ids\": [\"<product_id_1>\", \"<product_id_2>\"]\n}",
+              "options": { "raw": { "language": "json" } }
             },
-            "url": {
-              "raw": "{{url}}banners/admin/bulk",
-              "host": [
-                "{{url}}banners"
-              ],
-              "path": [
-                "admin",
-                "bulk"
-              ]
-            },
-            "description": "(Admin) Xóa hàng loạt banner."
+            "url": { "raw": "{{url}}products/bulk", "host": ["{{url}}products"], "path": ["bulk"] }
           },
           "response": []
         },
         {
-          "name": "3.7 Delete Single Banner",
+          "name": "4.14 Delete Product",
           "request": {
             "method": "DELETE",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
             ],
-            "url": {
-              "raw": "{{url}}banners/admin/<id>",
-              "host": [
-                "{{url}}banners"
-              ],
-              "path": [
-                "admin",
-                "<id>"
-              ]
+            "url": { "raw": "{{url}}products/:id", "host": ["{{url}}products"], "path": [":id"] }
+          },
+          "response": []
+        },
+        {
+          "name": "4.15 Get Product Variants",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{url}}products/:productId/variants", "host": ["{{url}}products"], "path": [":productId", "variants"] }
+          },
+          "response": []
+        },
+        {
+          "name": "4.16 Create Single Variant",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sku\": \"JBL-CHA-500-BLACK\",\n  \"attributes\": [\n    { \"name\": \"Màu sắc\", \"value\": \"Đen\" }\n  ],\n  \"price\": 3490000,\n  \"salePrice\": 2990000,\n  \"stock\": 20,\n  \"thumbnailMediaId\": \"<media_id>\"\n}",
+              "options": { "raw": { "language": "json" } }
             },
-            "description": "(Admin) Xóa một banner."
+            "url": { "raw": "{{url}}products/:productId/variants", "host": ["{{url}}products"], "path": [":productId", "variants"] }
+          },
+          "response": []
+        },
+        {
+          "name": "4.17 Bulk Create Product Variants",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"variants\": [\n    {\n      \"sku\": \"JBL-CHA-500-DEN\",\n      \"attributes\": [{ \"name\": \"Màu sắc\", \"value\": \"Đen\" }],\n      \"price\": 3490000,\n      \"stock\": 25\n    },\n    {\n      \"sku\": \"JBL-CHA-500-DO\",\n      \"attributes\": [{ \"name\": \"Màu sắc\", \"value\": \"Đỏ\" }],\n      \"price\": 3490000,\n      \"stock\": 15\n    }\n  ]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{url}}products/:productId/variants/bulk", "host": ["{{url}}products"], "path": [":productId", "variants", "bulk"] }
+          },
+          "response": []
+        },
+        {
+          "name": "4.18 Delete All Variants of Product",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": { "raw": "{{url}}products/:productId/variants/all", "host": ["{{url}}products"], "path": [":productId", "variants", "all"] }
+          },
+          "response": []
+        },
+        {
+          "name": "4.19 Get Variant By ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": { "raw": "{{url}}product-variants/:id", "host": ["{{url}}product-variants"], "path": [":id"] }
+          },
+          "response": []
+        },
+        {
+          "name": "4.20 Update Variant By ID",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sku\": \"JBL-CHA-500-DEN-UPDATED\",\n  \"price\": 3390000,\n  \"salePrice\": 2890000,\n  \"stock\": 30,\n  \"isActive\": true\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{url}}product-variants/:id", "host": ["{{url}}product-variants"], "path": [":id"] }
+          },
+          "response": []
+        },
+        {
+          "name": "4.21 Delete Variant By ID",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": { "raw": "{{url}}product-variants/:id", "host": ["{{url}}product-variants"], "path": [":id"] }
           },
           "response": []
         }
       ]
     },
     {
-      "name": "04. Media (Quản lý Thư viện Ảnh & File)",
+      "name": "05. Categories & Brands (Danh mục & Thương hiệu)",
       "item": [
         {
-          "name": "4.1 Search Media",
+          "name": "5.1 Get Public Categories Tree",
           "request": {
             "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{url}}media/search?q=banner&page=1&limit=20",
-              "host": [
-                "{{url}}media"
-              ],
-              "path": [
-                "search"
-              ]
-            },
-            "description": "(Admin) Tìm kiếm file ảnh theo tên."
+            "url": { "raw": "{{url}}categories", "host": ["{{url}}categories"] }
           },
           "response": []
         },
         {
-          "name": "4.2 Browse Media",
+          "name": "5.2 Get Admin Categories List",
           "request": {
             "method": "GET",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
             ],
-            "url": {
-              "raw": "{{url}}media?folderId=<folderId>&page=1&limit=50&sortBy=createdAt&sortDir=desc",
-              "host": [
-                "{{url}}media"
-              ]
-            },
-            "description": "(Admin) Lấy danh sách file ảnh theo thư mục có phân trang."
+            "url": { "raw": "{{url}}categories/admin", "host": ["{{url}}categories"], "path": ["admin"] }
           },
           "response": []
         },
         {
-          "name": "4.3 Upload Single File",
+          "name": "5.3 Get Category By ID / Slug",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{url}}categories/:id", "host": ["{{url}}categories"], "path": [":id"] }
+          },
+          "response": []
+        },
+        {
+          "name": "5.4 Create Category",
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Loa Karaoke\",\n  \"description\": \"Danh mục loa karaoke gia đình và sự kiện\",\n  \"parentId\": null,\n  \"thumbnailMediaId\": \"<media_id>\",\n  \"isActive\": true\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{url}}categories", "host": ["{{url}}categories"] }
+          },
+          "response": []
+        },
+        {
+          "name": "5.5 Update Category",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Loa Karaoke Cao Cấp\",\n  \"description\": \"Mô tả cập nhật\",\n  \"isActive\": true\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{url}}categories/:id", "host": ["{{url}}categories"], "path": [":id"] }
+          },
+          "response": []
+        },
+        {
+          "name": "5.6 Toggle Category Active Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isActive\": true\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{url}}categories/:id/status", "host": ["{{url}}categories"], "path": [":id", "status"] }
+          },
+          "response": []
+        },
+        {
+          "name": "5.7 Bulk Delete Categories",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ids\": [\"<category_id_1>\", \"<category_id_2>\"]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{url}}categories/bulk", "host": ["{{url}}categories"], "path": ["bulk"] }
+          },
+          "response": []
+        },
+        {
+          "name": "5.8 Delete Category",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": { "raw": "{{url}}categories/:id", "host": ["{{url}}categories"], "path": [":id"] }
+          },
+          "response": []
+        },
+        {
+          "name": "5.9 Get Public Brands List",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{url}}brands", "host": ["{{url}}brands"] }
+          },
+          "response": []
+        },
+        {
+          "name": "5.10 Get Admin Brands List",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": { "raw": "{{url}}brands/admin", "host": ["{{url}}brands"], "path": ["admin"] }
+          },
+          "response": []
+        },
+        {
+          "name": "5.11 Get Brand By ID / Slug",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{url}}brands/:id", "host": ["{{url}}brands"], "path": [":id"] }
+          },
+          "response": []
+        },
+        {
+          "name": "5.12 Create Brand",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"JBL Audio\",\n  \"description\": \"Thương hiệu âm thanh thế giới\",\n  \"logoMediaId\": \"<media_id>\",\n  \"isActive\": true\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{url}}brands", "host": ["{{url}}brands"] }
+          },
+          "response": []
+        },
+        {
+          "name": "5.13 Update Brand",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"JBL Harman\",\n  \"isActive\": true\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{url}}brands/:id", "host": ["{{url}}brands"], "path": [":id"] }
+          },
+          "response": []
+        },
+        {
+          "name": "5.14 Toggle Brand Active Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isActive\": true\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{url}}brands/:id/status", "host": ["{{url}}brands"], "path": [":id", "status"] }
+          },
+          "response": []
+        },
+        {
+          "name": "5.15 Bulk Delete Brands",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ids\": [\"<brand_id_1>\", \"<brand_id_2>\"]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{url}}brands/bulk", "host": ["{{url}}brands"], "path": ["bulk"] }
+          },
+          "response": []
+        },
+        {
+          "name": "5.16 Delete Brand",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": { "raw": "{{url}}brands/:id", "host": ["{{url}}brands"], "path": [":id"] }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "06. Media Library & Folders (Thư viện Ảnh & Thư mục)",
+      "item": [
+        {
+          "name": "6.1 Search Media & Folders",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{url}}media/search?q=banners&page=1&limit=20",
+              "host": ["{{url}}media"],
+              "path": ["search"],
+              "query": [
+                { "key": "q", "value": "banners" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            },
+            "description": "Tìm kiếm tệp media và thư mục. Trả về cả danh sách thư mục khớp và tệp media bên trong các thư mục đó."
+          },
+          "response": []
+        },
+        {
+          "name": "6.2 Browse Media Library",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{url}}media?folderId=<folder_id>&page=1&limit=20",
+              "host": ["{{url}}media"],
+              "query": [
+                { "key": "folderId", "value": "<folder_id>" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "6.3 Upload File to Cloudinary",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
             ],
             "body": {
               "mode": "formdata",
               "formdata": [
-                {
-                  "key": "file",
-                  "type": "file",
-                  "src": ""
-                },
-                {
-                  "key": "folderId",
-                  "value": "<folderId>",
-                  "type": "text"
-                }
+                { "key": "file", "type": "file", "src": [] },
+                { "key": "folderId", "value": "<folder_id>", "type": "text" }
               ]
             },
-            "url": {
-              "raw": "{{url}}media",
-              "host": [
-                "{{url}}media"
-              ]
-            },
-            "description": "(Admin) Tải file ảnh trực tiếp lên Cloud/B2."
+            "url": { "raw": "{{url}}media", "host": ["{{url}}media"] }
           },
           "response": []
         },
         {
-          "name": "4.4 Upload From URL",
+          "name": "6.4 Upload Image From URL",
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"url\": \"https://example.com/image.jpg\",\n  \"folderId\": \"<folderId>\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "raw": "{\n  \"url\": \"https://picsum.photos/800/600\",\n  \"folderId\": \"<folder_id>\"\n}",
+              "options": { "raw": { "language": "json" } }
             },
-            "url": {
-              "raw": "{{url}}media/upload-url",
-              "host": [
-                "{{url}}media"
-              ],
-              "path": [
-                "upload-url"
-              ]
-            },
-            "description": "(Admin) Upload ảnh từ đường dẫn liên kết URL."
+            "url": { "raw": "{{url}}media/upload-url", "host": ["{{url}}media"], "path": ["upload-url"] }
           },
           "response": []
         },
         {
-          "name": "4.5 Check Usages",
+          "name": "6.5 Check Media File Usages",
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"ids\": [\n    \"<mediaId1>\",\n    \"<mediaId2>\"\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "raw": "{\n  \"ids\": [\"<media_id_1>\", \"<media_id_2>\"]\n}",
+              "options": { "raw": { "language": "json" } }
             },
-            "url": {
-              "raw": "{{url}}media/check-usages",
-              "host": [
-                "{{url}}media"
-              ],
-              "path": [
-                "check-usages"
-              ]
-            },
-            "description": "(Admin) Kiểm tra vị trí ảnh đang được sử dụng (Sản phẩm, Banner, Blog...)."
+            "url": { "raw": "{{url}}media/check-usages", "host": ["{{url}}media"], "path": ["check-usages"] }
           },
           "response": []
         },
         {
-          "name": "4.6 Move Media To Folder",
+          "name": "6.6 Move File to Target Folder",
           "request": {
             "method": "PATCH",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"folderId\": \"<targetFolderId>\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "raw": "{\n  \"folderId\": \"<target_folder_id>\"\n}",
+              "options": { "raw": { "language": "json" } }
             },
-            "url": {
-              "raw": "{{url}}media/<id>/move",
-              "host": [
-                "{{url}}media"
-              ],
-              "path": [
-                "<id>",
-                "move"
-              ]
-            },
-            "description": "(Admin) Di chuyển file ảnh sang thư mục khác."
+            "url": { "raw": "{{url}}media/:id/move", "host": ["{{url}}media"], "path": [":id", "move"] }
           },
           "response": []
         },
         {
-          "name": "4.7 Bulk Delete Media",
+          "name": "6.7 Bulk Delete Media Files",
           "request": {
             "method": "DELETE",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"ids\": [\n    \"<mediaId1>\",\n    \"<mediaId2>\"\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "raw": "{\n  \"ids\": [\"<media_id_1>\", \"<media_id_2>\"]\n}",
+              "options": { "raw": { "language": "json" } }
             },
-            "url": {
-              "raw": "{{url}}media/bulk",
-              "host": [
-                "{{url}}media"
-              ],
-              "path": [
-                "bulk"
-              ]
-            },
-            "description": "(Admin) Xóa hàng loạt file ảnh."
+            "url": { "raw": "{{url}}media/bulk", "host": ["{{url}}media"], "path": ["bulk"] }
           },
           "response": []
         },
         {
-          "name": "4.8 Delete Single Media",
+          "name": "6.8 Delete Single Media File",
           "request": {
             "method": "DELETE",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
             ],
-            "url": {
-              "raw": "{{url}}media/<id>",
-              "host": [
-                "{{url}}media"
-              ],
-              "path": [
-                "<id>"
-              ]
+            "url": { "raw": "{{url}}media/:id", "host": ["{{url}}media"], "path": [":id"] }
+          },
+          "response": []
+        },
+        {
+          "name": "6.9 Get Folder Tree",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": { "raw": "{{url}}folders", "host": ["{{url}}folders"] }
+          },
+          "response": []
+        },
+        {
+          "name": "6.10 Get Folder Contents",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": { "raw": "{{url}}folders/:id/contents", "host": ["{{url}}folders"], "path": [":id", "contents"] }
+          },
+          "response": []
+        },
+        {
+          "name": "6.11 Create Folder",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Khuyến mãi 2026\",\n  \"parentId\": null\n}",
+              "options": { "raw": { "language": "json" } }
             },
-            "description": "(Admin) Xóa một file ảnh."
+            "url": { "raw": "{{url}}folders", "host": ["{{url}}folders"] }
+          },
+          "response": []
+        },
+        {
+          "name": "6.12 Reorder Folders",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    { \"_id\": \"<folder_id_1>\", \"position\": 1 },\n    { \"_id\": \"<folder_id_2>\", \"position\": 2 }\n  ]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{url}}folders/reorder", "host": ["{{url}}folders"], "path": ["reorder"] }
+          },
+          "response": []
+        },
+        {
+          "name": "6.13 Rename Folder",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Tên Thư Mục Mới\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{url}}folders/:id", "host": ["{{url}}folders"], "path": [":id"] }
+          },
+          "response": []
+        },
+        {
+          "name": "6.14 Delete Folder",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": { "raw": "{{url}}folders/:id", "host": ["{{url}}folders"], "path": [":id"] }
           },
           "response": []
         }
       ]
     },
     {
-      "name": "05. Folders (Quản lý Thư mục Ảnh)",
+      "name": "07. Banners (Banner Quảng cáo)",
       "item": [
         {
-          "name": "5.1 Get Folder Tree",
+          "name": "7.1 Get Public Banners",
           "request": {
             "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{url}}folders",
-              "host": [
-                "{{url}}folders"
-              ]
-            },
-            "description": "(Admin) Lấy toàn bộ cây thư mục dạng lồng nhau (Tree)."
+            "url": { "raw": "{{url}}banners", "host": ["{{url}}banners"] }
           },
           "response": []
         },
         {
-          "name": "5.2 Get Folder Contents",
+          "name": "7.2 Admin - Get All Banners",
           "request": {
             "method": "GET",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
             ],
-            "url": {
-              "raw": "{{url}}folders/<id>/contents",
-              "host": [
-                "{{url}}folders"
-              ],
-              "path": [
-                "<id>",
-                "contents"
-              ]
-            },
-            "description": "(Admin) Lấy nội dung chi tiết trong thư mục."
+            "url": { "raw": "{{url}}banners/admin", "host": ["{{url}}banners"], "path": ["admin"] }
           },
           "response": []
         },
         {
-          "name": "5.3 Create Folder",
+          "name": "7.3 Admin - Create Banner",
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Thư mục mới\",\n  \"parentId\": null\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{url}}folders",
-              "host": [
-                "{{url}}folders"
-              ]
-            },
-            "description": "(Admin) Tạo thư mục ảnh mới."
-          },
-          "response": []
-        },
-        {
-          "name": "5.4 Rename Folder",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Tên thư mục mới\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{url}}folders/<id>",
-              "host": [
-                "{{url}}folders"
-              ],
-              "path": [
-                "<id>"
-              ]
-            },
-            "description": "(Admin) Đổi tên thư mục ảnh."
-          },
-          "response": []
-        },
-        {
-          "name": "5.5 Reorder Folders",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"items\": [\n    {\n      \"id\": \"<folderId1>\",\n      \"order\": 1\n    }\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{url}}folders/reorder",
-              "host": [
-                "{{url}}folders"
-              ],
-              "path": [
-                "reorder"
-              ]
-            },
-            "description": "(Admin) Sắp xếp lại vị trí thứ tự các thư mục."
-          },
-          "response": []
-        },
-        {
-          "name": "5.6 Delete Folder",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{url}}folders/<id>",
-              "host": [
-                "{{url}}folders"
-              ],
-              "path": [
-                "<id>"
-              ]
-            },
-            "description": "(Admin) Xóa thư mục (Chỉ xóa được khi không chứa file hoặc thư mục con)."
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "06. Categories (Danh mục sản phẩm)",
-      "item": [
-        {
-          "name": "6.1 Get Public Categories",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{url}}categories",
-              "host": [
-                "{{url}}categories"
-              ]
-            },
-            "description": "(Public) Lấy danh mục sản phẩm công khai dạng cây."
-          },
-          "response": []
-        },
-        {
-          "name": "6.2 Get Admin Categories",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{url}}categories/admin",
-              "host": [
-                "{{url}}categories"
-              ],
-              "path": [
-                "admin"
-              ]
-            },
-            "description": "(Admin) Lấy tất cả danh mục sản phẩm phục vụ quản trị."
-          },
-          "response": []
-        },
-        {
-          "name": "6.3 Get Category By ID",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{url}}categories/<id>",
-              "host": [
-                "{{url}}categories"
-              ],
-              "path": [
-                "<id>"
-              ]
-            },
-            "description": "Lấy chi tiết một danh mục sản phẩm theo ID."
-          },
-          "response": []
-        },
-        {
-          "name": "6.4 Create Category",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Điện thoại\",\n  \"parentId\": null,\n  \"description\": \"Điện thoại thông minh\",\n  \"isActive\": true\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{url}}categories",
-              "host": [
-                "{{url}}categories"
-              ]
-            },
-            "description": "(Admin) Tạo mới danh mục sản phẩm."
-          },
-          "response": []
-        },
-        {
-          "name": "6.5 Update Category",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Điện thoại cao cấp\",\n  \"description\": \"Mô tả mới\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{url}}categories/<id>",
-              "host": [
-                "{{url}}categories"
-              ],
-              "path": [
-                "<id>"
-              ]
-            },
-            "description": "(Admin) Cập nhật danh mục sản phẩm."
-          },
-          "response": []
-        },
-        {
-          "name": "6.6 Toggle Category Status",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"isActive\": false\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{url}}categories/<id>/status",
-              "host": [
-                "{{url}}categories"
-              ],
-              "path": [
-                "<id>",
-                "status"
-              ]
-            },
-            "description": "(Admin) Bật/tắt kích hoạt trạng thái danh mục sản phẩm."
-          },
-          "response": []
-        },
-        {
-          "name": "6.7 Bulk Delete Categories",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"ids\": [\n    \"<catId1>\",\n    \"<catId2>\"\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{url}}categories/bulk",
-              "host": [
-                "{{url}}categories"
-              ],
-              "path": [
-                "bulk"
-              ]
-            },
-            "description": "(Admin) Xóa hàng loạt danh mục sản phẩm."
-          },
-          "response": []
-        },
-        {
-          "name": "6.8 Delete Single Category",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{url}}categories/<id>",
-              "host": [
-                "{{url}}categories"
-              ],
-              "path": [
-                "<id>"
-              ]
-            },
-            "description": "(Admin) Xóa một danh mục sản phẩm."
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "07. Brands (Thương hiệu)",
-      "item": [
-        {
-          "name": "7.1 Get Public Brands",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{url}}brands",
-              "host": [
-                "{{url}}brands"
-              ]
-            },
-            "description": "(Public) Lấy danh sách thương hiệu công khai."
-          },
-          "response": []
-        },
-        {
-          "name": "7.2 Get Admin Brands",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{url}}brands/admin",
-              "host": [
-                "{{url}}brands"
-              ],
-              "path": [
-                "admin"
-              ]
-            },
-            "description": "(Admin) Lấy toàn bộ thương hiệu."
-          },
-          "response": []
-        },
-        {
-          "name": "7.3 Get Brand By ID",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{url}}brands/<id>",
-              "host": [
-                "{{url}}brands"
-              ],
-              "path": [
-                "<id>"
-              ]
-            },
-            "description": "Lấy chi tiết thương hiệu theo ID."
-          },
-          "response": []
-        },
-        {
-          "name": "7.4 Create Brand",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Apple\",\n  \"description\": \"Thương hiệu Apple Inc\",\n  \"logoMediaId\": null,\n  \"isActive\": true\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{url}}brands",
-              "host": [
-                "{{url}}brands"
-              ]
-            },
-            "description": "(Admin) Tạo thương hiệu mới."
-          },
-          "response": []
-        },
-        {
-          "name": "7.5 Update Brand",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Apple Inc\",\n  \"description\": \"Cập nhật mô tả\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{url}}brands/<id>",
-              "host": [
-                "{{url}}brands"
-              ],
-              "path": [
-                "<id>"
-              ]
-            },
-            "description": "(Admin) Cập nhật thương hiệu."
-          },
-          "response": []
-        },
-        {
-          "name": "7.6 Toggle Brand Status",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"isActive\": false\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{url}}brands/<id>/status",
-              "host": [
-                "{{url}}brands"
-              ],
-              "path": [
-                "<id>",
-                "status"
-              ]
-            },
-            "description": "(Admin) Bật/tắt trạng thái thương hiệu."
-          },
-          "response": []
-        },
-        {
-          "name": "7.7 Bulk Delete Brands",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"ids\": [\n    \"<brandId1>\",\n    \"<brandId2>\"\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{url}}brands/bulk",
-              "host": [
-                "{{url}}brands"
-              ],
-              "path": [
-                "bulk"
-              ]
-            },
-            "description": "(Admin) Xóa hàng loạt thương hiệu."
-          },
-          "response": []
-        },
-        {
-          "name": "7.8 Delete Single Brand",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{url}}brands/<id>",
-              "host": [
-                "{{url}}brands"
-              ],
-              "path": [
-                "<id>"
-              ]
-            },
-            "description": "(Admin) Xóa một thương hiệu."
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "08. Products (Sản phẩm)",
-      "item": [
-        {
-          "name": "8.1 Get Products (Storefront)",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{url}}products?page=1&limit=20&keyword=&categoryId=&brandId=&minPrice=&maxPrice=&sort=newest",
-              "host": [
-                "{{url}}products"
-              ]
-            },
-            "description": "(Storefront) Lấy danh sách sản phẩm công khai với bộ lọc và tìm kiếm."
-          },
-          "response": []
-        },
-        {
-          "name": "8.2 Get Products (Admin)",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{url}}products/admin?page=1&limit=20&keyword=&status=",
-              "host": [
-                "{{url}}products"
-              ],
-              "path": [
-                "admin"
-              ]
-            },
-            "description": "(Admin) Lấy toàn bộ sản phẩm quản trị."
-          },
-          "response": []
-        },
-        {
-          "name": "8.3 Get Product By ID",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{url}}products/<id>",
-              "host": [
-                "{{url}}products"
-              ],
-              "path": [
-                "<id>"
-              ]
-            },
-            "description": "Lấy chi tiết sản phẩm theo ID/Slug."
-          },
-          "response": []
-        },
-        {
-          "name": "8.4 Get Product Deals",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{url}}products/<id>/deals",
-              "host": [
-                "{{url}}products"
-              ],
-              "path": [
-                "<id>",
-                "deals"
-              ]
-            },
-            "description": "Lấy các chương trình khuyến mãi/quà tặng/FlashSale áp dụng cho sản phẩm này."
-          },
-          "response": []
-        },
-        {
-          "name": "8.5 Compare Products",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"ids\": [\n    \"<productId1>\",\n    \"<productId2>\"\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{url}}products/compare",
-              "host": [
-                "{{url}}products"
-              ],
-              "path": [
-                "compare"
-              ]
-            },
-            "description": "Lấy dữ liệu so sánh danh sách sản phẩm."
-          },
-          "response": []
-        },
-        {
-          "name": "8.6 Download Excel Import Template",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{url}}products/template",
-              "host": [
-                "{{url}}products"
-              ],
-              "path": [
-                "template"
-              ]
-            },
-            "description": "(Admin) Tải về mẫu file Excel để nhập sản phẩm."
-          },
-          "response": []
-        },
-        {
-          "name": "8.7 Export Products to Excel",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{url}}products/export",
-              "host": [
-                "{{url}}products"
-              ],
-              "path": [
-                "export"
-              ]
-            },
-            "description": "(Admin) Xuất danh sách sản phẩm ra file Excel."
-          },
-          "response": []
-        },
-        {
-          "name": "8.8 Import Products from Excel",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
             ],
             "body": {
               "mode": "formdata",
               "formdata": [
-                {
-                  "key": "file",
-                  "type": "file",
-                  "src": ""
-                }
+                { "key": "title", "value": "Banner Khuyến Mãi Mùa Hè", "type": "text" },
+                { "key": "link", "value": "/collections/hot", "type": "text" },
+                { "key": "position", "value": "main_slider", "type": "text" },
+                { "key": "image", "type": "file", "src": [] }
               ]
             },
-            "url": {
-              "raw": "{{url}}products/import",
-              "host": [
-                "{{url}}products"
-              ],
-              "path": [
-                "import"
-              ]
-            },
-            "description": "(Admin) Nhập sản phẩm từ file Excel."
+            "url": { "raw": "{{url}}banners/admin", "host": ["{{url}}banners"], "path": ["admin"] }
           },
           "response": []
         },
         {
-          "name": "8.9 Sync Product Images",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{url}}products/sync-images",
-              "host": [
-                "{{url}}products"
-              ],
-              "path": [
-                "sync-images"
-              ]
-            },
-            "description": "(Admin) Đồng bộ hình ảnh sản phẩm tự động."
-          },
-          "response": []
-        },
-        {
-          "name": "8.10 Create Product",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"iPhone 16 Pro Max\",\n  \"sku\": \"IP16PM-256\",\n  \"originalPrice\": 34990000,\n  \"salePrice\": 32990000,\n  \"stock\": 50,\n  \"categoryId\": \"<categoryId>\",\n  \"brandId\": \"<brandId>\",\n  \"status\": \"published\",\n  \"isActive\": true\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{url}}products",
-              "host": [
-                "{{url}}products"
-              ]
-            },
-            "description": "(Admin) Tạo mới sản phẩm."
-          },
-          "response": []
-        },
-        {
-          "name": "8.11 Update Product",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"iPhone 16 Pro Max 256GB Updated\",\n  \"salePrice\": 31990000\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{url}}products/<id>",
-              "host": [
-                "{{url}}products"
-              ],
-              "path": [
-                "<id>"
-              ]
-            },
-            "description": "(Admin) Cập nhật sản phẩm."
-          },
-          "response": []
-        },
-        {
-          "name": "8.12 Toggle Product Status",
+          "name": "7.4 Admin - Reorder Banners",
           "request": {
             "method": "PATCH",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"status\": \"draft\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "raw": "{\n  \"items\": [\n    { \"id\": \"<banner_id_1>\", \"order\": 1 },\n    { \"id\": \"<banner_id_2>\", \"order\": 2 }\n  ]\n}",
+              "options": { "raw": { "language": "json" } }
             },
-            "url": {
-              "raw": "{{url}}products/<id>/status",
-              "host": [
-                "{{url}}products"
-              ],
-              "path": [
-                "<id>",
-                "status"
-              ]
-            },
-            "description": "(Admin) Đổi trạng thái hiển thị sản phẩm."
+            "url": { "raw": "{{url}}banners/admin/reorder", "host": ["{{url}}banners"], "path": ["admin", "reorder"] }
           },
           "response": []
         },
         {
-          "name": "8.13 Bulk Delete Products",
+          "name": "7.5 Admin - Update Banner",
           "request": {
-            "method": "DELETE",
+            "method": "PATCH",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"ids\": [\n    \"<productId1>\",\n    \"<productId2>\"\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "raw": "{\n  \"title\": \"Banner Mới Updated\",\n  \"link\": \"/products/sale\",\n  \"isActive\": true\n}",
+              "options": { "raw": { "language": "json" } }
             },
-            "url": {
-              "raw": "{{url}}products/bulk",
-              "host": [
-                "{{url}}products"
-              ],
-              "path": [
-                "bulk"
-              ]
-            },
-            "description": "(Admin) Xóa hàng loạt sản phẩm."
+            "url": { "raw": "{{url}}banners/admin/:id", "host": ["{{url}}banners"], "path": ["admin", ":id"] }
           },
           "response": []
         },
         {
-          "name": "8.14 Delete Single Product",
+          "name": "7.6 Admin - Bulk Delete Banners",
           "request": {
             "method": "DELETE",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
             ],
-            "url": {
-              "raw": "{{url}}products/<id>",
-              "host": [
-                "{{url}}products"
-              ],
-              "path": [
-                "<id>"
-              ]
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ids\": [\"<banner_id_1>\", \"<banner_id_2>\"]\n}",
+              "options": { "raw": { "language": "json" } }
             },
-            "description": "(Admin) Xóa một sản phẩm."
+            "url": { "raw": "{{url}}banners/admin/bulk", "host": ["{{url}}banners"], "path": ["admin", "bulk"] }
+          },
+          "response": []
+        },
+        {
+          "name": "7.7 Admin - Delete Banner",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": { "raw": "{{url}}banners/admin/:id", "host": ["{{url}}banners"], "path": ["admin", ":id"] }
           },
           "response": []
         }
       ]
     },
     {
-      "name": "09. Product Variants (Biến thể sản phẩm)",
+      "name": "08. Marketing & Promotions (Mã giảm giá, Flash Sale & Quà tặng)",
       "item": [
         {
-          "name": "9.1 Get Variants By Product ID",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{url}}products/<productId>/variants",
-              "host": [
-                "{{url}}products"
-              ],
-              "path": [
-                "<productId>",
-                "variants"
-              ]
-            },
-            "description": "Lấy danh sách biến thể theo ID sản phẩm."
-          },
-          "response": []
-        },
-        {
-          "name": "9.2 Create Single Variant",
+          "name": "8.1 Validate Coupon Code (Storefront Checkout)",
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
+              { "key": "Content-Type", "value": "application/json" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"sku\": \"IP16PM-256-BLK\",\n  \"attributes\": [\n    {\n      \"name\": \"Màu sắc\",\n      \"value\": \"Đen\"\n    }\n  ],\n  \"price\": 32990000,\n  \"stock\": 20\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "raw": "{\n  \"code\": \"SUMMER2026\",\n  \"orderValue\": 500000\n}",
+              "options": { "raw": { "language": "json" } }
             },
-            "url": {
-              "raw": "{{url}}products/<productId>/variants",
-              "host": [
-                "{{url}}products"
-              ],
-              "path": [
-                "<productId>",
-                "variants"
-              ]
-            },
-            "description": "(Admin) Tạo một biến thể sản phẩm."
+            "url": { "raw": "{{url}}coupons/validate", "host": ["{{url}}coupons"], "path": ["validate"] }
           },
           "response": []
         },
         {
-          "name": "9.3 Bulk Create Variants",
+          "name": "8.2 Get All Coupons",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{url}}coupons?page=1&limit=20", "host": ["{{url}}coupons"] }
+          },
+          "response": []
+        },
+        {
+          "name": "8.3 Create Coupon",
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
+              { "key": "Content-Type", "value": "application/json" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"variants\": [\n    {\n      \"sku\": \"IP16PM-256-WHT\",\n      \"attributes\": [\n        {\n          \"name\": \"Màu sắc\",\n          \"value\": \"Trắng\"\n        }\n      ],\n      \"price\": 32990000,\n      \"stock\": 15\n    }\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "raw": "{\n  \"code\": \"SUMMER50K\",\n  \"name\": \"Giảm 50k đơn từ 300k\",\n  \"type\": \"fixed\",\n  \"value\": 50000,\n  \"minOrderValue\": 300000,\n  \"usageLimit\": 100,\n  \"startDate\": \"2026-06-01T00:00:00Z\",\n  \"endDate\": \"2026-08-31T23:59:59Z\",\n  \"isActive\": true\n}",
+              "options": { "raw": { "language": "json" } }
             },
-            "url": {
-              "raw": "{{url}}products/<productId>/variants/bulk",
-              "host": [
-                "{{url}}products"
-              ],
-              "path": [
-                "<productId>",
-                "variants",
-                "bulk"
-              ]
-            },
-            "description": "(Admin) Tạo hàng loạt biến thể cho sản phẩm."
+            "url": { "raw": "{{url}}coupons", "host": ["{{url}}coupons"] }
           },
           "response": []
         },
         {
-          "name": "9.4 Delete Variants By Product",
+          "name": "8.4 Toggle Coupon Active Status",
           "request": {
-            "method": "DELETE",
+            "method": "PATCH",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
+              { "key": "Content-Type", "value": "application/json" }
             ],
-            "url": {
-              "raw": "{{url}}products/<productId>/variants/all",
-              "host": [
-                "{{url}}products"
-              ],
-              "path": [
-                "<productId>",
-                "variants",
-                "all"
-              ]
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isActive\": true\n}",
+              "options": { "raw": { "language": "json" } }
             },
-            "description": "(Admin) Xóa tất cả biến thể của sản phẩm."
+            "url": { "raw": "{{url}}coupons/:id/toggle-status", "host": ["{{url}}coupons"], "path": [":id", "toggle-status"] }
           },
           "response": []
         },
         {
-          "name": "9.5 Get Variant By ID",
+          "name": "8.5 Get Active Flash Sale (Storefront)",
           "request": {
             "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{url}}product-variants/<id>",
-              "host": [
-                "{{url}}product-variants"
-              ],
-              "path": [
-                "<id>"
-              ]
-            },
-            "description": "(Admin) Lấy chi tiết biến thể theo ID."
+            "url": { "raw": "{{url}}flash-sales/active", "host": ["{{url}}flash-sales"], "path": ["active"] }
           },
           "response": []
         },
         {
-          "name": "9.6 Update Variant",
+          "name": "8.6 Create Flash Sale",
           "request": {
-            "method": "PUT",
+            "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"price\": 31990000,\n  \"stock\": 25\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "raw": "{\n  \"name\": \"Flash Sale Giờ Vàng\",\n  \"startDate\": \"2026-08-21T12:00:00Z\",\n  \"endDate\": \"2026-08-21T18:00:00Z\",\n  \"isActive\": true,\n  \"items\": [\n    {\n      \"product\": \"<product_id>\",\n      \"flashPrice\": 1990000,\n      \"stockForSale\": 20\n    }\n  ]\n}",
+              "options": { "raw": { "language": "json" } }
             },
-            "url": {
-              "raw": "{{url}}product-variants/<id>",
-              "host": [
-                "{{url}}product-variants"
-              ],
-              "path": [
-                "<id>"
-              ]
-            },
-            "description": "(Admin) Cập nhật thông tin biến thể."
+            "url": { "raw": "{{url}}flash-sales", "host": ["{{url}}flash-sales"] }
           },
           "response": []
         },
         {
-          "name": "9.7 Delete Variant",
+          "name": "8.7 Apply Promotion Discount",
           "request": {
-            "method": "DELETE",
+            "method": "POST",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
+              { "key": "Content-Type", "value": "application/json" }
             ],
-            "url": {
-              "raw": "{{url}}product-variants/<id>",
-              "host": [
-                "{{url}}product-variants"
-              ],
-              "path": [
-                "<id>"
-              ]
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"<product_id>\",\n  \"cartTotal\": 1000000\n}",
+              "options": { "raw": { "language": "json" } }
             },
-            "description": "(Admin) Xóa một biến thể."
+            "url": { "raw": "{{url}}promotions/apply", "host": ["{{url}}promotions"], "path": ["apply"] }
+          },
+          "response": []
+        },
+        {
+          "name": "8.8 Create Promotion Program",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Chương trình Chiết khấu Tháng 8\",\n  \"discountPercent\": 10,\n  \"startDate\": \"2026-08-01T00:00:00Z\",\n  \"endDate\": \"2026-08-31T23:59:59Z\",\n  \"isActive\": true\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{url}}promotions", "host": ["{{url}}promotions"] }
+          },
+          "response": []
+        },
+        {
+          "name": "8.9 Apply Gift Program",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cartTotal\": 2000000\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{url}}gift-programs/apply", "host": ["{{url}}gift-programs"], "path": ["apply"] }
+          },
+          "response": []
+        },
+        {
+          "name": "8.10 Create Gift Program",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Tặng Tai Nghe Khi Mua Đơn Từ 2 Triệu\",\n  \"minOrderValue\": 2000000,\n  \"giftName\": \"Tai nghe JBL T110\",\n  \"startDate\": \"2026-08-01T00:00:00Z\",\n  \"endDate\": \"2026-08-31T23:59:59Z\",\n  \"isActive\": true\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{url}}gift-programs", "host": ["{{url}}gift-programs"] }
           },
           "response": []
         }
       ]
     },
     {
-      "name": "10. Coupons (Mã giảm giá)",
+      "name": "09. Blog & Content (Bài viết Blog, Danh mục & Tags)",
       "item": [
         {
-          "name": "10.1 Validate Coupon Code (Storefront)",
+          "name": "9.1 Get All Blog Posts",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{url}}blog-posts?page=1&limit=20&search=&category=&tag=&status=",
+              "host": ["{{url}}blog-posts"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                { "key": "search", "value": "" },
+                { "key": "category", "value": "" },
+                { "key": "tag", "value": "" },
+                { "key": "status", "value": "" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "9.2 Get Post By ID",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{url}}blog-posts/id/:id", "host": ["{{url}}blog-posts"], "path": ["id", ":id"] }
+          },
+          "response": []
+        },
+        {
+          "name": "9.3 Get Post By Slug",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{url}}blog-posts/:slug", "host": ["{{url}}blog-posts"], "path": [":slug"] }
+          },
+          "response": []
+        },
+        {
+          "name": "9.4 Create Blog Post",
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
+              { "key": "Content-Type", "value": "application/json" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"code\": \"MAGIAM20k\",\n  \"orderAmount\": 500000\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "raw": "{\n  \"title\": \"Hướng dẫn chọn mua loa bluetooth hát karaoke hay nhất 2026\",\n  \"slug\": \"huong-dan-chon-mua-loa-bluetooth\",\n  \"categories\": [\"<blog_category_id>\"],\n  \"tags\": [\"<tag_id>\"],\n  \"excerpt\": \"Tóm tắt nội dung bài viết đánh giá loa...\",\n  \"content\": \"<p>Nội dung chi tiết bài viết blog...</p>\",\n  \"thumbnailMediaId\": \"<media_id>\",\n  \"status\": \"published\",\n  \"isFeatured\": true,\n  \"isPinned\": false\n}",
+              "options": { "raw": { "language": "json" } }
             },
-            "url": {
-              "raw": "{{url}}coupons/validate",
-              "host": [
-                "{{url}}coupons"
-              ],
-              "path": [
-                "validate"
-              ]
-            },
-            "description": "Kiểm tra tính hợp lệ của mã giảm giá khi Checkout."
+            "url": { "raw": "{{url}}blog-posts", "host": ["{{url}}blog-posts"] }
           },
           "response": []
         },
         {
-          "name": "10.2 Get All Coupons (Admin)",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{url}}coupons?page=1&limit=20&search=&status=",
-              "host": [
-                "{{url}}coupons"
-              ]
-            },
-            "description": "(Admin) Lấy danh sách mã giảm giá."
-          },
-          "response": []
-        },
-        {
-          "name": "10.3 Get Coupon By ID",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{url}}coupons/<id>",
-              "host": [
-                "{{url}}coupons"
-              ],
-              "path": [
-                "<id>"
-              ]
-            },
-            "description": "(Admin) Lấy chi tiết mã giảm giá."
-          },
-          "response": []
-        },
-        {
-          "name": "10.4 Create Coupon",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"code\": \"MAGIAM20K\",\n  \"title\": \"Giảm 20k đơn từ 300k\",\n  \"discountType\": \"fixed\",\n  \"discountValue\": 20000,\n  \"minOrderValue\": 300000,\n  \"usageLimit\": 100,\n  \"isActive\": true\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{url}}coupons",
-              "host": [
-                "{{url}}coupons"
-              ]
-            },
-            "description": "(Admin) Tạo mới mã giảm giá."
-          },
-          "response": []
-        },
-        {
-          "name": "10.5 Update Coupon",
+          "name": "9.5 Update Blog Post",
           "request": {
             "method": "PUT",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
+              { "key": "Content-Type", "value": "application/json" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Cập nhật tiêu đề voucher\",\n  \"discountValue\": 30000\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "raw": "{\n  \"title\": \"Hướng dẫn chọn mua loa bluetooth mới nhất\",\n  \"status\": \"published\"\n}",
+              "options": { "raw": { "language": "json" } }
             },
-            "url": {
-              "raw": "{{url}}coupons/<id>",
-              "host": [
-                "{{url}}coupons"
-              ],
-              "path": [
-                "<id>"
-              ]
-            },
-            "description": "(Admin) Cập nhật mã giảm giá."
+            "url": { "raw": "{{url}}blog-posts/:id", "host": ["{{url}}blog-posts"], "path": [":id"] }
           },
           "response": []
         },
         {
-          "name": "10.6 Toggle Coupon Status",
+          "name": "9.6 Increment Blog Post View Count",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{url}}blog-posts/:slug/view", "host": ["{{url}}blog-posts"], "path": [":slug", "view"] }
+          },
+          "response": []
+        },
+        {
+          "name": "9.7 Delete Blog Post",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{url}}blog-posts/:id", "host": ["{{url}}blog-posts"], "path": [":id"] }
+          },
+          "response": []
+        },
+        {
+          "name": "9.8 Get Blog Categories",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{url}}blog-categories", "host": ["{{url}}blog-categories"] }
+          },
+          "response": []
+        },
+        {
+          "name": "9.9 Create Blog Category",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Tin công nghệ\",\n  \"description\": \"Tin tức thiết bị âm thanh & công nghệ mới\",\n  \"thumbnailMediaId\": \"<media_id>\",\n  \"isActive\": true\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{url}}blog-categories", "host": ["{{url}}blog-categories"] }
+          },
+          "response": []
+        },
+        {
+          "name": "9.10 Reorder Blog Categories",
           "request": {
             "method": "PATCH",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
+              { "key": "Content-Type", "value": "application/json" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"isActive\": false\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "raw": "{\n  \"items\": [\n    { \"_id\": \"<blog_cat_id_1>\", \"order\": 1 },\n    { \"_id\": \"<blog_cat_id_2>\", \"order\": 2 }\n  ]\n}",
+              "options": { "raw": { "language": "json" } }
             },
-            "url": {
-              "raw": "{{url}}coupons/<id>/toggle-status",
-              "host": [
-                "{{url}}coupons"
-              ],
-              "path": [
-                "<id>",
-                "toggle-status"
-              ]
-            },
-            "description": "(Admin) Bật/Tắt trạng thái kích hoạt của mã giảm giá."
+            "url": { "raw": "{{url}}blog-categories/reorder", "host": ["{{url}}blog-categories"], "path": ["reorder"] }
           },
           "response": []
         },
         {
-          "name": "10.7 Bulk Delete Coupons",
+          "name": "9.11 Get All Tags",
           "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"ids\": [\n    \"<couponId1>\",\n    \"<couponId2>\"\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{url}}coupons/bulk",
-              "host": [
-                "{{url}}coupons"
-              ],
-              "path": [
-                "bulk"
-              ]
-            },
-            "description": "(Admin) Xóa hàng loạt mã giảm giá."
+            "method": "GET",
+            "url": { "raw": "{{url}}tags", "host": ["{{url}}tags"] }
           },
           "response": []
         },
         {
-          "name": "10.8 Delete Single Coupon",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{url}}coupons/<id>",
-              "host": [
-                "{{url}}coupons"
-              ],
-              "path": [
-                "<id>"
-              ]
-            },
-            "description": "(Admin) Xóa một mã giảm giá."
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "11. Promotions (Chương trình Khuyến mãi)",
-      "item": [
-        {
-          "name": "11.1 Apply Promotion To Cart",
+          "name": "9.12 Create Tag",
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
+              { "key": "Content-Type", "value": "application/json" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"items\": [\n    {\n      \"productId\": \"<productId>\",\n      \"qty\": 2,\n      \"price\": 100000\n    }\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "raw": "{\n  \"name\": \"Loa Bluetooth\",\n  \"isActive\": true\n}",
+              "options": { "raw": { "language": "json" } }
             },
-            "url": {
-              "raw": "{{url}}promotions/apply",
-              "host": [
-                "{{url}}promotions"
-              ],
-              "path": [
-                "apply"
-              ]
-            },
-            "description": "Tính toán khuyến mãi tự động áp dụng cho giỏ hàng."
-          },
-          "response": []
-        },
-        {
-          "name": "11.2 Get All Promotions",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{url}}promotions?page=1&limit=20&search=&type=",
-              "host": [
-                "{{url}}promotions"
-              ]
-            },
-            "description": "(Admin) Lấy danh sách chương trình khuyến mãi tự động."
-          },
-          "response": []
-        },
-        {
-          "name": "11.3 Get Promotion By ID",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{url}}promotions/<id>",
-              "host": [
-                "{{url}}promotions"
-              ],
-              "path": [
-                "<id>"
-              ]
-            },
-            "description": "(Admin) Lấy chi tiết chương trình khuyến mãi."
-          },
-          "response": []
-        },
-        {
-          "name": "11.4 Create Promotion",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Giảm 10% cho đơn từ 1 triệu\",\n  \"type\": \"percent_discount\",\n  \"discountValue\": 10,\n  \"minOrderValue\": 1000000,\n  \"isActive\": true\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{url}}promotions",
-              "host": [
-                "{{url}}promotions"
-              ]
-            },
-            "description": "(Admin) Tạo mới chương trình khuyến mãi."
-          },
-          "response": []
-        },
-        {
-          "name": "11.5 Update Promotion",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Giảm 15% cho đơn từ 1 triệu\",\n  \"discountValue\": 15\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{url}}promotions/<id>",
-              "host": [
-                "{{url}}promotions"
-              ],
-              "path": [
-                "<id>"
-              ]
-            },
-            "description": "(Admin) Cập nhật chương trình khuyến mãi."
-          },
-          "response": []
-        },
-        {
-          "name": "11.6 Toggle Promotion Status",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"isActive\": false\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{url}}promotions/<id>/status",
-              "host": [
-                "{{url}}promotions"
-              ],
-              "path": [
-                "<id>",
-                "status"
-              ]
-            },
-            "description": "(Admin) Bật/tắt trạng thái khuyến mãi."
-          },
-          "response": []
-        },
-        {
-          "name": "11.7 Bulk Delete Promotions",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"ids\": [\n    \"<promoId1>\",\n    \"<promoId2>\"\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{url}}promotions/bulk",
-              "host": [
-                "{{url}}promotions"
-              ],
-              "path": [
-                "bulk"
-              ]
-            },
-            "description": "(Admin) Xóa hàng loạt chương trình khuyến mãi."
-          },
-          "response": []
-        },
-        {
-          "name": "11.8 Delete Single Promotion",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{url}}promotions/<id>",
-              "host": [
-                "{{url}}promotions"
-              ],
-              "path": [
-                "<id>"
-              ]
-            },
-            "description": "(Admin) Xóa một chương trình khuyến mãi."
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "12. Gift Programs (Chương trình Quà tặng kèm)",
-      "item": [
-        {
-          "name": "12.1 Apply Gift Program To Cart",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"items\": [\n    {\n      \"productId\": \"<productId>\",\n      \"qty\": 2\n    }\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{url}}gift-programs/apply",
-              "host": [
-                "{{url}}gift-programs"
-              ],
-              "path": [
-                "apply"
-              ]
-            },
-            "description": "Tính toán sản phẩm quà tặng kèm áp dụng cho đơn hàng."
-          },
-          "response": []
-        },
-        {
-          "name": "12.2 Get All Gift Programs",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{url}}gift-programs?page=1&limit=20&search=",
-              "host": [
-                "{{url}}gift-programs"
-              ]
-            },
-            "description": "(Admin) Lấy danh sách chương trình tặng quà."
-          },
-          "response": []
-        },
-        {
-          "name": "12.3 Get Gift Program By ID",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{url}}gift-programs/<id>",
-              "host": [
-                "{{url}}gift-programs"
-              ],
-              "path": [
-                "<id>"
-              ]
-            },
-            "description": "(Admin) Lấy chi tiết chương trình quà tặng."
-          },
-          "response": []
-        },
-        {
-          "name": "12.4 Create Gift Program",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Mua 2 tặng 1 Tai nghe\",\n  \"giftType\": \"buy_x_get_y\",\n  \"triggerQty\": 2,\n  \"giftQty\": 1,\n  \"giftProducts\": [\n    {\n      \"productId\": \"<giftProductId>\",\n      \"qty\": 1\n    }\n  ],\n  \"isActive\": true\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{url}}gift-programs",
-              "host": [
-                "{{url}}gift-programs"
-              ]
-            },
-            "description": "(Admin) Tạo chương trình tặng quà kèm mới."
-          },
-          "response": []
-        },
-        {
-          "name": "12.5 Update Gift Program",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Mua 2 tặng 1 Cáp sạc\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{url}}gift-programs/<id>",
-              "host": [
-                "{{url}}gift-programs"
-              ],
-              "path": [
-                "<id>"
-              ]
-            },
-            "description": "(Admin) Cập nhật chương trình quà tặng."
-          },
-          "response": []
-        },
-        {
-          "name": "12.6 Toggle Gift Program Status",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"isActive\": false\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{url}}gift-programs/<id>/status",
-              "host": [
-                "{{url}}gift-programs"
-              ],
-              "path": [
-                "<id>",
-                "status"
-              ]
-            },
-            "description": "(Admin) Bật/tắt trạng thái chương trình quà tặng."
-          },
-          "response": []
-        },
-        {
-          "name": "12.7 Bulk Delete Gift Programs",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"ids\": [\n    \"<giftId1>\",\n    \"<giftId2>\"\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{url}}gift-programs/bulk",
-              "host": [
-                "{{url}}gift-programs"
-              ],
-              "path": [
-                "bulk"
-              ]
-            },
-            "description": "(Admin) Xóa hàng loạt chương trình quà tặng."
-          },
-          "response": []
-        },
-        {
-          "name": "12.8 Delete Single Gift Program",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{url}}gift-programs/<id>",
-              "host": [
-                "{{url}}gift-programs"
-              ],
-              "path": [
-                "<id>"
-              ]
-            },
-            "description": "(Admin) Xóa một chương trình quà tặng."
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "13. Blog Categories (Danh mục Bài viết Blog)",
-      "item": [
-        {
-          "name": "13.1 Get All Blog Categories",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{url}}blog-categories",
-              "host": [
-                "{{url}}blog-categories"
-              ]
-            },
-            "description": "Lấy danh sách tất cả danh mục bài viết blog."
-          },
-          "response": []
-        },
-        {
-          "name": "13.2 Get Blog Category By Slug",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{url}}blog-categories/<slug>",
-              "host": [
-                "{{url}}blog-categories"
-              ],
-              "path": [
-                "<slug>"
-              ]
-            },
-            "description": "Lấy chi tiết danh mục blog theo slug."
-          },
-          "response": []
-        },
-        {
-          "name": "13.3 Create Blog Category",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Kiến thức công nghệ\",\n  \"description\": \"Tin tức công nghệ\",\n  \"isActive\": true\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{url}}blog-categories",
-              "host": [
-                "{{url}}blog-categories"
-              ]
-            },
-            "description": "(Admin) Tạo mới danh mục blog."
-          },
-          "response": []
-        },
-        {
-          "name": "13.4 Reorder Blog Categories",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"items\": [\n    {\n      \"id\": \"<blogCatId1>\",\n      \"order\": 1\n    }\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{url}}blog-categories/reorder",
-              "host": [
-                "{{url}}blog-categories"
-              ],
-              "path": [
-                "reorder"
-              ]
-            },
-            "description": "(Admin) Sắp xếp lại vị trí danh mục blog."
-          },
-          "response": []
-        },
-        {
-          "name": "13.5 Update Blog Category",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Kiến thức công nghệ mới\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{url}}blog-categories/<id>",
-              "host": [
-                "{{url}}blog-categories"
-              ],
-              "path": [
-                "<id>"
-              ]
-            },
-            "description": "(Admin) Cập nhật danh mục blog."
-          },
-          "response": []
-        },
-        {
-          "name": "13.6 Toggle Blog Category Status",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"isActive\": false\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{url}}blog-categories/<id>/status",
-              "host": [
-                "{{url}}blog-categories"
-              ],
-              "path": [
-                "<id>",
-                "status"
-              ]
-            },
-            "description": "(Admin) Bật/tắt trạng thái hiển thị danh mục blog."
-          },
-          "response": []
-        },
-        {
-          "name": "13.7 Bulk Delete Blog Categories",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"ids\": [\n    \"<catId1>\",\n    \"<catId2>\"\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{url}}blog-categories/bulk",
-              "host": [
-                "{{url}}blog-categories"
-              ],
-              "path": [
-                "bulk"
-              ]
-            },
-            "description": "(Admin) Xóa hàng loạt danh mục blog."
-          },
-          "response": []
-        },
-        {
-          "name": "13.8 Delete Single Blog Category",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{url}}blog-categories/<id>",
-              "host": [
-                "{{url}}blog-categories"
-              ],
-              "path": [
-                "<id>"
-              ]
-            },
-            "description": "(Admin) Xóa một danh mục blog."
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "14. Blog Posts (Bài viết Blog)",
-      "item": [
-        {
-          "name": "14.1 Get All Blog Posts",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{url}}blog-posts?page=1&limit=10&status=&categoryId=&keyword=&sort=newest",
-              "host": [
-                "{{url}}blog-posts"
-              ]
-            },
-            "description": "Lấy danh sách bài viết blog."
-          },
-          "response": []
-        },
-        {
-          "name": "14.2 Create Blog Post",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"title\": \"Tiêu đề bài viết\",\n  \"content\": \"<p>Nội dung...</p>\",\n  \"categories\": [\n    \"<catId>\"\n  ],\n  \"status\": \"published\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{url}}blog-posts",
-              "host": [
-                "{{url}}blog-posts"
-              ]
-            },
-            "description": "(Admin) Tạo mới bài viết blog."
-          },
-          "response": []
-        },
-        {
-          "name": "14.3 Get Blog Post By Slug",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{url}}blog-posts/<slug>",
-              "host": [
-                "{{url}}blog-posts"
-              ],
-              "path": [
-                "<slug>"
-              ]
-            },
-            "description": "(Storefront) Lấy chi tiết bài viết theo slug."
-          },
-          "response": []
-        },
-        {
-          "name": "14.4 Get Blog Post By ID",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{url}}blog-posts/id/<id>",
-              "host": [
-                "{{url}}blog-posts"
-              ],
-              "path": [
-                "id",
-                "<id>"
-              ]
-            },
-            "description": "(Admin) Lấy thông tin bài viết theo ID."
-          },
-          "response": []
-        },
-        {
-          "name": "14.5 Update Blog Post",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"title\": \"Tiêu đề bài viết cập nhật\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{url}}blog-posts/<id>",
-              "host": [
-                "{{url}}blog-posts"
-              ],
-              "path": [
-                "<id>"
-              ]
-            },
-            "description": "(Admin) Cập nhật bài viết blog."
-          },
-          "response": []
-        },
-        {
-          "name": "14.6 Toggle Blog Post Status",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"isActive\": false\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{url}}blog-posts/<id>/status",
-              "host": [
-                "{{url}}blog-posts"
-              ],
-              "path": [
-                "<id>",
-                "status"
-              ]
-            },
-            "description": "(Admin) Bật/tắt trạng thái hiển thị bài viết."
-          },
-          "response": []
-        },
-        {
-          "name": "14.7 Increment View Count",
-          "request": {
-            "method": "POST",
-            "header": [],
-            "url": {
-              "raw": "{{url}}blog-posts/<slug>/view",
-              "host": [
-                "{{url}}blog-posts"
-              ],
-              "path": [
-                "<slug>",
-                "view"
-              ]
-            },
-            "description": "(Storefront) Tăng lượt xem bài viết."
-          },
-          "response": []
-        },
-        {
-          "name": "14.8 Bulk Delete Blog Posts",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"ids\": [\n    \"<postId1>\",\n    \"<postId2>\"\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{url}}blog-posts/bulk",
-              "host": [
-                "{{url}}blog-posts"
-              ],
-              "path": [
-                "bulk"
-              ]
-            },
-            "description": "(Admin) Xóa hàng loạt bài viết."
-          },
-          "response": []
-        },
-        {
-          "name": "14.9 Delete Single Blog Post",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{url}}blog-posts/<id>",
-              "host": [
-                "{{url}}blog-posts"
-              ],
-              "path": [
-                "<id>"
-              ]
-            },
-            "description": "(Admin) Xóa một bài viết."
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "15. Tags (Nhãn bài viết)",
-      "item": [
-        {
-          "name": "15.1 Get All Tags",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{url}}tags",
-              "host": [
-                "{{url}}tags"
-              ]
-            },
-            "description": "Lấy danh sách tất cả tag bài viết."
-          },
-          "response": []
-        },
-        {
-          "name": "15.2 Get Tag By Slug",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{url}}tags/<slug>",
-              "host": [
-                "{{url}}tags"
-              ],
-              "path": [
-                "<slug>"
-              ]
-            },
-            "description": "Lấy chi tiết tag theo slug."
-          },
-          "response": []
-        },
-        {
-          "name": "15.3 Create Tag",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Khuyến mãi\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{url}}tags",
-              "host": [
-                "{{url}}tags"
-              ]
-            },
-            "description": "(Admin) Tạo mới tag."
-          },
-          "response": []
-        },
-        {
-          "name": "15.4 Update Tag",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Khuyến mãi HOT\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{url}}tags/<id>",
-              "host": [
-                "{{url}}tags"
-              ],
-              "path": [
-                "<id>"
-              ]
-            },
-            "description": "(Admin) Cập nhật tag."
-          },
-          "response": []
-        },
-        {
-          "name": "15.5 Toggle Tag Status",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"isActive\": false\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{url}}tags/<id>/status",
-              "host": [
-                "{{url}}tags"
-              ],
-              "path": [
-                "<id>",
-                "status"
-              ]
-            },
-            "description": "(Admin) Bật/tắt trạng thái tag."
-          },
-          "response": []
-        },
-        {
-          "name": "15.6 Bulk Delete Tags",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"ids\": [\n    \"<tagId1>\",\n    \"<tagId2>\"\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{url}}tags/bulk",
-              "host": [
-                "{{url}}tags"
-              ],
-              "path": [
-                "bulk"
-              ]
-            },
-            "description": "(Admin) Xóa hàng loạt tag."
-          },
-          "response": []
-        },
-        {
-          "name": "15.7 Delete Single Tag",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{url}}tags/<id>",
-              "host": [
-                "{{url}}tags"
-              ],
-              "path": [
-                "<id>"
-              ]
-            },
-            "description": "(Admin) Xóa một tag."
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "16. Flash Sales (Giờ vàng giá sốc)",
-      "item": [
-        {
-          "name": "16.1 Get Active Flash Sale (Public)",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{url}}flash-sales/active",
-              "host": [
-                "{{url}}flash-sales"
-              ],
-              "path": [
-                "active"
-              ]
-            },
-            "description": "Lấy Flash Sale đang diễn ra hiện tại (Public cho Storefront)."
-          },
-          "response": []
-        },
-        {
-          "name": "16.2 Get All Flash Sales (Admin)",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{url}}flash-sales?page=1&limit=10&status=active&search=",
-              "host": [
-                "{{url}}flash-sales"
-              ]
-            },
-            "description": "(Admin) Lấy danh sách Flash Sales có phân trang."
-          },
-          "response": []
-        },
-        {
-          "name": "16.3 Get Flash Sale By ID",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{url}}flash-sales/<id>",
-              "host": [
-                "{{url}}flash-sales"
-              ],
-              "path": [
-                "<id>"
-              ]
-            },
-            "description": "Lấy chi tiết chương trình Flash Sale theo ID."
-          },
-          "response": []
-        },
-        {
-          "name": "16.4 Create Flash Sale",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Flash Sale Giờ Vàng 12h-14h\",\n  \"description\": \"Giảm giá đặc biệt\",\n  \"bannerMediaId\": null,\n  \"startDate\": \"2026-08-22T05:00:00.000Z\",\n  \"endDate\": \"2026-08-22T07:00:00.000Z\",\n  \"isActive\": true,\n  \"items\": [\n    {\n      \"productId\": \"<productId>\",\n      \"variantId\": null,\n      \"originalPrice\": 15490000,\n      \"flashSalePrice\": 6990000,\n      \"stockLimit\": 20\n    }\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{url}}flash-sales",
-              "host": [
-                "{{url}}flash-sales"
-              ]
-            },
-            "description": "(Admin) Tạo mới chương trình Flash Sale."
-          },
-          "response": []
-        },
-        {
-          "name": "16.5 Update Flash Sale",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Flash Sale Giờ Vàng (Cập nhật)\",\n  \"flashSalePrice\": 6500000\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{url}}flash-sales/<id>",
-              "host": [
-                "{{url}}flash-sales"
-              ],
-              "path": [
-                "<id>"
-              ]
-            },
-            "description": "(Admin) Cập nhật chương trình Flash Sale."
-          },
-          "response": []
-        },
-        {
-          "name": "16.6 Toggle Flash Sale Status",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"isActive\": false\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{url}}flash-sales/<id>/toggle-status",
-              "host": [
-                "{{url}}flash-sales"
-              ],
-              "path": [
-                "<id>",
-                "toggle-status"
-              ]
-            },
-            "description": "(Admin) Bật/tắt kích hoạt Flash Sale."
-          },
-          "response": []
-        },
-        {
-          "name": "16.7 Delete Flash Sale",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{url}}flash-sales/<id>",
-              "host": [
-                "{{url}}flash-sales"
-              ],
-              "path": [
-                "<id>"
-              ]
-            },
-            "description": "(Admin) Xóa chương trình Flash Sale."
+            "url": { "raw": "{{url}}tags", "host": ["{{url}}tags"] }
           },
           "response": []
         }

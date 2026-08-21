@@ -132,8 +132,7 @@ export default function BlogPostFormPage() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Fixed action bar */}
-      <div className="fixed top-[53px] right-0 left-[var(--sidebar-width,256px)] z-30 bg-background/95 backdrop-blur-sm border-b border-border px-6 py-2.5 flex items-center justify-between">
+      <div className="sticky -top-3 sm:-top-6 z-30 -mt-3 sm:-mt-6 -mx-3 sm:-mx-6 px-4 sm:px-6 py-3 bg-background/95 backdrop-blur-md border-b border-border flex items-center justify-between gap-3 shadow-xs">
         <div className="flex items-center gap-3">
           <button type="button" onClick={() => navigate('/blog/posts')} className="p-1.5 rounded-lg hover:bg-muted transition-colors">
             <ArrowLeft className="size-4" />

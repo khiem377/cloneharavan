@@ -489,6 +489,8 @@ export default function MediaPage() {
             <div className="flex-1 overflow-y-auto p-4">
               <MediaGrid
                 items={mediaItems}
+                folders={isSearching ? (searchData?.folders || []) : (browseData?.type === 'parent' ? (browseData?.subFolders || []) : [])}
+                onFolderClick={handleFolderSelect}
                 selectedIds={selectedIds}
                 onToggle={toggleSelect}
                 onPreview={setPreviewItem}
