@@ -280,7 +280,7 @@ export default function BannerPage() {
   const activeItem = activeId ? banners.find(b => b._id === activeId) : null;
 
   return (
-    <div className="p-6 flex flex-col gap-6 w-full max-w-7xl mx-auto min-h-full bg-background text-foreground">
+    <div className="p-3 sm:p-6 flex flex-col gap-4 sm:gap-6 w-full max-w-full overflow-x-hidden min-h-full bg-background text-foreground">
       <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-border">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground">Banners</h1>

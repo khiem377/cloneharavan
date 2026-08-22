@@ -284,6 +284,7 @@ export default function FolderTree({ selectedId, onSelect }) {
 
       {confirm && (
         <ConfirmDialog
+          open={true}
           title="Xóa thư mục"
           message={`Xóa "${confirm.folder.name}"? Hành động này không thể hoàn tác.`}
           confirmText="Xóa"

@@ -81,6 +81,7 @@ const NAV_GROUPS = [
           { to: '/promotions/coupons', icon: CouponsIcon, label: 'Mã giảm giá' },
           { to: '/promotions/discounts', icon: DiscountIcon, label: 'Chương trình khuyến mãi' },
           { to: '/promotions/gifts', icon: GiftIcon, label: 'Chương trình tặng kèm' },
+          { to: '/promotions/flash-sales', icon: SparklesIcon, label: 'Flash Sale' },
         ],
       },
     ],

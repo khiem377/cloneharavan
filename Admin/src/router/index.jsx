@@ -2,6 +2,7 @@ import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom'
 import ProtectedRoute from './ProtectedRoute';
 import AdminLayout from '@/components/layout/AdminLayout';
 import LoginPage from '@/pages/auth/LoginPage';
+import DashboardPage from '@/pages/DashboardPage';
 import MediaPage from '@/pages/media/MediaPage';
 import BannerPage from '@/pages/banners/BannerPage';
 import CategoryPage from '@/pages/categories/CategoryPage';
@@ -14,6 +15,7 @@ import ImportExportPage from '@/pages/products/ImportExportPage';
 import CouponPage from '@/pages/promotions/CouponPage';
 import PromotionPage from '@/pages/promotions/PromotionPage';
 import GiftProgramPage from '@/pages/promotions/GiftProgramPage';
+import FlashSalePage from '@/pages/promotions/FlashSalePage';
 import ComingSoonPage from '@/pages/common/ComingSoonPage';
 import BlogPostListPage from '@/pages/blog/BlogPostListPage';
 import BlogPostFormPage from '@/pages/blog/BlogPostFormPage';
@@ -32,8 +34,8 @@ const router = createBrowserRouter([
       {
         element: <AdminLayout />,
         children: [
-          { index: true, element: <Navigate to="/products" replace /> },
-          { path: 'dashboard', element: <ComingSoonPage title="Dashboard" /> },
+          { index: true, element: <Navigate to="/dashboard" replace /> },
+          { path: 'dashboard', element: <DashboardPage /> },
           { path: 'media', element: <MediaPage /> },
           { path: 'banners', element: <BannerPage /> },
           { path: 'categories', element: <CategoryPage /> },
@@ -47,6 +49,7 @@ const router = createBrowserRouter([
           { path: 'promotions/coupons', element: <CouponPage /> },
           { path: 'promotions/discounts', element: <PromotionPage /> },
           { path: 'promotions/gifts', element: <GiftProgramPage /> },
+          { path: 'promotions/flash-sales', element: <FlashSalePage /> },
           { path: 'blog/posts', element: <BlogPostListPage /> },
           { path: 'blog/posts/new', element: <BlogPostFormPage /> },
           { path: 'blog/posts/:id/edit', element: <BlogPostFormPage /> },

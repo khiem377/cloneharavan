@@ -123,7 +123,7 @@ export default function BlogCategoryPage() {
   const [inUsePosts, setInUsePosts] = useState(null);
   const [localData, setLocalData] = useState(null);
 
-  const { data: fetchedData, loading, refetch } = useBlogCategories(query);
+  const { data: fetchedData, pagination, loading, refetch } = useBlogCategories(query);
   const data = localData ?? fetchedData ?? [];
 
   const sensors = useSensors(

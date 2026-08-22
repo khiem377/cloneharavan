@@ -74,7 +74,7 @@ export default function ProductListPage() {
   };
 
   return (
-    <div className="p-6 flex flex-col gap-6 w-full max-w-7xl mx-auto min-h-full bg-background text-foreground">
+    <div className="p-3 sm:p-6 flex flex-col gap-4 sm:gap-6 w-full max-w-full overflow-x-hidden min-h-full bg-background text-foreground">
       <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-border">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground">Sản phẩm</h1>
@@ -89,9 +89,9 @@ export default function ProductListPage() {
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
           <input
-            className="h-9 w-64 rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring/20 focus:border-ring placeholder:text-muted-foreground transition-colors"
+            className="h-9 w-full sm:w-64 rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring/20 focus:border-ring placeholder:text-muted-foreground transition-colors"
             placeholder="Tìm sản phẩm, mã SKU..."
             value={keyword}
             onChange={(e) => { setKeyword(e.target.value); setPage(1); }}

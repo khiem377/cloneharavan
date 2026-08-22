@@ -204,7 +204,7 @@ export default function CouponPage() {
     setSelectedIds(selectedIds.length === coupons.length ? [] : coupons.map((c) => c._id));
 
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <div className="p-3 sm:p-6 flex flex-col gap-4 sm:gap-6 w-full max-w-full overflow-x-hidden min-h-full bg-background text-foreground">
       {/* Header section */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>

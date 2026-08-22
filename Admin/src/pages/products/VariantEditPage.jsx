@@ -6,6 +6,20 @@ import { useProduct } from '@/hooks/useProducts';
 import { useVariant, useUpdateVariant } from '@/hooks/useProductVariants';
 import RichTextEditor from '@/components/ui/RichTextEditor';
 import MediaPickerModal from '@/components/ui/MediaPickerModal';
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  rectSortingStrategy,
+  useSortable,
+  arrayMove,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 /* ─── helpers ─── */
 function fmtVND(v) {
@@ -109,33 +123,76 @@ function SpecsEditor({ specs = [], onChange }) {
   );
 }
 
-/* ─── Image grid (same as ProductFormPage gallery) ─── */
-function ImageGrid({ urls, onAdd, onRemove }) {
+/* ─── Image grid (Sortable dnd-kit gallery) ─── */
+function SortableImageTile({ id, url, idx, onRemove }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+    cursor: isDragging ? 'grabbing' : 'grab',
+    touchAction: 'none',
+  };
+
   return (
-    <div className="flex flex-wrap gap-2">
-      {urls.map((url, i) => (
-        <div key={i} className="relative size-20 rounded-lg overflow-hidden border border-border group bg-muted">
-          <img src={url} alt="" className="size-full object-cover" />
-          <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-            <button
-              type="button"
-              onClick={() => onRemove(i)}
-              className="size-7 rounded-full bg-destructive/90 flex items-center justify-center cursor-pointer hover:bg-destructive transition-colors"
-            >
-              <Trash2 size={12} className="text-white" />
-            </button>
-          </div>
-        </div>
-      ))}
-      <button
-        type="button"
-        onClick={onAdd}
-        className="size-20 rounded-lg border-2 border-dashed border-border flex flex-col items-center justify-center gap-1 cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors text-muted-foreground hover:text-primary"
-      >
-        <Plus size={18} />
-        <span className="text-[10px] font-medium">Thêm ảnh</span>
-      </button>
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className="relative size-20 rounded-lg overflow-hidden border border-border group bg-muted select-none cursor-grab active:cursor-grabbing hover:ring-2 hover:ring-primary/40 transition-all"
+    >
+      <img src={url} alt="" className="size-full object-cover pointer-events-none" />
+      <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+        <button
+          type="button"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => { e.stopPropagation(); onRemove(idx); }}
+          className="size-6 rounded-full bg-destructive/90 text-destructive-foreground flex items-center justify-center text-xs hover:scale-105 cursor-pointer font-bold shadow-xs"
+          title="Xóa ảnh"
+        >
+          ×
+        </button>
+      </div>
     </div>
+  );
+}
+
+function ImageGrid({ urls = [], ids = [], onAdd, onRemove, onReorder }) {
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  const handleDragEnd = (event) => {
+    const { active, over } = event;
+    if (active && over && active.id !== over.id) {
+      const getTileId = (i) => ids[i] || `v-img-${i}`;
+      const oldIdx = urls.findIndex((_, i) => getTileId(i) === active.id);
+      const newIdx = urls.findIndex((_, i) => getTileId(i) === over.id);
+
+      if (oldIdx !== -1 && newIdx !== -1 && onReorder) {
+        onReorder(arrayMove(ids, oldIdx, newIdx), arrayMove(urls, oldIdx, newIdx));
+      }
+    }
+  };
+
+  return (
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <SortableContext items={urls.map((_, i) => ids[i] || `v-img-${i}`)} strategy={rectSortingStrategy}>
+        <div className="flex flex-wrap gap-2">
+          {urls.map((url, i) => {
+            const tileId = ids[i] || `v-img-${i}`;
+            return <SortableImageTile key={tileId} id={tileId} url={url} idx={i} onRemove={onRemove} />;
+          })}
+          <button
+            type="button"
+            onClick={onAdd}
+            className="size-20 rounded-lg border-2 border-dashed border-border flex flex-col items-center justify-center gap-1 cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors text-muted-foreground hover:text-primary"
+          >
+            <Plus size={18} />
+            <span className="text-[10px] font-medium">Thêm ảnh</span>
+          </button>
+        </div>
+      </SortableContext>
+    </DndContext>
   );
 }
 
@@ -274,8 +331,7 @@ export default function VariantEditPage() {
 
   return (
     <div className="flex flex-col gap-6 max-w-[1200px] mx-auto p-6">
-      {/* ── Header ── */}
-      <div className="flex items-center justify-between">
+      <div className="sticky -top-3 sm:-top-6 z-30 -mt-3 sm:-mt-6 -mx-3 sm:-mx-6 px-4 sm:px-6 py-3 bg-background/95 backdrop-blur-md border-b border-border flex items-center justify-between gap-3 shadow-xs">
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -544,8 +600,10 @@ export default function VariantEditPage() {
             <h3 className="text-sm font-semibold text-foreground pb-2 border-b border-border">Bộ ảnh biến thể</h3>
             <ImageGrid
               urls={form.imageUrls}
+              ids={form.imageMediaIds}
               onAdd={() => setPickerMode('images')}
               onRemove={removeGalleryImage}
+              onReorder={(newIds, newUrls) => set({ imageMediaIds: newIds, imageUrls: newUrls })}
             />
           </div>
 
