@@ -282,6 +282,12 @@ export default function MediaPickerModal({ onSelect, onClose, isMultiple = false
   const isLoading = isSearching ? ls : lb;
 
   const searchFolders = isSearching ? (searchData?.folders ?? []) : [];
+  // Sub-folders to show in main content area: search results folders OR children of current folder
+  const modalFolders = isSearching
+    ? searchFolders
+    : selectedFolder
+      ? (folderMap[selectedFolder]?.children ?? [])
+      : [];
   const crumbs = selectedFolder ? buildBreadcrumb(folderMap, selectedFolder) : [];
 
   const invalidateFolders = () => {

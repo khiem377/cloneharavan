@@ -18,6 +18,7 @@ const blogCategoryRoutes  = require('./blogCategory.routes');
 const blogPostRoutes      = require('./blogPost.routes');
 const flashSaleRoutes     = require('./flashSale.routes');
 const dashboardRoutes     = require('./dashboard.routes');
+const menuRoutes          = require('./menu.routes');
 
 router.use('/auth',             authRoutes);
 router.use('/users',            userRoutes);
@@ -36,5 +37,6 @@ router.use('/dashboard',         dashboardRoutes);
 router.use('/tags',             tagRoutes);
 router.use('/blog-categories',  blogCategoryRoutes);
 router.use('/blog-posts',       blogPostRoutes);
+router.use('/menus',            menuRoutes);
 
 module.exports = router;

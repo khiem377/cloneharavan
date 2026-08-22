@@ -1,4 +1,5 @@
 const Product = require('../models/product.model');
+const ProductVariant = require('../models/productVariant.model');
 const Category = require('../models/category.model');
 const Brand = require('../models/brand.model');
 const Media = require('../models/media.model');
@@ -156,7 +157,21 @@ const getAllProductsAdmin = async (query = {}) => {
     Product.countDocuments(filter),
   ]);
 
-  return { products, pagination: { page: pageNum, limit: limitNum, total, totalPages: Math.ceil(total / limitNum) } };
+  // Đếm số biến thể cho mỗi sản phẩm bằng 1 aggregation
+  const productIds = products.map(p => p._id);
+  const variantCounts = await ProductVariant.aggregate([
+    { $match: { productId: { $in: productIds } } },
+    { $group: { _id: '$productId', count: { $sum: 1 } } },
+  ]);
+  const variantCountMap = {};
+  variantCounts.forEach(v => { variantCountMap[v._id.toString()] = v.count; });
+
+  const productsWithCount = products.map(p => ({
+    ...p.toObject(),
+    variantCount: variantCountMap[p._id.toString()] ?? 0,
+  }));
+
+  return { products: productsWithCount, pagination: { page: pageNum, limit: limitNum, total, totalPages: Math.ceil(total / limitNum) } };
 };
 
 const getProductById = async (idOrSlug) => {

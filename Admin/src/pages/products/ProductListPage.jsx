@@ -174,6 +174,7 @@ export default function ProductListPage() {
                 <th className="px-3.5 py-3">Danh mục</th>
                 <th className="px-3.5 py-3">Thương hiệu</th>
                 <th className="px-3.5 py-3">Giá bán</th>
+                <th className="px-3.5 py-3 text-center">Biến thể</th>
                 <th className="px-3.5 py-3">Tồn kho</th>
                 <th className="px-3.5 py-3">Thao tác</th>
               </tr>
@@ -206,6 +207,20 @@ export default function ProductListPage() {
                       </div>
                     ) : (
                       <span className="font-medium text-foreground">{formatPrice(p.price)}</span>
+                    )}
+                  </td>
+                  <td className="px-3.5 py-3 align-middle text-center">
+                    {p.variantCount > 0 ? (
+                      <button
+                        className="inline-flex items-center gap-1 rounded-full bg-violet-500/10 border border-violet-500/20 px-2.5 py-0.5 text-xs font-semibold text-violet-600 dark:text-violet-400 hover:bg-violet-500/20 transition-colors cursor-pointer"
+                        title="Quản lý biến thể"
+                        onClick={() => navigate(`/products/${p._id}/variants`)}
+                      >
+                        <Layers size={11} />
+                        {p.variantCount}
+                      </button>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
                     )}
                   </td>
                   <td className="px-3.5 py-3 align-middle font-mono text-xs">{p.stock}</td>
