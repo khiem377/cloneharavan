@@ -2531,6 +2531,131 @@
           "response": []
         }
       ]
+    },
+    {
+      "name": "13. Menu (Quản lý Menu điều hướng)",
+      "item": [
+        {
+          "name": "13.1 Get All Menus (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{url}}menus",
+              "host": ["{{url}}menus"]
+            },
+            "description": "(Admin) Lấy tất cả menus trong hệ thống. Yêu cầu Bearer token admin."
+          },
+          "response": []
+        },
+        {
+          "name": "13.2 Get Menu by Handle (Public)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{url}}menus/handle/main-menu",
+              "host": ["{{url}}menus"],
+              "path": ["handle", "main-menu"]
+            },
+            "description": "(Public - Storefront) Lấy menu theo handle định danh. Dùng để render navigation trên trang khách hàng. Ví dụ handle: main-menu, footer, header-nav."
+          },
+          "response": []
+        },
+        {
+          "name": "13.3 Get Menu by ID (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{url}}menus/<menuId>",
+              "host": ["{{url}}menus"],
+              "path": ["<menuId>"]
+            },
+            "description": "(Admin) Lấy chi tiết 1 menu theo MongoDB ObjectId."
+          },
+          "response": []
+        },
+        {
+          "name": "13.4 Create Menu (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Menu Chính\",\n  \"handle\": \"main-menu\",\n  \"isActive\": true,\n  \"items\": [\n    {\n      \"label\": \"Tivi & Âm thanh\",\n      \"linkType\": \"category\",\n      \"linkRef\": \"<categoryId>\",\n      \"customUrl\": \"/collections/tivi\",\n      \"openInNewTab\": false,\n      \"badge\": \"\",\n      \"badgeColor\": \"#ef4444\",\n      \"megaMenu\": true,\n      \"order\": 0,\n      \"isActive\": true,\n      \"children\": [\n        {\n          \"label\": \"Smart TV\",\n          \"linkType\": \"category\",\n          \"linkRef\": \"<categoryId>\",\n          \"customUrl\": \"\",\n          \"openInNewTab\": false,\n          \"badge\": \"Hot\",\n          \"badgeColor\": \"#ef4444\",\n          \"megaMenu\": false,\n          \"order\": 0,\n          \"isActive\": true,\n          \"children\": []\n        }\n      ]\n    },\n    {\n      \"label\": \"Flash Sale\",\n      \"linkType\": \"url\",\n      \"linkRef\": null,\n      \"customUrl\": \"/flash-sales\",\n      \"openInNewTab\": false,\n      \"badge\": \"Hot\",\n      \"badgeColor\": \"#ef4444\",\n      \"megaMenu\": false,\n      \"order\": 1,\n      \"isActive\": true,\n      \"children\": []\n    }\n  ]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{url}}menus",
+              "host": ["{{url}}menus"]
+            },
+            "description": "(Admin) Tạo menu mới. `handle` phải là unique (dạng slug). `linkType` hỗ trợ: none | url | category | brand | blog | blog_post. Items hỗ trợ tối đa 3 cấp lồng nhau."
+          },
+          "response": []
+        },
+        {
+          "name": "13.5 Update Menu (Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Menu Chính (Cập nhật)\",\n  \"isActive\": true,\n  \"items\": [\n    {\n      \"label\": \"Tivi & Âm thanh\",\n      \"linkType\": \"url\",\n      \"customUrl\": \"/collections/tivi\",\n      \"openInNewTab\": false,\n      \"badge\": \"Mới\",\n      \"badgeColor\": \"#22c55e\",\n      \"megaMenu\": false,\n      \"order\": 0,\n      \"isActive\": true,\n      \"children\": []\n    }\n  ]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{url}}menus/<menuId>",
+              "host": ["{{url}}menus"],
+              "path": ["<menuId>"]
+            },
+            "description": "(Admin) Cập nhật toàn bộ menu (name, isActive, items). Ghi đè toàn bộ danh sách items."
+          },
+          "response": []
+        },
+        {
+          "name": "13.6 Duplicate Menu (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{url}}menus/<menuId>/duplicate",
+              "host": ["{{url}}menus"],
+              "path": ["<menuId>", "duplicate"]
+            },
+            "description": "(Admin) Tạo bản sao của menu. Handle của bản sao sẽ tự động thêm suffix `-copy`."
+          },
+          "response": []
+        },
+        {
+          "name": "13.7 Delete Menu (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{url}}menus/<menuId>",
+              "host": ["{{url}}menus"],
+              "path": ["<menuId>"]
+            },
+            "description": "(Admin) Xóa vĩnh viễn 1 menu theo ID."
+          },
+          "response": []
+        }
+      ]
     }
   ]
 }
