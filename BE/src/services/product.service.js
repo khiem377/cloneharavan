@@ -1,4 +1,5 @@
 const Product = require('../models/product.model');
+const ProductVariant = require('../models/productVariant.model');
 const Category = require('../models/category.model');
 const Brand = require('../models/brand.model');
 const Media = require('../models/media.model');
@@ -15,11 +16,31 @@ const resolveMedia = async (mediaId) => {
   return { mediaId: media._id, url: media.url, publicId: media.publicId };
 };
 
+/**
+ * Tự sinh productCode từ tên sản phẩm
+ * Ví dụ: "Tivi Sony X90L" → "TIVI-SONY-X90L"
+ */
+const generateProductCode = (name) =>
+  slugify(name).toUpperCase().replace(/[^A-Z0-9-]/g, '').replace(/-+/g, '-').slice(0, 50);
+
+/**
+ * Đảm bảo productCode là unique trong collection products
+ */
+const ensureUniqueProductCode = async (base, excludeId = null) => {
+  let candidate = base;
+  let count = 1;
+  while (true) {
+    const query = { productCode: candidate };
+    if (excludeId) query._id = { $ne: excludeId };
+    const exists = await Product.findOne(query);
+    if (!exists) break;
+    candidate = `${base}-${count++}`;
+  }
+  return candidate;
+};
+
 const createProduct = async (data) => {
   const generatedSlug = data.slug ? slugify(data.slug) : slugify(data.name);
-
-  const existingSku = await Product.findOne({ sku: data.sku.toUpperCase() });
-  if (existingSku) throw new AppError('Mã SKU sản phẩm đã tồn tại', 400);
 
   const existingSlug = await Product.findOne({ slug: generatedSlug });
   if (existingSlug) throw new AppError('Tên sản phẩm hoặc slug đã tồn tại', 400);
@@ -48,15 +69,19 @@ const createProduct = async (data) => {
     }
   }
 
+  // Tự sinh productCode nếu Admin không nhập
+  const baseCode = (data.productCode && data.productCode.trim() !== '')
+    ? data.productCode.toUpperCase().trim()
+    : generateProductCode(data.name);
+
+  const productCode = await ensureUniqueProductCode(baseCode);
+
   const product = await Product.create({
     name: data.name,
     slug: generatedSlug,
-    sku: data.sku.toUpperCase(),
+    productCode,
     categories: data.categories,
     brand: data.brand,
-    price: data.price,
-    salePrice: data.salePrice,
-    stock: data.stock,
     thumbnail,
     images,
     description: data.description,
@@ -65,6 +90,23 @@ const createProduct = async (data) => {
     isHot: data.isHot,
     status: data.status,
     isActive: data.isActive,
+  });
+
+  // Tự động tạo 1 Default Variant — SKU = productCode (sản phẩm đơn không biến thể)
+  await ProductVariant.create({
+    productId: product._id,
+    attributes: [{ name: 'Phân loại', value: 'Mặc định' }],
+    displayName: 'Mặc định',
+    sku: product.productCode,
+    isManualSku: false,
+    price: data.price ?? 0,
+    salePrice: data.salePrice ?? 0,
+    stock: data.stock ?? 0,
+    thumbnail: product.thumbnail,
+    images: product.images,
+    position: 0,
+    isActive: product.isActive !== false,
+    isDefault: true,
   });
 
   return Product.findById(product._id)
@@ -92,7 +134,7 @@ const getAllProducts = async (query = {}) => {
 
   if (keyword) filter.$or = [
     { name: { $regex: keyword, $options: 'i' } },
-    { sku: { $regex: keyword, $options: 'i' } },
+    { productCode: { $regex: keyword, $options: 'i' } },
   ];
   if (category) {
     const ids = await getCategoryIds(category);
@@ -102,10 +144,13 @@ const getAllProducts = async (query = {}) => {
   if (brand) filter.brand = brand;
   if (isFeatured !== undefined) filter.isFeatured = isFeatured === 'true';
   if (isHot !== undefined) filter.isHot = isHot === 'true';
+
+  // Filter theo giá qua Variant (nếu có)
+  let variantFilter = {};
   if (minPrice || maxPrice) {
-    filter.price = {};
-    if (minPrice) filter.price.$gte = Number(minPrice);
-    if (maxPrice) filter.price.$lte = Number(maxPrice);
+    variantFilter = {};
+    if (minPrice) variantFilter.$gte = Number(minPrice);
+    if (maxPrice) variantFilter.$lte = Number(maxPrice);
   }
 
   const pageNum = Math.max(1, parseInt(page, 10));
@@ -122,7 +167,19 @@ const getAllProducts = async (query = {}) => {
     Product.countDocuments(filter),
   ]);
 
-  return { products, pagination: { page: pageNum, limit: limitNum, total, totalPages: Math.ceil(total / limitNum) } };
+  const productsWithVariants = await Promise.all(
+    products.map(async (p) => {
+      const defaultVariant = await ProductVariant.findOne({ productId: p._id, isDefault: true });
+      const pObj = p.toObject();
+      pObj.price = defaultVariant?.price ?? 0;
+      pObj.salePrice = defaultVariant?.salePrice ?? 0;
+      pObj.stock = defaultVariant?.stock ?? 0;
+      pObj.sku = defaultVariant?.sku ?? p.productCode;
+      return pObj;
+    })
+  );
+
+  return { products: productsWithVariants, pagination: { page: pageNum, limit: limitNum, total, totalPages: Math.ceil(total / limitNum) } };
 };
 
 const getAllProductsAdmin = async (query = {}) => {
@@ -132,7 +189,7 @@ const getAllProductsAdmin = async (query = {}) => {
   const filter = {};
   if (keyword) filter.$or = [
     { name: { $regex: keyword, $options: 'i' } },
-    { sku: { $regex: keyword, $options: 'i' } },
+    { productCode: { $regex: keyword, $options: 'i' } },
   ];
   if (category) {
     const ids = await getCategoryIds(category);
@@ -156,7 +213,19 @@ const getAllProductsAdmin = async (query = {}) => {
     Product.countDocuments(filter),
   ]);
 
-  return { products, pagination: { page: pageNum, limit: limitNum, total, totalPages: Math.ceil(total / limitNum) } };
+  const productsWithVariants = await Promise.all(
+    products.map(async (p) => {
+      const defaultVariant = await ProductVariant.findOne({ productId: p._id, isDefault: true });
+      const pObj = p.toObject();
+      pObj.price = defaultVariant?.price ?? 0;
+      pObj.salePrice = defaultVariant?.salePrice ?? 0;
+      pObj.stock = defaultVariant?.stock ?? 0;
+      pObj.sku = defaultVariant?.sku ?? p.productCode;
+      return pObj;
+    })
+  );
+
+  return { products: productsWithVariants, pagination: { page: pageNum, limit: limitNum, total, totalPages: Math.ceil(total / limitNum) } };
 };
 
 const getProductById = async (idOrSlug) => {
@@ -168,7 +237,15 @@ const getProductById = async (idOrSlug) => {
     .populate('brand', 'name slug logo');
 
   if (!product) throw new AppError('Không tìm thấy sản phẩm', 404);
-  return product;
+
+  const defaultVariant = await ProductVariant.findOne({ productId: product._id, isDefault: true });
+  const pObj = product.toObject();
+  pObj.price = defaultVariant?.price ?? 0;
+  pObj.salePrice = defaultVariant?.salePrice ?? 0;
+  pObj.stock = defaultVariant?.stock ?? 0;
+  pObj.sku = defaultVariant?.sku ?? product.productCode;
+
+  return pObj;
 };
 
 const getProductsToCompare = async (productIds) => {
@@ -184,10 +261,12 @@ const updateProduct = async (id, data) => {
   const product = await Product.findById(id);
   if (!product) throw new AppError('Không tìm thấy sản phẩm', 404);
 
-  if (data.sku && data.sku.toUpperCase() !== product.sku) {
-    const existingSku = await Product.findOne({ sku: data.sku.toUpperCase(), _id: { $ne: id } });
-    if (existingSku) throw new AppError('Mã SKU sản phẩm đã bị trùng lặp', 400);
-    data.sku = data.sku.toUpperCase();
+  // Nếu Admin muốn đổi productCode thủ công
+  if (data.productCode && data.productCode.toUpperCase() !== product.productCode) {
+    const newCode = data.productCode.toUpperCase().trim();
+    const existingCode = await Product.findOne({ productCode: newCode, _id: { $ne: id } });
+    if (existingCode) throw new AppError('Mã sản phẩm (productCode) đã bị trùng lặp', 400);
+    data.productCode = newCode;
   }
 
   if (data.name && data.name !== product.name) {
@@ -265,6 +344,11 @@ const getProductDeals = async (idOrSlug) => {
   const product = await Product.findOne(filter).populate('categories', '_id');
   if (!product) throw new AppError('Không tìm thấy sản phẩm', 404);
 
+  // Lấy giá thấp nhất từ Variant
+  const defaultVariant = await ProductVariant.findOne({ productId: product._id, isDefault: true });
+  const basePrice = defaultVariant?.price ?? 0;
+  const baseSalePrice = defaultVariant?.salePrice ?? 0;
+
   const now = new Date();
   const categoryIds = (product.categories || []).map((c) => c._id || c);
 
@@ -290,18 +374,18 @@ const getProductDeals = async (idOrSlug) => {
     }).sort({ createdAt: -1 }).limit(10),
   ]);
 
-  let effectivePrice = product.salePrice > 0 ? product.salePrice : product.price;
+  let effectivePrice = baseSalePrice > 0 ? baseSalePrice : basePrice;
   let bestPromotion = null;
 
   for (const promo of promotions) {
     if (promo.type === 'percent_discount' && promo.discountValue > 0) {
-      let discounted = product.price * (1 - promo.discountValue / 100);
-      if (promo.maxDiscountValue) discounted = Math.max(product.price - promo.maxDiscountValue, discounted);
+      let discounted = basePrice * (1 - promo.discountValue / 100);
+      if (promo.maxDiscountValue) discounted = Math.max(basePrice - promo.maxDiscountValue, discounted);
       discounted = Math.round(discounted);
       if (discounted < effectivePrice) { effectivePrice = discounted; bestPromotion = promo; }
     }
     if (promo.type === 'fixed_discount' && promo.discountValue > 0) {
-      const discounted = Math.max(0, product.price - promo.discountValue);
+      const discounted = Math.max(0, basePrice - promo.discountValue);
       if (discounted < effectivePrice) { effectivePrice = discounted; bestPromotion = promo; }
     }
   }

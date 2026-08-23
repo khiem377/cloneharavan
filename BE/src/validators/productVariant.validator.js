@@ -12,9 +12,8 @@ const createVariantSchema = z.object({
   }).min(1, 'Biến thể phải có ít nhất 1 thuộc tính'),
 
   sku: z.string({
-    required_error: 'Vui lòng nhập mã SKU cho biến thể',
     invalid_type_error: 'Mã SKU phải là chuỗi ký tự',
-  }).min(2, 'Mã SKU phải có ít nhất 2 ký tự'),
+  }).min(2, 'Mã SKU phải có ít nhất 2 ký tự').optional().or(z.literal('')),
 
   price: z.number({
     invalid_type_error: 'Giá phải là số',

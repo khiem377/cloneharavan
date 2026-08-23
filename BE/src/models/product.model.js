@@ -14,12 +14,14 @@ const productSchema = new mongoose.Schema(
       lowercase: true,
       trim: true,
     },
-    sku: {
+    // Mã nội bộ sản phẩm — Backend tự sinh từ name, Admin có thể override
+    // Đây KHÔNG phải SKU. SKU chỉ tồn tại ở ProductVariant.
+    productCode: {
       type: String,
-      required: [true, 'Mã SKU sản phẩm là bắt buộc'],
       unique: true,
       uppercase: true,
       trim: true,
+      index: true,
     },
     categories: {
       type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Category' }],
@@ -33,22 +35,6 @@ const productSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Brand',
       required: [true, 'Thương hiệu sản phẩm là bắt buộc'],
-    },
-    price: {
-      type: Number,
-      required: [true, 'Giá niêm yết sản phẩm là bắt buộc'],
-      min: [0, 'Giá sản phẩm không được nhỏ hơn 0'],
-    },
-    salePrice: {
-      type: Number,
-      default: 0,
-      min: [0, 'Giá khuyến mãi không được nhỏ hơn 0'],
-    },
-    stock: {
-      type: Number,
-      required: [true, 'Số lượng tồn kho là bắt buộc'],
-      default: 0,
-      min: [0, 'Số lượng tồn kho không được nhỏ hơn 0'],
     },
     thumbnail: {
       mediaId: { type: mongoose.Schema.Types.ObjectId, ref: 'Media', default: null },
@@ -109,10 +95,6 @@ const productSchema = new mongoose.Schema(
 productSchema.pre('save', async function () {
   if (this.isModified('name') || !this.slug) {
     this.slug = slugify(this.name);
-  }
-
-  if (this.stock <= 0) {
-    this.status = 'out_of_stock';
   }
 });
 

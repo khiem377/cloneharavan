@@ -10,12 +10,9 @@ import MediaPickerModal from '@/components/ui/MediaPickerModal';
 
 const DEFAULT_FORM = {
   name: '',
-  sku: '',
+  productCode: '',
   categories: [],
   brand: '',
-  price: '',
-  salePrice: '',
-  stock: 0,
   description: '',
   status: 'published',
   isActive: true,
@@ -232,7 +229,7 @@ export default function ProductFormPage() {
       const p = productData.data;
       setForm({
         name: p.name || '',
-        sku: p.sku || '',
+        productCode: p.productCode || '',
         categories: (p.categories || []).map((c) => c._id || c),
         brand: p.brand?._id || p.brand || '',
         price: p.price || 0,
@@ -298,18 +295,16 @@ export default function ProductFormPage() {
 
   const handleSubmit = () => {
     if (!form.name.trim()) return toast.error('Vui lòng nhập tên sản phẩm');
-    if (!form.sku.trim()) return toast.error('Vui lòng nhập mã SKU');
+    if (!form.productCode.trim()) return toast.error('Vui lòng nhập mã sản phẩm');
     if (!form.categories.length) return toast.error('Vui lòng chọn ít nhất 1 danh mục');
-    if (!form.price) return toast.error('Vui lòng nhập giá niêm yết');
+
 
     const payload = {
       name: form.name.trim(),
-      sku: form.sku.trim(),
+      productCode: form.productCode.trim(),
       categories: form.categories,
       brand: form.brand || undefined,
-      price: Number(form.price),
-      salePrice: Number(form.salePrice) || 0,
-      stock: Number(form.stock),
+
       description: form.description,
       status: form.status,
       isActive: form.isActive,
@@ -384,24 +379,15 @@ export default function ProductFormPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-foreground">Mã SKU <span className="text-destructive ml-0.5">*</span></label>
+                <label className="text-xs font-medium text-foreground">Mã sản phẩm <span className="text-destructive ml-0.5">*</span></label>
                 <input
                   className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 placeholder:text-muted-foreground transition-colors"
-                  value={form.sku}
-                  onChange={(e) => setField('sku', e.target.value)}
+                  value={form.productCode}
+                  onChange={(e) => setField('productCode', e.target.value)}
                   placeholder="VD: SAM-ZF6-256"
                 />
               </div>
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-foreground">Tồn kho <span className="text-destructive ml-0.5">*</span></label>
-                <input
-                  type="number"
-                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 transition-colors"
-                  value={form.stock}
-                  onChange={(e) => setField('stock', e.target.value)}
-                  min="0"
-                />
-              </div>
+
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

@@ -60,7 +60,7 @@ export default function ProductVariantsPage() {
             <h1 className="text-lg font-bold tracking-tight text-foreground leading-tight truncate">
               Biến thể — {product.name}
             </h1>
-            <p className="text-xs text-muted-foreground">SKU gốc: {product.sku}</p>
+            <p className="text-xs text-muted-foreground">Mã sản phẩm: {product.productCode}</p>
           </div>
         </div>
         <button
@@ -97,7 +97,7 @@ export default function ProductVariantsPage() {
         onOptionsChange={(opts) => setOptions(opts)}
         basePrice={product.price ?? 0}
         baseSalePrice={product.salePrice ?? 0}
-        parentSku={product.sku || ''}
+        parentSku={product.productCode || ''}
       />
     </div>
   );

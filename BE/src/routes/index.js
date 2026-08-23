@@ -16,6 +16,7 @@ const giftProgramRoutes   = require('./gift-program.routes');
 const tagRoutes           = require('./tag.routes');
 const blogCategoryRoutes  = require('./blogCategory.routes');
 const blogPostRoutes      = require('./blogPost.routes');
+const cartRoutes          = require('./cart.routes');
 
 router.use('/auth',             authRoutes);
 router.use('/users',            userRoutes);
@@ -32,5 +33,6 @@ router.use('/gift-programs',    giftProgramRoutes);
 router.use('/tags',             tagRoutes);
 router.use('/blog-categories',  blogCategoryRoutes);
 router.use('/blog-posts',       blogPostRoutes);
+router.use('/cart',             cartRoutes);
 
 module.exports = router;

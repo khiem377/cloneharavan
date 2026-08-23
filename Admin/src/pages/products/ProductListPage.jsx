@@ -92,7 +92,7 @@ export default function ProductListPage() {
         <div className="flex flex-wrap items-center gap-3">
           <input
             className="h-9 w-64 rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring/20 focus:border-ring placeholder:text-muted-foreground transition-colors"
-            placeholder="Tìm sản phẩm, mã SKU..."
+            placeholder="Tìm sản phẩm, mã sản phẩm..."
             value={keyword}
             onChange={(e) => { setKeyword(e.target.value); setPage(1); }}
           />
@@ -169,7 +169,7 @@ export default function ProductListPage() {
                   <input type="checkbox" className="size-4 rounded border-input text-primary focus:ring-ring" checked={selected.length === products.length && products.length > 0} onChange={toggleSelectAll} />
                 </th>
                 <th className="px-3.5 py-3">Sản phẩm</th>
-                <th className="px-3.5 py-3">SKU</th>
+                <th className="px-3.5 py-3">Mã sản phẩm</th>
                 <th className="px-3.5 py-3">Trạng thái</th>
                 <th className="px-3.5 py-3">Danh mục</th>
                 <th className="px-3.5 py-3">Thương hiệu</th>
@@ -190,7 +190,7 @@ export default function ProductListPage() {
                       <span className="font-medium text-foreground text-sm line-clamp-1">{p.name}</span>
                     </div>
                   </td>
-                  <td className="px-3.5 py-3 align-middle"><code className="inline-flex items-center rounded bg-muted px-2 py-0.5 font-mono text-xs text-muted-foreground border border-border/50">{p.sku}</code></td>
+                  <td className="px-3.5 py-3 align-middle"><code className="inline-flex items-center rounded bg-muted px-2 py-0.5 font-mono text-xs text-muted-foreground border border-border/50">{p.productCode || p.sku}</code></td>
                   <td className="px-3.5 py-3 align-middle">
                     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border ${STATUS_BADGE[p.status]}`}>
                       {STATUS_LABELS[p.status]}
@@ -236,7 +236,7 @@ export default function ProductListPage() {
               <div className="p-3 flex flex-col gap-1.5">
                 <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border w-fit ${STATUS_BADGE[p.status]}`}>{STATUS_LABELS[p.status]}</span>
                 <p className="font-semibold text-sm text-foreground line-clamp-1">{p.name}</p>
-                <p className="text-xs text-muted-foreground font-mono">{p.sku}</p>
+                <p className="text-xs text-muted-foreground font-mono">{p.productCode || p.sku}</p>
                 <p className="font-bold text-sm text-foreground">{formatPrice(p.salePrice > 0 && p.salePrice < p.price ? p.salePrice : p.price)}</p>
               </div>
               <div className="flex items-center justify-end gap-1 p-2 border-t border-border bg-muted/30">

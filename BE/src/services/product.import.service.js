@@ -1,6 +1,7 @@
 const ExcelJS = require('exceljs');
 const axios = require('axios');
 const Product = require('../models/product.model');
+const ProductVariant = require('../models/productVariant.model');
 const Category = require('../models/category.model');
 const Brand = require('../models/brand.model');
 const Media = require('../models/media.model');
@@ -11,10 +12,10 @@ const { uploadToCloudinary } = require('../config/cloudinary');
 
 const COLS = [
   { key: 'name', header: 'Tên sản phẩm *', width: 35 },
-  { key: 'sku', header: 'Mã SKU *', width: 18 },
-  { key: 'price', header: 'Giá niêm yết *', width: 15 },
-  { key: 'salePrice', header: 'Giá khuyến mãi', width: 15 },
-  { key: 'stock', header: 'Tồn kho *', width: 10 },
+  { key: 'product_code', header: 'Mã sản phẩm (để trống tự sinh)', width: 25 },
+  { key: 'price', header: 'Giá niêm yết (Default Variant) *', width: 20 },
+  { key: 'salePrice', header: 'Giá KM (Default Variant)', width: 20 },
+  { key: 'stock', header: 'Tồn kho (Default Variant) *', width: 15 },
   { key: 'category', header: 'Danh mục *', width: 25 },
   { key: 'brand', header: 'Thương hiệu *', width: 20 },
   { key: 'status', header: 'Trạng thái', width: 15 },
@@ -122,10 +123,10 @@ const exportProducts = async (query = {}) => {
   products.forEach((p) => {
     ws.addRow({
       name: p.name,
-      sku: p.sku,
-      price: p.price,
-      salePrice: p.salePrice || '',
-      stock: p.stock,
+      product_code: p.productCode,
+      price: '',
+      salePrice: '',
+      stock: '',
       category: p.category?.name || '',
       brand: p.brand?.name || '',
       status: p.status,
@@ -172,11 +173,11 @@ const importProducts = async (buffer) => {
     };
 
     const name = get('name');
-    const sku = get('sku');
+    const productCodeRaw = get('product_code');
     const price = Number(get('price').replace(/[^0-9.]/g, ''));
 
-    if (!name || !sku || !price) {
-      results.errors.push({ row: rowNum, message: 'Thiếu Tên / SKU / Giá' });
+    if (!name || !price) {
+      results.errors.push({ row: rowNum, message: 'Thiếu Tên / Giá' });
       results.skipped++;
       continue;
     }
@@ -197,19 +198,22 @@ const importProducts = async (buffer) => {
       continue;
     }
 
+    // Tự sinh productCode nếu admin không điền
+    const baseCode = productCodeRaw
+      ? productCodeRaw.toUpperCase().trim()
+      : slugify(name).toUpperCase().replace(/[^A-Z0-9-]/g, '').replace(/-+/g, '-').slice(0, 50);
+
     const thumbnailUrl = get('thumbnail_url');
     const galleryRaw = get('gallery_urls');
     const galleryUrls = galleryRaw ? galleryRaw.split(',').map((u) => u.trim()).filter(Boolean) : [];
+    const stock = Number(get('stock')) || 0;
+    const salePrice = Number(get('salePrice').replace(/[^0-9.]/g, '')) || 0;
 
     const payload = {
       name,
       slug: slugify(name),
-      sku: sku.toUpperCase(),
       category: categoryId,
       brand: brandId,
-      price,
-      salePrice: Number(get('salePrice').replace(/[^0-9.]/g, '')) || 0,
-      stock: Number(get('stock')) || 0,
       status: ['published', 'draft', 'archived'].includes(get('status')) ? get('status') : 'draft',
       isFeatured: get('isFeatured') === 'true',
       isHot: get('isHot') === 'true',
@@ -219,13 +223,36 @@ const importProducts = async (buffer) => {
     };
 
     try {
-      const existing = await Product.findOne({ sku: payload.sku });
+      const existing = await Product.findOne({ productCode: baseCode });
       if (existing) {
         await Product.findByIdAndUpdate(existing._id, payload);
         results.updated++;
       } else {
-        await Product.create(payload);
+        // Đảm bảo productCode unique
+        let finalCode = baseCode;
+        let cnt = 1;
+        while (await Product.findOne({ productCode: finalCode })) {
+          finalCode = `${baseCode}-${cnt++}`;
+        }
+        const newProduct = await Product.create({ ...payload, productCode: finalCode });
         results.inserted++;
+
+        // Tự động tạo 1 Default Variant (SKU = productCode)
+        await ProductVariant.create({
+          productId: newProduct._id,
+          attributes: [{ name: 'Phân loại', value: 'Mặc định' }],
+          displayName: 'Mặc định',
+          sku: newProduct.productCode,
+          isManualSku: false,
+          price,
+          salePrice,
+          stock,
+          thumbnail: newProduct.thumbnail,
+          images: newProduct.images,
+          position: 0,
+          isActive: newProduct.status !== 'draft',
+          isDefault: true,
+        });
       }
     } catch (err) {
       results.errors.push({ row: rowNum, message: err.message });

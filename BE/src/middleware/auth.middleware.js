@@ -50,4 +50,36 @@ const authorize = (...roles) => {
   };
 };
 
-module.exports = { protect, authorize };
+/**
+ * optionalAuth — Đọc JWT nếu có, nhưng KHÔNG throw 401 nếu không có token.
+ * Dùng cho các route cho phép cả Guest lẫn User (Cart, Wishlist...).
+ * req.user sẽ được set nếu token hợp lệ, ngược lại req.user = null.
+ */
+const optionalAuth = async (req, res, next) => {
+  try {
+    let token;
+
+    if (req.headers.authorization?.startsWith('Bearer ')) {
+      token = req.headers.authorization.split(' ')[1];
+    } else if (req.cookies?.accessToken) {
+      token = req.cookies.accessToken;
+    }
+
+    if (!token) {
+      req.user = null;
+      return next();
+    }
+
+    const decoded = verifyAccessToken(token);
+    const user    = await User.findById(decoded.id);
+
+    req.user = (user && user.isActive) ? user : null;
+    next();
+  } catch {
+    // Token lỗi/hết hạn → treat as guest
+    req.user = null;
+    next();
+  }
+};
+
+module.exports = { protect, authorize, optionalAuth };

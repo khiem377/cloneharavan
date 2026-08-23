@@ -26,6 +26,10 @@ const productVariantSchema = new mongoose.Schema(
       uppercase: true,
       trim: true,
     },
+    isManualSku: {
+      type: Boolean,
+      default: false,
+    },
     price: {
       type: Number,
       default: null,
@@ -61,6 +65,10 @@ const productVariantSchema = new mongoose.Schema(
     isActive: {
       type: Boolean,
       default: true,
+    },
+    isDefault: {
+      type: Boolean,
+      default: false,
     },
     // Override fields — null = kế thừa từ sản phẩm cha
     nameOverride: { type: String, default: null },

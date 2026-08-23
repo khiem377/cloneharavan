@@ -18,7 +18,8 @@ const errorHandler = (err, req, res, next) => {
 
   if (err instanceof ZodError) {
     statusCode = 400;
-    const msgs = err.errors.map((e) => e.message).filter(Boolean);
+    const issues = err.issues ?? err.errors ?? [];
+    const msgs = issues.map((e) => e.message).filter(Boolean);
     message = msgs.length ? msgs[0] : 'Dữ liệu không hợp lệ';
   }
 
