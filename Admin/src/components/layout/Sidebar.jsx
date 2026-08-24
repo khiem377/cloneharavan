@@ -21,6 +21,7 @@ import {
   GiftIcon,
   DiscountIcon,
   Layers as VariantsIcon,
+  MenuNavIcon,
 } from '@/components/ui/Icons';
 import useAuthStore from '@/store/authStore';
 import { authService } from '@/services/auth.service';
@@ -104,6 +105,7 @@ const NAV_GROUPS = [
   {
     label: 'Hệ thống',
     items: [
+      { to: '/menus', icon: MenuNavIcon, label: 'Điều hướng' },
       { to: '/settings', icon: SettingsIcon, label: 'Cài đặt' },
     ],
   },

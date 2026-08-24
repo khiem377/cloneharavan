@@ -21,6 +21,8 @@ import BlogPostListPage from '@/pages/blog/BlogPostListPage';
 import BlogPostFormPage from '@/pages/blog/BlogPostFormPage';
 import BlogCategoryPage from '@/pages/blog/BlogCategoryPage';
 import BlogTagPage from '@/pages/blog/BlogTagPage';
+import MenuListPage from '@/pages/menus/MenuListPage';
+import MenuEditorPage from '@/pages/menus/MenuEditorPage';
 
 const router = createBrowserRouter([
   {
@@ -55,6 +57,8 @@ const router = createBrowserRouter([
           { path: 'blog/posts/:id/edit', element: <BlogPostFormPage /> },
           { path: 'blog/categories', element: <BlogCategoryPage /> },
           { path: 'blog/tags', element: <BlogTagPage /> },
+          { path: 'menus', element: <MenuListPage /> },
+          { path: 'menus/:id/edit', element: <MenuEditorPage /> },
           { path: 'settings', element: <ComingSoonPage title="Cài đặt hệ thống" /> },
           { path: '*', element: <ComingSoonPage title="Trang không tồn tại" /> },
         ],

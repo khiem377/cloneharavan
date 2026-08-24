@@ -213,6 +213,16 @@ export const ArrowLeftIcon = (p) => (
   </Ic>
 );
 
+/** MenuNavIcon — hamburger with nested hierarchy lines */
+export const MenuNavIcon = (p) => (
+  <Ic {...p}>
+    <path d="M3 6h18" />
+    <path d="M3 12h14" />
+    <path d="M3 18h10" />
+    <path d="M18 15l3 3-3 3" strokeWidth="1.4" />
+  </Ic>
+);
+
 export const HomeIcon = (p) => (
   <Ic {...p}>
     <path d="M3 12L12 4l9 8" />
