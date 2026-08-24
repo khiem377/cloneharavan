@@ -8,6 +8,13 @@ const productVariantSchema = new mongoose.Schema(
       required: [true, 'ID sản phẩm là bắt buộc'],
       index: true,
     },
+    // isDefault: true → đây là Default Variant (sản phẩm không có biến thể thực)
+    // Mỗi product luôn có đúng 1 isDefault = true
+    isDefault: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
     attributes: [
       {
         name: { type: String, required: [true, 'Tên thuộc tính là bắt buộc'] },
@@ -19,16 +26,17 @@ const productVariantSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    // SKU optional: tự sinh nếu để trống
     sku: {
       type: String,
-      required: [true, 'Mã SKU biến thể là bắt buộc'],
       unique: true,
+      sparse: true,
       uppercase: true,
       trim: true,
     },
     price: {
       type: Number,
-      default: null,
+      required: [true, 'Giá bán là bắt buộc'],
       min: [0, 'Giá không được nhỏ hơn 0'],
     },
     salePrice: {
@@ -79,10 +87,13 @@ const productVariantSchema = new mongoose.Schema(
 productVariantSchema.pre('save', function () {
   if (this.attributes?.length > 0) {
     this.displayName = this.attributes.map((a) => a.value).join(' / ');
+  } else if (this.isDefault) {
+    this.displayName = 'Mặc định';
   }
 });
 
 productVariantSchema.index({ productId: 1, sku: 1 });
+productVariantSchema.index({ productId: 1, isDefault: 1 });
 
 const ProductVariant = mongoose.model('ProductVariant', productVariantSchema);
 module.exports = ProductVariant;

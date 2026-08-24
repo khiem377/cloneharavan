@@ -101,6 +101,7 @@ const getAllPosts = async (query = {}) => {
       .populate('categories', 'name slug')
       .populate('tags', 'name slug')
       .populate('authorId', 'firstName lastName email avatar')
+      .populate('thumbnailMediaId', 'url')
       .sort(sort)
       .skip(skip)
       .limit(limit)
@@ -108,7 +109,15 @@ const getAllPosts = async (query = {}) => {
     BlogPost.countDocuments(filter),
   ]);
 
-  return { data, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 1 } };
+  const formattedData = data.map((doc) => {
+    const item = doc.toObject();
+    if (!item.thumbnailUrl && item.thumbnailMediaId?.url) {
+      item.thumbnailUrl = item.thumbnailMediaId.url;
+    }
+    return item;
+  });
+
+  return { data: formattedData, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 1 } };
 };
 
 const getPostBySlug = async (slug) => {
@@ -116,21 +125,33 @@ const getPostBySlug = async (slug) => {
     .populate('categories', 'name slug')
     .populate('tags', 'name slug')
     .populate('authorId', 'firstName lastName email avatar')
+    .populate('thumbnailMediaId', 'url')
     .populate('relatedPostIds', 'title slug thumbnailUrl excerpt publishedAt');
   if (!post) throw new AppError('Không tìm thấy bài viết', 404);
 
+  const obj = post.toObject();
+  if (!obj.thumbnailUrl && obj.thumbnailMediaId?.url) {
+    obj.thumbnailUrl = obj.thumbnailMediaId.url;
+  }
+
   const seo = buildSeoFields(post);
 
-  return { ...post.toObject(), seo };
+  return { ...obj, seo };
 };
 
 const getPostById = async (id) => {
   const post = await BlogPost.findById(id)
     .populate('categories', 'name slug')
     .populate('tags', 'name slug')
-    .populate('authorId', 'firstName lastName email avatar');
+    .populate('authorId', 'firstName lastName email avatar')
+    .populate('thumbnailMediaId', 'url');
   if (!post) throw new AppError('Không tìm thấy bài viết', 404);
-  return post;
+
+  const obj = post.toObject();
+  if (!obj.thumbnailUrl && obj.thumbnailMediaId?.url) {
+    obj.thumbnailUrl = obj.thumbnailMediaId.url;
+  }
+  return obj;
 };
 
 const createPost = async (data, authorId) => {
@@ -144,7 +165,16 @@ const createPost = async (data, authorId) => {
   if (data.tags?.length)       await Tag.updateMany({ _id: { $in: data.tags } }, { $inc: { postCount: 1 } });
   if (data.categories?.length) await BlogCategory.updateMany({ _id: { $in: data.categories } }, { $inc: { postCount: 1 } });
 
-  return post;
+  const populatedPost = await BlogPost.findById(post._id)
+    .populate('categories', 'name slug')
+    .populate('tags', 'name slug')
+    .populate('thumbnailMediaId', 'url');
+  
+  const obj = populatedPost.toObject();
+  if (!obj.thumbnailUrl && obj.thumbnailMediaId?.url) {
+    obj.thumbnailUrl = obj.thumbnailMediaId.url;
+  }
+  return obj;
 };
 
 const updatePost = async (id, data) => {
@@ -168,8 +198,14 @@ const updatePost = async (id, data) => {
 
   const post = await BlogPost.findByIdAndUpdate(id, data, { new: true, runValidators: true })
     .populate('categories', 'name slug')
-    .populate('tags', 'name slug');
-  return post;
+    .populate('tags', 'name slug')
+    .populate('thumbnailMediaId', 'url');
+
+  const obj = post.toObject();
+  if (!obj.thumbnailUrl && obj.thumbnailMediaId?.url) {
+    obj.thumbnailUrl = obj.thumbnailMediaId.url;
+  }
+  return obj;
 };
 
 const deletePost = async (id) => {

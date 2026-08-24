@@ -14,8 +14,8 @@ const {
 const COOKIE_OPTIONS = {
   httpOnly: true,
   secure: process.env.NODE_ENV === 'production',
-  sameSite: 'strict',
-  maxAge: 7 * 24 * 60 * 60 * 1000,
+  sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+  maxAge: 30 * 24 * 60 * 60 * 1000, // 30 ngày gia hạn cuộn (Sliding Refresh)
 };
 
 const buildTokenResponse = async (user, res) => {

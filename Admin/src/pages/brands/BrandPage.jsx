@@ -294,15 +294,21 @@ export default function BrandPage() {
 
                     {/* Logo */}
                     <td className="px-3.5 py-3 align-middle">
-                      {brand.logo?.url ? (
-                        <img
-                          src={brand.logo.url}
-                          alt={brand.name}
-                          className="h-9 max-w-24 object-contain rounded border border-border p-1 bg-background"
-                        />
-                      ) : (
-                        <div className="h-9 w-16 rounded border border-border bg-muted/60" />
-                      )}
+                      <div className="w-20 h-9 flex items-center justify-center rounded border border-border bg-white dark:bg-zinc-900 overflow-hidden p-1">
+                        {brand.logo?.url ? (
+                          <img
+                            src={
+                              brand.logo.url.includes('cloudinary.com')
+                                ? brand.logo.url.replace('/upload/', '/upload/c_pad,w_96,h_36,b_white/')
+                                : brand.logo.url
+                            }
+                            alt={brand.name}
+                            className="w-full h-full object-contain"
+                          />
+                        ) : (
+                          <div className="w-full h-full rounded bg-muted/60" />
+                        )}
+                      </div>
                     </td>
 
                     {/* Name */}

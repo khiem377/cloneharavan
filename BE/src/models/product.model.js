@@ -14,10 +14,20 @@ const productSchema = new mongoose.Schema(
       lowercase: true,
       trim: true,
     },
+    // productCode: mã định danh ngắn tự sinh từ tên, dùng để prefix SKU biến thể
+    // Ví dụ: "Tủ lạnh Samsung 409 lít" → "TU-LANH-SAMSUNG-409"
+    productCode: {
+      type: String,
+      unique: true,
+      sparse: true,
+      uppercase: true,
+      trim: true,
+    },
+    // SKU cũ — giữ lại để backward compat, deprecated (dùng variant.sku thay thế)
     sku: {
       type: String,
-      required: [true, 'Mã SKU sản phẩm là bắt buộc'],
       unique: true,
+      sparse: true,
       uppercase: true,
       trim: true,
     },
@@ -34,20 +44,21 @@ const productSchema = new mongoose.Schema(
       ref: 'Brand',
       required: [true, 'Thương hiệu sản phẩm là bắt buộc'],
     },
+    // price / salePrice / stock: deprecated — giờ nằm ở Default Variant
+    // Giữ lại để không break data cũ, không bắt buộc
     price: {
       type: Number,
-      required: [true, 'Giá niêm yết sản phẩm là bắt buộc'],
+      default: null,
       min: [0, 'Giá sản phẩm không được nhỏ hơn 0'],
     },
     salePrice: {
       type: Number,
-      default: 0,
+      default: null,
       min: [0, 'Giá khuyến mãi không được nhỏ hơn 0'],
     },
     stock: {
       type: Number,
-      required: [true, 'Số lượng tồn kho là bắt buộc'],
-      default: 0,
+      default: null,
       min: [0, 'Số lượng tồn kho không được nhỏ hơn 0'],
     },
     thumbnail: {
@@ -110,10 +121,7 @@ productSchema.pre('save', async function () {
   if (this.isModified('name') || !this.slug) {
     this.slug = slugify(this.name);
   }
-
-  if (this.stock <= 0) {
-    this.status = 'out_of_stock';
-  }
+  // Không tự đổi status theo stock nữa (stock nằm ở variant)
 });
 
 const Product = mongoose.model('Product', productSchema);

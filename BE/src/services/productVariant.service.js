@@ -2,6 +2,7 @@ const ProductVariant = require('../models/productVariant.model');
 const Product = require('../models/product.model');
 const Media = require('../models/media.model');
 const { AppError } = require('../utils/AppError');
+const { generateVariantSku } = require('./product.service');
 
 const resolveMedia = async (mediaId) => {
   if (!mediaId) return null;
@@ -13,7 +14,7 @@ const resolveMedia = async (mediaId) => {
 const getVariantsByProduct = async (productId) => {
   const product = await Product.findById(productId);
   if (!product) throw new AppError('Không tìm thấy sản phẩm', 404);
-  return ProductVariant.find({ productId }).sort({ position: 1, createdAt: 1 });
+  return ProductVariant.find({ productId }).sort({ isDefault: -1, position: 1, createdAt: 1 });
 };
 
 const getVariantById = async (id) => {
@@ -26,8 +27,24 @@ const createVariant = async (productId, data) => {
   const product = await Product.findById(productId);
   if (!product) throw new AppError('Không tìm thấy sản phẩm', 404);
 
-  const existingSku = await ProductVariant.findOne({ sku: data.sku.toUpperCase() });
-  if (existingSku) throw new AppError(`Mã SKU "${data.sku}" đã được sử dụng bởi biến thể khác`, 400);
+  // Tự sinh SKU nếu không truyền
+  let sku;
+  if (data.sku && data.sku.trim()) {
+    sku = data.sku.trim().toUpperCase();
+    const existingSku = await ProductVariant.findOne({ sku });
+    if (existingSku) throw new AppError(`Mã SKU "${data.sku}" đã được sử dụng bởi biến thể khác`, 400);
+  } else {
+    const productCode = product.productCode;
+    if (!productCode) throw new AppError('Sản phẩm chưa có productCode, không thể tự sinh SKU', 500);
+    sku = await generateVariantSku(productCode, data.attributes || []);
+  }
+
+  // Khi thêm variant thực (có attributes) → xóa isDefault của Default Variant
+  const hasRealAttrs = data.attributes && data.attributes.length > 0;
+  if (hasRealAttrs && !data.isDefault) {
+    // Không cần xóa isDefault variant, nó vẫn tồn tại nhưng ẩn khỏi UI
+    // (Policy: Default Variant vẫn giữ để backward compat)
+  }
 
   const thumbnail = await resolveMedia(data.thumbnailMediaId);
 
@@ -41,15 +58,19 @@ const createVariant = async (productId, data) => {
 
   const variant = await ProductVariant.create({
     productId,
-    attributes: data.attributes,
-    sku: data.sku.toUpperCase(),
-    price: data.price ?? null,
+    isDefault: data.isDefault ?? false,
+    attributes: data.attributes || [],
+    sku,
+    price: data.price,
     salePrice: data.salePrice ?? null,
-    stock: data.stock,
+    stock: data.stock ?? 0,
     thumbnail: thumbnail || undefined,
     images,
     position: data.position ?? 0,
     isActive: data.isActive ?? true,
+    nameOverride: data.nameOverride ?? null,
+    descriptionOverride: data.descriptionOverride ?? null,
+    specifications: data.specifications ?? [],
   });
 
   return variant;
@@ -59,7 +80,35 @@ const bulkCreateVariants = async (productId, variants) => {
   const product = await Product.findById(productId);
   if (!product) throw new AppError('Không tìm thấy sản phẩm', 404);
 
-  const skus = variants.map((v) => v.sku.toUpperCase());
+  const productCode = product.productCode;
+
+  // Tự sinh SKU cho từng variant nếu thiếu
+  const docs = [];
+  for (let idx = 0; idx < variants.length; idx++) {
+    const v = variants[idx];
+    let sku;
+    if (v.sku && v.sku.trim()) {
+      sku = v.sku.trim().toUpperCase();
+    } else {
+      if (!productCode) throw new AppError('Sản phẩm chưa có productCode', 500);
+      sku = await generateVariantSku(productCode, v.attributes || []);
+    }
+    docs.push({
+      productId,
+      isDefault: false,
+      attributes: v.attributes || [],
+      displayName: (v.attributes || []).map((a) => a.value).join(' / '),
+      sku,
+      price: v.price,
+      salePrice: v.salePrice ?? null,
+      stock: v.stock ?? 0,
+      position: idx,
+      isActive: v.isActive ?? true,
+    });
+  }
+
+  // Kiểm tra trùng SKU trong batch
+  const skus = docs.map((d) => d.sku);
   const uniqueSkus = new Set(skus);
   if (uniqueSkus.size !== skus.length) throw new AppError('Danh sách biến thể có mã SKU bị trùng nhau', 400);
 
@@ -68,18 +117,6 @@ const bulkCreateVariants = async (productId, variants) => {
     const taken = existingSkus.map((v) => v.sku).join(', ');
     throw new AppError(`Các mã SKU sau đã tồn tại: ${taken}`, 400);
   }
-
-  const docs = variants.map((v, idx) => ({
-    productId,
-    attributes: v.attributes,
-    displayName: v.attributes.map((a) => a.value).join(' / '),
-    sku: v.sku.toUpperCase(),
-    price: v.price ?? null,
-    salePrice: v.salePrice ?? null,
-    stock: v.stock,
-    position: idx,
-    isActive: v.isActive ?? true,
-  }));
 
   return ProductVariant.insertMany(docs);
 };
@@ -117,6 +154,7 @@ const updateVariant = async (id, data) => {
 const deleteVariant = async (id) => {
   const variant = await ProductVariant.findById(id);
   if (!variant) throw new AppError('Không tìm thấy biến thể sản phẩm', 404);
+  if (variant.isDefault) throw new AppError('Không thể xóa Default Variant của sản phẩm', 400);
   await variant.deleteOne();
   return { message: 'Đã xóa biến thể thành công' };
 };
