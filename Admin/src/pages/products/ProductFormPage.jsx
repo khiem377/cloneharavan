@@ -476,12 +476,15 @@ export default function ProductFormPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-foreground">Mã SKU <span className="text-destructive ml-0.5">*</span></label>
+                <label className="text-xs font-medium text-foreground">
+                  Mã SKU
+                  <span className="ml-1.5 text-[10px] font-normal text-muted-foreground">(Tùy chọn — tự sinh nếu để trống)</span>
+                </label>
                 <input
                   className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 placeholder:text-muted-foreground transition-colors"
                   value={form.sku}
                   onChange={(e) => setField('sku', e.target.value)}
-                  placeholder="VD: SAM-ZF6-256"
+                  placeholder="Để trống để tự sinh từ tên sản phẩm"
                 />
               </div>
               <div className="flex flex-col gap-1.5">
@@ -498,7 +501,10 @@ export default function ProductFormPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-foreground">Giá niêm yết <span className="text-destructive ml-0.5">*</span></label>
+                <label className="text-xs font-medium text-foreground">
+                  Giá niêm yết <span className="text-destructive ml-0.5">*</span>
+                  <span className="ml-1.5 text-[10px] font-normal text-muted-foreground">(Biến thể mặc định)</span>
+                </label>
                 <PriceInput value={form.price} onChange={(v) => setField('price', v)} placeholder="8,000,000" />
               </div>
 

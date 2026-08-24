@@ -1612,6 +1612,77 @@
           "response": []
         }
       ]
+    },
+    {
+      "name": "10. Menus (Điều hướng Header & Footer)",
+      "item": [
+        {
+          "name": "10.1 Get All Menus (Lấy danh sách tất cả Menu)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{url}}menus", "host": ["{{url}}menus"] },
+            "description": "Lấy danh sách tất cả các menu điều hướng hệ thống (main-menu, footer,...)."
+          },
+          "response": []
+        },
+        {
+          "name": "10.2 Get Menu by Handle (Lấy chi tiết Menu theo handle)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{url}}menus/handle/main-menu", "host": ["{{url}}menus"], "path": ["handle", "main-menu"] },
+            "description": "Lấy chi tiết cấu trúc menu theo handle (main-menu hoặc footer)."
+          },
+          "response": []
+        },
+        {
+          "name": "10.3 Create Menu (Tạo Menu mới)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Menu chính (Header)\",\n  \"handle\": \"main-menu\",\n  \"isActive\": true,\n  \"items\": [\n    {\n      \"label\": \"Trang chủ\",\n      \"linkType\": \"url\",\n      \"customUrl\": \"/\",\n      \"order\": 0\n    },\n    {\n      \"label\": \"Danh mục sản phẩm\",\n      \"linkType\": \"none\",\n      \"megaMenu\": true,\n      \"order\": 1,\n      \"children\": [\n        {\n          \"label\": \"Tivi\",\n          \"linkType\": \"category\",\n          \"customUrl\": \"/collections/tivi\",\n          \"order\": 0\n        }\n      ]\n    },\n    {\n      \"label\": \"⚡ Flash Sales\",\n      \"linkType\": \"url\",\n      \"customUrl\": \"/flash-sales\",\n      \"badge\": \"Hot\",\n      \"badgeColor\": \"#ef4444\",\n      \"order\": 2\n    }\n  ]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{url}}menus", "host": ["{{url}}menus"] },
+            "description": "Tạo mới một Menu điều hướng hệ thống (hỗ trợ Mega Menu, Badge, Sub-items)."
+          },
+          "response": []
+        },
+        {
+          "name": "10.4 Update Menu (Cập nhật Menu)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Menu chính (Header)\",\n  \"items\": [\n    {\n      \"label\": \"Trang chủ\",\n      \"linkType\": \"url\",\n      \"customUrl\": \"/\",\n      \"order\": 0\n    }\n  ]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{url}}menus/<menu_id>", "host": ["{{url}}menus"], "path": ["<menu_id>"] },
+            "description": "Cập nhật cấu trúc danh sách items của Menu theo _id."
+          },
+          "response": []
+        },
+        {
+          "name": "10.5 Delete Menu (Xóa Menu)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": { "raw": "{{url}}menus/<menu_id>", "host": ["{{url}}menus"], "path": ["<menu_id>"] },
+            "description": "Xóa một Menu điều hướng khỏi hệ thống."
+          },
+          "response": []
+        }
+      ]
     }
   ]
 }

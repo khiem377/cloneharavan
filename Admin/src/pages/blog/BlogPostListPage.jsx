@@ -153,8 +153,8 @@ export default function BlogPostListPage() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-start gap-3">
-                      {post.thumbnailUrl && (
-                        <img src={post.thumbnailUrl} alt="" className="w-12 h-9 object-cover rounded shrink-0" />
+                      {(post.thumbnailUrl || post.thumbnailMediaId?.url) && (
+                        <img src={post.thumbnailUrl || post.thumbnailMediaId?.url} alt="" className="w-12 h-9 object-cover rounded shrink-0" />
                       )}
                       <div className="min-w-0">
                         <div className="font-medium text-foreground line-clamp-1 flex items-center gap-1">
@@ -167,7 +167,11 @@ export default function BlogPostListPage() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground">{post.categoryId?.name || '—'}</td>
+                  <td className="px-4 py-3 text-muted-foreground">
+                    {Array.isArray(post.categories) && post.categories.length > 0
+                      ? post.categories.map(c => c.name || c).join(', ')
+                      : (post.categoryId?.name || '—')}
+                  </td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_BADGE[post.status]}`}>
                       {STATUS_LABEL[post.status]}
