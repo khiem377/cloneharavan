@@ -7,12 +7,68 @@ import { useCategories } from '@/hooks/useCategories';
 import { useBrands, useAllBrands } from '@/hooks/useBrands';
 import RichTextEditor from '@/components/ui/RichTextEditor';
 import MediaPickerModal from '@/components/ui/MediaPickerModal';
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  rectSortingStrategy,
+  useSortable,
+  arrayMove,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
+function SortableGalleryItem({ id, url, idx, onRemove }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+    cursor: isDragging ? 'grabbing' : 'grab',
+    touchAction: 'none',
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className="relative aspect-square rounded-md border border-border overflow-hidden bg-muted group select-none hover:ring-2 hover:ring-primary/40 transition-all cursor-grab active:cursor-grabbing"
+    >
+      <img src={url} alt={`gallery-${idx}`} className="size-full object-cover pointer-events-none" />
+      <button
+        type="button"
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={(e) => {
+          e.stopPropagation();
+          onRemove(idx);
+        }}
+        className="absolute top-1 right-1 size-6 rounded-full bg-destructive/90 hover:bg-destructive text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-xs cursor-pointer shadow-xs z-10 font-bold"
+        title="Xóa ảnh"
+      >
+        ×
+      </button>
+      <div className="absolute inset-x-0 bottom-0 bg-black/60 py-0.5 text-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+        <span className="text-[9px] font-medium text-white">Kéo để đổi vị trí</span>
+      </div>
+    </div>
+  );
+}
 
 const DEFAULT_FORM = {
   name: '',
-  productCode: '',
+  sku: '',
   categories: [],
   brand: '',
+  price: '',
+  salePrice: '',
+  stock: 0,
   description: '',
   status: 'published',
   isActive: true,
@@ -225,11 +281,11 @@ export default function ProductFormPage() {
   const updateMut = useUpdateProduct();
 
   useEffect(() => {
-    if (isEdit && productData?.data) {
-      const p = productData.data;
+    const p = productData?.data || productData;
+    if (isEdit && p && (p._id || p.name)) {
       setForm({
         name: p.name || '',
-        productCode: p.productCode || '',
+        sku: p.sku || '',
         categories: (p.categories || []).map((c) => c._id || c),
         brand: p.brand?._id || p.brand || '',
         price: p.price || 0,
@@ -242,9 +298,9 @@ export default function ProductFormPage() {
         isHot: p.isHot ?? false,
         specifications: p.specifications || [],
         options: p.options || [],
-        thumbnailMediaId: p.thumbnail?.mediaId || '',
+        thumbnailMediaId: p.thumbnail?.mediaId || p.thumbnail?._id || '',
         thumbnailUrl: p.thumbnail?.url || '',
-        imageMediaIds: p.images?.map((i) => i.mediaId) || [],
+        imageMediaIds: p.images?.map((i) => i.mediaId || i._id) || [],
         imageUrls: p.images?.map((i) => i.url) || [],
       });
     }
@@ -293,18 +349,41 @@ export default function ProductFormPage() {
     }));
   };
 
+  const gallerySensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  );
+
+  const handleDragEndGallery = (event) => {
+    const { active, over } = event;
+    if (active && over && active.id !== over.id) {
+      const getGalleryId = (idx) => form.imageMediaIds[idx] || `img-${idx}`;
+      const oldIndex = form.imageUrls.findIndex((_, i) => getGalleryId(i) === active.id);
+      const newIndex = form.imageUrls.findIndex((_, i) => getGalleryId(i) === over.id);
+
+      if (oldIndex !== -1 && newIndex !== -1) {
+        setForm((f) => ({
+          ...f,
+          imageMediaIds: arrayMove(f.imageMediaIds, oldIndex, newIndex),
+          imageUrls: arrayMove(f.imageUrls, oldIndex, newIndex),
+        }));
+      }
+    }
+  };
+
   const handleSubmit = () => {
     if (!form.name.trim()) return toast.error('Vui lòng nhập tên sản phẩm');
-    if (!form.productCode.trim()) return toast.error('Vui lòng nhập mã sản phẩm');
+    if (!form.sku.trim()) return toast.error('Vui lòng nhập mã SKU');
     if (!form.categories.length) return toast.error('Vui lòng chọn ít nhất 1 danh mục');
-
+    if (!form.price) return toast.error('Vui lòng nhập giá niêm yết');
 
     const payload = {
       name: form.name.trim(),
-      productCode: form.productCode.trim(),
+      sku: form.sku.trim(),
       categories: form.categories,
       brand: form.brand || undefined,
-
+      price: Number(form.price),
+      salePrice: Number(form.salePrice) || 0,
+      stock: Number(form.stock),
       description: form.description,
       status: form.status,
       isActive: form.isActive,
@@ -336,30 +415,48 @@ export default function ProductFormPage() {
   }
 
   return (
-    <div className="p-6 flex flex-col gap-6 w-full max-w-6xl mx-auto min-h-full bg-background text-foreground">
-      <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-xs py-3 border-b border-border flex items-center justify-between gap-4">
-        <button
-          className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg px-3.5 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer"
-          onClick={() => navigate('/products')}
-        >
-          <ArrowLeft size={16} /> Quay lại
-        </button>
-        <h1 className="text-xl font-bold tracking-tight text-foreground flex-1">{isEdit ? 'Sửa sản phẩm' : 'Thêm sản phẩm'}</h1>
-        {isEdit && (
+    <div className="p-3 sm:p-6 flex flex-col gap-6 w-full max-w-6xl mx-auto min-h-full bg-background text-foreground">
+      <div className="sticky -top-3 sm:-top-6 z-30 -mt-3 sm:-mt-6 -mx-3 sm:-mx-6 px-4 sm:px-6 py-3 bg-background/95 backdrop-blur-md border-b border-border flex items-center justify-between gap-3 shadow-xs">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
           <button
-            className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-violet-500/40 px-3.5 text-sm font-medium text-violet-600 dark:text-violet-400 hover:bg-violet-500/10 transition-colors cursor-pointer"
-            onClick={() => navigate(`/products/${id}/variants`)}
+            type="button"
+            className="inline-flex size-8 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer shrink-0"
+            onClick={() => navigate('/products')}
+            title="Quay lại danh sách"
           >
-            <Layers size={15} /> Quản lý biến thể
+            <ArrowLeft size={16} />
           </button>
-        )}
-        <button
-          className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground shadow-xs hover:bg-primary/90 transition-colors cursor-pointer disabled:pointer-events-none disabled:opacity-50"
-          onClick={handleSubmit}
-          disabled={isMutating}
-        >
-          {isMutating ? <Loader2 size={15} className="animate-spin" /> : (isEdit ? 'Cập nhật' : 'Tạo sản phẩm')}
-        </button>
+          <div className="min-w-0 flex-1">
+            <h1 className="text-base sm:text-lg font-bold tracking-tight text-foreground truncate">
+              {isEdit ? 'Chỉnh sửa sản phẩm' : 'Thêm sản phẩm mới'}
+            </h1>
+            {isEdit && form.name && (
+              <p className="text-xs text-muted-foreground truncate hidden sm:block font-mono">
+                {form.name}
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          {isEdit && (
+            <button
+              type="button"
+              className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-violet-500/40 px-3.5 text-xs sm:text-sm font-medium text-violet-600 dark:text-violet-400 hover:bg-violet-500/10 transition-colors cursor-pointer"
+              onClick={() => navigate(`/products/${id}/variants`)}
+            >
+              <Layers size={15} /> <span className="hidden sm:inline">Quản lý</span> biến thể
+            </button>
+          )}
+          <button
+            type="button"
+            className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-primary px-4 text-xs sm:text-sm font-medium text-primary-foreground shadow-xs hover:bg-primary/90 transition-colors cursor-pointer disabled:pointer-events-none disabled:opacity-50"
+            onClick={handleSubmit}
+            disabled={isMutating}
+          >
+            {isMutating ? <Loader2 size={15} className="animate-spin" /> : (isEdit ? 'Cập nhật' : 'Tạo sản phẩm')}
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -379,20 +476,35 @@ export default function ProductFormPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-foreground">Mã sản phẩm <span className="text-destructive ml-0.5">*</span></label>
+                <label className="text-xs font-medium text-foreground">
+                  Mã SKU
+                  <span className="ml-1.5 text-[10px] font-normal text-muted-foreground">(Tùy chọn — tự sinh nếu để trống)</span>
+                </label>
                 <input
                   className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 placeholder:text-muted-foreground transition-colors"
-                  value={form.productCode}
-                  onChange={(e) => setField('productCode', e.target.value)}
-                  placeholder="VD: SAM-ZF6-256"
+                  value={form.sku}
+                  onChange={(e) => setField('sku', e.target.value)}
+                  placeholder="Để trống để tự sinh từ tên sản phẩm"
                 />
               </div>
-
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-foreground">Tồn kho <span className="text-destructive ml-0.5">*</span></label>
+                <input
+                  type="number"
+                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 transition-colors"
+                  value={form.stock}
+                  onChange={(e) => setField('stock', e.target.value)}
+                  min="0"
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-foreground">Giá niêm yết <span className="text-destructive ml-0.5">*</span></label>
+                <label className="text-xs font-medium text-foreground">
+                  Giá niêm yết <span className="text-destructive ml-0.5">*</span>
+                  <span className="ml-1.5 text-[10px] font-normal text-muted-foreground">(Biến thể mặc định)</span>
+                </label>
                 <PriceInput value={form.price} onChange={(v) => setField('price', v)} placeholder="8,000,000" />
               </div>
 
@@ -536,28 +648,41 @@ export default function ProductFormPage() {
             </div>
 
             <div className="flex flex-col gap-1.5 mt-2">
-              <label className="text-xs font-medium text-foreground">Bộ ảnh sản phẩm</label>
-              <div className="grid grid-cols-3 gap-2">
-                {form.imageUrls.map((url, idx) => (
-                  <div key={idx} className="relative aspect-square rounded-md border border-border overflow-hidden bg-muted group">
-                    <img src={url} alt={`gallery-${idx}`} className="size-full object-cover" />
-                    <button
-                      type="button"
-                      className="absolute top-1 right-1 size-6 rounded-full bg-destructive text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-xs cursor-pointer shadow-xs"
-                      onClick={() => removeGalleryImage(idx)}
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
-                <div
-                  className="aspect-square rounded-md border-2 border-dashed border-border bg-muted/20 hover:border-primary/50 transition-colors cursor-pointer flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-foreground"
-                  onClick={() => setPickerMode('images')}
-                >
-                  <Plus size={20} />
-                  <span className="text-[10px] font-medium">Thêm ảnh</span>
-                </div>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-medium text-foreground">Bộ ảnh sản phẩm</label>
+                {form.imageUrls.length > 1 && (
+                  <span className="text-[10px] text-muted-foreground">Kéo thả để sắp xếp</span>
+                )}
               </div>
+
+              <DndContext sensors={gallerySensors} collisionDetection={closestCenter} onDragEnd={handleDragEndGallery}>
+                <SortableContext
+                  items={form.imageUrls.map((_, i) => form.imageMediaIds[i] || `img-${i}`)}
+                  strategy={rectSortingStrategy}
+                >
+                  <div className="grid grid-cols-3 gap-2">
+                    {form.imageUrls.map((url, idx) => {
+                      const itemId = form.imageMediaIds[idx] || `img-${idx}`;
+                      return (
+                        <SortableGalleryItem
+                          key={itemId}
+                          id={itemId}
+                          url={url}
+                          idx={idx}
+                          onRemove={removeGalleryImage}
+                        />
+                      );
+                    })}
+                    <div
+                      className="aspect-square rounded-md border-2 border-dashed border-border bg-muted/20 hover:border-primary/50 transition-colors cursor-pointer flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-foreground"
+                      onClick={() => setPickerMode('images')}
+                    >
+                      <Plus size={20} />
+                      <span className="text-[10px] font-medium">Thêm ảnh</span>
+                    </div>
+                  </div>
+                </SortableContext>
+              </DndContext>
             </div>
           </div>
 

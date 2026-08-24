@@ -1,6 +1,5 @@
 import { useRef, useState, useCallback } from 'react';
 import { Editor } from '@tinymce/tinymce-react';
-import { Upload, Image as ImageIcon } from '@/components/ui/Icons';
 import MediaPickerModal from '@/components/ui/MediaPickerModal';
 
 export default function RichTextEditor({ value, onChange }) {
@@ -11,7 +10,7 @@ export default function RichTextEditor({ value, onChange }) {
   const insertImageToEditor = useCallback((url, alt = '') => {
     const editor = editorRef.current;
     if (!editor) return;
-    editor.insertContent(`<img src="${url}" alt="${alt}" style="max-width:100%;height:auto;" />`);
+    editor.insertContent(`<img src="${url}" alt="${alt}" style="max-width:100%;height:auto;border-radius:8px;margin:8px 0;" />`);
   }, []);
 
   const handleFileUpload = (e) => {
@@ -33,19 +32,19 @@ export default function RichTextEditor({ value, onChange }) {
 
     editor.ui.registry.addButton('uploadimage', {
       icon: 'upload',
-      tooltip: 'Tai anh len tu may tinh',
+      tooltip: 'Tải ảnh từ máy tính',
       onAction: () => fileInputRef.current?.click(),
     });
 
     editor.ui.registry.addButton('mediapicker', {
       icon: 'gallery',
-      tooltip: 'Chon anh tu thu vien Media',
+      tooltip: 'Chọn ảnh từ thư viện Media',
       onAction: () => setShowMediaPicker(true),
     });
   };
 
   return (
-    <div className="rich-editor-wrap">
+    <div className="rich-editor-wrap border border-border rounded-lg overflow-hidden shadow-2xs">
       <input
         ref={fileInputRef}
         type="file"
@@ -57,21 +56,40 @@ export default function RichTextEditor({ value, onChange }) {
       <Editor
         apiKey={import.meta.env.VITE_TINYMCE_API_KEY}
         init={{
-          height: 400,
-          menubar: false,
+          height: 480,
+          menubar: 'file edit view insert format tools table',
+          promotion: false,
+          branding: false,
           skin: 'oxide',
           content_css: 'default',
           plugins: [
-            'lists', 'link', 'image', 'table', 'code',
-            'fullscreen', 'wordcount', 'autolink', 'media',
+            'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
+            'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
+            'insertdatetime', 'media', 'table', 'wordcount', 'emoticons',
+            'accordion', 'directionality', 'pagebreak', 'nonbreaking',
           ],
-          toolbar:
-            'undo redo | styles | bold italic underline strikethrough | ' +
-            'alignleft aligncenter alignright alignjustify | ' +
-            'bullist numlist | link table | uploadimage mediapicker | code fullscreen',
+          toolbar1:
+            'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | ' +
+            'forecolor backcolor | alignleft aligncenter alignright alignjustify | ' +
+            'bullist numlist outdent indent',
+          toolbar2:
+            'link image media table accordion | emoticons charmap insertdatetime | ' +
+            'uploadimage mediapicker | removeformat code preview fullscreen',
+          toolbar_mode: 'sliding',
           setup,
           content_style: `
-            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; }
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+              font-size: 14px;
+              line-height: 1.6;
+              padding: 12px;
+              color: #1e293b;
+            }
+            img { max-width: 100%; height: auto; border-radius: 8px; }
+            blockquote { border-left: 4px solid #3b82f6; margin: 1em 0; padding-left: 1em; color: #475569; font-style: italic; }
+            table { border-collapse: collapse; width: 100%; }
+            th, td { border: 1px solid #cbd5e1; padding: 8px 12px; }
+            th { background-color: #f8fafc; }
           `,
         }}
         value={value}

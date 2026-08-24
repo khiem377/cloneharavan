@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   Plus, Pencil, Trash2,
   ToggleLeft, ToggleRight,
-  Loader2, Globe,
+  Loader2, Globe, RefreshCw,
 } from '@/components/ui/Icons';
 import { toast } from '@/providers/ToastProvider';
 import {
@@ -17,6 +17,7 @@ import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import MediaPickerModal from '@/components/ui/MediaPickerModal';
 import DataTablePagination from '@/components/ui/DataTablePagination';
 import { useSearchParams } from 'react-router-dom';
+import Can from '@/components/auth/Can';
 
 const DEFAULT_FORM = {
   name: '',
@@ -191,7 +192,7 @@ export default function BrandPage() {
   const isMutating = createMut.isPending || updateMut.isPending;
 
   return (
-    <div className="p-6 flex flex-col gap-6 w-full max-w-7xl mx-auto min-h-full bg-background text-foreground">
+    <div className="p-3 sm:p-6 flex flex-col gap-4 sm:gap-6 w-full max-w-full overflow-x-hidden min-h-full bg-background text-foreground">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-border">
         <div>
@@ -204,19 +205,32 @@ export default function BrandPage() {
           </p>
         </div>
 
-        <button
-          className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground shadow-xs hover:bg-primary/90 transition-colors cursor-pointer"
-          onClick={openCreate}
-        >
-          <Plus size={16} />
-          Tạo thương hiệu
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => res.refetch()}
+            className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-input bg-background px-3 text-sm font-medium text-foreground hover:bg-muted transition-colors cursor-pointer"
+            title="Làm mới dữ liệu"
+          >
+            <RefreshCw size={15} className={isLoading ? 'animate-spin' : ''} />
+            Làm mới
+          </button>
+
+          <Can do="brand.manage">
+            <button
+              className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground shadow-xs hover:bg-primary/90 transition-colors cursor-pointer"
+              onClick={openCreate}
+            >
+              <Plus size={16} />
+              Tạo thương hiệu
+            </button>
+          </Can>
+        </div>
       </div>
 
       {/* Search + Bulk actions */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <input
-          className="h-9 w-64 rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring/20 focus:border-ring placeholder:text-muted-foreground transition-colors"
+          className="h-9 w-full sm:w-64 rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring/20 focus:border-ring placeholder:text-muted-foreground transition-colors"
           placeholder="Tìm thương hiệu..."
           value={keyword}
           onChange={(e) => {
@@ -294,15 +308,21 @@ export default function BrandPage() {
 
                     {/* Logo */}
                     <td className="px-3.5 py-3 align-middle">
-                      {brand.logo?.url ? (
-                        <img
-                          src={brand.logo.url}
-                          alt={brand.name}
-                          className="h-9 max-w-24 object-contain rounded border border-border p-1 bg-background"
-                        />
-                      ) : (
-                        <div className="h-9 w-16 rounded border border-border bg-muted/60" />
-                      )}
+                      <div className="w-20 h-9 flex items-center justify-center rounded border border-border bg-white dark:bg-zinc-900 overflow-hidden p-1">
+                        {brand.logo?.url ? (
+                          <img
+                            src={
+                              brand.logo.url.includes('cloudinary.com')
+                                ? brand.logo.url.replace('/upload/', '/upload/c_pad,w_96,h_36,b_white/')
+                                : brand.logo.url
+                            }
+                            alt={brand.name}
+                            className="w-full h-full object-contain"
+                          />
+                        ) : (
+                          <div className="w-full h-full rounded bg-muted/60" />
+                        )}
+                      </div>
                     </td>
 
                     {/* Name */}
@@ -351,42 +371,44 @@ export default function BrandPage() {
                     {/* Actions */}
                     <td className="px-3.5 py-3 align-middle">
                       <div className="flex items-center gap-1">
-                        <button
-                          className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer"
-                          title="Sửa"
-                          onClick={() => openEdit(brand)}
-                        >
-                          <Pencil size={15} />
-                        </button>
+                        <Can do="brand.manage">
+                          <button
+                            className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer"
+                            title="Sửa"
+                            onClick={() => openEdit(brand)}
+                          >
+                            <Pencil size={15} />
+                          </button>
 
-                        <button
-                          className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer"
-                          title={
-                            brand.isActive ? 'Ẩn' : 'Hiện'
-                          }
-                          onClick={() =>
-                            handleToggle(brand)
-                          }
-                        >
-                          {brand.isActive ? (
-                            <ToggleRight
-                              size={15}
-                              className="text-emerald-600 dark:text-emerald-400"
-                            />
-                          ) : (
-                            <ToggleLeft size={15} />
-                          )}
-                        </button>
+                          <button
+                            className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer"
+                            title={
+                              brand.isActive ? 'Ẩn' : 'Hiện'
+                            }
+                            onClick={() =>
+                              handleToggle(brand)
+                            }
+                          >
+                            {brand.isActive ? (
+                              <ToggleRight
+                                size={15}
+                                className="text-emerald-600 dark:text-emerald-400"
+                              />
+                            ) : (
+                              <ToggleLeft size={15} />
+                            )}
+                          </button>
 
-                        <button
-                          className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors cursor-pointer"
-                          title="Xóa"
-                          onClick={() =>
-                            setDeleteTarget(brand)
-                          }
-                        >
-                          <Trash2 size={15} />
-                        </button>
+                          <button
+                            className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors cursor-pointer"
+                            title="Xóa"
+                            onClick={() =>
+                              setDeleteTarget(brand)
+                            }
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </Can>
                       </div>
                     </td>
                   </tr>

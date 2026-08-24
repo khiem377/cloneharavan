@@ -213,6 +213,16 @@ export const ArrowLeftIcon = (p) => (
   </Ic>
 );
 
+/** MenuNavIcon — hamburger with nested hierarchy lines */
+export const MenuNavIcon = (p) => (
+  <Ic {...p}>
+    <path d="M3 6h18" />
+    <path d="M3 12h14" />
+    <path d="M3 18h10" />
+    <path d="M18 15l3 3-3 3" strokeWidth="1.4" />
+  </Ic>
+);
+
 export const HomeIcon = (p) => (
   <Ic {...p}>
     <path d="M3 12L12 4l9 8" />
@@ -617,14 +627,13 @@ export { ToggleRightIcon as ToggleRight   };
 export { MenuIcon        as Menu          };
 export { HomeIcon        as Home          };
 export { GripVerticalIcon as GripVertical };
-export { CouponsIcon     as TicketPercent };
-export { DiscountIcon    as Percent       };
-export { CategoriesIcon  as FolderTree    };
-export { CategoriesIcon  as FolderTreeIcon };
-export { DashboardIcon   as LayoutDashboard };
-export { MediaIcon       as ImagePlay     };
-export { ProductsIcon    as ShoppingBag   };
-export { BrandsIcon      as Diamond       };
+export { CouponsIcon     as TicketPercent, CouponsIcon as TicketPercentIcon };
+export { DiscountIcon    as Percent, DiscountIcon as PercentIcon       };
+export { CategoriesIcon  as FolderTree, CategoriesIcon as FolderTreeIcon    };
+export { DashboardIcon   as LayoutDashboard, DashboardIcon as LayoutDashboardIcon };
+export { MediaIcon       as ImagePlay, MediaIcon as ImagePlayIcon     };
+export { ProductsIcon    as ShoppingBag, ProductsIcon as ShoppingBagIcon   };
+export { BrandsIcon      as Diamond, BrandsIcon as DiamondIcon       };
 
 // ─── Save ─────────────────────────────────────────────────────────────────────
 const SaveIcon = (p) => (
@@ -661,3 +670,193 @@ const StarIcon = (p) => (
   </Ic>
 );
 export { StarIcon as Star };
+
+// ─── Dashboard Stats Icons ──────────────────────────────────────────────────────
+const TrendingUpIcon = (p) => (
+  <Ic {...p}>
+    <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+    <polyline points="17 6 23 6 23 12" />
+  </Ic>
+);
+export { TrendingUpIcon, TrendingUpIcon as TrendingUp };
+
+const TrendingDownIcon = (p) => (
+  <Ic {...p}>
+    <polyline points="23 18 13.5 8.5 8.5 13.5 1 6" />
+    <polyline points="17 18 23 18 23 12" />
+  </Ic>
+);
+export { TrendingDownIcon, TrendingDownIcon as TrendingDown };
+
+const PackageIcon = (p) => (
+  <Ic {...p}>
+    <line x1="16.5" y1="9.4" x2="7.5" y2="4.21" />
+    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+    <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+    <line x1="12" y1="22.08" x2="12" y2="12" />
+  </Ic>
+);
+export { PackageIcon, PackageIcon as Package };
+
+const UsersIcon = (p) => (
+  <Ic {...p}>
+    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+    <circle cx="9" cy="7" r="4" />
+    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+  </Ic>
+);
+export { UsersIcon, UsersIcon as Users };
+
+const DollarSignIcon = (p) => (
+  <Ic {...p}>
+    <line x1="12" y1="1" x2="12" y2="23" />
+    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+  </Ic>
+);
+export { DollarSignIcon, DollarSignIcon as DollarSign };
+
+const CalendarIcon = (p) => (
+  <Ic {...p}>
+    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+    <line x1="16" y1="2" x2="16" y2="6" />
+    <line x1="8" y1="2" x2="8" y2="6" />
+    <line x1="3" y1="10" x2="21" y2="10" />
+  </Ic>
+);
+export { CalendarIcon, CalendarIcon as Calendar };
+
+const ArrowUpRightIcon = (p) => (
+  <Ic {...p}>
+    <line x1="7" y1="17" x2="17" y2="7" />
+    <polyline points="7 7 17 7 17 17" />
+  </Ic>
+);
+export { ArrowUpRightIcon, ArrowUpRightIcon as ArrowUpRight };
+
+const ZapIcon = (p) => (
+  <Ic {...p}>
+    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+  </Ic>
+);
+export { ZapIcon, ZapIcon as Zap };
+
+const FileTextIcon = (p) => (
+  <Ic {...p}>
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+    <polyline points="14 2 14 8 20 8" />
+    <line x1="16" y1="13" x2="8" y2="13" />
+    <line x1="16" y1="17" x2="8" y2="17" />
+    <polyline points="10 9 9 9 8 9" />
+  </Ic>
+);
+export { FileTextIcon, FileTextIcon as FileText };
+
+// ═══════════════════════════════════════════════════════════════
+//  HANDCRAFTED DETAILED DASHBOARD ICONS WITH ACCENTS & LAYERS
+// ═══════════════════════════════════════════════════════════════
+
+/** Product & Box 3D Layered Icon */
+export const DashProductIcon = ({ size = 24, className = '', ...p }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} {...p}>
+    <path d="M12 2.5L20 6.8V17.2L12 21.5L4 17.2V6.8L12 2.5Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+    <path d="M12 2.5V11.5M12 11.5L20 6.8M12 11.5L4 6.8" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+    <path d="M7.5 4.8L15.5 9.2" stroke="currentColor" strokeWidth="1.3" opacity="0.6" strokeDasharray="1.5 1.5" />
+    <path d="M16 11.8L12 14L8 11.8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    <circle cx="12" cy="17" r="1.5" fill="currentColor" opacity="0.8" />
+  </svg>
+);
+
+/** Category Tree Hierarchy Icon */
+export const DashCategoryIcon = ({ size = 24, className = '', ...p }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} {...p}>
+    <rect x="3" y="3.5" width="8" height="6" rx="1.8" stroke="currentColor" strokeWidth="1.8" />
+    <rect x="13" y="3.5" width="8" height="6" rx="1.8" stroke="currentColor" strokeWidth="1.8" />
+    <rect x="8" y="14.5" width="8" height="6" rx="1.8" stroke="currentColor" strokeWidth="1.8" />
+    <path d="M7 9.5V11.5C7 12.6 7.9 13.5 9 13.5H12M17 9.5V11.5C17 12.6 16.1 13.5 15 13.5H12M12 13.5V14.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    <circle cx="7" cy="6.5" r="1" fill="currentColor" />
+    <circle cx="17" cy="6.5" r="1" fill="currentColor" />
+    <circle cx="12" cy="17.5" r="1" fill="currentColor" />
+  </svg>
+);
+
+/** Luxury Gem & Diamond Brand Icon */
+export const DashBrandIcon = ({ size = 24, className = '', ...p }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} {...p}>
+    <path d="M6 3.5H18L21.5 8.5L12 20.5L2.5 8.5L6 3.5Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+    <path d="M2.5 8.5H21.5" stroke="currentColor" strokeWidth="1.6" />
+    <path d="M9 3.5L6.5 8.5L12 20.5L17.5 8.5L15 3.5" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+    <path d="M12 3.5V8.5" stroke="currentColor" strokeWidth="1.4" />
+    <circle cx="12" cy="12" r="1" fill="currentColor" opacity="0.7" />
+  </svg>
+);
+
+/** Editorial Article & Blog Icon */
+export const DashBlogIcon = ({ size = 24, className = '', ...p }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} {...p}>
+    <rect x="3.5" y="3" width="17" height="18" rx="2.5" stroke="currentColor" strokeWidth="1.8" />
+    <path d="M7 7.5H17" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    <path d="M7 11.5H14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    <path d="M7 15.5H12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    <path d="M16 14.5L18.5 17L16.5 19" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    <circle cx="16.5" cy="11.5" r="1.2" fill="currentColor" />
+  </svg>
+);
+
+/** Media Storage & Cloud Drive Icon */
+export const DashMediaIcon = ({ size = 24, className = '', ...p }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} {...p}>
+    <rect x="2.5" y="4" width="19" height="13.5" rx="2.5" stroke="currentColor" strokeWidth="1.8" />
+    <circle cx="8" cy="9" r="2" stroke="currentColor" strokeWidth="1.5" />
+    <path d="M3 15L8 10.5L12.5 15L16 11.5L21 16.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M6 20.5H18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    <path d="M12 17.5V20.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+  </svg>
+);
+
+/** Multi-User & Customer Team Icon */
+export const DashUserIcon = ({ size = 24, className = '', ...p }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} {...p}>
+    <circle cx="9" cy="7.5" r="3.5" stroke="currentColor" strokeWidth="1.8" />
+    <path d="M2.5 19C2.5 15.4 5.4 12.5 9 12.5C12.6 12.5 15.5 15.4 15.5 19" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    <path d="M15.5 5.5A3 3 0 0 1 15.5 11.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    <path d="M18 19C18 16.5 19.5 14.5 21.5 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    <circle cx="9" cy="7.5" r="1" fill="currentColor" />
+  </svg>
+);
+
+/** Dynamic 3D Flash Sale Lightning Bolt Icon */
+export const DashFlashIcon = ({ size = 24, className = '', ...p }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} {...p}>
+    <path d="M13.5 2L3.5 13H12L10.5 22L20.5 11H12L13.5 2Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+    <path d="M12 6L8 11.5H12.5L11.5 17" stroke="currentColor" strokeWidth="1.2" opacity="0.6" strokeLinecap="round" />
+    <circle cx="18" cy="4" r="1" fill="currentColor" />
+    <circle cx="6" cy="19" r="1" fill="currentColor" />
+  </svg>
+);
+
+/** Coupon & Perforated Voucher Ticket Icon */
+export const DashCouponIcon = ({ size = 24, className = '', ...p }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} {...p}>
+    <path d="M3 8V6A2 2 0 0 1 5 4H19A2 2 0 0 1 21 6V8A2.5 2.5 0 0 0 21 13V18A2 2 0 0 1 19 20H5A2 2 0 0 1 3 18V13A2.5 2.5 0 0 0 3 8Z" stroke="currentColor" strokeWidth="1.8" />
+    <line x1="9" y1="4.5" x2="9" y2="19.5" stroke="currentColor" strokeWidth="1.4" strokeDasharray="2 2" />
+    <circle cx="14" cy="9.5" r="1.5" stroke="currentColor" strokeWidth="1.4" />
+    <circle cx="17" cy="14.5" r="1.5" stroke="currentColor" strokeWidth="1.4" />
+    <line x1="13.5" y1="15" x2="17.5" y2="9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+  </svg>
+);
+
+/** Gift Box with Ribbon Bow Icon */
+export const DashGiftIcon = ({ size = 24, className = '', ...p }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} {...p}>
+    <rect x="3.5" y="10.5" width="17" height="10.5" rx="2" stroke="currentColor" strokeWidth="1.8" />
+    <rect x="2.5" y="7" width="19" height="3.5" rx="1.2" stroke="currentColor" strokeWidth="1.8" />
+    <line x1="12" y1="7" x2="12" y2="21" stroke="currentColor" strokeWidth="1.8" />
+    <path d="M12 7C10.2 4.5 6 3 6 5.8C6 8.5 10.5 7.5 12 7Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+    <path d="M12 7C13.8 4.5 18 3 18 5.8C18 8.5 13.5 7.5 12 7Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+    <circle cx="12" cy="7" r="1" fill="currentColor" />
+  </svg>
+);
+
+
+

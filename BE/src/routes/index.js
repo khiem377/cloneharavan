@@ -16,7 +16,10 @@ const giftProgramRoutes   = require('./gift-program.routes');
 const tagRoutes           = require('./tag.routes');
 const blogCategoryRoutes  = require('./blogCategory.routes');
 const blogPostRoutes      = require('./blogPost.routes');
-const cartRoutes          = require('./cart.routes');
+const flashSaleRoutes     = require('./flashSale.routes');
+const dashboardRoutes     = require('./dashboard.routes');
+const menuRoutes          = require('./menu.routes');
+const roleRoutes          = require('./role.routes');
 
 router.use('/auth',             authRoutes);
 router.use('/users',            userRoutes);
@@ -30,9 +33,12 @@ router.use('/product-variants', productVariantRoutes);
 router.use('/coupons',          couponRoutes);
 router.use('/promotions',       promotionRoutes);
 router.use('/gift-programs',    giftProgramRoutes);
+router.use('/flash-sales',       flashSaleRoutes);
+router.use('/dashboard',         dashboardRoutes);
 router.use('/tags',             tagRoutes);
 router.use('/blog-categories',  blogCategoryRoutes);
 router.use('/blog-posts',       blogPostRoutes);
-router.use('/cart',             cartRoutes);
+router.use('/menus',            menuRoutes);
+router.use('/roles',            roleRoutes);
 
 module.exports = router;

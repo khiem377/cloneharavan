@@ -9,6 +9,8 @@ const Coupon = require('../models/coupon.model');
 const { AppError } = require('../utils/AppError');
 const { slugify } = require('../utils/slugify');
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
 const resolveMedia = async (mediaId) => {
   if (!mediaId) return null;
   const media = await Media.findById(mediaId);
@@ -17,30 +19,133 @@ const resolveMedia = async (mediaId) => {
 };
 
 /**
- * Tự sinh productCode từ tên sản phẩm
- * Ví dụ: "Tivi Sony X90L" → "TIVI-SONY-X90L"
+ * Tự sinh productCode từ tên sản phẩm.
+ * "Tủ lạnh Samsung Inverter 409 lít" → "TU-LANH-SAMSUNG-INVERTER-409"
  */
-const generateProductCode = (name) =>
-  slugify(name).toUpperCase().replace(/[^A-Z0-9-]/g, '').replace(/-+/g, '-').slice(0, 50);
+const generateProductCode = async (name) => {
+  const normalized = name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/gi, 'd')
+    .toUpperCase()
+    .replace(/[^A-Z0-9\s]/g, '')
+    .trim()
+    .split(/\s+/)
+    .filter((w) => w.length > 1)
+    .slice(0, 5)
+    .join('-');
+
+  const base = normalized || 'PROD';
+  let code = base;
+  let suffix = 1;
+  while (await Product.findOne({ productCode: code })) {
+    code = `${base}-${suffix++}`;
+  }
+  return code;
+};
 
 /**
- * Đảm bảo productCode là unique trong collection products
+ * Tự sinh SKU cho variant từ productCode + attributes.
+ * productCode="SAMSUNG-409", attrs=[{value:"Đen"},{value:"M"}] → "SAMSUNG-409-DEN-M"
  */
-const ensureUniqueProductCode = async (base, excludeId = null) => {
-  let candidate = base;
-  let count = 1;
-  while (true) {
-    const query = { productCode: candidate };
-    if (excludeId) query._id = { $ne: excludeId };
-    const exists = await Product.findOne(query);
-    if (!exists) break;
-    candidate = `${base}-${count++}`;
+const generateVariantSku = async (productCode, attributes = []) => {
+  const attrPart = attributes
+    .map((a) =>
+      a.value
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/đ/gi, 'd')
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, '')
+        .substring(0, 6)
+    )
+    .filter(Boolean)
+    .join('-');
+
+  const base = attrPart ? `${productCode}-${attrPart}` : productCode;
+  let sku = base;
+  let suffix = 1;
+  while (await ProductVariant.findOne({ sku })) {
+    sku = `${base}-${suffix++}`;
   }
-  return candidate;
+  return sku;
 };
+
+/**
+ * Tạo Default Variant cho sản phẩm không có biến thể.
+ */
+const createDefaultVariant = async (productId, productCode, price, salePrice, stock) => {
+  const sku = await generateVariantSku(productCode, []);
+  return ProductVariant.create({
+    productId,
+    isDefault: true,
+    attributes: [],
+    displayName: 'Mặc định',
+    sku,
+    price: price || 0,
+    salePrice: salePrice || null,
+    stock: stock ?? 0,
+    position: 0,
+    isActive: true,
+  });
+};
+
+/**
+ * Lấy default variant của sản phẩm.
+ */
+const getDefaultVariant = (productId) =>
+  ProductVariant.findOne({ productId, isDefault: true });
+
+/**
+ * Inject thông tin giá/stock từ default variant vào product object.
+ */
+const injectDefaultVariantData = async (productObjects) => {
+  const ids = productObjects.map((p) => p._id || p.id);
+  const defaults = await ProductVariant.find({ productId: { $in: ids }, isDefault: true })
+    .select('productId price salePrice stock sku');
+
+  const map = {};
+  defaults.forEach((v) => { map[v.productId.toString()] = v; });
+
+  return productObjects.map((p) => {
+    const pid = (p._id || p.id).toString();
+    const dv = map[pid];
+    return {
+      ...p,
+      defaultVariantId: dv?._id || null,
+      price:     dv?.price     ?? p.price     ?? null,
+      salePrice: dv?.salePrice ?? p.salePrice ?? null,
+      stock:     dv?.stock     ?? p.stock     ?? null,
+    };
+  });
+};
+
+// ─── Category helper ──────────────────────────────────────────────────────────
+
+const getCategoryIds = async (categoryQuery) => {
+  if (!categoryQuery) return null;
+  const isObjectId = /^[0-9a-fA-F]{24}$/.test(categoryQuery);
+  const root = isObjectId
+    ? await Category.findById(categoryQuery)
+    : await Category.findOne({ slug: categoryQuery });
+  if (!root) return [];
+  const children = await Category.find({ parentId: root._id });
+  const grandChildren = await Category.find({ parentId: { $in: children.map((c) => c._id) } });
+  return [root._id, ...children.map((c) => c._id), ...grandChildren.map((c) => c._id)];
+};
+
+// ─── CRUD ─────────────────────────────────────────────────────────────────────
 
 const createProduct = async (data) => {
   const generatedSlug = data.slug ? slugify(data.slug) : slugify(data.name);
+
+  // SKU cũ (backward compat)
+  let sku;
+  if (data.sku && data.sku.trim()) {
+    sku = data.sku.trim().toUpperCase();
+    const existingSku = await Product.findOne({ sku });
+    if (existingSku) throw new AppError('Mã SKU sản phẩm đã tồn tại', 400);
+  }
 
   const existingSlug = await Product.findOne({ slug: generatedSlug });
   if (existingSlug) throw new AppError('Tên sản phẩm hoặc slug đã tồn tại', 400);
@@ -69,16 +174,13 @@ const createProduct = async (data) => {
     }
   }
 
-  // Tự sinh productCode nếu Admin không nhập
-  const baseCode = (data.productCode && data.productCode.trim() !== '')
-    ? data.productCode.toUpperCase().trim()
-    : generateProductCode(data.name);
-
-  const productCode = await ensureUniqueProductCode(baseCode);
+  // Sinh productCode
+  const productCode = await generateProductCode(data.name);
 
   const product = await Product.create({
     name: data.name,
     slug: generatedSlug,
+    sku,
     productCode,
     categories: data.categories,
     brand: data.brand,
@@ -86,54 +188,42 @@ const createProduct = async (data) => {
     images,
     description: data.description,
     specifications: data.specifications,
+    options: data.options,
     isFeatured: data.isFeatured,
     isHot: data.isHot,
     status: data.status,
     isActive: data.isActive,
   });
 
-  // Tự động tạo 1 Default Variant — SKU = productCode (sản phẩm đơn không biến thể)
-  await ProductVariant.create({
-    productId: product._id,
-    attributes: [{ name: 'Phân loại', value: 'Mặc định' }],
-    displayName: 'Mặc định',
-    sku: product.productCode,
-    isManualSku: false,
-    price: data.price ?? 0,
-    salePrice: data.salePrice ?? 0,
-    stock: data.stock ?? 0,
-    thumbnail: product.thumbnail,
-    images: product.images,
-    position: 0,
-    isActive: product.isActive !== false,
-    isDefault: true,
-  });
+  // Auto-tạo Default Variant
+  await createDefaultVariant(
+    product._id,
+    productCode,
+    data.price,
+    data.salePrice,
+    data.stock,
+  );
 
-  return Product.findById(product._id)
+  const result = await Product.findById(product._id)
     .populate('categories', 'name slug parentId')
     .populate('brand', 'name slug logo');
-};
 
-const getCategoryIds = async (categoryQuery) => {
-  if (!categoryQuery) return null;
-  const isObjectId = /^[0-9a-fA-F]{24}$/.test(categoryQuery);
-  const root = isObjectId
-    ? await Category.findById(categoryQuery)
-    : await Category.findOne({ slug: categoryQuery });
-  if (!root) return [];
-  const children = await Category.find({ parentId: root._id });
-  const grandChildren = await Category.find({ parentId: { $in: children.map((c) => c._id) } });
-  return [root._id, ...children.map((c) => c._id), ...grandChildren.map((c) => c._id)];
+  const [enriched] = await injectDefaultVariantData([result.toObject()]);
+  return enriched;
 };
 
 const getAllProducts = async (query = {}) => {
-  const { keyword, category, brand, minPrice, maxPrice, status = 'published',
-    isFeatured, isHot, sortBy = 'createdAt', sortOrder = 'desc', page = 1, limit = 20 } = query;
+  const {
+    keyword, category, brand, minPrice, maxPrice,
+    status = 'published', isFeatured, isHot,
+    sortBy = 'createdAt', sortOrder = 'desc', page = 1, limit = 20,
+  } = query;
 
   const filter = { isActive: true, status };
 
   if (keyword) filter.$or = [
     { name: { $regex: keyword, $options: 'i' } },
+    { sku: { $regex: keyword, $options: 'i' } },
     { productCode: { $regex: keyword, $options: 'i' } },
   ];
   if (category) {
@@ -144,14 +234,6 @@ const getAllProducts = async (query = {}) => {
   if (brand) filter.brand = brand;
   if (isFeatured !== undefined) filter.isFeatured = isFeatured === 'true';
   if (isHot !== undefined) filter.isHot = isHot === 'true';
-
-  // Filter theo giá qua Variant (nếu có)
-  let variantFilter = {};
-  if (minPrice || maxPrice) {
-    variantFilter = {};
-    if (minPrice) variantFilter.$gte = Number(minPrice);
-    if (maxPrice) variantFilter.$lte = Number(maxPrice);
-  }
 
   const pageNum = Math.max(1, parseInt(page, 10));
   const limitNum = Math.max(1, parseInt(limit, 10));
@@ -167,28 +249,34 @@ const getAllProducts = async (query = {}) => {
     Product.countDocuments(filter),
   ]);
 
-  const productsWithVariants = await Promise.all(
-    products.map(async (p) => {
-      const defaultVariant = await ProductVariant.findOne({ productId: p._id, isDefault: true });
-      const pObj = p.toObject();
-      pObj.price = defaultVariant?.price ?? 0;
-      pObj.salePrice = defaultVariant?.salePrice ?? 0;
-      pObj.stock = defaultVariant?.stock ?? 0;
-      pObj.sku = defaultVariant?.sku ?? p.productCode;
-      return pObj;
-    })
-  );
+  // Lọc theo giá (từ default variant)
+  let enriched = await injectDefaultVariantData(products.map((p) => p.toObject()));
 
-  return { products: productsWithVariants, pagination: { page: pageNum, limit: limitNum, total, totalPages: Math.ceil(total / limitNum) } };
+  if (minPrice || maxPrice) {
+    enriched = enriched.filter((p) => {
+      const pr = p.price ?? 0;
+      if (minPrice && pr < Number(minPrice)) return false;
+      if (maxPrice && pr > Number(maxPrice)) return false;
+      return true;
+    });
+  }
+
+  return {
+    products: enriched,
+    pagination: { page: pageNum, limit: limitNum, total, totalPages: Math.ceil(total / limitNum) },
+  };
 };
 
 const getAllProductsAdmin = async (query = {}) => {
-  const { keyword, category, brand, status, isActive,
-    sortBy = 'createdAt', sortOrder = 'desc', page = 1, limit = 20 } = query;
+  const {
+    keyword, category, brand, status, isActive,
+    sortBy = 'createdAt', sortOrder = 'desc', page = 1, limit = 20,
+  } = query;
 
   const filter = {};
   if (keyword) filter.$or = [
     { name: { $regex: keyword, $options: 'i' } },
+    { sku: { $regex: keyword, $options: 'i' } },
     { productCode: { $regex: keyword, $options: 'i' } },
   ];
   if (category) {
@@ -213,19 +301,41 @@ const getAllProductsAdmin = async (query = {}) => {
     Product.countDocuments(filter),
   ]);
 
-  const productsWithVariants = await Promise.all(
-    products.map(async (p) => {
-      const defaultVariant = await ProductVariant.findOne({ productId: p._id, isDefault: true });
-      const pObj = p.toObject();
-      pObj.price = defaultVariant?.price ?? 0;
-      pObj.salePrice = defaultVariant?.salePrice ?? 0;
-      pObj.stock = defaultVariant?.stock ?? 0;
-      pObj.sku = defaultVariant?.sku ?? p.productCode;
-      return pObj;
-    })
-  );
+  const productIds = products.map((p) => p._id);
 
-  return { products: productsWithVariants, pagination: { page: pageNum, limit: limitNum, total, totalPages: Math.ceil(total / limitNum) } };
+  // Đếm biến thể (không tính default variant)
+  const [variantCounts, defaultVariants] = await Promise.all([
+    ProductVariant.aggregate([
+      { $match: { productId: { $in: productIds }, isDefault: false } },
+      { $group: { _id: '$productId', count: { $sum: 1 } } },
+    ]),
+    ProductVariant.find({ productId: { $in: productIds }, isDefault: true })
+      .select('productId price salePrice stock sku'),
+  ]);
+
+  const variantCountMap = {};
+  variantCounts.forEach((v) => { variantCountMap[v._id.toString()] = v.count; });
+
+  const defaultVariantMap = {};
+  defaultVariants.forEach((v) => { defaultVariantMap[v.productId.toString()] = v; });
+
+  const productsWithData = products.map((p) => {
+    const pid = p._id.toString();
+    const dv = defaultVariantMap[pid];
+    return {
+      ...p.toObject(),
+      variantCount: variantCountMap[pid] ?? 0,
+      defaultVariantId: dv?._id || null,
+      price:     dv?.price     ?? p.price     ?? null,
+      salePrice: dv?.salePrice ?? p.salePrice ?? null,
+      stock:     dv?.stock     ?? p.stock     ?? null,
+    };
+  });
+
+  return {
+    products: productsWithData,
+    pagination: { page: pageNum, limit: limitNum, total, totalPages: Math.ceil(total / limitNum) },
+  };
 };
 
 const getProductById = async (idOrSlug) => {
@@ -238,35 +348,28 @@ const getProductById = async (idOrSlug) => {
 
   if (!product) throw new AppError('Không tìm thấy sản phẩm', 404);
 
-  const defaultVariant = await ProductVariant.findOne({ productId: product._id, isDefault: true });
-  const pObj = product.toObject();
-  pObj.price = defaultVariant?.price ?? 0;
-  pObj.salePrice = defaultVariant?.salePrice ?? 0;
-  pObj.stock = defaultVariant?.stock ?? 0;
-  pObj.sku = defaultVariant?.sku ?? product.productCode;
-
-  return pObj;
+  const [enriched] = await injectDefaultVariantData([product.toObject()]);
+  return enriched;
 };
 
 const getProductsToCompare = async (productIds) => {
   if (!Array.isArray(productIds) || productIds.length === 0) {
     throw new AppError('Danh sách sản phẩm so sánh không được để trống', 400);
   }
-  return Product.find({ _id: { $in: productIds }, isActive: true })
+  const products = await Product.find({ _id: { $in: productIds }, isActive: true })
     .populate('categories', 'name slug parentId')
     .populate('brand', 'name slug logo');
+  return injectDefaultVariantData(products.map((p) => p.toObject()));
 };
 
 const updateProduct = async (id, data) => {
   const product = await Product.findById(id);
   if (!product) throw new AppError('Không tìm thấy sản phẩm', 404);
 
-  // Nếu Admin muốn đổi productCode thủ công
-  if (data.productCode && data.productCode.toUpperCase() !== product.productCode) {
-    const newCode = data.productCode.toUpperCase().trim();
-    const existingCode = await Product.findOne({ productCode: newCode, _id: { $ne: id } });
-    if (existingCode) throw new AppError('Mã sản phẩm (productCode) đã bị trùng lặp', 400);
-    data.productCode = newCode;
+  if (data.sku && data.sku.toUpperCase() !== product.sku) {
+    const existingSku = await Product.findOne({ sku: data.sku.toUpperCase(), _id: { $ne: id } });
+    if (existingSku) throw new AppError('Mã SKU sản phẩm đã bị trùng lặp', 400);
+    data.sku = data.sku.toUpperCase();
   }
 
   if (data.name && data.name !== product.name) {
@@ -304,13 +407,32 @@ const updateProduct = async (id, data) => {
     product.images = images;
   }
 
-  const { thumbnailMediaId, imageMediaIds, ...rest } = data;
+  // Sync price/stock lên Default Variant
+  const hasPriceOrStock = data.price !== undefined || data.stock !== undefined || data.salePrice !== undefined;
+  if (hasPriceOrStock) {
+    let dv = await getDefaultVariant(id);
+    if (!dv) {
+      // Không có default variant → tạo mới
+      const productCode = product.productCode || await generateProductCode(product.name);
+      dv = await createDefaultVariant(id, productCode, data.price, data.salePrice, data.stock);
+    } else {
+      if (data.price    !== undefined) dv.price    = data.price;
+      if (data.salePrice !== undefined) dv.salePrice = data.salePrice;
+      if (data.stock    !== undefined) dv.stock    = data.stock;
+      await dv.save();
+    }
+  }
+
+  const { thumbnailMediaId, imageMediaIds, price, salePrice, stock, ...rest } = data;
   Object.assign(product, rest);
   await product.save();
 
-  return Product.findById(product._id)
+  const result = await Product.findById(product._id)
     .populate('categories', 'name slug parentId')
     .populate('brand', 'name slug logo');
+
+  const [enriched] = await injectDefaultVariantData([result.toObject()]);
+  return enriched;
 };
 
 const toggleProductStatus = async (id, isActive) => {
@@ -325,6 +447,7 @@ const toggleProductStatus = async (id, isActive) => {
 const deleteProduct = async (id) => {
   const product = await Product.findById(id);
   if (!product) throw new AppError('Không tìm thấy sản phẩm', 404);
+  await ProductVariant.deleteMany({ productId: id }); // xóa variants theo
   await product.deleteOne();
   return { message: 'Đã xóa sản phẩm thành công' };
 };
@@ -333,6 +456,7 @@ const deleteBulkProducts = async (ids) => {
   if (!Array.isArray(ids) || ids.length === 0) {
     throw new AppError('Danh sách ID sản phẩm cần xóa không hợp lệ', 400);
   }
+  await ProductVariant.deleteMany({ productId: { $in: ids } });
   const result = await Product.deleteMany({ _id: { $in: ids } });
   return { message: `Đã xóa thành công ${result.deletedCount} sản phẩm` };
 };
@@ -344,10 +468,10 @@ const getProductDeals = async (idOrSlug) => {
   const product = await Product.findOne(filter).populate('categories', '_id');
   if (!product) throw new AppError('Không tìm thấy sản phẩm', 404);
 
-  // Lấy giá thấp nhất từ Variant
-  const defaultVariant = await ProductVariant.findOne({ productId: product._id, isDefault: true });
-  const basePrice = defaultVariant?.price ?? 0;
-  const baseSalePrice = defaultVariant?.salePrice ?? 0;
+  // Lấy giá từ default variant
+  const dv = await getDefaultVariant(product._id);
+  const productPrice = dv?.price ?? product.price ?? 0;
+  const productSalePrice = dv?.salePrice ?? product.salePrice ?? 0;
 
   const now = new Date();
   const categoryIds = (product.categories || []).map((c) => c._id || c);
@@ -374,18 +498,18 @@ const getProductDeals = async (idOrSlug) => {
     }).sort({ createdAt: -1 }).limit(10),
   ]);
 
-  let effectivePrice = baseSalePrice > 0 ? baseSalePrice : basePrice;
+  let effectivePrice = productSalePrice > 0 ? productSalePrice : productPrice;
   let bestPromotion = null;
 
   for (const promo of promotions) {
     if (promo.type === 'percent_discount' && promo.discountValue > 0) {
-      let discounted = basePrice * (1 - promo.discountValue / 100);
-      if (promo.maxDiscountValue) discounted = Math.max(basePrice - promo.maxDiscountValue, discounted);
+      let discounted = productPrice * (1 - promo.discountValue / 100);
+      if (promo.maxDiscountValue) discounted = Math.max(productPrice - promo.maxDiscountValue, discounted);
       discounted = Math.round(discounted);
       if (discounted < effectivePrice) { effectivePrice = discounted; bestPromotion = promo; }
     }
     if (promo.type === 'fixed_discount' && promo.discountValue > 0) {
-      const discounted = Math.max(0, basePrice - promo.discountValue);
+      const discounted = Math.max(0, productPrice - promo.discountValue);
       if (discounted < effectivePrice) { effectivePrice = discounted; bestPromotion = promo; }
     }
   }
@@ -404,4 +528,8 @@ module.exports = {
   toggleProductStatus,
   deleteProduct,
   deleteBulkProducts,
+  // export helpers để dùng trong seeder/migration
+  generateProductCode,
+  generateVariantSku,
+  createDefaultVariant,
 };

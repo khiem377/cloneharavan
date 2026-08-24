@@ -5,6 +5,7 @@ const Product = require('../models/product.model');
 const ProductVariant = require('../models/productVariant.model');
 const BlogPost = require('../models/blogPost.model');
 const BlogCategory = require('../models/blogCategory.model');
+const FlashSale = require('../models/flashSale.model');
 
 const mediaRegistry = [
   {
@@ -52,9 +53,17 @@ const mediaRegistry = [
   {
     model: BlogCategory,
     displayName: 'Danh mục Blog',
+
     mediaFields: ['thumbnailMediaId'],
     getEntityName: (doc) => doc.name,
     getAdminUrl: (doc) => `/blog/categories?highlight=${doc._id}`,
+  },
+  {
+    model: FlashSale,
+    displayName: 'Flash Sale',
+    mediaFields: ['banner.mediaId'],
+    getEntityName: (doc) => doc.name,
+    getAdminUrl: (doc) => `/promotions/flash-sales?highlight=${doc._id}`,
   },
 ];
 

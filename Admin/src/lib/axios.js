@@ -54,15 +54,6 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    // Không có refreshToken → logout không reload
-    const { refreshToken } = useAuthStore.getState();
-    if (!refreshToken) {
-      useAuthStore.getState().clearAuth();
-      // Dùng React Router navigate thay window.location để không hard-reload
-      window.__navigate__?.('/login');
-      return Promise.reject(error);
-    }
-
     // Nếu đang refresh → đưa vào queue chờ
     if (isRefreshing) {
       return new Promise((resolve, reject) => {
@@ -80,7 +71,9 @@ api.interceptors.response.use(
     isRefreshing = true;
 
     try {
-      const { data } = await authApi.post('/auth/refresh-token', { refreshToken });
+      const { refreshToken } = useAuthStore.getState();
+      // authApi có withCredentials: true nên browser tự động gửi httpOnly Cookie
+      const { data } = await authApi.post('/auth/refresh-token', refreshToken ? { refreshToken } : {});
       const newAccessToken  = data.data.accessToken;
       const newRefreshToken = data.data.refreshToken;
 

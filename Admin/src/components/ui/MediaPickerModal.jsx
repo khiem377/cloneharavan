@@ -282,6 +282,12 @@ export default function MediaPickerModal({ onSelect, onClose, isMultiple = false
   const isLoading = isSearching ? ls : lb;
 
   const searchFolders = isSearching ? (searchData?.folders ?? []) : [];
+  // Sub-folders to show in main content area: search results folders OR children of current folder
+  const modalFolders = isSearching
+    ? searchFolders
+    : selectedFolder
+      ? (folderMap[selectedFolder]?.children ?? [])
+      : [];
   const crumbs = selectedFolder ? buildBreadcrumb(folderMap, selectedFolder) : [];
 
   const invalidateFolders = () => {
@@ -463,64 +469,57 @@ export default function MediaPickerModal({ onSelect, onClose, isMultiple = false
                     <div key={i} className="aspect-square rounded-lg bg-muted animate-pulse border border-border" />
                   ))}
                 </div>
-              ) : (browseData?.type === 'parent' && browseData?.subFolders?.length > 0 && mediaItems.length === 0) ? (
-                <div className="flex flex-wrap gap-2.5 p-2">
-                  {browseData.subFolders.map((sf) => (
-                    <button
-                      key={sf._id}
-                      className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-2 text-xs font-medium text-foreground hover:border-primary/50 hover:bg-accent transition-colors cursor-pointer"
-                      onClick={() => handleFolderSelect(sf._id)}
-                    >
-                      <FolderOpen size={15} className="text-primary" />
-                      <span>{sf.name}</span>
-                    </button>
-                  ))}
-                </div>
-              ) : mediaItems.length === 0 ? (
+              ) : (mediaItems.length === 0 && modalFolders.length === 0) ? (
                 <div className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground">
-                  <p className="text-xs font-medium">Không có ảnh nào trong thư mục này</p>
+                  <p className="text-xs font-medium">Không có ảnh hoặc thư mục nào</p>
                 </div>
               ) : (
                 <div className="flex flex-col gap-4">
-                  {browseData?.subFolders?.length > 0 && (
-                    <div className="flex flex-wrap gap-2 pb-3 border-b border-border">
-                      {browseData.subFolders.map((sf) => (
-                        <button
-                          key={sf._id}
-                          className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground hover:border-primary/50 hover:bg-accent transition-colors cursor-pointer"
-                          onClick={() => handleFolderSelect(sf._id)}
-                        >
-                          <FolderOpen size={14} className="text-primary" />
-                          <span>{sf.name}</span>
-                        </button>
-                      ))}
+                  {modalFolders.length > 0 && (
+                    <div className="space-y-1.5 pb-3 border-b border-border">
+                      <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Thư mục ({modalFolders.length})</p>
+                      <div className="flex flex-wrap gap-2">
+                        {modalFolders.map((sf) => (
+                          <button
+                            key={sf._id}
+                            className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground hover:border-amber-500/60 hover:bg-amber-500/10 transition-colors cursor-pointer"
+                            onClick={() => handleFolderSelect(sf._id)}
+                          >
+                            <FolderOpen size={15} className="text-amber-600 shrink-0" />
+                            <span>{sf.name}</span>
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   )}
-                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3 content-start">
-                    {mediaItems.map(item => {
-                      const active = isSelected(item._id);
-                      return (
-                        <div
-                          key={item._id}
-                          className={`relative aspect-square rounded-lg border-2 overflow-hidden cursor-pointer transition-all bg-card ${active ? 'border-primary ring-2 ring-primary/30 shadow-md' : 'border-border hover:border-primary/50'}`}
-                          onClick={() => handleCardClick(item)}
-                          onDoubleClick={() => {
-                            if (!isMultiple) { onSelect(item); onClose(); }
-                          }}
-                        >
-                          <img src={item.url} alt={item.filename} loading="lazy" className="size-full object-cover" />
-                          {active && (
-                            <div className="absolute top-1.5 right-1.5 size-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-xs z-10 font-bold text-[10px]">
-                              {isMultiple ? (pickedMultiple.findIndex((x) => x._id === item._id) + 1) : <Check size={12} />}
+
+                  {mediaItems.length > 0 && (
+                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3 content-start">
+                      {mediaItems.map(item => {
+                        const active = isSelected(item._id);
+                        return (
+                          <div
+                            key={item._id}
+                            className={`relative aspect-square rounded-lg border-2 overflow-hidden cursor-pointer transition-all bg-card ${active ? 'border-primary ring-2 ring-primary/30 shadow-md' : 'border-border hover:border-primary/50'}`}
+                            onClick={() => handleCardClick(item)}
+                            onDoubleClick={() => {
+                              if (!isMultiple) { onSelect(item); onClose(); }
+                            }}
+                          >
+                            <img src={item.url} alt={item.filename} loading="lazy" className="size-full object-cover" />
+                            {active && (
+                              <div className="absolute top-1.5 right-1.5 size-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-xs z-10 font-bold text-[10px]">
+                                {isMultiple ? (pickedMultiple.findIndex((x) => x._id === item._id) + 1) : <Check size={12} />}
+                              </div>
+                            )}
+                            <div className="absolute inset-x-0 bottom-0 bg-black/60 p-1 text-[10px] text-white truncate px-1.5 font-medium">
+                              {item.filename}
                             </div>
-                          )}
-                          <div className="absolute inset-x-0 bottom-0 bg-black/60 p-1 text-[10px] text-white truncate px-1.5 font-medium">
-                            {item.filename}
                           </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -551,7 +550,7 @@ export default function MediaPickerModal({ onSelect, onClose, isMultiple = false
                 className="flex items-center justify-center bg-[repeating-conic-gradient(#80808015_0%_25%,transparent_0%_50%)] bg-[length:12px_12px] border-b border-border shrink-0"
                 style={{ height: 150 }}
               >
-                {pickerPreview.mimetype?.startsWith('image/') ? (
+                {((pickerPreview.mimeType || pickerPreview.mimetype || '').startsWith('image/') || pickerPreview.url) ? (
                   <img src={pickerPreview.url} alt={pickerPreview.filename} className="max-h-[146px] max-w-full object-contain" />
                 ) : (
                   <span className="text-3xl font-extrabold text-muted-foreground/20">

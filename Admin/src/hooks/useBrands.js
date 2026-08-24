@@ -13,8 +13,8 @@ export const useBrands = (params) =>
 export const useAllBrands = () =>
   useQuery({
     queryKey: [...BRANDS_KEY, 'all'],
-    queryFn: () => brandService.getAll({ all: 'true' }).then((r) => r.data.data),
-    staleTime: 60_000,
+    queryFn: () => brandService.getAll({ all: 'true', limit: 1000 }).then((r) => r.data.data),
+    staleTime: 10 * 60 * 1000, // 10 phút cache
   });
 
 export const useCreateBrand = () => {

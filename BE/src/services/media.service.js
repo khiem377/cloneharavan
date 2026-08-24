@@ -51,8 +51,14 @@ const uploadMediaFromUrl = async (url, folderId) => {
     cloudinaryFolder = `${targetFolder.slug}/${subFolder.slug}`;
   }
 
-  const resp = await fetch(url, { signal: AbortSignal.timeout(15000) });
-  if (!resp.ok) throw new AppError('Không thể tải ảnh từ URL', 400);
+  const resp = await fetch(url, {
+    signal: AbortSignal.timeout(15000),
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Referer': 'https://ega-dien-may.myharavan.com/',
+    },
+  });
+  if (!resp.ok) throw new AppError(`Không thể tải ảnh từ URL (${resp.status} ${resp.statusText})`, 400);
   const mimeType = resp.headers.get('content-type') || 'image/jpeg';
   if (!mimeType.startsWith('image/')) throw new AppError('URL không phải là ảnh', 400);
   const arrayBuffer = await resp.arrayBuffer();
@@ -77,57 +83,112 @@ const uploadMediaFromUrl = async (url, folderId) => {
 };
 
 
+const getAllSubFolderIds = async (rootId) => {
+  const allIds = [rootId];
+  let currentIds = [rootId];
+  while (currentIds.length > 0) {
+    const children = await Folder.find({ parentId: { $in: currentIds } }, '_id').lean();
+    if (children.length === 0) break;
+    const childIds = children.map((c) => c._id);
+    allIds.push(...childIds);
+    currentIds = childIds;
+  }
+  return allIds;
+};
+
 const browseMedia = async ({ folderId, page = 1, limit = 20, sortBy = 'createdAt', sortDir = 'desc' }) => {
   const sort = { [sortBy]: sortDir === 'asc' ? 1 : -1 };
 
   if (folderId) {
+    const allFolderIds = await getAllSubFolderIds(folderId);
     const subFolders = await Folder.find({ parentId: folderId }, 'name slug position').sort('position');
 
-    if (subFolders.length > 0) {
-      const skip = (page - 1) * limit;
-      const total = await Media.countDocuments({ folderId });
-      const items = await Media.find({ folderId }).sort(sort).skip(skip).limit(limit);
-      return {
-        type: 'parent',
-        subFolders: subFolders.map((f) => ({ _id: f._id, name: f.name, slug: f.slug })),
-        media: items,
-        total, page, limit,
-        totalPages: Math.ceil(total / limit),
-      };
-    }
-
     const skip = (page - 1) * limit;
-    const total = await Media.countDocuments({ folderId });
-    const items = await Media.find({ folderId }).sort(sort).skip(skip).limit(limit);
-    return { type: 'leaf', media: items, total, page, limit, totalPages: Math.ceil(total / limit) };
+    const total = await Media.countDocuments({ folderId: { $in: allFolderIds } });
+    const items = await Media.find({ folderId: { $in: allFolderIds } })
+      .populate('folderId', 'name slug _id')
+      .sort(sort)
+      .skip(skip)
+      .limit(limit);
+
+    return {
+      type: subFolders.length > 0 ? 'parent' : 'leaf',
+      subFolders: subFolders.map((f) => ({ _id: f._id, name: f.name, slug: f.slug })),
+      media: items,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   const skip = (page - 1) * limit;
   const total = await Media.countDocuments({});
   const items = await Media.find()
     .populate('folderId', 'name slug')
-    .sort(sort).skip(skip).limit(limit);
+    .sort(sort)
+    .skip(skip)
+    .limit(limit);
+
   return { type: 'all', media: items, total, page, limit, totalPages: Math.ceil(total / limit) };
 };
 
-
 const searchMedia = async ({ q, page = 1, limit = 20, sortBy = 'createdAt', sortDir = 'desc' }) => {
-  if (!q) return { folders: [], media: [], total: 0 };
+  if (!q || !q.trim()) {
+    return { folders: [], media: [], total: 0, page, limit, totalPages: 0 };
+  }
 
-  const regex = { $regex: q, $options: 'i' };
+  const regex = new RegExp(q.trim(), 'i');
   const sort = { [sortBy]: sortDir === 'asc' ? 1 : -1 };
 
-  const [folders, total, mediaItems] = await Promise.all([
-    Folder.find({ $or: [{ name: regex }, { slug: regex }] }, 'name slug parentId').limit(10),
-    Media.countDocuments({ filename: regex }),
-    Media.find({ filename: regex })
+  // 1. Find all matching folders by name or slug
+  const directFolders = await Folder.find(
+    { $or: [{ name: regex }, { slug: regex }] },
+    'name slug parentId _id'
+  ).lean();
+
+  let folderIds = directFolders.map((f) => f._id);
+
+  // 2. Collect all subfolders recursively
+  if (folderIds.length > 0) {
+    let currentIds = [...folderIds];
+    while (currentIds.length > 0) {
+      const children = await Folder.find({ parentId: { $in: currentIds } }, '_id').lean();
+      if (children.length === 0) break;
+      const childIds = children.map((c) => c._id);
+      folderIds.push(...childIds);
+      currentIds = childIds;
+    }
+  }
+
+  // 3. Match media by filename, publicId OR any folderId in matching folders
+  const mediaQuery = {
+    $or: [
+      { filename: regex },
+      { publicId: regex },
+      ...(folderIds.length > 0 ? [{ folderId: { $in: folderIds } }] : []),
+    ],
+  };
+
+  const skip = (page - 1) * limit;
+
+  const [total, mediaItems] = await Promise.all([
+    Media.countDocuments(mediaQuery),
+    Media.find(mediaQuery)
       .populate('folderId', 'name slug _id')
       .sort(sort)
-      .skip((page - 1) * limit)
+      .skip(skip)
       .limit(limit),
   ]);
 
-  return { folders, media: mediaItems, total, page, limit, totalPages: Math.ceil(total / limit) };
+  return {
+    folders: directFolders,
+    media: mediaItems,
+    total,
+    page,
+    limit,
+    totalPages: Math.ceil(total / limit),
+  };
 };
 
 

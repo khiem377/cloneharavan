@@ -10,6 +10,14 @@ export const useProducts = (params) =>
     staleTime: 30_000,
   });
 
+// Query lấy TOÀN BỘ sản phẩm cho các Dropdown/Select (Khuyến mãi, Quà tặng, Coupon...) với staleTime 5 phút
+export const useAllProductsSelect = (extraParams = {}) =>
+  useQuery({
+    queryKey: [...PRODUCTS_KEY, 'select-all', extraParams],
+    queryFn: () => productService.getAll({ limit: 1000, page: 1, ...extraParams }).then((r) => r.data?.data || []),
+    staleTime: 5 * 60 * 1000, // 5 phút cache
+  });
+
 export const useProduct = (id) =>
   useQuery({
     queryKey: [...PRODUCTS_KEY, id],

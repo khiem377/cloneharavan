@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Loader2 } from '@/components/ui/Icons';
-import { useBlogPost, useBlogCategories, useTags } from '@/hooks/useBlog';
+import { useBlogPost, useBlogCategories, useBlogTags } from '@/hooks/useBlog';
 import { blogPostService } from '@/services/blog.service';
 import { toast } from '@/providers/ToastProvider';
 import RichTextEditor from '@/components/ui/RichTextEditor';
@@ -43,9 +43,12 @@ export default function BlogPostFormPage() {
   const isEdit   = Boolean(id);
   const { user } = useAuthStore();
 
-  const { data: existing, loading: loadingPost } = useBlogPost(id);
-  const { data: categories } = useBlogCategories({ limit: 100 });
-  const { data: allTags }    = useTags({ limit: 200 });
+  const { data: existing, isLoading: loadingPost } = useBlogPost(id);
+  const { data: categoriesData } = useBlogCategories({ limit: 100 });
+  const { data: allTagsData }    = useBlogTags({ limit: 200 });
+
+  const categories = categoriesData?.data || [];
+  const allTags = allTagsData?.data || [];
 
   const [form, setForm]           = useState(DEFAULT_FORM);
   const [saving, setSaving]       = useState(false);
@@ -132,8 +135,7 @@ export default function BlogPostFormPage() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Fixed action bar */}
-      <div className="fixed top-[53px] right-0 left-[var(--sidebar-width,256px)] z-30 bg-background/95 backdrop-blur-sm border-b border-border px-6 py-2.5 flex items-center justify-between">
+      <div className="sticky -top-3 sm:-top-6 z-30 -mt-3 sm:-mt-6 -mx-3 sm:-mx-6 px-4 sm:px-6 py-3 bg-background/95 backdrop-blur-md border-b border-border flex items-center justify-between gap-3 shadow-xs">
         <div className="flex items-center gap-3">
           <button type="button" onClick={() => navigate('/blog/posts')} className="p-1.5 rounded-lg hover:bg-muted transition-colors">
             <ArrowLeft className="size-4" />
