@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Plus, Edit, Trash2, Search, Loader2 } from '@/components/ui/Icons';
-import { useTags } from '@/hooks/useBlog';
+import { useBlogTags } from '@/hooks/useBlog';
 import { tagService } from '@/services/blog.service';
 import { toast } from '@/providers/ToastProvider';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
@@ -17,7 +17,9 @@ export default function BlogTagPage() {
   const [confirm, setConfirm] = useState(null);
   const [selected, setSelected] = useState([]);
 
-  const { data, pagination, loading, refetch } = useTags(query);
+  const { data: resTags, isLoading: loading, refetch } = useBlogTags(query);
+  const data = resTags?.data || [];
+  const pagination = resTags?.pagination || {};
 
   const set = (f, v) => setForm(p => ({ ...p, [f]: v }));
 

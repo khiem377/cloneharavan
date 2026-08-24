@@ -50,6 +50,18 @@ const login = async (req, res, next) => {
     const user = await loginUser(email, password);
     const { accessToken, refreshToken } = await buildTokenResponse(user, res);
 
+    const populatedUser = await User.findById(user._id)
+      .populate({ path: 'roleId', populate: { path: 'permissions', select: 'code name module' } })
+      .populate('customPermissions', 'code name module');
+
+    const isSuperAdmin = populatedUser.role === 'administrator' || populatedUser.role === 'admin' || populatedUser.roleId?.code === 'administrator';
+    const permissions = isSuperAdmin 
+      ? ['*']
+      : [...new Set([
+          ...(populatedUser.roleId?.permissions || []).map(p => p.code),
+          ...(populatedUser.customPermissions || []).map(p => p.code)
+        ])];
+
     res.json({
       status: 'success',
       statusCode: 200,
@@ -58,12 +70,14 @@ const login = async (req, res, next) => {
         accessToken,
         refreshToken,
         user: {
-          _id: user._id,
-          fullName: user.fullName,
-          email: user.email,
-          phone: user.phone,
-          gender: user.gender,
-          role: user.role,
+          _id: populatedUser._id,
+          fullName: populatedUser.fullName,
+          email: populatedUser.email,
+          phone: populatedUser.phone,
+          gender: populatedUser.gender,
+          role: populatedUser.role,
+          roleId: populatedUser.roleId,
+          permissions,
         },
       },
     });
@@ -96,14 +110,28 @@ const refreshToken = async (req, res, next) => {
 
 const getProfile = async (req, res, next) => {
   try {
-    const user = await User.findById(req.user._id);
-    if (!user) throw new AppError('Không tìm thấy người dùng', 404);
+    const populatedUser = await User.findById(req.user._id)
+      .populate({ path: 'roleId', populate: { path: 'permissions', select: 'code name module' } })
+      .populate('customPermissions', 'code name module');
+
+    if (!populatedUser) throw new AppError('Không tìm thấy người dùng', 404);
+
+    const isSuperAdmin = populatedUser.role === 'administrator' || populatedUser.role === 'admin' || populatedUser.roleId?.code === 'administrator';
+    const permissions = isSuperAdmin 
+      ? ['*']
+      : [...new Set([
+          ...(populatedUser.roleId?.permissions || []).map(p => p.code),
+          ...(populatedUser.customPermissions || []).map(p => p.code)
+        ])];
+
+    const userObj = populatedUser.toObject();
+    userObj.permissions = permissions;
 
     res.json({
       status: 'success',
       statusCode: 200,
       message: 'Lấy thông tin thành công',
-      data: { user },
+      data: { user: userObj },
     });
   } catch (error) {
     next(error);

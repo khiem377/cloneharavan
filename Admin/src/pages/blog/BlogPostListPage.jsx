@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Trash2, Edit, Eye, EyeOff, Search, Loader2 } from '@/components/ui/Icons';
+import { Plus, Trash2, Edit, Eye, EyeOff, Search, Loader2, RefreshCw, Pin, Star, ExternalLink } from '@/components/ui/Icons';
 import { useBlogPosts } from '@/hooks/useBlog';
 import { blogPostService } from '@/services/blog.service';
 import { toast } from '@/providers/ToastProvider';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import DataTablePagination from '@/components/ui/DataTablePagination';
+import Can from '@/components/auth/Can';
+
+const CLIENT_STORE_URL = import.meta.env.VITE_STORE_FRONTEND_URL || import.meta.env.VITE_CLIENT_URL || 'http://localhost:3000';
 
 const STATUS_BADGE = {
   draft:          'bg-gray-100 text-gray-600',
@@ -27,7 +30,9 @@ export default function BlogPostListPage() {
   const [selected, setSelected] = useState([]);
   const [confirm, setConfirm]   = useState(null);
 
-  const { data: posts, pagination, loading, refetch } = useBlogPosts(query);
+  const { data: resPosts, isLoading: loading, refetch } = useBlogPosts(query);
+  const posts = resPosts?.data || [];
+  const pagination = resPosts?.pagination || {};
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -63,8 +68,8 @@ export default function BlogPostListPage() {
 
   const handleBulkDelete = async () => {
     try {
-      const res = await blogPostService.removeBulk(selected);
-      toast.success(`Đã xóa ${res.data.deleted} bài viết`);
+      await blogPostService.removeBulk(selected);
+      toast.success('Đã xóa các bài viết đã chọn');
       setSelected([]);
       refetch();
     } catch (e) {
@@ -74,17 +79,28 @@ export default function BlogPostListPage() {
 
   return (
     <div className="p-3 sm:p-6 flex flex-col gap-4 sm:gap-6 w-full max-w-full overflow-x-hidden min-h-full bg-background text-foreground">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Bài viết Blog</h1>
           <p className="text-sm text-muted-foreground mt-1">Quản lý nội dung blog</p>
         </div>
-        <button
-          onClick={() => navigate('/blog/posts/new')}
-          className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
-        >
-          <Plus className="size-4" /> Tạo bài mới
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => refetch()}
+            className="flex items-center gap-1.5 border border-input bg-background px-3 py-2 rounded-lg text-sm font-medium hover:bg-muted transition-colors"
+            title="Làm mới dữ liệu"
+          >
+            <RefreshCw className={`size-4 ${loading ? 'animate-spin' : ''}`} /> Làm mới
+          </button>
+          <Can do="blog.create">
+            <button
+              onClick={() => navigate('/blog/posts/new')}
+              className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
+            >
+              <Plus className="size-4" /> Tạo bài mới
+            </button>
+          </Can>
+        </div>
       </div>
 
       <div className="bg-card border border-border rounded-xl overflow-hidden">
@@ -184,24 +200,37 @@ export default function BlogPostListPage() {
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-1">
                       <button
-                        onClick={() => handleToggleStatus(post)}
-                        title={post.isActive ? 'Ẩn' : 'Hiện'}
+                        onClick={() => window.open(`${CLIENT_STORE_URL}/blogs/news/${post.slug}`, '_blank')}
+                        title="Xem trên Cửa hàng"
                         className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
                       >
-                        {post.isActive ? <Eye className="size-4" /> : <EyeOff className="size-4" />}
+                        <ExternalLink className="size-4" />
                       </button>
-                      <button
-                        onClick={() => navigate(`/blog/posts/${post._id}/edit`)}
-                        className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        <Edit className="size-4" />
-                      </button>
-                      <button
-                        onClick={() => setConfirm({ type: 'single', id: post._id, title: post.title })}
-                        className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-                      >
-                        <Trash2 className="size-4" />
-                      </button>
+                      <Can do="blog.edit">
+                        <button
+                          onClick={() => handleToggleStatus(post)}
+                          title={post.isActive ? 'Ẩn' : 'Hiện'}
+                          className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          {post.isActive ? <Eye className="size-4 text-emerald-600" /> : <EyeOff className="size-4" />}
+                        </button>
+                        <button
+                          onClick={() => navigate(`/blog/posts/${post._id}/edit`)}
+                          title="Chỉnh sửa"
+                          className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          <Edit className="size-4" />
+                        </button>
+                      </Can>
+                      <Can do="blog.delete">
+                        <button
+                          onClick={() => setConfirm({ type: 'single', id: post._id, title: post.title })}
+                          title="Xóa"
+                          className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                        >
+                          <Trash2 className="size-4" />
+                        </button>
+                      </Can>
                     </div>
                   </td>
                 </tr>

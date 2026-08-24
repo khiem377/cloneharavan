@@ -126,9 +126,22 @@ const userSchema = new mongoose.Schema(
     // =========================
     role: {
       type: String,
-      enum: ['user', 'admin'],
+      enum: ['user', 'admin', 'administrator', 'manager', 'staff', 'inventory_manager', 'content_editor', 'customer_care'],
       default: 'user',
     },
+
+    roleId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Role',
+      default: null,
+    },
+
+    customPermissions: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Permission',
+      },
+    ],
 
     isActive: {
       type: Boolean,

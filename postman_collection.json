@@ -2656,6 +2656,599 @@
           "response": []
         }
       ]
+    },
+    {
+      "name": "14. Dashboard",
+      "item": [
+        {
+          "name": "14.1 Overview Stats (Thống kê tổng quan)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{url}}dashboard/overview",
+              "host": ["{{url}}dashboard"],
+              "path": ["overview"]
+            },
+            "description": "Lấy tổng quan số liệu hệ thống: sản phẩm, tồn kho, danh mục, thương hiệu, bài viết blog, dung lượng media, mã giảm giá, v.v."
+          },
+          "response": []
+        },
+        {
+          "name": "14.2 Global Search (Tìm kiếm toàn cục)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{url}}dashboard/search?q=loa",
+              "host": ["{{url}}dashboard"],
+              "path": ["search"],
+              "query": [{ "key": "q", "value": "loa" }]
+            },
+            "description": "Tìm kiếm nhanh dữ liệu trên toàn hệ thống (sản phẩm, danh mục, thương hiệu, mã giảm giá, bài viết blog, người dùng)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "15. Flash Sales",
+      "item": [
+        {
+          "name": "15.1 Get Active Flash Sales (Chương trình đang diễn ra)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{url}}flash-sales/active",
+              "host": ["{{url}}flash-sales"],
+              "path": ["active"]
+            },
+            "description": "Lấy danh sách các chương trình Flash Sale đang kích hoạt và còn thời hạn (Public cho khách mua hàng)."
+          },
+          "response": []
+        },
+        {
+          "name": "15.2 Get All Flash Sales (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{url}}flash-sales",
+              "host": ["{{url}}flash-sales"]
+            },
+            "description": "Lấy danh sách tất cả các chương trình Flash Sale trong hệ thống."
+          },
+          "response": []
+        },
+        {
+          "name": "15.3 Get Flash Sale By ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{url}}flash-sales/<flashSaleId>",
+              "host": ["{{url}}flash-sales"],
+              "path": ["<flashSaleId>"]
+            },
+            "description": "Lấy thông tin chi tiết 1 chương trình Flash Sale."
+          },
+          "response": []
+        },
+        {
+          "name": "15.4 Create Flash Sale (Tạo Flash Sale)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Flash Sale Giờ Vàng 12h\",\n  \"startTime\": \"2026-08-25T00:00:00.000Z\",\n  \"endTime\": \"2026-08-25T23:59:59.000Z\",\n  \"isActive\": true,\n  \"items\": [\n    {\n      \"product\": \"<productId>\",\n      \"flashPrice\": 1990000,\n      \"stockLimit\": 50\n    }\n  ]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{url}}flash-sales",
+              "host": ["{{url}}flash-sales"]
+            },
+            "description": "(Admin) Tạo chương trình Flash Sale mới kèm danh sách sản phẩm và giá sốc."
+          },
+          "response": []
+        },
+        {
+          "name": "15.5 Update Flash Sale (Cập nhật Flash Sale)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Flash Sale Cuối Tuần Bùng Nổ\",\n  \"isActive\": true\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{url}}flash-sales/<flashSaleId>",
+              "host": ["{{url}}flash-sales"],
+              "path": ["<flashSaleId>"]
+            },
+            "description": "(Admin) Cập nhật thông tin chương trình Flash Sale."
+          },
+          "response": []
+        },
+        {
+          "name": "15.6 Toggle Status Flash Sale (Bật/Tắt Flash Sale)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isActive\": false\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{url}}flash-sales/<flashSaleId>/toggle-status",
+              "host": ["{{url}}flash-sales"],
+              "path": ["<flashSaleId>", "toggle-status"]
+            },
+            "description": "(Admin) Bật hoặc Tắt kích hoạt nhanh chương trình Flash Sale."
+          },
+          "response": []
+        },
+        {
+          "name": "15.7 Delete Flash Sale (Xóa Flash Sale)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{url}}flash-sales/<flashSaleId>",
+              "host": ["{{url}}flash-sales"],
+              "path": ["<flashSaleId>"]
+            },
+            "description": "(Admin) Xóa chương trình Flash Sale."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "16. Blog & Content",
+      "item": [
+        {
+          "name": "16.1 Get All Blog Posts (Danh sách bài viết)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{url}}blog-posts?page=1&limit=10",
+              "host": ["{{url}}blog-posts"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            },
+            "description": "Lấy danh sách bài viết blog kèm bộ lọc phân trang, từ khóa, danh mục."
+          },
+          "response": []
+        },
+        {
+          "name": "16.2 Get Blog Post By ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{url}}blog-posts/id/<postId>",
+              "host": ["{{url}}blog-posts"],
+              "path": ["id", "<postId>"]
+            },
+            "description": "Lấy thông tin bài viết blog theo ID."
+          },
+          "response": []
+        },
+        {
+          "name": "16.3 Get Blog Post By Slug (Public)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{url}}blog-posts/<slug>",
+              "host": ["{{url}}blog-posts"],
+              "path": ["<slug>"]
+            },
+            "description": "Lấy chi tiết bài viết blog theo đường dẫn slug."
+          },
+          "response": []
+        },
+        {
+          "name": "16.4 Create Blog Post (Tạo bài viết mới)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Top 5 Loa Bluetooth hay nhất 2026\",\n  \"slug\": \"top-5-loa-bluetooth-hay-nhat-2026\",\n  \"excerpt\": \"Đánh giá chi tiết top 5 dòng loa bluetooth đỉnh cao âm thanh.\",\n  \"content\": \"<p>Nội dung chi tiết bài viết...</p>\",\n  \"thumbnailUrl\": \"https://res.cloudinary.com/demo/image/upload/v1/sample.jpg\",\n  \"status\": \"published\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{url}}blog-posts",
+              "host": ["{{url}}blog-posts"]
+            },
+            "description": "(Admin) Tạo mới bài viết blog."
+          },
+          "response": []
+        },
+        {
+          "name": "16.5 Update Blog Post (Cập nhật bài viết)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Top 5 Loa Bluetooth hay nhất 2026 (Cập nhật mới)\",\n  \"status\": \"published\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{url}}blog-posts/<postId>",
+              "host": ["{{url}}blog-posts"],
+              "path": ["<postId>"]
+            },
+            "description": "(Admin) Cập nhật bài viết blog."
+          },
+          "response": []
+        },
+        {
+          "name": "16.6 Toggle Blog Post Status (Bật/Ẩn bài viết)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isActive\": true\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{url}}blog-posts/<postId>/status",
+              "host": ["{{url}}blog-posts"],
+              "path": ["<postId>", "status"]
+            },
+            "description": "(Admin) Bật hoặc ẩn trạng thái của bài viết blog."
+          },
+          "response": []
+        },
+        {
+          "name": "16.7 Increment Post Views (Tăng lượt xem)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{url}}blog-posts/<slug>/view",
+              "host": ["{{url}}blog-posts"],
+              "path": ["<slug>", "view"]
+            },
+            "description": "Tăng số lượt xem của bài viết khi khách hàng đọc bài."
+          },
+          "response": []
+        },
+        {
+          "name": "16.8 Delete Blog Post (Xóa 1 bài viết)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{url}}blog-posts/<postId>",
+              "host": ["{{url}}blog-posts"],
+              "path": ["<postId>"]
+            },
+            "description": "(Admin) Xóa 1 bài viết blog."
+          },
+          "response": []
+        },
+        {
+          "name": "16.9 Bulk Delete Blog Posts (Xóa hàng loạt bài viết)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ids\": [\"<postId1>\", \"<postId2>\"]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{url}}blog-posts/bulk",
+              "host": ["{{url}}blog-posts"],
+              "path": ["bulk"]
+            },
+            "description": "(Admin) Xóa hàng loạt bài viết blog."
+          },
+          "response": []
+        },
+        {
+          "name": "16.10 Get All Blog Categories (Danh mục blog)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{url}}blog-categories",
+              "host": ["{{url}}blog-categories"]
+            },
+            "description": "Lấy danh sách các danh mục tin tức/blog."
+          },
+          "response": []
+        },
+        {
+          "name": "16.11 Create Blog Category (Tạo danh mục blog)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Tin công nghệ\",\n  \"slug\": \"tin-cong-nghe\",\n  \"isActive\": true\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{url}}blog-categories",
+              "host": ["{{url}}blog-categories"]
+            },
+            "description": "(Admin) Tạo mới danh mục tin tức/blog."
+          },
+          "response": []
+        },
+        {
+          "name": "16.12 Reorder Blog Categories (Sắp xếp danh mục blog)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    { \"id\": \"<catId1>\", \"order\": 0 },\n    { \"id\": \"<catId2>\", \"order\": 1 }\n  ]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{url}}blog-categories/reorder",
+              "host": ["{{url}}blog-categories"],
+              "path": ["reorder"]
+            },
+            "description": "(Admin) Sắp xếp thứ tự các danh mục blog."
+          },
+          "response": []
+        },
+        {
+          "name": "16.13 Toggle Blog Category Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isActive\": true\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{url}}blog-categories/<catId>/status",
+              "host": ["{{url}}blog-categories"],
+              "path": ["<catId>", "status"]
+            },
+            "description": "(Admin) Bật hoặc Ẩn danh mục blog."
+          },
+          "response": []
+        },
+        {
+          "name": "16.14 Get All Tags (Danh sách tag)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{url}}tags",
+              "host": ["{{url}}tags"]
+            },
+            "description": "Lấy danh sách các thẻ tag gắn bài viết."
+          },
+          "response": []
+        },
+        {
+          "name": "16.15 Create Tag (Tạo tag mới)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Loa Karaoke\",\n  \"slug\": \"loa-karaoke\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{url}}tags",
+              "host": ["{{url}}tags"]
+            },
+            "description": "(Admin) Tạo mới tag gắn bài viết blog."
+          },
+          "response": []
+        },
+        {
+          "name": "16.16 Toggle Tag Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isActive\": true\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{url}}tags/<tagId>/status",
+              "host": ["{{url}}tags"],
+              "path": ["<tagId>", "status"]
+            },
+            "description": "(Admin) Bật hoặc Ẩn tag bài viết."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "17. Roles & Permissions (Vai trò & Phân quyền)",
+      "item": [
+        {
+          "name": "17.1 Get All Permissions (Danh sách toàn bộ quyền)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{url}}roles/permissions",
+              "host": ["{{url}}roles"],
+              "path": ["permissions"]
+            },
+            "description": "Lấy danh sách tất cả mã quyền hệ thống (Permission list) phân loại theo Module để hiển thị UI phân quyền."
+          },
+          "response": []
+        },
+        {
+          "name": "17.2 Get All Roles (Danh sách các Vai trò)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{url}}roles",
+              "host": ["{{url}}roles"]
+            },
+            "description": "Lấy danh sách tất cả các vai trò (Roles) đã được cấu hình trong hệ thống."
+          },
+          "response": []
+        },
+        {
+          "name": "17.3 Get Role By ID (Chi tiết 1 Vai trò)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{url}}roles/<roleId>",
+              "host": ["{{url}}roles"],
+              "path": ["<roleId>"]
+            },
+            "description": "Lấy chi tiết 1 vai trò kèm danh sách quyền được cấp."
+          },
+          "response": []
+        },
+        {
+          "name": "17.4 Create Role (Tạo Vai trò mới)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Quản lý Sản Phẩm\",\n  \"code\": \"product_manager\",\n  \"description\": \"Có đầy đủ quyền xem, tạo, sửa, xóa sản phẩm và danh mục\",\n  \"permissions\": [\"product.view\", \"product.create\", \"product.edit\", \"category.view\", \"category.manage\"]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{url}}roles",
+              "host": ["{{url}}roles"]
+            },
+            "description": "(Admin) Tạo mới một Vai trò (Role) trong hệ thống kèm danh sách quyền permissions."
+          },
+          "response": []
+        },
+        {
+          "name": "17.5 Update Role (Cập nhật Vai trò)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Quản lý Sản Phẩm & Kho\",\n  \"description\": \"Cập nhật quyền kho hàng\",\n  \"permissions\": [\"product.view\", \"product.create\", \"product.edit\", \"product.delete\", \"category.view\"]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{url}}roles/<roleId>",
+              "host": ["{{url}}roles"],
+              "path": ["<roleId>"]
+            },
+            "description": "(Admin) Cập nhật tên, mô tả và danh sách mã quyền permissions cho 1 vai trò."
+          },
+          "response": []
+        },
+        {
+          "name": "17.6 Delete Role (Xóa Vai trò)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{url}}roles/<roleId>",
+              "host": ["{{url}}roles"],
+              "path": ["<roleId>"]
+            },
+            "description": "(Admin) Xóa 1 vai trò khỏi hệ thống."
+          },
+          "response": []
+        },
+        {
+          "name": "17.7 Assign Role To User (Phân quyền cho Người dùng)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roleId\": \"<roleId>\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{url}}roles/users/<userId>/assign",
+              "host": ["{{url}}roles"],
+              "path": ["users", "<userId>", "assign"]
+            },
+            "description": "(Admin) Gán một Vai trò (Role) cho tài khoản người dùng."
+          },
+          "response": []
+        }
+      ]
     }
   ]
 }

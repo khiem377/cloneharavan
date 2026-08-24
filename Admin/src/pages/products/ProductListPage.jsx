@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight, Loader2, LayoutList, LayoutGrid, Eye, Layers } from '@/components/ui/Icons';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight, Loader2, LayoutList, LayoutGrid, Eye, Layers, RefreshCw } from '@/components/ui/Icons';
 import { toast } from '@/providers/ToastProvider';
 import { useProducts, useToggleProductStatus, useDeleteProduct, useDeleteBulkProducts } from '@/hooks/useProducts';
 import { useCategories } from '@/hooks/useCategories';
 import { useBrands, useAllBrands } from '@/hooks/useBrands';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import DataTablePagination from '@/components/ui/DataTablePagination';
+import Can from '@/components/auth/Can';
 
 const STATUS_LABELS = { published: 'Công khai', draft: 'Nháp', out_of_stock: 'Hết hàng' };
 const STATUS_BADGE = {
@@ -15,6 +16,8 @@ const STATUS_BADGE = {
   out_of_stock: 'bg-destructive/10 text-destructive border-destructive/20',
 };
 
+const CLIENT_STORE_URL = import.meta.env.VITE_STORE_FRONTEND_URL || import.meta.env.VITE_CLIENT_URL || 'http://localhost:3000';
+
 function formatPrice(n) {
   if (!n) return '0đ';
   return n.toLocaleString('vi-VN') + 'đ';
@@ -22,10 +25,12 @@ function formatPrice(n) {
 
 export default function ProductListPage() {
   const navigate = useNavigate();
-  const [keyword, setKeyword] = useState('');
-  const [filterCategory, setFilterCategory] = useState('');
-  const [filterBrand, setFilterBrand] = useState('');
-  const [filterStatus, setFilterStatus] = useState('');
+  const [searchParams] = useSearchParams();
+
+  const [keyword, setKeyword] = useState(searchParams.get('keyword') || '');
+  const [filterCategory, setFilterCategory] = useState(searchParams.get('category') || '');
+  const [filterBrand, setFilterBrand] = useState(searchParams.get('brand') || '');
+  const [filterStatus, setFilterStatus] = useState(searchParams.get('status') || '');
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [viewMode, setViewMode] = useState('table');
@@ -33,8 +38,26 @@ export default function ProductListPage() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
 
+  useEffect(() => {
+    const catParam = searchParams.get('category');
+    if (catParam !== null && catParam !== filterCategory) {
+      setFilterCategory(catParam);
+      setPage(1);
+    }
+    const brandParam = searchParams.get('brand');
+    if (brandParam !== null && brandParam !== filterBrand) {
+      setFilterBrand(brandParam);
+      setPage(1);
+    }
+    const statusParam = searchParams.get('status');
+    if (statusParam !== null && statusParam !== filterStatus) {
+      setFilterStatus(statusParam);
+      setPage(1);
+    }
+  }, [searchParams]);
+
   const params = { keyword, category: filterCategory, brand: filterBrand, status: filterStatus || undefined, page, limit };
-  const { data, isLoading } = useProducts(params);
+  const { data, isLoading, refetch } = useProducts(params);
   const products = data?.data ?? [];
   const pagination = data?.pagination;
 
@@ -43,6 +66,10 @@ export default function ProductListPage() {
   const toggleMut = useToggleProductStatus();
   const deleteMut = useDeleteProduct();
   const bulkDeleteMut = useDeleteBulkProducts();
+
+  const handleViewFrontend = (slug) => {
+    window.open(`${CLIENT_STORE_URL}/products/${slug}`, '_blank');
+  };
 
   const handleToggle = (p) => {
     toggleMut.mutate({ id: p._id, isActive: !p.isActive }, {
@@ -80,12 +107,25 @@ export default function ProductListPage() {
           <h1 className="text-2xl font-bold tracking-tight text-foreground">Sản phẩm</h1>
           <p className="text-xs text-muted-foreground mt-0.5">{pagination?.total ?? 0} sản phẩm</p>
         </div>
-        <button
-          className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground shadow-xs hover:bg-primary/90 transition-colors cursor-pointer"
-          onClick={() => navigate('/products/new')}
-        >
-          <Plus size={16} /> Thêm sản phẩm
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => refetch()}
+            className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-input bg-background px-3 text-sm font-medium text-foreground hover:bg-muted transition-colors cursor-pointer"
+            title="Làm mới dữ liệu"
+          >
+            <RefreshCw size={15} className={isLoading ? 'animate-spin' : ''} />
+            Làm mới
+          </button>
+
+          <Can do="product.create">
+            <button
+              className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground shadow-xs hover:bg-primary/90 transition-colors cursor-pointer"
+              onClick={() => navigate('/products/new')}
+            >
+              <Plus size={16} /> Thêm sản phẩm
+            </button>
+          </Can>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -226,13 +266,21 @@ export default function ProductListPage() {
                   <td className="px-3.5 py-3 align-middle font-mono text-xs">{p.stock}</td>
                   <td className="px-3.5 py-3 align-middle">
                     <div className="flex items-center gap-1">
-                      <button className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer" title="Xem" onClick={() => window.open(`/products/${p.slug}`, '_blank')}><Eye size={15} /></button>
-                      <button className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer" title="Sửa" onClick={() => navigate(`/products/${p._id}/edit`)}><Pencil size={15} /></button>
-                      <button className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-violet-500/10 hover:text-violet-500 transition-colors cursor-pointer" title="Quản lý biến thể" onClick={() => navigate(`/products/${p._id}/variants`)}><Layers size={15} /></button>
-                      <button className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer" title={p.isActive ? 'Ẩn' : 'Hiện'} onClick={() => handleToggle(p)}>
-                        {p.isActive ? <ToggleRight size={15} className="text-emerald-600 dark:text-emerald-400" /> : <ToggleLeft size={15} />}
-                      </button>
-                      <button className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors cursor-pointer" title="Xóa" onClick={() => setDeleteTarget(p)}><Trash2 size={15} /></button>
+                      <button className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer" title="Xem trên Cửa hàng" onClick={() => handleViewFrontend(p.slug)}><Eye size={15} /></button>
+                      <Can do="product.edit">
+                        <button className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer" title="Sửa" onClick={() => navigate(`/products/${p._id}/edit`)}><Pencil size={15} /></button>
+                      </Can>
+                      <Can do="product_variant.create">
+                        <button className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-violet-500/10 hover:text-violet-500 transition-colors cursor-pointer" title="Quản lý biến thể" onClick={() => navigate(`/products/${p._id}/variants`)}><Layers size={15} /></button>
+                      </Can>
+                      <Can do="product.edit">
+                        <button className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer" title={p.isActive ? 'Ẩn' : 'Hiện'} onClick={() => handleToggle(p)}>
+                          {p.isActive ? <ToggleRight size={15} className="text-emerald-600 dark:text-emerald-400" /> : <ToggleLeft size={15} />}
+                        </button>
+                      </Can>
+                      <Can do="product.delete">
+                        <button className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors cursor-pointer" title="Xóa" onClick={() => setDeleteTarget(p)}><Trash2 size={15} /></button>
+                      </Can>
                     </div>
                   </td>
                 </tr>
@@ -255,12 +303,21 @@ export default function ProductListPage() {
                 <p className="font-bold text-sm text-foreground">{formatPrice(p.salePrice > 0 && p.salePrice < p.price ? p.salePrice : p.price)}</p>
               </div>
               <div className="flex items-center justify-end gap-1 p-2 border-t border-border bg-muted/30">
-                <button className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer" title="Sửa" onClick={() => navigate(`/products/${p._id}/edit`)}><Pencil size={14} /></button>
-                <button className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-violet-500/10 hover:text-violet-500 transition-colors cursor-pointer" title="Biến thể" onClick={() => navigate(`/products/${p._id}/variants`)}><Layers size={14} /></button>
-                <button className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer" title={p.isActive ? 'Ẩn' : 'Hiện'} onClick={() => handleToggle(p)}>
-                  {p.isActive ? <ToggleRight size={14} className="text-emerald-600 dark:text-emerald-400" /> : <ToggleLeft size={14} />}
-                </button>
-                <button className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors cursor-pointer" title="Xóa" onClick={() => setDeleteTarget(p)}><Trash2 size={14} /></button>
+                <button className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer" title="Xem trên Cửa hàng" onClick={() => handleViewFrontend(p.slug)}><Eye size={14} /></button>
+                <Can do="product.edit">
+                  <button className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer" title="Sửa" onClick={() => navigate(`/products/${p._id}/edit`)}><Pencil size={14} /></button>
+                </Can>
+                <Can do="product_variant.create">
+                  <button className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-violet-500/10 hover:text-violet-500 transition-colors cursor-pointer" title="Biến thể" onClick={() => navigate(`/products/${p._id}/variants`)}><Layers size={14} /></button>
+                </Can>
+                <Can do="product.edit">
+                  <button className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer" title={p.isActive ? 'Ẩn' : 'Hiện'} onClick={() => handleToggle(p)}>
+                    {p.isActive ? <ToggleRight size={14} className="text-emerald-600 dark:text-emerald-400" /> : <ToggleLeft size={14} />}
+                  </button>
+                </Can>
+                <Can do="product.delete">
+                  <button className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors cursor-pointer" title="Xóa" onClick={() => setDeleteTarget(p)}><Trash2 size={14} /></button>
+                </Can>
               </div>
             </div>
           ))}

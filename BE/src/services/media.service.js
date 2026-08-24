@@ -51,8 +51,14 @@ const uploadMediaFromUrl = async (url, folderId) => {
     cloudinaryFolder = `${targetFolder.slug}/${subFolder.slug}`;
   }
 
-  const resp = await fetch(url, { signal: AbortSignal.timeout(15000) });
-  if (!resp.ok) throw new AppError('Không thể tải ảnh từ URL', 400);
+  const resp = await fetch(url, {
+    signal: AbortSignal.timeout(15000),
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Referer': 'https://ega-dien-may.myharavan.com/',
+    },
+  });
+  if (!resp.ok) throw new AppError(`Không thể tải ảnh từ URL (${resp.status} ${resp.statusText})`, 400);
   const mimeType = resp.headers.get('content-type') || 'image/jpeg';
   if (!mimeType.startsWith('image/')) throw new AppError('URL không phải là ảnh', 400);
   const arrayBuffer = await resp.arrayBuffer();

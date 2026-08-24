@@ -38,10 +38,18 @@ const protect = async (req, res, next) => {
 
 const authorize = (...roles) => {
   return (req, res, next) => {
-    if (!roles.includes(req.user.role)) {
+    // Nếu kiểm tra 'admin' hoặc 'administrator', cho phép tất cả tài khoản thuộc nhóm quản trị/nhân viên (role khác 'user')
+    const checkingAdmin = roles.includes('admin') || roles.includes('administrator');
+    const isStaffOrAdmin = req.user && req.user.role !== 'user';
+
+    if (checkingAdmin && isStaffOrAdmin) {
+      return next();
+    }
+
+    if (!roles.includes(req.user?.role)) {
       return next(
         new AppError(
-          `Role '${req.user.role}' is not authorized to access this route`,
+          `Tài khoản vai trò '${req.user?.role}' không có quyền truy cập API này`,
           403
         )
       );

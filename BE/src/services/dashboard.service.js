@@ -111,45 +111,45 @@ const getOverviewStats = async () => {
   const formattedMediaSize = formatBytes(totalMediaBytes);
   const totalFolders = Math.max(rawFolderCount || 0, (distinctMediaFolders || []).filter(Boolean).length);
 
-  // Aggregate Category Product Share
+  // Aggregate Category Product Share (Thống kê Top danh mục có nhiều sản phẩm nhất)
   let categoryDistribution = [];
   try {
-    const categoryAgg = await Product.aggregate([
-      { $unwind: '$categories' },
-      {
-        $group: {
-          _id: '$categories',
-          count: { $sum: 1 },
-        },
-      },
-      { $sort: { count: -1 } },
-      { $limit: 6 },
-    ]);
+    const allCategories = await Category.find({}).select('name').lean();
+    
+    // Đếm số lượng sản phẩm thực tế cho từng danh mục
+    const catCounts = await Promise.all(
+      allCategories.map(async (cat) => {
+        const count = await Product.countDocuments({
+          $or: [
+            { categories: cat._id },
+            { categories: cat._id.toString() }
+          ]
+        });
+        return {
+          _id: cat._id,
+          name: cat.name,
+          count,
+        };
+      })
+    );
 
-    for (const item of categoryAgg) {
-      if (item._id) {
-        const cat = await Category.findById(item._id).select('name');
-        if (cat) {
-          const percent = totalProducts > 0 ? Math.round((item.count / totalProducts) * 100) : 0;
-          categoryDistribution.push({
-            name: cat.name,
-            count: item.count,
-            percent,
-          });
-        }
-      }
-    }
+    // Sắp xếp các danh mục theo số sản phẩm giảm dần
+    catCounts.sort((a, b) => b.count - a.count);
+    
+    // Lấy 6 danh mục hàng đầu
+    const topCats = catCounts.slice(0, 6);
+
+    categoryDistribution = topCats.map((item) => {
+      const percent = totalProducts > 0 ? Math.round((item.count / totalProducts) * 100) : 0;
+      return {
+        _id: item._id,
+        name: item.name,
+        count: item.count,
+        percent,
+      };
+    });
   } catch (err) {
-    console.error('Category aggregation error:', err);
-  }
-
-  if (categoryDistribution.length === 0) {
-    const allCats = await Category.find({}).select('name').limit(5);
-    categoryDistribution = allCats.map((c) => ({
-      name: c.name,
-      count: 0,
-      percent: 0,
-    }));
+    console.error('Category distribution error:', err);
   }
 
   // Format low stock alert items
@@ -169,7 +169,7 @@ const getOverviewStats = async () => {
     price: p.salePrice || p.price || 0,
     stock: p.stock,
     status: p.status,
-    thumbnail: p.thumbnail?.url || '',
+    thumbnail: typeof p.thumbnail === 'string' ? p.thumbnail : (p.thumbnail?.url || ''),
     categoryName: p.categories?.[0]?.name || 'Chưa phân loại',
     brandName: p.brand?.name || '',
     createdAt: p.createdAt,
@@ -182,7 +182,7 @@ const getOverviewStats = async () => {
     slug: post.slug,
     status: post.status,
     viewsCount: post.viewsCount || 0,
-    thumbnailUrl: post.thumbnailUrl || '',
+    thumbnailUrl: post.thumbnailUrl || (typeof post.thumbnail === 'string' ? post.thumbnail : (post.thumbnail?.url || '')),
     createdAt: post.createdAt,
   }));
 
@@ -224,6 +224,7 @@ const getOverviewStats = async () => {
       totalCustomers,
       totalStaff,
     },
+    categoryDistribution,
     distributions: {
       categoryDistribution,
       productStatus: [

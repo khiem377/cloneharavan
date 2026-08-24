@@ -7,7 +7,15 @@ export const useCategories = (params) =>
   useQuery({
     queryKey: [...CATEGORIES_KEY, params],
     queryFn: () => categoryService.getAll(params).then((r) => r.data.data),
-    staleTime: 0,
+    staleTime: 30_000,
+  });
+
+// Query lấy TOÀN BỘ danh mục cho các Dropdown/Select với staleTime 10 phút
+export const useAllCategoriesSelect = (tree = false) =>
+  useQuery({
+    queryKey: [...CATEGORIES_KEY, 'select-all', tree],
+    queryFn: () => categoryService.getAll({ limit: 1000, tree: tree ? 'true' : 'false' }).then((r) => r.data.data || []),
+    staleTime: 10 * 60 * 1000, // 10 phút cache
   });
 
 export const useCreateCategory = () => {

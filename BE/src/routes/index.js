@@ -19,6 +19,7 @@ const blogPostRoutes      = require('./blogPost.routes');
 const flashSaleRoutes     = require('./flashSale.routes');
 const dashboardRoutes     = require('./dashboard.routes');
 const menuRoutes          = require('./menu.routes');
+const roleRoutes          = require('./role.routes');
 
 router.use('/auth',             authRoutes);
 router.use('/users',            userRoutes);
@@ -38,5 +39,6 @@ router.use('/tags',             tagRoutes);
 router.use('/blog-categories',  blogCategoryRoutes);
 router.use('/blog-posts',       blogPostRoutes);
 router.use('/menus',            menuRoutes);
+router.use('/roles',            roleRoutes);
 
 module.exports = router;
