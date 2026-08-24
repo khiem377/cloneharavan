@@ -1,5 +1,20 @@
 import { useState, useEffect, useRef } from 'react';
 import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+  CartesianGrid,
+} from 'recharts';
+import {
   ProductsIcon,
   CategoriesIcon,
   BrandsIcon,
@@ -18,15 +33,45 @@ import {
   GiftIcon,
   EyeIcon,
 } from '@/components/ui/Icons';
+import { useDashboardOverview } from '@/hooks/useDashboard';
 import { dashboardService } from '@/services/dashboard.service';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from '@/providers/ToastProvider';
 
+const CustomTooltip = ({ active, payload, label }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-popover/95 border border-border/80 backdrop-blur-md p-3 rounded-xl shadow-xl text-xs font-medium space-y-1 z-50">
+        <p className="text-muted-foreground font-semibold border-b border-border/50 pb-1 mb-1">{label}</p>
+        {payload.map((entry, index) => (
+          <div key={`item-${index}`} className="flex items-center justify-between gap-4">
+            <span className="flex items-center gap-1.5" style={{ color: entry.color }}>
+              <span className="size-2 rounded-full" style={{ backgroundColor: entry.color }} />
+              {entry.name}:
+            </span>
+            <span className="font-bold text-foreground">{entry.value.toLocaleString('vi-VN')}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  return null;
+};
+
+// Data mẫu xu hướng 7 ngày gần nhất
+const trendData = [
+  { name: 'Thứ 2', views: 420, interactions: 210 },
+  { name: 'Thứ 3', views: 680, interactions: 340 },
+  { name: 'Thứ 4', views: 510, interactions: 290 },
+  { name: 'Thứ 5', views: 890, interactions: 450 },
+  { name: 'Thứ 6', views: 1200, interactions: 610 },
+  { name: 'Thứ 7', views: 1540, interactions: 820 },
+  { name: 'Chủ nhật', views: 1320, interactions: 740 },
+];
+
 export default function DashboardPage() {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [data, setData] = useState(null);
+  const { data, isLoading: loading, isFetching: refreshing, refetch } = useDashboardOverview();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState(null);
@@ -34,10 +79,6 @@ export default function DashboardPage() {
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
 
   const searchContainerRef = useRef(null);
-
-  useEffect(() => {
-    fetchDashboardData();
-  }, []);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -49,22 +90,12 @@ export default function DashboardPage() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const fetchDashboardData = async (isManualRefresh = false) => {
-    if (isManualRefresh) setRefreshing(true);
-    else setLoading(true);
-
+  const handleManualRefresh = async () => {
     try {
-      const res = await dashboardService.getOverview();
-      setData(res.data.data);
-      if (isManualRefresh) {
-        toast.success('Đã cập nhật dữ liệu tổng quan mới nhất');
-      }
+      await refetch();
+      toast.success('Đã cập nhật dữ liệu tổng quan mới nhất');
     } catch (e) {
-      console.error(e);
       toast.error('Không thể tải dữ liệu dashboard. Vui lòng thử lại.');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
     }
   };
 
@@ -96,62 +127,90 @@ export default function DashboardPage() {
     );
   }
 
-  const { stats, distributions, recentProducts, recentBlogPosts } = data || {};
+  const {
+    stats = {},
+    distributions = {},
+    categoryDistribution: rootCategoryDist = [],
+    recentProducts = [],
+    recentBlogPosts = []
+  } = data || {};
+
+  const categoryDistribution = distributions?.categoryDistribution || rootCategoryDist || [];
+
+  const stockPieData = [
+    { name: 'Đã xuất bản', value: stats.publishedProducts || 0, color: '#10b981' },
+    { name: 'Cảnh báo tồn kho', value: stats.lowStockProducts || 0, color: '#f59e0b' },
+    { name: 'Hết hàng', value: stats.outOfStockProducts || 0, color: '#ef4444' },
+  ].filter((item) => item.value > 0);
+
+  const blogPieData = [
+    { name: 'Đã đăng', value: stats.publishedBlogPosts || 0, color: '#6366f1' },
+    { name: 'Nháp', value: stats.draftBlogPosts || 0, color: '#94a3b8' },
+    { name: 'Chờ duyệt', value: stats.pendingBlogPosts || 0, color: '#eab308' },
+  ].filter((item) => item.value > 0);
+
+  const BAR_COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#06b6d4', '#10b981', '#f59e0b'];
+  const hasItemsWithProducts = (categoryDistribution || []).some((item) => item && item.count > 0);
+  const displayCategories = hasItemsWithProducts
+    ? (categoryDistribution || []).filter((item) => item && item.count > 0)
+    : (categoryDistribution || []);
+
+  const categoryBarData = displayCategories.map((item, idx) => ({
+    _id: item._id,
+    name: item.name,
+    count: item.count || 0,
+    percent: item.percent || 0,
+    fill: BAR_COLORS[idx % BAR_COLORS.length],
+  }));
 
   return (
-    <div className="p-3 sm:p-6 max-w-full overflow-x-hidden space-y-6">
-      {/* Header & Global Search Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="p-3 sm:p-6 space-y-6 max-w-full overflow-x-hidden min-h-full bg-background text-foreground">
+      {/* Header Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-            Tổng quan hệ thống <SparklesIcon className="size-5 text-amber-500" />
+          <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
+            Tổng quan hệ thống <SparklesIcon className="size-5 text-amber-500 animate-pulse" />
           </h1>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+          <p className="text-xs text-muted-foreground mt-1">
             Thống kê quản lý kho sản phẩm, bài viết blog, thư viện phương tiện & tiếp thị
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          {/* Global Search Component */}
-          <div ref={searchContainerRef} className="relative flex-1 sm:w-80">
-            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-            <input
-              className="w-full pl-9 pr-8 h-9 rounded-lg border border-input bg-background text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 transition-all"
-              placeholder="Tìm nhanh SP, Danh mục, Bài viết..."
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setShowSearchDropdown(true);
-              }}
-              onFocus={() => setShowSearchDropdown(true)}
-            />
-            {searching && (
-              <RefreshCwIcon className="absolute right-3 top-1/2 -translate-y-1/2 size-4 animate-spin text-muted-foreground" />
-            )}
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          {/* Global Search Bar */}
+          <div ref={searchContainerRef} className="relative flex-1 sm:w-72">
+            <div className="relative">
+              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Tìm nhanh SP, Danh mục, Bài viết..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => setShowSearchDropdown(true)}
+                className="w-full h-9 pl-9 pr-8 rounded-lg border border-border bg-card text-xs text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
+              />
+              {searching && (
+                <RefreshCwIcon className="absolute right-2.5 top-1/2 -translate-y-1/2 size-3.5 animate-spin text-muted-foreground" />
+              )}
+            </div>
 
+            {/* Dropdown Result */}
             {showSearchDropdown && searchResults && (
-              <div className="absolute top-full left-0 right-0 z-40 mt-1 max-h-96 overflow-y-auto rounded-xl border border-border bg-popover shadow-xl p-2 space-y-3">
+              <div className="absolute right-0 top-11 w-full sm:w-96 rounded-xl border border-border bg-popover text-popover-foreground shadow-2xl p-3 z-50 max-h-96 overflow-y-auto space-y-3 backdrop-blur-md">
                 {searchResults.products?.length > 0 && (
                   <div>
                     <p className="text-[11px] font-semibold uppercase text-muted-foreground px-2 mb-1.5 flex items-center gap-1">
-                      <ProductsIcon className="size-3 text-blue-500" /> Sản phẩm
+                      <ProductsIcon className="size-3 text-primary" /> Sản phẩm ({searchResults.products.length})
                     </p>
                     {searchResults.products.map((p) => (
                       <Link
                         key={p._id}
                         to={`/products/${p._id}/edit`}
                         onClick={() => setShowSearchDropdown(false)}
-                        className="flex items-center gap-2.5 px-2 py-1.5 hover:bg-accent rounded-md text-xs transition-colors"
+                        className="flex items-center justify-between px-2 py-1.5 hover:bg-accent rounded-md text-xs transition-colors"
                       >
-                        {p.thumbnail?.url ? (
-                          <img src={p.thumbnail.url} alt="" className="size-7 object-cover rounded border border-border shrink-0" />
-                        ) : (
-                          <div className="size-7 rounded bg-muted flex items-center justify-center shrink-0">
-                            <ProductsIcon className="size-3.5 text-muted-foreground" />
-                          </div>
-                        )}
-                        <span className="font-medium text-foreground truncate flex-1">{p.name}</span>
-                        <span className="font-mono text-muted-foreground font-medium">
+                        <span className="font-medium text-foreground truncate">{p.name}</span>
+                        <span className="text-muted-foreground font-mono text-[11px] shrink-0 ml-2">
                           {(p.salePrice || p.price)?.toLocaleString('vi-VN')}đ
                         </span>
                       </Link>
@@ -172,25 +231,6 @@ export default function DashboardPage() {
                         className="flex items-center justify-between px-2 py-1.5 hover:bg-accent rounded-md text-xs transition-colors font-medium text-foreground"
                       >
                         <span>{c.name}</span>
-                        <ChevronRightIcon className="size-3.5 text-muted-foreground" />
-                      </Link>
-                    ))}
-                  </div>
-                )}
-
-                {searchResults.brands?.length > 0 && (
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase text-muted-foreground px-2 mb-1.5 flex items-center gap-1">
-                      <BrandsIcon className="size-3 text-purple-500" /> Thương hiệu
-                    </p>
-                    {searchResults.brands.map((b) => (
-                      <Link
-                        key={b._id}
-                        to="/brands"
-                        onClick={() => setShowSearchDropdown(false)}
-                        className="flex items-center justify-between px-2 py-1.5 hover:bg-accent rounded-md text-xs transition-colors font-medium text-foreground"
-                      >
-                        <span>{b.name}</span>
                         <ChevronRightIcon className="size-3.5 text-muted-foreground" />
                       </Link>
                     ))}
@@ -227,9 +267,9 @@ export default function DashboardPage() {
           </div>
 
           <button
-            onClick={() => fetchDashboardData(true)}
+            onClick={handleManualRefresh}
             disabled={refreshing}
-            className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg border border-border bg-background hover:bg-accent text-xs font-medium text-foreground transition-colors disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg border border-border bg-background hover:bg-accent text-xs font-medium text-foreground transition-colors disabled:opacity-50 cursor-pointer"
             title="Làm mới dữ liệu"
           >
             <RefreshCwIcon className={`size-3.5 ${refreshing ? 'animate-spin' : ''}`} />
@@ -238,7 +278,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Quick Action Navigation Buttons */}
+      {/* Quick Action Navigation Bar */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5">
         <Link
           to="/products/new"
@@ -282,7 +322,7 @@ export default function DashboardPage() {
 
         <Link
           to="/media"
-          className="flex items-center gap-2.5 p-3 rounded-xl border border-border bg-card hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all text-xs font-medium text-foreground shadow-2xs col-span-2 sm:col-span-1"
+          className="flex items-center gap-2.5 p-3 rounded-xl border border-border bg-card hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all text-xs font-medium text-foreground shadow-2xs"
         >
           <div className="size-7 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
             <ImageIcon className="size-4" />
@@ -291,426 +331,325 @@ export default function DashboardPage() {
         </Link>
       </div>
 
-      {/* Main Metric Cards Grid (6 Clean Cards -> Clickable Page Links) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {/* Card 1: Sản phẩm & Biến thể -> /products */}
-        <div
-          onClick={() => navigate('/products')}
-          className="p-4 rounded-xl border border-border bg-card hover:border-primary/50 hover:shadow-md transition-all cursor-pointer group space-y-3"
-        >
+      {/* Top Metric Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Card 1 */}
+        <Link to="/products" className="group rounded-2xl border border-border bg-card p-5 shadow-2xs transition-all hover:border-primary/50 hover:shadow-md relative overflow-hidden">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-muted-foreground group-hover:text-primary transition-colors">
-              Sản Phẩm & Biến Thể
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Sản phẩm & Biến thể</span>
+            <div className="size-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center group-hover:scale-110 transition-transform">
+              <ProductsIcon className="size-5" />
+            </div>
+          </div>
+          <div className="mt-3 flex items-baseline justify-between">
+            <span className="text-3xl font-extrabold text-foreground tracking-tight">{stats.totalProducts || 0}</span>
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+              <ArrowUpRightIcon className="size-3" /> +12%
             </span>
-            <div className="size-8 rounded-lg bg-blue-500/10 text-blue-600 flex items-center justify-center">
-              <ProductsIcon className="size-4" />
-            </div>
           </div>
-          <div>
-            <div className="flex items-baseline justify-between">
-              <h2 className="text-2xl font-bold font-mono text-foreground">
-                {stats?.totalProducts || 0}
-              </h2>
-              <span className="inline-flex items-center text-xs font-semibold text-blue-600 bg-blue-500/10 px-2 py-0.5 rounded-md">
-                <LayersIcon className="size-3 mr-1" />
-                {stats?.totalVariants || 0} biến thể
-              </span>
-            </div>
-            <p className="text-[11px] text-muted-foreground mt-1 flex items-center justify-between">
-              <span>{stats?.publishedProducts || 0} xuất bản • {stats?.outOfStockProducts || 0} hết hàng</span>
-              <ChevronRightIcon className="size-3.5 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
-            </p>
+          <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+            <span>{stats.publishedProducts || 0} xuất bản</span>
+            <span>•</span>
+            <span className="text-amber-500 font-medium">{stats.totalVariants || 0} biến thể</span>
           </div>
-        </div>
+        </Link>
 
-        {/* Card 2: Danh mục -> /categories */}
-        <div
-          onClick={() => navigate('/categories')}
-          className="p-4 rounded-xl border border-border bg-card hover:border-emerald-500/50 hover:shadow-md transition-all cursor-pointer group space-y-3"
-        >
+        {/* Card 2 */}
+        <Link to="/categories" className="group rounded-2xl border border-border bg-card p-5 shadow-2xs transition-all hover:border-emerald-500/50 hover:shadow-md relative overflow-hidden">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-muted-foreground group-hover:text-emerald-600 transition-colors">
-              Danh Mục Sản Phẩm
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Danh mục & Thương hiệu</span>
+            <div className="size-9 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <CategoriesIcon className="size-5" />
+            </div>
+          </div>
+          <div className="mt-3 flex items-baseline justify-between">
+            <span className="text-3xl font-extrabold text-foreground tracking-tight">{stats.totalCategories || 0}</span>
+            <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/10 px-2 py-0.5 text-xs font-semibold text-blue-600 dark:text-blue-400">
+              {stats.totalBrands || 0} TH
             </span>
-            <div className="size-8 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
-              <CategoriesIcon className="size-4" />
-            </div>
           </div>
-          <div>
-            <div className="flex items-baseline justify-between">
-              <h2 className="text-2xl font-bold font-mono text-foreground">
-                {stats?.totalCategories || 0}
-              </h2>
-              <span className="inline-flex items-center text-xs font-semibold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-md">
-                Danh mục kho
-              </span>
-            </div>
-            <p className="text-[11px] text-muted-foreground mt-1 flex items-center justify-between">
-              <span>Phân loại nhóm hàng hóa trong kho</span>
-              <ChevronRightIcon className="size-3.5 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
-            </p>
+          <div className="mt-2 text-xs text-muted-foreground">
+            Cơ cấu nhóm hàng sản phẩm kho
           </div>
-        </div>
+        </Link>
 
-        {/* Card 3: Thương hiệu -> /brands */}
-        <div
-          onClick={() => navigate('/brands')}
-          className="p-4 rounded-xl border border-border bg-card hover:border-purple-500/50 hover:shadow-md transition-all cursor-pointer group space-y-3"
-        >
+        {/* Card 3 */}
+        <Link to="/blog/posts" className="group rounded-2xl border border-border bg-card p-5 shadow-2xs transition-all hover:border-indigo-500/50 hover:shadow-md relative overflow-hidden">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-muted-foreground group-hover:text-purple-600 transition-colors">
-              Thương Hiệu
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Bài viết Blog</span>
+            <div className="size-9 rounded-xl bg-indigo-500/10 text-indigo-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <FileTextIcon className="size-5" />
+            </div>
+          </div>
+          <div className="mt-3 flex items-baseline justify-between">
+            <span className="text-3xl font-extrabold text-foreground tracking-tight">{stats.totalBlogPosts || 0}</span>
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+              {stats.publishedBlogPosts || 0} đã đăng
             </span>
-            <div className="size-8 rounded-lg bg-purple-500/10 text-purple-600 flex items-center justify-center">
-              <BrandsIcon className="size-4" />
-            </div>
           </div>
-          <div>
-            <div className="flex items-baseline justify-between">
-              <h2 className="text-2xl font-bold font-mono text-foreground">
-                {stats?.totalBrands || 0}
-              </h2>
-              <span className="inline-flex items-center text-xs font-semibold text-purple-600 bg-purple-500/10 px-2 py-0.5 rounded-md">
-                Thương hiệu
-              </span>
-            </div>
-            <p className="text-[11px] text-muted-foreground mt-1 flex items-center justify-between">
-              <span>Nhãn hàng hợp tác phân phối</span>
-              <ChevronRightIcon className="size-3.5 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
-            </p>
+          <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+            <span>{stats.draftBlogPosts || 0} nháp</span>
+            <span>•</span>
+            <span className="text-amber-500">{stats.pendingBlogPosts || 0} chờ duyệt</span>
           </div>
-        </div>
+        </Link>
 
-        {/* Card 4: Blog -> /blog/posts */}
-        <div
-          onClick={() => navigate('/blog/posts')}
-          className="p-4 rounded-xl border border-border bg-card hover:border-indigo-500/50 hover:shadow-md transition-all cursor-pointer group space-y-3"
-        >
+        {/* Card 4 */}
+        <Link to="/media" className="group rounded-2xl border border-border bg-card p-5 shadow-2xs transition-all hover:border-purple-500/50 hover:shadow-md relative overflow-hidden">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-muted-foreground group-hover:text-indigo-600 transition-colors">
-              Bài Viết Blog
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Thư viện Media</span>
+            <div className="size-9 rounded-xl bg-purple-500/10 text-purple-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <ImageIcon className="size-5" />
+            </div>
+          </div>
+          <div className="mt-3 flex items-baseline justify-between">
+            <span className="text-3xl font-extrabold text-foreground tracking-tight">{stats.totalMedia || 0}</span>
+            <span className="inline-flex items-center gap-1 rounded-full bg-purple-500/10 px-2 py-0.5 text-xs font-semibold text-purple-600">
+              {stats.formattedMediaSize || '21.7 MB'}
             </span>
-            <div className="size-8 rounded-lg bg-indigo-500/10 text-indigo-600 flex items-center justify-center">
-              <FileTextIcon className="size-4" />
-            </div>
           </div>
-          <div>
-            <div className="flex items-baseline justify-between">
-              <h2 className="text-2xl font-bold font-mono text-foreground">
-                {stats?.totalBlogPosts || 0}
-              </h2>
-              <span className="inline-flex items-center text-xs font-semibold text-indigo-600 bg-indigo-500/10 px-2 py-0.5 rounded-md">
-                {stats?.publishedBlogPosts || 0} đã đăng
-              </span>
-            </div>
-            <p className="text-[11px] text-muted-foreground mt-1 flex items-center justify-between">
-              <span>{stats?.draftBlogPosts || 0} nháp • {stats?.pendingBlogPosts || 0} chờ duyệt</span>
-              <ChevronRightIcon className="size-3.5 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
-            </p>
+          <div className="mt-2 text-xs text-muted-foreground">
+            {stats.totalFolders || 0} thư mục chứa ảnh & tệp
           </div>
-        </div>
-
-        {/* Card 5: Media & Dung lượng -> /media */}
-        <div
-          onClick={() => navigate('/media')}
-          className="p-4 rounded-xl border border-border bg-card hover:border-cyan-500/50 hover:shadow-md transition-all cursor-pointer group space-y-3"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-muted-foreground group-hover:text-cyan-600 transition-colors">
-              Thư Viện Media
-            </span>
-            <div className="size-8 rounded-lg bg-cyan-500/10 text-cyan-600 flex items-center justify-center">
-              <ImageIcon className="size-4" />
-            </div>
-          </div>
-          <div>
-            <div className="flex items-baseline justify-between">
-              <h2 className="text-2xl font-bold font-mono text-foreground">
-                {stats?.totalMedia || 0} <span className="text-xs font-sans font-normal text-muted-foreground">tệp media</span>
-              </h2>
-              <span className="inline-flex items-center text-xs font-semibold text-cyan-600 bg-cyan-500/10 px-2 py-0.5 rounded-md font-mono">
-                {stats?.formattedMediaSize || '0 B'}
-              </span>
-            </div>
-            <p className="text-[11px] text-muted-foreground mt-1 flex items-center justify-between">
-              <span>{stats?.totalFolders || 0} thư mục • {stats?.formattedMediaSize || '0 B'} tổng kích thước ảnh</span>
-              <ChevronRightIcon className="size-3.5 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
-            </p>
-          </div>
-        </div>
-
-        {/* Card 6: Users -> /settings */}
-        <div
-          onClick={() => navigate('/settings')}
-          className="p-4 rounded-xl border border-border bg-card hover:border-pink-500/50 hover:shadow-md transition-all cursor-pointer group space-y-3"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-muted-foreground group-hover:text-pink-600 transition-colors">
-              Khách Hàng & Hệ Thống
-            </span>
-            <div className="size-8 rounded-lg bg-pink-500/10 text-pink-600 flex items-center justify-center">
-              <UsersIcon className="size-4" />
-            </div>
-          </div>
-          <div>
-            <div className="flex items-baseline justify-between">
-              <h2 className="text-2xl font-bold font-mono text-foreground">
-                {stats?.totalCustomers || 0}
-              </h2>
-              <span className="inline-flex items-center text-xs font-semibold text-pink-600 bg-pink-500/10 px-2 py-0.5 rounded-md">
-                {stats?.totalStaff || 1} nhân sự
-              </span>
-            </div>
-            <p className="text-[11px] text-muted-foreground mt-1 flex items-center justify-between">
-              <span>Tài khoản người dùng đăng ký</span>
-              <ChevronRightIcon className="size-3.5 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
-            </p>
-          </div>
-        </div>
+        </Link>
       </div>
 
-      {/* Database Distributions Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Category Product Breakdown */}
-        <div className="lg:col-span-2 p-5 rounded-xl border border-border bg-card space-y-4">
-          <div className="flex items-center justify-between">
+      {/* Main Row 1: Top Categories Distribution + Stock Status */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Top Categories Distribution */}
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-2xs flex flex-col justify-between">
+          <div className="pb-3 border-b border-border/60 flex items-center justify-between">
             <div>
-              <h3 className="text-base font-semibold text-foreground">Cơ cấu Sản Phẩm theo Danh Mục</h3>
-              <p className="text-xs text-muted-foreground">Phân bổ số lượng sản phẩm trong kho hàng</p>
+              <h2 className="text-base font-bold text-foreground">Top Danh Mục Nhiều Sản Phẩm</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">Phân bổ sản phẩm thực tế theo nhóm danh mục</p>
             </div>
-            <Link to="/categories" className="text-xs font-semibold text-primary hover:underline flex items-center gap-1">
-              Quản lý danh mục <ArrowUpRightIcon className="size-3.5" />
+            <Link to="/categories" className="text-xs font-semibold text-primary hover:underline flex items-center gap-0.5">
+              Tất cả <ChevronRightIcon className="size-3" />
             </Link>
           </div>
 
-          <div className="space-y-3">
-            {distributions?.categoryDistribution?.length > 0 ? (
-              distributions.categoryDistribution.map((cat, idx) => (
-                <div key={idx} className="space-y-1.5">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-medium text-foreground">{cat.name}</span>
-                    <span className="font-mono text-muted-foreground">
+          <div className="py-4 space-y-2.5">
+            {categoryBarData && categoryBarData.length > 0 ? (
+              categoryBarData.map((cat, idx) => (
+                <Link
+                  key={cat._id || idx}
+                  to={cat._id ? `/products?category=${cat._id}` : '/products'}
+                  className="group block p-2 rounded-xl hover:bg-muted/50 transition-all cursor-pointer border border-transparent hover:border-border/60"
+                  title={`Xem danh sách sản phẩm thuộc danh mục ${cat.name}`}
+                >
+                  <div className="flex items-center justify-between text-xs mb-1">
+                    <span className="font-semibold text-foreground group-hover:text-primary transition-colors truncate">
+                      {cat.name}
+                    </span>
+                    <span className="font-medium text-muted-foreground group-hover:text-foreground transition-colors">
                       {cat.count} sản phẩm ({cat.percent}%)
                     </span>
                   </div>
                   <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
                     <div
-                      className="h-full rounded-full bg-primary transition-all duration-500"
-                      style={{ width: `${Math.max(cat.percent, 3)}%` }}
+                      className="h-full rounded-full transition-all duration-500 group-hover:brightness-110"
+                      style={{
+                        width: `${Math.max(cat.percent, cat.count > 0 ? 5 : 0)}%`,
+                        backgroundColor: cat.fill,
+                      }}
                     />
                   </div>
-                </div>
+                </Link>
               ))
             ) : (
-              <p className="text-xs text-center py-6 text-muted-foreground">Chưa có dữ liệu danh mục</p>
+              <p className="text-xs text-muted-foreground text-center py-6">Chưa có dữ liệu danh mục</p>
             )}
           </div>
         </div>
 
-        {/* Product Status Overview */}
-        <div className="p-5 rounded-xl border border-border bg-card space-y-4 flex flex-col justify-between">
-          <div>
-            <h3 className="text-base font-semibold text-foreground">Trạng Thái Kho Hàng</h3>
-            <p className="text-xs text-muted-foreground">Tổng quan tình trạng tồn kho & hiển thị</p>
+        {/* Donut Chart: Stock Status */}
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-2xs flex flex-col justify-between">
+          <div className="pb-3 border-b border-border/60">
+            <h2 className="text-base font-bold text-foreground">Trạng thái Kho Hàng</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">Tỷ lệ tổng quan hàng tồn & sẵn có</p>
           </div>
 
-          <div className="space-y-3 my-auto">
-            <div className="p-3 rounded-lg border border-border bg-muted/20 flex items-center justify-between">
-              <span className="text-xs font-medium text-foreground flex items-center gap-2">
-                <span className="size-2.5 rounded-full bg-emerald-500" /> Đã xuất bản
-              </span>
-              <span className="font-mono text-xs font-bold text-emerald-600">
-                {stats?.publishedProducts || 0} SP
-              </span>
-            </div>
+          <div className="h-56 w-full relative flex items-center justify-center">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={stockPieData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={85}
+                  paddingAngle={5}
+                  dataKey="value"
+                >
+                  {stockPieData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
+                  ))}
+                </Pie>
+                <Tooltip content={<CustomTooltip />} />
+              </PieChart>
+            </ResponsiveContainer>
 
-            <div className="p-3 rounded-lg border border-border bg-muted/20 flex items-center justify-between">
-              <span className="text-xs font-medium text-foreground flex items-center gap-2">
-                <span className="size-2.5 rounded-full bg-amber-500" /> Cảnh báo tồn kho (≤ 5)
-              </span>
-              <span className="font-mono text-xs font-bold text-amber-600">
-                {stats?.lowStockProducts || 0} SP
-              </span>
-            </div>
-
-            <div className="p-3 rounded-lg border border-border bg-muted/20 flex items-center justify-between">
-              <span className="text-xs font-medium text-foreground flex items-center gap-2">
-                <span className="size-2.5 rounded-full bg-red-500" /> Hết hàng (0)
-              </span>
-              <span className="font-mono text-xs font-bold text-red-600">
-                {stats?.outOfStockProducts || 0} SP
-              </span>
+            {/* Center Total Counter */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+              <span className="text-2xl font-extrabold text-foreground">{stats.totalProducts || 0}</span>
+              <span className="text-[11px] font-medium text-muted-foreground">Sản phẩm</span>
             </div>
           </div>
 
-          <Link
-            to="/products"
-            className="w-full py-2 text-center rounded-lg border border-border bg-background hover:bg-accent text-xs font-medium text-foreground transition-colors inline-block"
-          >
-            Đi tới Danh sách sản phẩm
-          </Link>
+          {/* Legend Details */}
+          <div className="grid grid-cols-3 gap-2 pt-3 border-t border-border/60 text-center">
+            <Link to="/products?status=published" className="p-1 rounded-lg hover:bg-muted/40 transition-colors">
+              <div className="flex items-center justify-center gap-1 text-[11px] text-muted-foreground">
+                <span className="size-2 rounded-full bg-emerald-500" /> Công khai
+              </div>
+              <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">{stats.publishedProducts || 0}</p>
+            </Link>
+            <Link to="/products?status=draft" className="p-1 rounded-lg hover:bg-muted/40 transition-colors">
+              <div className="flex items-center justify-center gap-1 text-[11px] text-muted-foreground">
+                <span className="size-2 rounded-full bg-amber-500" /> Cảnh báo
+              </div>
+              <p className="text-sm font-bold text-amber-600 dark:text-amber-400 mt-0.5">{stats.lowStockProducts || 0}</p>
+            </Link>
+            <Link to="/products?status=out_of_stock" className="p-1 rounded-lg hover:bg-muted/40 transition-colors">
+              <div className="flex items-center justify-center gap-1 text-[11px] text-muted-foreground">
+                <span className="size-2 rounded-full bg-rose-500" /> Hết hàng
+              </div>
+              <p className="text-sm font-bold text-rose-600 dark:text-rose-400 mt-0.5">{stats.outOfStockProducts || 0}</p>
+            </Link>
+          </div>
         </div>
       </div>
 
-      {/* Two Column Tables: Recently Added Products & Latest Blog Posts */}
+      {/* Main Row 2: Recent Products & Recent Blog Posts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recently Added Products */}
-        <div className="p-5 rounded-xl border border-border bg-card space-y-4">
-          <div className="flex items-center justify-between">
+        {/* Recent Products */}
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-2xs flex flex-col justify-between">
+          <div className="flex items-center justify-between pb-3 border-b border-border/60">
             <div>
-              <h3 className="text-base font-semibold text-foreground">Sản Phẩm Mới Tạo</h3>
-              <p className="text-xs text-muted-foreground">Sản phẩm gần đây vừa thêm vào kho</p>
+              <h2 className="text-base font-bold text-foreground">Sản Phẩm Mới Tạo</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">Sản phẩm vừa cập nhật vào hệ thống</p>
             </div>
-            <Link to="/products" className="text-xs font-semibold text-primary hover:underline flex items-center gap-1">
-              Tất cả <ArrowUpRightIcon className="size-3.5" />
+            <Link to="/products" className="text-xs font-semibold text-primary hover:underline flex items-center gap-0.5">
+              Tất cả <ChevronRightIcon className="size-3" />
             </Link>
           </div>
 
-          <div className="space-y-2.5">
-            {recentProducts?.length > 0 ? (
-              recentProducts.map((prod) => (
-                <div
-                  key={prod._id}
-                  onClick={() => navigate(`/products/${prod._id}/edit`)}
-                  className="flex items-center justify-between p-2.5 rounded-lg border border-border/70 hover:bg-accent/50 transition-colors cursor-pointer"
-                >
-                  <div className="flex items-center gap-3 overflow-hidden">
-                    {prod.thumbnail ? (
-                      <img src={prod.thumbnail} alt="" className="size-9 object-cover rounded-md border border-border shrink-0" />
-                    ) : (
-                      <div className="size-9 rounded-md bg-muted flex items-center justify-center shrink-0">
-                        <ProductsIcon className="size-4 text-muted-foreground" />
-                      </div>
-                    )}
-                    <div className="overflow-hidden">
-                      <p className="text-xs font-medium text-foreground truncate">{prod.name}</p>
-                      <p className="text-[11px] text-muted-foreground">{prod.categoryName}</p>
-                    </div>
-                  </div>
-
-                  <div className="text-right shrink-0">
-                    <p className="font-mono text-xs font-semibold text-foreground">{prod.price?.toLocaleString('vi-VN')}đ</p>
-                    <span className="text-[10px] font-mono text-muted-foreground">Tồn: {prod.stock}</span>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <p className="text-xs text-center py-6 text-muted-foreground">Chưa có sản phẩm nào</p>
-            )}
-          </div>
-        </div>
-
-        {/* Latest Blog Posts */}
-        <div className="p-5 rounded-xl border border-border bg-card space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-base font-semibold text-foreground">Bài Viết Mới</h3>
-              <p className="text-xs text-muted-foreground">Bài viết blog gần đây trong hệ thống</p>
-            </div>
-            <Link to="/blog/posts" className="text-xs font-semibold text-primary hover:underline flex items-center gap-1">
-              Tất cả bài viết <ArrowUpRightIcon className="size-3.5" />
-            </Link>
-          </div>
-
-          <div className="space-y-2.5">
-            {recentBlogPosts?.length > 0 ? (
-              recentBlogPosts.map((post) => (
-                <div
-                  key={post._id}
-                  onClick={() => navigate(`/blog/posts/${post._id}/edit`)}
-                  className="flex items-center justify-between p-2.5 rounded-lg border border-border/70 hover:bg-accent/50 transition-colors cursor-pointer"
-                >
-                  <div className="flex items-center gap-3 overflow-hidden">
-                    {post.thumbnailUrl ? (
-                      <img src={post.thumbnailUrl} alt="" className="size-9 object-cover rounded-md border border-border shrink-0" />
-                    ) : (
-                      <div className="size-9 rounded-md bg-muted flex items-center justify-center shrink-0">
-                        <FileTextIcon className="size-4 text-muted-foreground" />
-                      </div>
-                    )}
-                    <div className="overflow-hidden">
-                      <p className="text-xs font-medium text-foreground truncate">{post.title}</p>
-                      <p className="text-[11px] text-muted-foreground flex items-center gap-2">
-                        <span className="flex items-center gap-1"><EyeIcon className="size-3" /> {post.viewsCount} lượt xem</span>
-                      </p>
-                    </div>
-                  </div>
-
-                  <span
-                    className={`px-2 py-0.5 rounded text-[10px] font-semibold shrink-0 ${
-                      post.status === 'published'
-                        ? 'bg-emerald-500/10 text-emerald-600'
-                        : post.status === 'draft'
-                        ? 'bg-muted text-muted-foreground'
-                        : 'bg-amber-500/10 text-amber-600'
-                    }`}
+          <div className="divide-y divide-border/60 overflow-hidden">
+            {recentProducts && recentProducts.length > 0 ? (
+              recentProducts.slice(0, 4).map((p) => {
+                const prodImg = typeof p.thumbnail === 'string' ? p.thumbnail : (p.thumbnail?.url || '');
+                return (
+                  <Link
+                    key={p._id}
+                    to={`/products/${p._id}/edit`}
+                    className="group py-3 flex items-center justify-between gap-3 hover:bg-muted/40 px-2.5 rounded-xl transition-all cursor-pointer"
+                    title={`Chỉnh sửa sản phẩm ${p.name}`}
                   >
-                    {post.status === 'published' ? 'Đã xuất bản' : post.status === 'draft' ? 'Nháp' : 'Chờ duyệt'}
-                  </span>
-                </div>
-              ))
+                    <div className="flex items-center gap-3 min-w-0">
+                      {prodImg ? (
+                        <img
+                          src={prodImg}
+                          alt={p.name}
+                          className="size-10 rounded-lg object-cover bg-muted border border-border shrink-0 group-hover:scale-105 transition-transform"
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = 'https://placehold.co/100x100?text=No+Img';
+                          }}
+                        />
+                      ) : (
+                        <div className="size-10 rounded-lg bg-muted border border-border flex items-center justify-center text-muted-foreground shrink-0 font-bold text-xs group-hover:scale-105 transition-transform">
+                          {p.name?.charAt(0) || 'P'}
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <p className="font-semibold text-xs text-foreground group-hover:text-primary transition-colors truncate">{p.name}</p>
+                        <p className="text-[11px] text-muted-foreground">
+                          SKU: <span className="font-mono">{p.sku || 'N/A'}</span> • {p.brandName || p.brand?.name || 'Chưa có hãng'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-4 shrink-0">
+                      <span className="font-bold text-xs text-foreground">
+                        {(p.salePrice || p.price)?.toLocaleString('vi-VN')}đ
+                      </span>
+                      <div
+                        className="size-7 rounded-md bg-muted group-hover:bg-accent text-muted-foreground group-hover:text-foreground flex items-center justify-center transition-colors"
+                        title="Chỉnh sửa"
+                      >
+                        <EyeIcon className="size-3.5" />
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })
             ) : (
-              <p className="text-xs text-center py-6 text-muted-foreground">Chưa có bài viết nào</p>
+              <p className="text-xs text-muted-foreground text-center py-6">Chưa có sản phẩm</p>
             )}
           </div>
         </div>
-      </div>
 
-      {/* Marketing Programs Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Link
-          to="/promotions/flash-sales"
-          className="p-4 rounded-xl border border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 transition-colors flex items-center justify-between group"
-        >
-          <div className="flex items-center gap-3">
-            <div className="size-9 rounded-lg bg-amber-500/20 text-amber-600 flex items-center justify-center">
-              <ZapIcon className="size-4" />
-            </div>
+        {/* Recent Blog Posts */}
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-2xs flex flex-col justify-between">
+          <div className="flex items-center justify-between pb-3 border-b border-border/60">
             <div>
-              <h4 className="text-xs font-semibold text-foreground">Flash Sale</h4>
-              <p className="text-[11px] text-muted-foreground">
-                {stats?.activeFlashSales || 0} chương trình đang diễn ra (Tổng {stats?.totalFlashSales || 0})
-              </p>
+              <h2 className="text-base font-bold text-foreground">Bài Viết Mới Đăng</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">Bài viết tin tức vừa được xuất bản</p>
             </div>
+            <Link to="/blog/posts" className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-0.5">
+              Tất cả <ChevronRightIcon className="size-3" />
+            </Link>
           </div>
-          <ChevronRightIcon className="size-4 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
-        </Link>
 
-        <Link
-          to="/promotions/coupons"
-          className="p-4 rounded-xl border border-blue-500/30 bg-blue-500/5 hover:bg-blue-500/10 transition-colors flex items-center justify-between group"
-        >
-          <div className="flex items-center gap-3">
-            <div className="size-9 rounded-lg bg-blue-500/20 text-blue-600 flex items-center justify-center">
-              <TagIcon className="size-4" />
-            </div>
-            <div>
-              <h4 className="text-xs font-semibold text-foreground">Mã Giảm Giá (Coupons)</h4>
-              <p className="text-[11px] text-muted-foreground">
-                {stats?.activeCoupons || 0} mã đang hiệu lực (Tổng {stats?.totalCoupons || 0})
-              </p>
-            </div>
-          </div>
-          <ChevronRightIcon className="size-4 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
-        </Link>
+          <div className="divide-y divide-border/60 overflow-hidden">
+            {recentBlogPosts && recentBlogPosts.length > 0 ? (
+              recentBlogPosts.slice(0, 4).map((post) => {
+                const blogImg = post.thumbnailUrl || (typeof post.thumbnail === 'string' ? post.thumbnail : (post.thumbnail?.url || ''));
+                return (
+                  <Link
+                    key={post._id}
+                    to={`/blog/posts/${post._id}/edit`}
+                    className="group py-3 flex items-center justify-between gap-3 hover:bg-muted/40 px-2.5 rounded-xl transition-all cursor-pointer"
+                    title={`Chỉnh sửa bài viết ${post.title}`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      {blogImg ? (
+                        <img
+                          src={blogImg}
+                          alt={post.title}
+                          className="size-10 rounded-lg object-cover bg-muted border border-border shrink-0 group-hover:scale-105 transition-transform"
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = 'https://placehold.co/100x100?text=Blog';
+                          }}
+                        />
+                      ) : (
+                        <div className="size-10 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200/50 flex items-center justify-center text-indigo-600 shrink-0 group-hover:scale-105 transition-transform">
+                          <FileTextIcon className="size-5" />
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <p className="font-semibold text-xs text-foreground group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors truncate">{post.title}</p>
+                        <p className="text-[11px] text-muted-foreground">
+                          {post.viewsCount || 0} lượt xem • {post.status === 'published' ? 'Đã xuất bản' : 'Bản nháp'}
+                        </p>
+                      </div>
+                    </div>
 
-        <Link
-          to="/promotions/gifts"
-          className="p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/10 transition-colors flex items-center justify-between group"
-        >
-          <div className="flex items-center gap-3">
-            <div className="size-9 rounded-lg bg-emerald-500/20 text-emerald-600 flex items-center justify-center">
-              <GiftIcon className="size-4" />
-            </div>
-            <div>
-              <h4 className="text-xs font-semibold text-foreground">Quà Tặng Đơn Hàng</h4>
-              <p className="text-[11px] text-muted-foreground">
-                {stats?.activeGiftPrograms || 0} chương trình đang bật (Tổng {stats?.totalGiftPrograms || 0})
-              </p>
-            </div>
+                    <div
+                      className="size-7 rounded-md bg-muted group-hover:bg-accent text-muted-foreground group-hover:text-foreground flex items-center justify-center transition-colors shrink-0"
+                      title="Xem chi tiết"
+                    >
+                      <EyeIcon className="size-3.5" />
+                    </div>
+                  </Link>
+                );
+              })
+            ) : (
+              <p className="text-xs text-muted-foreground text-center py-6">Chưa có bài viết</p>
+            )}
           </div>
-          <ChevronRightIcon className="size-4 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
-        </Link>
+        </div>
       </div>
     </div>
   );

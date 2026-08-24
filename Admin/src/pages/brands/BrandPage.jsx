@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   Plus, Pencil, Trash2,
   ToggleLeft, ToggleRight,
-  Loader2, Globe,
+  Loader2, Globe, RefreshCw,
 } from '@/components/ui/Icons';
 import { toast } from '@/providers/ToastProvider';
 import {
@@ -17,6 +17,7 @@ import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import MediaPickerModal from '@/components/ui/MediaPickerModal';
 import DataTablePagination from '@/components/ui/DataTablePagination';
 import { useSearchParams } from 'react-router-dom';
+import Can from '@/components/auth/Can';
 
 const DEFAULT_FORM = {
   name: '',
@@ -204,13 +205,26 @@ export default function BrandPage() {
           </p>
         </div>
 
-        <button
-          className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground shadow-xs hover:bg-primary/90 transition-colors cursor-pointer"
-          onClick={openCreate}
-        >
-          <Plus size={16} />
-          Tạo thương hiệu
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => res.refetch()}
+            className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-input bg-background px-3 text-sm font-medium text-foreground hover:bg-muted transition-colors cursor-pointer"
+            title="Làm mới dữ liệu"
+          >
+            <RefreshCw size={15} className={isLoading ? 'animate-spin' : ''} />
+            Làm mới
+          </button>
+
+          <Can do="brand.manage">
+            <button
+              className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground shadow-xs hover:bg-primary/90 transition-colors cursor-pointer"
+              onClick={openCreate}
+            >
+              <Plus size={16} />
+              Tạo thương hiệu
+            </button>
+          </Can>
+        </div>
       </div>
 
       {/* Search + Bulk actions */}
@@ -357,42 +371,44 @@ export default function BrandPage() {
                     {/* Actions */}
                     <td className="px-3.5 py-3 align-middle">
                       <div className="flex items-center gap-1">
-                        <button
-                          className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer"
-                          title="Sửa"
-                          onClick={() => openEdit(brand)}
-                        >
-                          <Pencil size={15} />
-                        </button>
+                        <Can do="brand.manage">
+                          <button
+                            className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer"
+                            title="Sửa"
+                            onClick={() => openEdit(brand)}
+                          >
+                            <Pencil size={15} />
+                          </button>
 
-                        <button
-                          className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer"
-                          title={
-                            brand.isActive ? 'Ẩn' : 'Hiện'
-                          }
-                          onClick={() =>
-                            handleToggle(brand)
-                          }
-                        >
-                          {brand.isActive ? (
-                            <ToggleRight
-                              size={15}
-                              className="text-emerald-600 dark:text-emerald-400"
-                            />
-                          ) : (
-                            <ToggleLeft size={15} />
-                          )}
-                        </button>
+                          <button
+                            className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer"
+                            title={
+                              brand.isActive ? 'Ẩn' : 'Hiện'
+                            }
+                            onClick={() =>
+                              handleToggle(brand)
+                            }
+                          >
+                            {brand.isActive ? (
+                              <ToggleRight
+                                size={15}
+                                className="text-emerald-600 dark:text-emerald-400"
+                              />
+                            ) : (
+                              <ToggleLeft size={15} />
+                            )}
+                          </button>
 
-                        <button
-                          className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors cursor-pointer"
-                          title="Xóa"
-                          onClick={() =>
-                            setDeleteTarget(brand)
-                          }
-                        >
-                          <Trash2 size={15} />
-                        </button>
+                          <button
+                            className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors cursor-pointer"
+                            title="Xóa"
+                            onClick={() =>
+                              setDeleteTarget(brand)
+                            }
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </Can>
                       </div>
                     </td>
                   </tr>

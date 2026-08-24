@@ -9,6 +9,8 @@ import { authService } from '@/services/auth.service';
 import useAuthStore from '@/store/authStore';
 import { cn } from '@/lib/utils';
 
+import { getDefaultRedirectPath } from '@/utils/permissionUtils';
+
 const schema = z.object({
   email: z.string().email('Email không hợp lệ'),
   password: z.string().min(6, 'Mật khẩu tối thiểu 6 ký tự'),
@@ -26,13 +28,17 @@ export default function LoginPage() {
   const onSubmit = async (values) => {
     try {
       const { data } = await authService.login(values);
+      const user = data.data.user;
       setAuth({
-        user: data.data.user,
+        user,
         accessToken: data.data.accessToken,
         refreshToken: data.data.refreshToken,
       });
       toast.success(data.message || 'Đăng nhập thành công!');
-      navigate('/media');
+      
+      // Chuyển hướng thông minh theo đúng quyền hạn của tài khoản
+      const targetPath = getDefaultRedirectPath(user);
+      navigate(targetPath, { replace: true });
     } catch (err) {
       const msg = err.response?.data?.message ?? err.message ?? 'Có lỗi xảy ra';
       toast.error(msg);

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Loader2 } from '@/components/ui/Icons';
-import { useBlogPost, useBlogCategories, useTags } from '@/hooks/useBlog';
+import { useBlogPost, useBlogCategories, useBlogTags } from '@/hooks/useBlog';
 import { blogPostService } from '@/services/blog.service';
 import { toast } from '@/providers/ToastProvider';
 import RichTextEditor from '@/components/ui/RichTextEditor';
@@ -43,9 +43,12 @@ export default function BlogPostFormPage() {
   const isEdit   = Boolean(id);
   const { user } = useAuthStore();
 
-  const { data: existing, loading: loadingPost } = useBlogPost(id);
-  const { data: categories } = useBlogCategories({ limit: 100 });
-  const { data: allTags }    = useTags({ limit: 200 });
+  const { data: existing, isLoading: loadingPost } = useBlogPost(id);
+  const { data: categoriesData } = useBlogCategories({ limit: 100 });
+  const { data: allTagsData }    = useBlogTags({ limit: 200 });
+
+  const categories = categoriesData?.data || [];
+  const allTags = allTagsData?.data || [];
 
   const [form, setForm]           = useState(DEFAULT_FORM);
   const [saving, setSaving]       = useState(false);

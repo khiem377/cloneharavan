@@ -51,8 +51,8 @@ const NAV_GROUPS = [
     label: 'Quản lý',
     items: [
       { to: '/dashboard', icon: DashboardIcon, label: 'Dashboard' },
-      { to: '/media', icon: MediaIcon, label: 'Media' },
-      { to: '/banners', icon: BannersIcon, label: 'Banners' },
+      { to: '/media', icon: MediaIcon, label: 'Media', permission: 'media.manage' },
+      { to: '/banners', icon: BannersIcon, label: 'Banners', permission: 'media.manage' },
     ],
   },
   {
@@ -61,13 +61,14 @@ const NAV_GROUPS = [
       {
         icon: ProductsIcon,
         label: 'Sản phẩm',
+        permission: 'product.view',
         children: [
-          { to: '/products', icon: ListIcon, label: 'Danh sách' },
-          { to: '/products/new', icon: PlusIcon, label: 'Tạo mới' },
-          { to: '/products/import', icon: ImportIcon, label: 'Import / Export' },
-          { to: '/categories', icon: CategoriesIcon, label: 'Danh mục' },
-          { to: '/brands', icon: BrandsIcon, label: 'Thương hiệu' },
-          { to: '/products?view=variants', icon: VariantsIcon, label: 'Biến thể' },
+          { to: '/products', icon: ListIcon, label: 'Danh sách', permission: 'product.view' },
+          { to: '/products/new', icon: PlusIcon, label: 'Tạo mới', permission: 'product.create' },
+          { to: '/products/import', icon: ImportIcon, label: 'Import / Export', permission: 'product.create' },
+          { to: '/categories', icon: CategoriesIcon, label: 'Danh mục', permission: 'category.manage' },
+          { to: '/brands', icon: BrandsIcon, label: 'Thương hiệu', permission: 'brand.manage' },
+          { to: '/products?view=variants', icon: VariantsIcon, label: 'Biến thể', permission: 'product.view' },
         ],
       },
     ],
@@ -78,11 +79,12 @@ const NAV_GROUPS = [
       {
         icon: CouponsIcon,
         label: 'Khuyến mãi',
+        permission: 'promotion.view',
         children: [
-          { to: '/promotions/coupons', icon: CouponsIcon, label: 'Mã giảm giá' },
-          { to: '/promotions/discounts', icon: DiscountIcon, label: 'Chương trình khuyến mãi' },
-          { to: '/promotions/gifts', icon: GiftIcon, label: 'Chương trình tặng kèm' },
-          { to: '/promotions/flash-sales', icon: SparklesIcon, label: 'Flash Sale' },
+          { to: '/promotions/coupons', icon: CouponsIcon, label: 'Mã giảm giá', permission: 'promotion.view' },
+          { to: '/promotions/discounts', icon: DiscountIcon, label: 'Chương trình khuyến mãi', permission: 'promotion.manage' },
+          { to: '/promotions/gifts', icon: GiftIcon, label: 'Chương trình tặng kèm', permission: 'promotion.manage' },
+          { to: '/promotions/flash-sales', icon: SparklesIcon, label: 'Flash Sale', permission: 'promotion.manage' },
         ],
       },
     ],
@@ -93,11 +95,12 @@ const NAV_GROUPS = [
       {
         icon: SparklesIcon,
         label: 'Blog',
+        permission: 'blog.view',
         children: [
-          { to: '/blog/posts', icon: ListIcon, label: 'Bài viết' },
-          { to: '/blog/posts/new', icon: PlusIcon, label: 'Tạo bài mới' },
-          { to: '/blog/categories', icon: CategoriesIcon, label: 'Danh mục' },
-          { to: '/blog/tags', icon: KeyIcon, label: 'Tags' },
+          { to: '/blog/posts', icon: ListIcon, label: 'Bài viết', permission: 'blog.view' },
+          { to: '/blog/posts/new', icon: PlusIcon, label: 'Tạo bài mới', permission: 'blog.create' },
+          { to: '/blog/categories', icon: CategoriesIcon, label: 'Danh mục', permission: 'blog.edit' },
+          { to: '/blog/tags', icon: KeyIcon, label: 'Tags', permission: 'blog.edit' },
         ],
       },
     ],
@@ -105,8 +108,9 @@ const NAV_GROUPS = [
   {
     label: 'Hệ thống',
     items: [
-      { to: '/menus', icon: MenuNavIcon, label: 'Điều hướng' },
-      { to: '/settings', icon: SettingsIcon, label: 'Cài đặt' },
+      { to: '/menus', icon: MenuNavIcon, label: 'Điều hướng', permission: 'menu.manage' },
+      { to: '/roles', icon: KeyIcon, label: 'Vai trò & Quyền', permission: 'role.manage' },
+      { to: '/settings', icon: SettingsIcon, label: 'Cài đặt', permission: 'role.manage' },
     ],
   },
 ];
@@ -117,13 +121,23 @@ function NavGroupItem({ item }) {
   const navigate = useNavigate();
   const { state } = useSidebar();
   const isCollapsed = state === 'collapsed';
+  const hasPermission = useAuthStore((s) => s.hasPermission);
+
+  // Kiểm tra quyền item cha
+  if (item.permission && !hasPermission(item.permission)) {
+    return null;
+  }
 
   if (item.children) {
-    const childRoutes = item.children.map((c) => c.to);
+    // Lọc các children mà user có quyền
+    const validChildren = item.children.filter((c) => !c.permission || hasPermission(c.permission));
+    if (validChildren.length === 0) return null;
+
+    const childRoutes = validChildren.map((c) => c.to);
     const isAnyActive = childRoutes.some((r) => location.pathname.startsWith(r));
     const [open, setOpen] = useState(isAnyActive);
     const Icon = item.icon;
-    const firstChild = item.children[0]?.to ?? '/';
+    const firstChild = validChildren[0]?.to ?? '/';
 
     if (isCollapsed) {
       return (
@@ -156,7 +170,7 @@ function NavGroupItem({ item }) {
 
         {open && (
           <SidebarMenuSub>
-            {item.children.map(child => {
+            {validChildren.map(child => {
               const CIcon = child.icon;
               const isActive = location.pathname.startsWith(child.to);
               return (

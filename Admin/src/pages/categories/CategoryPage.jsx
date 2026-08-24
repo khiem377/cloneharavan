@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Plus, Pencil, Trash2, ChevronRight, ChevronDown, ToggleLeft, ToggleRight, Loader2 } from '@/components/ui/Icons';
+import { Plus, Pencil, Trash2, ChevronRight, ChevronDown, ToggleLeft, ToggleRight, Loader2, RefreshCw, Eye } from '@/components/ui/Icons';
 import { toast } from '@/providers/ToastProvider';
 import {
   useCategories, useCreateCategory, useUpdateCategory,
@@ -8,7 +8,11 @@ import {
 import { useBrands, useAllBrands } from '@/hooks/useBrands';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import MediaPickerModal from '@/components/ui/MediaPickerModal';
+import DataTablePagination from '@/components/ui/DataTablePagination';
 import { useSearchParams } from 'react-router-dom';
+import Can from '@/components/auth/Can';
+
+const CLIENT_STORE_URL = import.meta.env.VITE_STORE_FRONTEND_URL || import.meta.env.VITE_CLIENT_URL || 'http://localhost:3000';
 
 const DEFAULT_FORM = {
   name: '',
@@ -107,15 +111,24 @@ function CategoryRow({ cat, level = 0, selected, onSelect, onEdit, onDelete, onT
         <td className="px-3.5 py-3 align-middle text-muted-foreground font-mono text-xs">{cat.order}</td>
         <td className="px-3.5 py-3 align-middle">
           <div className="flex items-center gap-1">
-            <button className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer" title="Sửa" onClick={() => onEdit(cat)}>
-              <Pencil size={15} />
+            <button
+              className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer"
+              title="Xem trên Cửa hàng"
+              onClick={() => window.open(`${CLIENT_STORE_URL}/collections/${cat.slug}`, '_blank')}
+            >
+              <Eye size={15} />
             </button>
-            <button className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer" title={cat.isActive ? 'Ẩn' : 'Hiện'} onClick={() => onToggle(cat)}>
-              {cat.isActive ? <ToggleRight size={15} className="text-emerald-600 dark:text-emerald-400" /> : <ToggleLeft size={15} />}
-            </button>
-            <button className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors cursor-pointer" title="Xóa" onClick={() => onDelete(cat)}>
-              <Trash2 size={15} />
-            </button>
+            <Can do="category.manage">
+              <button className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer" title="Sửa" onClick={() => onEdit(cat)}>
+                <Pencil size={15} />
+              </button>
+              <button className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer" title={cat.isActive ? 'Ẩn' : 'Hiện'} onClick={() => onToggle(cat)}>
+                {cat.isActive ? <ToggleRight size={15} className="text-emerald-600 dark:text-emerald-400" /> : <ToggleLeft size={15} />}
+              </button>
+              <button className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors cursor-pointer" title="Xóa" onClick={() => onDelete(cat)}>
+                <Trash2 size={15} />
+              </button>
+            </Can>
           </div>
         </td>
       </tr>
@@ -147,9 +160,20 @@ export default function CategoryPage() {
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const { data: categories = [], isLoading } = useCategories({ keyword, tree: 'true' });
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  const { data: categories = [], isLoading, refetch } = useCategories({ keyword, tree: 'true' });
   const { data: flatCategories = [] } = useCategories({});
   const { data: brands = [] } = useAllBrands();
+
+  useEffect(() => {
+    setPage(1);
+  }, [keyword]);
+
+  const totalItems = categories.length;
+  const totalPages = Math.ceil(totalItems / pageSize) || 1;
+  const paginatedCategories = categories.slice((page - 1) * pageSize, page * pageSize);
 
   const highlightId = searchParams.get('highlight');
   useEffect(() => {
@@ -264,12 +288,25 @@ export default function CategoryPage() {
           <h1 className="text-2xl font-bold tracking-tight text-foreground">Danh mục</h1>
           <p className="text-xs text-muted-foreground mt-0.5">Quản lý danh mục sản phẩm</p>
         </div>
-        <button
-          className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground shadow-xs hover:bg-primary/90 transition-colors cursor-pointer"
-          onClick={openCreate}
-        >
-          <Plus size={16} /> Tạo danh mục
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => refetch()}
+            className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-input bg-background px-3 text-sm font-medium text-foreground hover:bg-muted transition-colors cursor-pointer"
+            title="Làm mới dữ liệu"
+          >
+            <RefreshCw size={15} className={isLoading ? 'animate-spin' : ''} />
+            Làm mới
+          </button>
+
+          <Can do="category.manage">
+            <button
+              className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground shadow-xs hover:bg-primary/90 transition-colors cursor-pointer"
+              onClick={openCreate}
+            >
+              <Plus size={16} /> Tạo danh mục
+            </button>
+          </Can>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -314,7 +351,7 @@ export default function CategoryPage() {
                   <td colSpan={8} className="py-12 text-center text-sm text-muted-foreground">Chưa có danh mục nào</td>
                 </tr>
               ) : (
-                categories.map((cat) => (
+                paginatedCategories.map((cat) => (
                   <CategoryRow
                     key={cat._id}
                     cat={cat}
@@ -332,6 +369,16 @@ export default function CategoryPage() {
           </table>
         )}
       </div>
+
+      <DataTablePagination
+        page={page}
+        pageSize={pageSize}
+        total={totalItems}
+        totalPages={totalPages}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+        pageSizeOptions={[10, 20, 50]}
+      />
 
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4" onClick={() => setShowForm(false)}>

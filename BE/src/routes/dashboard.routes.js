@@ -1,10 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const dashboardController = require('../controllers/dashboard.controller');
-const { protect, authorize } = require('../middleware/auth.middleware');
+const { protect } = require('../middleware/auth.middleware');
+const { requirePermission } = require('../middleware/permission.middleware');
 
 router.use(protect);
-router.use(authorize('admin', 'staff'));
+router.use(requirePermission('dashboard.view'));
 
 router.get('/overview', dashboardController.getOverviewStats);
 router.get('/search', dashboardController.searchGlobal);
