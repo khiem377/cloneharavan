@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight, Loader2, Gift, X } from '@/components/ui/Icons';
+import PriceInput from '@/components/ui/PriceInput';
+import DateTimePicker from '@/components/ui/DateTimePicker';
 import { toast } from '@/providers/ToastProvider';
 import {
   useGiftPrograms,
@@ -145,8 +147,13 @@ const DEFAULT_FORM = {
   isActive: true,
 };
 
+import { useSearchParams } from 'react-router-dom';
+
 export default function GiftProgramPage() {
-  const [keyword, setKeyword] = useState('');
+  const [searchParams] = useSearchParams();
+  const initialSearch = searchParams.get('search') || '';
+
+  const [keyword, setKeyword] = useState(initialSearch);
   const [filterStatus, setFilterStatus] = useState('');
   const [filterType, setFilterType] = useState('');
   const [page, setPage] = useState(1);
@@ -561,11 +568,20 @@ export default function GiftProgramPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs font-medium text-foreground">Ngày bắt đầu <span className="text-destructive">*</span></label>
-                    <input type="datetime-local" className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-ring transition-colors cursor-pointer" value={form.startDate} onChange={(e) => setForm((f) => ({ ...f, startDate: e.target.value }))} />
+                    <DateTimePicker
+                      value={form.startDate}
+                      onChange={(val) => setForm((f) => ({ ...f, startDate: val }))}
+                      placeholder="Chọn ngày bắt đầu..."
+                    />
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs font-medium text-foreground">Ngày kết thúc <span className="text-destructive">*</span></label>
-                    <input type="datetime-local" className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-ring transition-colors cursor-pointer" value={form.endDate} onChange={(e) => setForm((f) => ({ ...f, endDate: e.target.value }))} />
+                    <DateTimePicker
+                      value={form.endDate}
+                      onChange={(val) => setForm((f) => ({ ...f, endDate: val }))}
+                      placeholder="Chọn ngày kết thúc..."
+                      align="right"
+                    />
                   </div>
                 </div>
                 <div className="flex items-center gap-2 pt-1">

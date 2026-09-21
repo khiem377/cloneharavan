@@ -5,6 +5,8 @@ import { productService } from '@/services/product.service';
 import { productVariantService } from '@/services/productVariant.service';
 import { toast } from '@/providers/ToastProvider';
 import MediaPickerModal from '@/components/ui/MediaPickerModal';
+import { MediaThumbnailHover } from '@/components/ui/MediaFolderBadge';
+import DateTimePicker from '@/components/ui/DateTimePicker';
 
 export default function FlashSaleFormModal({ flashSale, onClose, onSuccess }) {
   const isEdit = !!flashSale;
@@ -312,11 +314,10 @@ export default function FlashSaleFormModal({ flashSale, onClose, onSuccess }) {
                 <label className="text-sm font-medium text-foreground">
                   Thời gian bắt đầu <span className="text-destructive">*</span>
                 </label>
-                <input
-                  type="datetime-local"
-                  className="w-full h-9 px-3 rounded-md border border-input bg-background text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 transition-colors"
+                <DateTimePicker
                   value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
+                  onChange={(val) => setStartDate(val)}
+                  placeholder="Chọn thời gian bắt đầu..."
                 />
               </div>
 
@@ -324,11 +325,10 @@ export default function FlashSaleFormModal({ flashSale, onClose, onSuccess }) {
                 <label className="text-sm font-medium text-foreground">
                   Thời gian kết thúc <span className="text-destructive">*</span>
                 </label>
-                <input
-                  type="datetime-local"
-                  className="w-full h-9 px-3 rounded-md border border-input bg-background text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 transition-colors"
+                <DateTimePicker
                   value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
+                  onChange={(val) => setEndDate(val)}
+                  placeholder="Chọn thời gian kết thúc..."
                 />
               </div>
 
@@ -347,7 +347,9 @@ export default function FlashSaleFormModal({ flashSale, onClose, onSuccess }) {
                 <label className="text-sm font-medium text-foreground">Banner chương trình</label>
                 {banner?.url ? (
                   <div className="relative h-32 rounded-lg border border-border overflow-hidden group">
-                    <img src={banner.url} alt="banner" className="size-full object-cover" />
+                  <MediaThumbnailHover media={banner}>
+                      <img src={banner.url} alt="banner" className="size-full object-cover" />
+                    </MediaThumbnailHover>
                     <button
                       type="button"
                       onClick={() => setShowMediaPicker(true)}

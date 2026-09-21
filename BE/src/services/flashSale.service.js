@@ -205,6 +205,14 @@ const toggleFlashSaleStatus = async (id, isActive) => {
   return flashSale;
 };
 
+const locateFlashSale = async (id, limit = 10) => {
+  const sale = await FlashSale.findById(id).select('_id createdAt');
+  if (!sale) throw new AppError('Không tìm thấy flash sale', 404);
+  const positionBefore = await FlashSale.countDocuments({ createdAt: { $gt: sale.createdAt } });
+  const page = Math.ceil((positionBefore + 1) / limit);
+  return { page: Math.max(1, page), flashSaleId: id };
+};
+
 module.exports = {
   createFlashSale,
   getAllFlashSales,
@@ -213,4 +221,5 @@ module.exports = {
   updateFlashSale,
   deleteFlashSale,
   toggleFlashSaleStatus,
+  locateFlashSale,
 };
