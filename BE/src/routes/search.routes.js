@@ -2,8 +2,12 @@ const express    = require('express');
 const router     = express.Router();
 const controller = require('../controllers/search.controller');
 const { protect } = require('../middleware/auth.middleware');
+const { upload }  = require('../middleware/upload.middleware');
 
 // ── Public: Client Frontend ────────────────────────────────────────────────
+
+// Image Visual Search: POST /api/v1/search/image
+router.post('/image',   upload.single('image'), controller.searchByImage);
 
 // Full search: GET /api/search?q=iphone&domain=products&limit=20
 router.get('/',         controller.globalSearch);

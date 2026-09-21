@@ -69,6 +69,32 @@ const recordPurchaseKeyword = async (req, res, next) => {
   }
 };
 
+const visualSearchService = require('../services/visualSearch.service');
+
+const searchByImage = async (req, res, next) => {
+  try {
+    if (!req.file || !req.file.buffer) {
+      return res.status(400).json({
+        success: false,
+        message: 'Vui lòng cung cấp file ảnh hợp lệ (JPEG, PNG, WebP)',
+      });
+    }
+
+    const result = await visualSearchService.searchByImage(
+      req.file.buffer,
+      req.file.mimetype,
+      req.query
+    );
+
+    res.json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   globalSearch,
   getInstantSuggestions,
@@ -76,4 +102,5 @@ module.exports = {
   toggleKeywordTrending,
   recordSearchClick,
   recordPurchaseKeyword,
+  searchByImage,
 };

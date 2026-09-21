@@ -1,0 +1,246 @@
+{
+  "info": {
+    "_postman_id": "visual-search-test-2026",
+    "name": "🔍 Visual Image Search — Clone Haravan",
+    "description": "Test tìm kiếm sản phẩm bằng hình ảnh qua Vision AI (Gemini 1.5 Flash + Groq Llama 3.2 fallback).\n\n**Cách dùng:**\n1. Chọn request muốn test\n2. Tab Body → form-data → chọn field `image` → upload file ảnh (JPEG/PNG/WebP)\n3. Bấm Send và xem kết quả\n\n**API Endpoint:** POST /api/v1/search/image",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:5000/api/v1",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "🖼️ Search by Image — Basic",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "image",
+              "type": "file",
+              "src": "",
+              "description": "Upload ảnh sản phẩm cần tìm (JPEG / PNG / WebP, tối đa 5MB)"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{base_url}}/search/image",
+          "host": ["{{base_url}}"],
+          "path": ["search", "image"]
+        },
+        "description": "Tìm kiếm cơ bản — upload ảnh, trả về top 12 sản phẩm khớp nhất.\n\nAI sẽ tự nhận diện:\n- Loại sản phẩm (Tivi, Tủ lạnh, Máy lạnh...)\n- Thương hiệu (Samsung, Sony, LG...)\n- Model/Dòng sản phẩm\n- Kích thước (55 inch, 300 lít...)"
+      },
+      "response": [
+        {
+          "name": "✅ Kết quả thành công (Tivi Samsung 55 inch)",
+          "originalRequest": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": ""
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/search/image",
+              "host": ["{{base_url}}"],
+              "path": ["search", "image"]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"success\": true,\n  \"data\": {\n    \"detected\": {\n      \"category\": \"Tivi\",\n      \"brand\": \"Samsung\",\n      \"model\": \"Crystal UHD\",\n      \"color\": \"Đen\",\n      \"screenSize\": \"55 inch\",\n      \"detectedText\": \"SAMSUNG Crystal UHD 4K\",\n      \"searchKeywords\": [\"tivi samsung\", \"crystal uhd\", \"55 inch\", \"4k tivi\", \"smart tv samsung\"]\n    },\n    \"totalFound\": 5,\n    \"products\": [\n      {\n        \"_id\": \"64f1a2b3c4d5e6f7a8b9c0d1\",\n        \"name\": \"Smart Tivi Samsung Crystal 4K 55 inch UA55CU8000\",\n        \"slug\": \"smart-tivi-samsung-crystal-4k-55-inch-ua55cu8000\",\n        \"brand\": { \"name\": \"Samsung\", \"slug\": \"samsung\" },\n        \"categories\": [{ \"name\": \"Tivi\", \"slug\": \"tivi\" }],\n        \"thumbnail\": \"https://res.cloudinary.com/.../samsung-55.jpg\",\n        \"price\": 12990000,\n        \"originalPrice\": 15990000,\n        \"variantsCount\": 1,\n        \"matchScore\": 98\n      },\n      {\n        \"_id\": \"64f1a2b3c4d5e6f7a8b9c0d2\",\n        \"name\": \"Smart Tivi Samsung Crystal 4K 43 inch UA43CU8000\",\n        \"slug\": \"smart-tivi-samsung-crystal-4k-43-inch-ua43cu8000\",\n        \"brand\": { \"name\": \"Samsung\", \"slug\": \"samsung\" },\n        \"categories\": [{ \"name\": \"Tivi\", \"slug\": \"tivi\" }],\n        \"thumbnail\": \"https://res.cloudinary.com/.../samsung-43.jpg\",\n        \"price\": 9490000,\n        \"originalPrice\": 11990000,\n        \"variantsCount\": 1,\n        \"matchScore\": 85\n      }\n    ]\n  }\n}"
+        }
+      ]
+    },
+    {
+      "name": "🖼️ Search by Image — Limit 5 kết quả",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "image",
+              "type": "file",
+              "src": "",
+              "description": "Upload ảnh sản phẩm cần tìm"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{base_url}}/search/image?limit=5",
+          "host": ["{{base_url}}"],
+          "path": ["search", "image"],
+          "query": [
+            {
+              "key": "limit",
+              "value": "5",
+              "description": "Số lượng kết quả trả về (mặc định 12, tối đa 30)"
+            }
+          ]
+        },
+        "description": "Giống request cơ bản nhưng giới hạn chỉ lấy top 5 sản phẩm.\nDùng khi cần hiển thị nhanh trên mobile."
+      },
+      "response": []
+    },
+    {
+      "name": "🖼️ Search by Image — Limit 20 kết quả",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "image",
+              "type": "file",
+              "src": "",
+              "description": "Upload ảnh sản phẩm cần tìm"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{base_url}}/search/image?limit=20",
+          "host": ["{{base_url}}"],
+          "path": ["search", "image"],
+          "query": [
+            {
+              "key": "limit",
+              "value": "20",
+              "description": "Trả về nhiều kết quả hơn"
+            }
+          ]
+        },
+        "description": "Lấy nhiều kết quả hơn để xem toàn bộ danh sách sản phẩm phù hợp."
+      },
+      "response": []
+    },
+    {
+      "name": "❌ Test thiếu file ảnh (lỗi 400)",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": []
+        },
+        "url": {
+          "raw": "{{base_url}}/search/image",
+          "host": ["{{base_url}}"],
+          "path": ["search", "image"]
+        },
+        "description": "Test trường hợp không gửi file ảnh — API phải trả về lỗi 400 kèm thông báo hướng dẫn."
+      },
+      "response": [
+        {
+          "name": "❌ 400 — Thiếu file ảnh",
+          "originalRequest": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": []
+            },
+            "url": {
+              "raw": "{{base_url}}/search/image",
+              "host": ["{{base_url}}"],
+              "path": ["search", "image"]
+            }
+          },
+          "status": "Bad Request",
+          "code": 400,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"success\": false,\n  \"message\": \"Vui lòng cung cấp file ảnh hợp lệ (JPEG, PNG, WebP)\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "❌ Test file sai định dạng (lỗi 400)",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "image",
+              "type": "file",
+              "src": "",
+              "description": "⚠️ Upload file PDF hoặc GIF để test lỗi định dạng"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{base_url}}/search/image",
+          "host": ["{{base_url}}"],
+          "path": ["search", "image"]
+        },
+        "description": "Test khi upload file không phải ảnh (PDF, GIF, MP4...) — phải báo lỗi 400 định dạng không hợp lệ."
+      },
+      "response": []
+    },
+    {
+      "name": "📋 AI Analyze Only — Chỉ xem AI nhận diện gì (debug)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "x-debug-mode",
+            "value": "analyze-only",
+            "type": "text",
+            "description": "Header debug (chỉ để tham khảo, không ảnh hưởng kết quả)"
+          }
+        ],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "image",
+              "type": "file",
+              "src": "",
+              "description": "Upload ảnh để xem AI nhận diện được gì từ trường detected trong response"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{base_url}}/search/image?limit=1",
+          "host": ["{{base_url}}"],
+          "path": ["search", "image"],
+          "query": [
+            {
+              "key": "limit",
+              "value": "1",
+              "description": "Chỉ cần 1 kết quả, focus xem trường detected của AI phân tích gì"
+            }
+          ]
+        },
+        "description": "Dùng để debug — xem trường `detected` trong response để kiểm tra AI có nhận diện đúng brand, category, model, screenSize không.\n\nNếu AI nhận diện sai → cần tinh chỉnh prompt trong visualSearch.service.js"
+      },
+      "response": []
+    }
+  ]
+}
