@@ -9,5 +9,6 @@ router.use(requirePermission('dashboard.view'));
 
 router.get('/overview', dashboardController.getOverviewStats);
 router.get('/search', dashboardController.searchGlobal);
+router.get('/inventory-stats', dashboardController.getInventoryStats);
 
 module.exports = router;

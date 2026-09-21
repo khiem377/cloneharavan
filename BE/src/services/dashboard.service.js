@@ -2,287 +2,320 @@ const Product = require('../models/product.model');
 const ProductVariant = require('../models/productVariant.model');
 const Category = require('../models/category.model');
 const Brand = require('../models/brand.model');
-const User = require('../models/user.model');
-const FlashSale = require('../models/flashSale.model');
-const Coupon = require('../models/coupon.model');
-const Promotion = require('../models/promotion.model');
-const GiftProgram = require('../models/gift-program.model');
 const BlogPost = require('../models/blogPost.model');
-const BlogCategory = require('../models/blogCategory.model');
-const Tag = require('../models/tag.model');
 const Media = require('../models/media.model');
 const Folder = require('../models/folder.model');
-const Banner = require('../models/banner.model');
+const StockMovement = require('../models/stockMovement.model');
 
-// Helper to format bytes to human-readable string (KB, MB, GB)
-const formatBytes = (bytes = 0) => {
-  if (!bytes || bytes <= 0) return '0 B';
+// ─ Helper: format bytes ───────────────────────────────────────────────────────────────────────
+const formatBytes = (bytes) => {
+  if (!bytes || bytes === 0) return '0 B';
   const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const sizes = ['B', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
 };
 
-const getOverviewStats = async () => {
+// ─ Helper: parse period string → { start, end, label } ────────────────────────────────────────────
+const parsePeriod = (period = '30days') => {
   const now = new Date();
+  const map = {
+    '7days':  { days: 7,   label: '7 ngày' },
+    '30days': { days: 30,  label: '30 ngày' },
+    '90days': { days: 90,  label: '90 ngày' },
+    '6months':{ days: 180, label: '6 tháng' },
+  };
+  const cfg = map[period] || map['30days'];
+  const start = new Date(now.getTime() - cfg.days * 24 * 60 * 60 * 1000);
+  return { start, end: now, label: cfg.label, days: cfg.days };
+};
 
+// ─ Helper: build N-slot time series ─────────────────────────────────────────────────────────────────────
+const MONTHS = ['Th1','Th2','Th3','Th4','Th5','Th6','Th7','Th8','Th9','Th10','Th11','Th12'];
+
+const buildMonthSlots = (numMonths) => {
+  const now = new Date();
+  return Array.from({ length: numMonths }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth() - (numMonths - 1 - i), 1);
+    const start = new Date(d.getFullYear(), d.getMonth(), 1);
+    const end   = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999);
+    return { label: MONTHS[d.getMonth()], start, end, year: d.getFullYear(), month: d.getMonth() + 1 };
+  });
+};
+
+const buildDaySlots = (numDays) => {
+  const now = new Date();
+  return Array.from({ length: numDays }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (numDays - 1 - i));
+    const start = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
+    const end   = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
+    return {
+      label: `${d.getDate()}/${d.getMonth() + 1}`,
+      start,
+      end,
+      year: d.getFullYear(),
+      month: d.getMonth() + 1,
+      day: d.getDate(),
+    };
+  });
+};
+
+
+// ==========================================================================
+// getOverviewStats — Main dashboard data
+// ==========================================================================
+const getOverviewStats = async (period = '30days') => {
+  const now = new Date();
+  const { start: periodStart, label: periodLabel } = parsePeriod(period);
+
+  // ── Basic Counts (all-time totals) ──────────────────────────────────────────────────────────────────────────────────
   const [
     totalProducts,
     publishedProducts,
-    draftProducts,
-    outOfStockProducts,
     lowStockProducts,
+    outOfStockProducts,
     totalVariants,
     totalCategories,
     totalBrands,
-    totalUsers,
-    totalCustomers,
-    totalStaff,
     totalBlogPosts,
     publishedBlogPosts,
     draftBlogPosts,
     pendingBlogPosts,
-    totalBlogCategories,
-    totalTags,
     totalMedia,
+    totalMediaBytesAgg,
     rawFolderCount,
     distinctMediaFolders,
-    totalBanners,
-    totalCoupons,
-    activeCoupons,
-    totalFlashSales,
-    activeFlashSales,
-    totalPromotions,
-    activePromotions,
-    totalGiftPrograms,
-    activeGiftPrograms,
-    mediaSizeAgg,
-    recentProducts,
-    recentBlogPosts,
-    lowStockItemsRaw,
+    // ── New-in-period deltas ──
+    newProducts,
+    newBlogPosts,
+    newMedia,
   ] = await Promise.all([
-    Product.countDocuments({}),
-    Product.countDocuments({ status: 'published' }),
-    Product.countDocuments({ status: 'draft' }),
-    Product.countDocuments({ stock: 0 }),
-    Product.countDocuments({ stock: { $gt: 0, $lte: 5 } }),
-    ProductVariant.countDocuments({}),
-    Category.countDocuments({}),
-    Brand.countDocuments({}),
-    User.countDocuments({}),
-    User.countDocuments({ role: 'customer' }),
-    User.countDocuments({ role: { $in: ['admin', 'staff'] } }),
+    Product.countDocuments({ isActive: true }),
+    Product.countDocuments({ isActive: true, status: 'published' }),
+    Product.countDocuments({ isActive: true, status: 'published', stock: { $gt: 0, $lte: 10 } }),
+    Product.countDocuments({ isActive: true, status: 'published', stock: { $lte: 0 } }),
+    ProductVariant.countDocuments({ isActive: true }),
+    Category.countDocuments({ isActive: true }),
+    Brand.countDocuments({ isActive: true }),
     BlogPost.countDocuments({}),
     BlogPost.countDocuments({ status: 'published' }),
     BlogPost.countDocuments({ status: 'draft' }),
-    BlogPost.countDocuments({ status: 'pending_review' }),
-    BlogCategory.countDocuments({}),
-    Tag.countDocuments({}),
+    BlogPost.countDocuments({ status: 'pending' }),
     Media.countDocuments({}),
+    Media.aggregate([{ $group: { _id: null, total: { $sum: '$size' } } }]),
     Folder.countDocuments({}),
     Media.distinct('folderId'),
-    Banner.countDocuments({}),
-    Coupon.countDocuments({}),
-    Coupon.countDocuments({ isActive: true, endDate: { $gte: now } }),
-    FlashSale.countDocuments({}),
-    FlashSale.countDocuments({ isActive: true, startDate: { $lte: now }, endDate: { $gte: now } }),
-    Promotion.countDocuments({}),
-    Promotion.countDocuments({ isActive: true, endDate: { $gte: now } }),
-    GiftProgram.countDocuments({}),
-    GiftProgram.countDocuments({ isActive: true, endDate: { $gte: now } }),
-    Media.aggregate([{ $group: { _id: null, totalSize: { $sum: '$size' } } }]),
-    Product.find({})
-      .select('name price salePrice stock thumbnail categories brand status createdAt')
-      .populate('categories', 'name')
-      .populate('brand', 'name')
-      .sort({ createdAt: -1 })
-      .limit(5),
-    BlogPost.find({})
-      .select('title slug status viewsCount thumbnailUrl publishedAt createdAt')
-      .sort({ createdAt: -1 })
-      .limit(5),
-    Product.find({ stock: { $lte: 5 } })
-      .select('name price salePrice stock thumbnail categories')
-      .populate('categories', 'name')
-      .limit(8),
+    // Deltas
+    Product.countDocuments({ isActive: true, createdAt: { $gte: periodStart } }),
+    BlogPost.countDocuments({ createdAt: { $gte: periodStart } }),
+    Media.countDocuments({ createdAt: { $gte: periodStart } }),
   ]);
 
-  const totalMediaBytes = mediaSizeAgg?.[0]?.totalSize || 0;
+  const totalMediaBytes = totalMediaBytesAgg[0]?.total || 0;
   const formattedMediaSize = formatBytes(totalMediaBytes);
   const totalFolders = Math.max(rawFolderCount || 0, (distinctMediaFolders || []).filter(Boolean).length);
 
-  // Aggregate Category Product Share (Thống kê Top danh mục có nhiều sản phẩm nhất)
+  // ── Category Distribution — aggregate 1 query ────────────────────────────────────────────────
   let categoryDistribution = [];
   try {
-    const allCategories = await Category.find({}).select('name').lean();
-    
-    // Đếm số lượng sản phẩm thực tế cho từng danh mục
-    const catCounts = await Promise.all(
-      allCategories.map(async (cat) => {
-        const count = await Product.countDocuments({
-          $or: [
-            { categories: cat._id },
-            { categories: cat._id.toString() }
-          ]
-        });
-        return {
-          _id: cat._id,
-          name: cat.name,
-          count,
-        };
-      })
-    );
+    const catAgg = await Product.aggregate([
+      { $match: { isActive: true } },
+      { $unwind: '$categories' },
+      { $group: { _id: '$categories', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 6 },
+      {
+        $lookup: {
+          from: 'categories',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'cat',
+        },
+      },
+      { $unwind: { path: '$cat', preserveNullAndEmptyArrays: true } },
+      {
+        $project: {
+          _id: 1,
+          name: { $ifNull: ['$cat.name', 'Khác'] },
+          count: 1,
+        },
+      },
+    ]);
 
-    // Sắp xếp các danh mục theo số sản phẩm giảm dần
-    catCounts.sort((a, b) => b.count - a.count);
-    
-    // Lấy 6 danh mục hàng đầu
-    const topCats = catCounts.slice(0, 6);
-
-    categoryDistribution = topCats.map((item) => {
-      const percent = totalProducts > 0 ? Math.round((item.count / totalProducts) * 100) : 0;
-      return {
-        _id: item._id,
-        name: item.name,
-        count: item.count,
-        percent,
-      };
-    });
+    categoryDistribution = catAgg.map((item) => ({
+      _id: item._id,
+      name: item.name,
+      count: item.count,
+      percent: totalProducts > 0 ? Math.round((item.count / totalProducts) * 100) : 0,
+    }));
   } catch (err) {
     console.error('Category distribution error:', err);
   }
 
-  // Format low stock alert items
-  const lowStockItems = lowStockItemsRaw.map((prod) => ({
-    _id: prod._id,
-    name: prod.name,
-    stock: prod.stock,
-    price: prod.salePrice || prod.price || 0,
-    thumbnail: prod.thumbnail?.url || '',
-    categoryName: prod.categories?.[0]?.name || 'Chưa phân loại',
-  }));
+  // ── Recent Products ──────────────────────────────────────────────────────────────────────────────────
+  const recentProducts = await Product.find({ isActive: true })
+    .sort({ createdAt: -1 })
+    .limit(5)
+    .select('name sku price salePrice thumbnail status stock brand')
+    .populate('brand', 'name')
+    .lean();
 
-  // Format recent products
-  const formattedRecentProducts = recentProducts.map((p) => ({
-    _id: p._id,
-    name: p.name,
-    price: p.salePrice || p.price || 0,
-    stock: p.stock,
-    status: p.status,
-    thumbnail: typeof p.thumbnail === 'string' ? p.thumbnail : (p.thumbnail?.url || ''),
-    categoryName: p.categories?.[0]?.name || 'Chưa phân loại',
-    brandName: p.brand?.name || '',
-    createdAt: p.createdAt,
-  }));
-
-  // Format recent blog posts
-  const formattedRecentBlogPosts = recentBlogPosts.map((post) => ({
-    _id: post._id,
-    title: post.title,
-    slug: post.slug,
-    status: post.status,
-    viewsCount: post.viewsCount || 0,
-    thumbnailUrl: post.thumbnailUrl || (typeof post.thumbnail === 'string' ? post.thumbnail : (post.thumbnail?.url || '')),
-    createdAt: post.createdAt,
-  }));
+  // ── Recent Blog Posts ───────────────────────────────────────────────────────────────────────────────
+  const recentBlogPosts = await BlogPost.find({})
+    .sort({ createdAt: -1 })
+    .limit(5)
+    .select('title slug status thumbnail createdAt')
+    .lean();
 
   return {
     stats: {
       totalProducts,
       publishedProducts,
-      draftProducts,
-      outOfStockProducts,
       lowStockProducts,
+      outOfStockProducts,
       totalVariants,
-
       totalCategories,
       totalBrands,
-
       totalBlogPosts,
       publishedBlogPosts,
       draftBlogPosts,
       pendingBlogPosts,
-      totalBlogCategories,
-      totalTags,
-
       totalMedia,
-      totalFolders,
       totalMediaBytes,
       formattedMediaSize,
-      totalBanners,
-
-      totalCoupons,
-      activeCoupons,
-      totalFlashSales,
-      activeFlashSales,
-      totalPromotions,
-      activePromotions,
-      totalGiftPrograms,
-      activeGiftPrograms,
-
-      totalUsers,
-      totalCustomers,
-      totalStaff,
+      totalFolders,
+      // ── Period deltas ──
+      newProducts,
+      newBlogPosts,
+      newMedia,
+      periodLabel,
     },
-    categoryDistribution,
     distributions: {
       categoryDistribution,
-      productStatus: [
-        { label: 'Đã xuất bản', count: publishedProducts, key: 'published' },
-        { label: 'Bản nháp', count: draftProducts, key: 'draft' },
-        { label: 'Hết hàng', count: outOfStockProducts, key: 'out_of_stock' },
-      ],
-      blogStatus: [
-        { label: 'Đã xuất bản', count: publishedBlogPosts, key: 'published' },
-        { label: 'Bản nháp', count: draftBlogPosts, key: 'draft' },
-        { label: 'Chờ duyệt', count: pendingBlogPosts, key: 'pending_review' },
-      ],
     },
-    recentProducts: formattedRecentProducts,
-    recentBlogPosts: formattedRecentBlogPosts,
-    lowStockItems,
+    categoryDistribution,
+    recentProducts,
+    recentBlogPosts,
+    period,
   };
 };
 
-const searchGlobal = async (query) => {
-  if (!query || !query.trim()) {
-    return { products: [], categories: [], brands: [], coupons: [], blogPosts: [], users: [] };
+// ==========================================================================
+// getInventoryDashboardStats — Inventory chart & kho stats
+// range: '7days' | '30days' | '90days' | '6months' (default)
+// ==========================================================================
+const getInventoryDashboardStats = async (range = '6months') => {
+  const now = new Date();
+
+  // Quyết định slots dựa vào range
+  let slots, groupByDay;
+  if (range === '7days') {
+    slots = buildDaySlots(7);
+    groupByDay = true;
+  } else if (range === '30days') {
+    slots = buildDaySlots(30);
+    groupByDay = true;
+  } else if (range === '90days') {
+    slots = buildMonthSlots(3);
+    groupByDay = false;
+  } else {
+    // '6months' default
+    slots = buildMonthSlots(6);
+    groupByDay = false;
   }
 
-  const regex = new RegExp(query.trim(), 'i');
+  const rangeStart = slots[0].start;
 
-  const [products, categories, brands, coupons, blogPosts, users] = await Promise.all([
-    Product.find({ name: regex })
-      .select('name price salePrice thumbnail stock status')
-      .limit(5),
-    Category.find({ name: regex })
-      .select('name slug')
-      .limit(5),
-    Brand.find({ name: regex })
-      .select('name logo')
-      .limit(5),
-    Coupon.find({ $or: [{ code: regex }, { name: regex }] })
-      .select('code name type value')
-      .limit(5),
-    BlogPost.find({ title: regex })
-      .select('title slug thumbnailUrl viewsCount status')
-      .limit(5),
-    User.find({ $or: [{ fullName: regex }, { email: regex }] })
-      .select('fullName email role')
-      .limit(5),
+  // Aggregate StockMovement — 1 query
+  const movementAgg = await StockMovement.aggregate([
+    { $match: { createdAt: { $gte: rangeStart, $lte: now } } },
+    {
+      $group: {
+        _id: {
+          year:  { $year: '$createdAt' },
+          month: { $month: '$createdAt' },
+          ...(groupByDay && { day: { $dayOfMonth: '$createdAt' } }),
+          sign:  { $cond: [{ $gt: ['$changeQty', 0] }, 'nhap', 'xuat'] },
+        },
+        total: { $sum: { $abs: '$changeQty' } },
+      },
+    },
+  ]);
+
+  const movMap = {};
+  for (const m of movementAgg) {
+    const key = groupByDay
+      ? `${m._id.year}-${m._id.month}-${m._id.day}-${m._id.sign}`
+      : `${m._id.year}-${m._id.month}-${m._id.sign}`;
+    movMap[key] = (movMap[key] || 0) + m.total;
+  }
+
+  const monthlyData = slots.map((s) => {
+    const yr = s.year;
+    const mo = s.month;
+    if (groupByDay) {
+      return {
+        month: s.label,
+        nhap: movMap[`${yr}-${mo}-${s.day}-nhap`] || 0,
+        xuat: movMap[`${yr}-${mo}-${s.day}-xuat`] || 0,
+      };
+    }
+    return {
+      month: s.label,
+      nhap: movMap[`${yr}-${mo}-nhap`] || 0,
+      xuat: movMap[`${yr}-${mo}-xuat`] || 0,
+    };
+  });
+
+  // Stock status counts
+  const [published, lowStock, outOfStock] = await Promise.all([
+    Product.countDocuments({ isActive: true, status: 'published' }),
+    Product.countDocuments({ isActive: true, status: 'published', stock: { $gt: 0, $lte: 10 } }),
+    Product.countDocuments({ isActive: true, status: 'published', stock: { $lte: 0 } }),
   ]);
 
   return {
-    products,
-    categories,
-    brands,
-    coupons,
-    blogPosts,
-    users,
+    monthlyData,
+    range,
+    stockStatus: {
+      published,
+      lowStock,
+      outOfStock,
+    },
   };
+};
+
+// ==========================================================================
+// searchGlobal — Global search across Products, Categories, Brands, BlogPosts
+// ==========================================================================
+const searchGlobal = async (q) => {
+  if (!q?.trim()) return { products: [], categories: [], brands: [], blogPosts: [] };
+  const regex = new RegExp(q.trim(), 'i');
+
+  const [products, categories, brands, blogPosts] = await Promise.all([
+    Product.find({ isActive: true, $or: [{ name: regex }, { sku: regex }] })
+      .select('name sku price salePrice thumbnail status')
+      .limit(5)
+      .lean(),
+    Category.find({ isActive: true, name: regex })
+      .select('name slug')
+      .limit(5)
+      .lean(),
+    Brand.find({ isActive: true, name: regex })
+      .select('name slug')
+      .limit(5)
+      .lean(),
+    BlogPost.find({ $or: [{ title: regex }, { slug: regex }] })
+      .select('title slug status createdAt')
+      .limit(5)
+      .lean(),
+  ]);
+
+  return { products, categories, brands, blogPosts };
 };
 
 module.exports = {
   getOverviewStats,
+  getInventoryDashboardStats,
   searchGlobal,
 };
