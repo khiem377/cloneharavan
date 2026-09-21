@@ -236,6 +236,14 @@ const incrementViews = async (slug) => {
   await BlogPost.findOneAndUpdate({ slug }, { $inc: { viewsCount: 1 } });
 };
 
+const locatePost = async (id, limit = 10) => {
+  const post = await BlogPost.findById(id).select('_id createdAt');
+  if (!post) throw new AppError('Không tìm thấy bài viết', 404);
+  const positionBefore = await BlogPost.countDocuments({ createdAt: { $gt: post.createdAt } });
+  const page = Math.ceil((positionBefore + 1) / limit);
+  return { page: Math.max(1, page), postId: id };
+};
+
 module.exports = {
   getAllPosts,
   getPostBySlug,
@@ -247,4 +255,5 @@ module.exports = {
   togglePostStatus,
   incrementViews,
   stripHtml,
+  locatePost,
 };

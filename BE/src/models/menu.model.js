@@ -82,6 +82,4 @@ const menuSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-menuSchema.index({ handle: 1 }, { unique: true });
-
 module.exports = mongoose.model('Menu', menuSchema);

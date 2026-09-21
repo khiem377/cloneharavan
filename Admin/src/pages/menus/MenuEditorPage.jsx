@@ -23,6 +23,7 @@ import { useMenu, useUpdateMenu } from '@/hooks/useMenus';
 import { useCategories } from '@/hooks/useCategories';
 import { useAllBrands } from '@/hooks/useBrands';
 import { useBlogCategories } from '@/hooks/useBlog';
+import { flattenTree, buildTree } from '@/utils/treeUtils';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 
 // ─── Utils ────────────────────────────────────────────────────────────────────
@@ -61,27 +62,7 @@ const BADGE_COLORS = [
   { label: 'Tím', value: '#a855f7' },
 ];
 
-// ─── Flatten / Tree helpers ────────────────────────────────────────────────────
-function flattenTree(items, depth = 0, parentId = null) {
-  return items.flatMap((item) => [
-    { ...item, depth, parentId, children: item.children || [] },
-    ...flattenTree(item.children || [], depth + 1, item._id),
-  ]);
-}
-
-function buildTree(flat) {
-  const map = {};
-  flat.forEach((item) => { map[item._id] = { ...item, children: [] }; });
-  const roots = [];
-  flat.forEach((item) => {
-    if (item.parentId && map[item.parentId]) {
-      map[item.parentId].children.push(map[item._id]);
-    } else {
-      roots.push(map[item._id]);
-    }
-  });
-  return roots;
-}
+// flattenTree, buildTree được import từ @/utils/treeUtils
 
 // ─── Sortable Item Row ─────────────────────────────────────────────────────────
 function SortableItemRow({ item, depth, isSelected, onSelect, onAdd, onDelete, expanded, onToggle, hasChildren }) {
