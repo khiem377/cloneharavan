@@ -57,6 +57,17 @@ const assignUserRole = async (req, res, next) => {
   }
 };
 
+const seedFullPermissionsScript = require('../../scripts/seed-full-permissions');
+
+const seedPermissions = async (req, res, next) => {
+  try {
+    const result = await seedFullPermissionsScript(false);
+    res.json({ message: 'Đã khởi tạo bộ Permissions & Preset Roles thành công!', ...result });
+  } catch (e) {
+    next(e);
+  }
+};
+
 module.exports = {
   getPermissions,
   getRoles,
@@ -65,4 +76,5 @@ module.exports = {
   updateRole,
   deleteRole,
   assignUserRole,
+  seedPermissions,
 };

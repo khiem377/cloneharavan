@@ -9,6 +9,7 @@ const roleService = {
   deleteRole:     (id) => api.delete(`/roles/${id}`),
   assignUserRole: (userId, roleId, customPermissions = []) =>
     api.patch(`/roles/users/${userId}/assign`, { roleId, customPermissions }),
+  seedFullPermissions: () => api.post('/roles/seed-full-permissions'),
 };
 
 export default roleService;
