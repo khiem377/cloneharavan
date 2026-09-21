@@ -3,6 +3,8 @@ const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const { errorHandler, notFound } = require('./middleware/error.middleware');
 const routes = require('./routes');
+require('./services/excelTemplate.service');
+const { startCronJobs } = require('./utils/cronJobs');
 
 const app = express();
 
@@ -21,9 +23,13 @@ app.use(cors({
   },
   credentials: true,
 }));
+const { sanitizeInput } = require('./middleware/sanitize.middleware');
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+app.use(sanitizeInput);
+app.use('/uploads', express.static('public/uploads', { maxAge: '30d' }));
 
 
 app.get('/health', (req, res) => {
@@ -36,5 +42,8 @@ app.use('/api/v1', routes);
 
 app.use(notFound);
 app.use(errorHandler);
+
+// Start background cron jobs (Item-CF every 6h, Python SVD every 4h)
+startCronJobs();
 
 module.exports = app;

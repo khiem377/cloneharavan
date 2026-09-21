@@ -1,7 +1,8 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { Bell, X, Eye, EyeOff, Loader2 } from '@/components/ui/Icons';
 import AppSidebar from './Sidebar';
+import ChatbotBubble from '@/components/ui/ChatbotBubble';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -199,13 +200,22 @@ export default function AdminLayout() {
       <SidebarInset className="h-screen max-h-screen overflow-hidden flex flex-col">
         <Topbar title={title} />
         <main className="flex-1 overflow-y-auto p-3 sm:p-6">
-          <Outlet />
+          <Suspense fallback={
+            <div className="flex items-center justify-center p-12 text-slate-500">
+              <Loader2 className="w-6 h-6 animate-spin mr-2" /> Đang tải...
+            </div>
+          }>
+            <Outlet />
+          </Suspense>
         </main>
       </SidebarInset>
 
       {/* Modals */}
-      {modal === 'profile' && <ProfileModal user={useAuthStore.getState().user} onClose={() => setModal(null)} />}
+      {modal === 'profile'    && <ProfileModal user={useAuthStore.getState().user} onClose={() => setModal(null)} />}
       {modal === 'changepass' && <ChangePasswordModal onClose={() => setModal(null)} />}
+
+      {/* Chatbot test bubble — remove khi không cần nữa */}
+      <ChatbotBubble />
     </SidebarProvider>
   );
 }

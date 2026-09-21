@@ -9,6 +9,8 @@ import {
   PaginationEllipsis,
 } from '@/components/ui/pagination';
 
+import SearchableSelect from './SearchableSelect';
+
 export default function DataTablePagination({
   page = 1,
   pageSize = 10,
@@ -21,16 +23,20 @@ export default function DataTablePagination({
   showJumpToPage = true,
   className = '',
 }) {
-  const [jumpInput, setJumpInput] = useState(String(page));
+  const numPage = typeof page === 'number' && !isNaN(page) ? page : (parseInt(page, 10) || 1);
+  const numPageSize = typeof pageSize === 'number' && !isNaN(pageSize) ? pageSize : (parseInt(pageSize, 10) || 10);
+  const numTotal = typeof total === 'number' && !isNaN(total) ? total : (parseInt(total, 10) || 0);
+
+  const [jumpInput, setJumpInput] = useState(String(numPage));
 
   useEffect(() => {
-    setJumpInput(String(page));
-  }, [page]);
+    setJumpInput(String(numPage));
+  }, [numPage]);
 
-  if (!total) return null;
+  if (!numTotal) return null;
 
-  const startItem = total === 0 ? 0 : (page - 1) * pageSize + 1;
-  const endItem = Math.min(page * pageSize, total);
+  const startItem = numTotal === 0 ? 0 : (numPage - 1) * numPageSize + 1;
+  const endItem = Math.min(numPage * numPageSize, numTotal);
 
   const handleJumpSubmit = (e) => {
     e.preventDefault();
@@ -47,7 +53,7 @@ export default function DataTablePagination({
       {/* Left: Summary text */}
       <div className="flex items-center gap-2">
         <span>
-          Hiển thị <strong>{startItem}–{endItem}</strong> trong <strong>{total}</strong> bản ghi
+          Hiển thị <strong>{startItem}–{endItem}</strong> trong <strong>{numTotal}</strong> bản ghi
         </span>
       </div>
 
@@ -55,22 +61,22 @@ export default function DataTablePagination({
       <div className="flex flex-wrap items-center gap-3 ml-auto">
         {/* PageSize dropdown */}
         {showPageSize && onPageSizeChange && (
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 shrink-0">
             <span>Hiển thị</span>
-            <select
-              className="h-8 rounded-md border border-input bg-background px-2 text-xs font-medium text-foreground outline-none focus:border-ring cursor-pointer"
-              value={pageSize}
-              onChange={(e) => {
-                onPageSizeChange(Number(e.target.value));
+            <SearchableSelect
+              className="w-28"
+              options={pageSizeOptions.map((opt) => ({
+                label: `${opt} / trang`,
+                value: String(opt),
+              }))}
+              value={String(pageSize)}
+              onChange={(val) => {
+                onPageSizeChange(Number(val));
                 onPageChange(1);
               }}
-            >
-              {pageSizeOptions.map((opt) => (
-                <option key={opt} value={opt}>
-                  {opt} / trang
-                </option>
-              ))}
-            </select>
+              creatable={false}
+              placeholder={`${pageSize} / trang`}
+            />
           </div>
         )}
 
