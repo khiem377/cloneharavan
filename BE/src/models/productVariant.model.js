@@ -8,6 +8,11 @@ const productVariantSchema = new mongoose.Schema(
       required: [true, 'ID sản phẩm là bắt buộc'],
       index: true,
     },
+    supplierId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Supplier',
+      default: null,
+    },
     // isDefault: true → đây là Default Variant (sản phẩm không có biến thể thực)
     // Mỗi product luôn có đúng 1 isDefault = true
     isDefault: {
@@ -43,6 +48,21 @@ const productVariantSchema = new mongoose.Schema(
       type: Number,
       default: null,
       min: [0, 'Giá khuyến mãi không được nhỏ hơn 0'],
+    },
+    costPrice: {
+      type: Number,
+      default: 0,
+      min: [0, 'Giá vốn không được nhỏ hơn 0'],
+    },
+    allocated: {
+      type: Number,
+      default: 0,
+      min: [0, 'Số lượng giữ chỗ không được nhỏ hơn 0'],
+    },
+    unit: {
+      type: String,
+      default: 'Cái',
+      trim: true,
     },
     stock: {
       type: Number,

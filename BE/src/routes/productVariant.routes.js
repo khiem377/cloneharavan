@@ -1,10 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const productVariantController = require('../controllers/productVariant.controller');
-const { protect, authorize } = require('../middleware/auth.middleware');
+const { protect } = require('../middleware/auth.middleware');
+const { requirePermission } = require('../middleware/permission.middleware');
 
-router.get('/:id',    protect, authorize('admin'), productVariantController.getVariantById);
-router.put('/:id',    protect, authorize('admin'), productVariantController.updateVariant);
-router.delete('/:id', protect, authorize('admin'), productVariantController.deleteVariant);
+router.get('/:id',    protect, requirePermission('product_variant.view'), productVariantController.getVariantById);
+router.put('/:id',    protect, requirePermission('product_variant.edit'), productVariantController.updateVariant);
+router.delete('/:id', protect, requirePermission('product_variant.delete'), productVariantController.deleteVariant);
 
 module.exports = router;

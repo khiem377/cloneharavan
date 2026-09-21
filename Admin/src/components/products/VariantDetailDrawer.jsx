@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { X, Image, Plus, Trash2, Loader2, Check, Save, ChevronDown, ChevronUp } from '@/components/ui/Icons';
 import { toast } from '@/providers/ToastProvider';
 import MediaPickerModal from '@/components/ui/MediaPickerModal';
+import { MediaThumbnailHover } from '@/components/ui/MediaFolderBadge';
 import { useUpdateVariant } from '@/hooks/useProductVariants';
 
 /* ─── helpers ─── */
@@ -109,19 +110,21 @@ function SpecsEditor({ specs, onChange }) {
 }
 
 /* ─── Image thumbnail picker ─── */
-function ThumbnailPicker({ url, onPick }) {
+function ThumbnailPicker({ url, media, onPick }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <label className="text-xs font-medium text-foreground">Ảnh đại diện</label>
+      <label className="text-xs font-medium text-foreground">Anh dai dien</label>
       {url ? (
         <div className="relative group w-full aspect-square max-w-[200px] rounded-lg overflow-hidden border border-border bg-muted">
-          <img src={url} alt="thumb" className="size-full object-cover" />
+          <MediaThumbnailHover media={media} className="size-full">
+            <img src={url} alt="thumb" className="size-full object-cover" />
+          </MediaThumbnailHover>
           <div
             className="absolute inset-0 bg-black/40 flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
             onClick={onPick}
           >
             <Image size={14} className="text-white" />
-            <span className="text-white text-xs font-medium">Thay ảnh</span>
+            <span className="text-white text-xs font-medium">Thay đổi ảnh</span>
           </div>
         </div>
       ) : (
@@ -130,7 +133,7 @@ function ThumbnailPicker({ url, onPick }) {
           onClick={onPick}
         >
           <Image size={24} className="text-muted-foreground" />
-          <span className="text-xs text-muted-foreground">Chọn ảnh đại diện</span>
+          <span className="text-xs text-muted-foreground">Chon anh dai dien</span>
         </div>
       )}
     </div>
@@ -138,14 +141,16 @@ function ThumbnailPicker({ url, onPick }) {
 }
 
 /* ─── Gallery strip ─── */
-function GalleryPicker({ urls, ids, onPick, onRemove }) {
+function GalleryPicker({ urls, ids, mediaObjects = {}, onPick, onRemove }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <label className="text-xs font-medium text-foreground">Bộ ảnh biến thể</label>
+      <label className="text-xs font-medium text-foreground">Bo anh bien the</label>
       <div className="flex flex-wrap gap-2">
         {urls.map((url, i) => (
           <div key={i} className="relative size-16 rounded-md overflow-hidden border border-border group bg-muted">
-            <img src={url} alt="" className="size-full object-cover" />
+            <MediaThumbnailHover media={mediaObjects[ids[i]]} className="size-full">
+              <img src={url} alt="" className="size-full object-cover" />
+            </MediaThumbnailHover>
             <button
               type="button"
               className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
@@ -161,7 +166,7 @@ function GalleryPicker({ urls, ids, onPick, onRemove }) {
           onClick={onPick}
         >
           <Plus size={16} />
-          <span className="text-[9px] font-medium">Thêm ảnh</span>
+          <span className="text-[9px] font-medium">Them anh</span>
         </button>
       </div>
     </div>
@@ -253,15 +258,22 @@ export default function VariantDetailDrawer({ variant, product, onClose }) {
     }
   };
 
+  const [pickedMediaObjects, setPickedMediaObjects] = useState({}); // Map<mediaId, media>
+
   const handleMediaSelected = (media) => {
     if (pickerMode === 'thumbnail') {
       const m = Array.isArray(media) ? media[0] : media;
-      if (m) set({ thumbnailMediaId: m._id, thumbnailUrl: m.url });
+      if (m) {
+        set({ thumbnailMediaId: m._id, thumbnailUrl: m.url });
+        setPickedMediaObjects((prev) => ({ ...prev, [m._id]: m }));
+      }
     } else {
       const list = Array.isArray(media) ? media : [media];
       const ids = [...form.imageMediaIds], urls = [...form.imageUrls];
-      list.forEach((m) => { if (!ids.includes(m._id)) { ids.push(m._id); urls.push(m.url); } });
+      const newObjs = {};
+      list.forEach((m) => { if (!ids.includes(m._id)) { ids.push(m._id); urls.push(m.url); newObjs[m._id] = m; } });
       set({ imageMediaIds: ids, imageUrls: urls });
+      setPickedMediaObjects((prev) => ({ ...prev, ...newObjs }));
     }
     setPickerMode(null);
   };
@@ -388,11 +400,10 @@ export default function VariantDetailDrawer({ variant, product, onClose }) {
                 <label className="text-xs font-medium text-foreground">Trạng thái hiển thị</label>
                 <button
                   type="button"
-                  className={`h-9 w-full rounded-md border text-sm font-medium cursor-pointer transition-colors flex items-center justify-center gap-2 ${
-                    form.isActive
+                  className={`h-9 w-full rounded-md border text-sm font-medium cursor-pointer transition-colors flex items-center justify-center gap-2 ${form.isActive
                       ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600'
                       : 'bg-muted border-border text-muted-foreground'
-                  }`}
+                    }`}
                   onClick={() => set({ isActive: !form.isActive })}
                 >
                   <span className={`size-2 rounded-full ${form.isActive ? 'bg-emerald-500' : 'bg-muted-foreground'}`} />
@@ -405,10 +416,15 @@ export default function VariantDetailDrawer({ variant, product, onClose }) {
           {/* Images */}
           <Section title="Hình ảnh biến thể" defaultOpen={true}>
             <div className="grid grid-cols-2 gap-4">
-              <ThumbnailPicker url={form.thumbnailUrl} onPick={() => setPickerMode('thumbnail')} />
+              <ThumbnailPicker
+                url={form.thumbnailUrl}
+                media={form.thumbnailMediaId ? pickedMediaObjects[form.thumbnailMediaId] : null}
+                onPick={() => setPickerMode('thumbnail')}
+              />
               <GalleryPicker
                 urls={form.imageUrls}
                 ids={form.imageMediaIds}
+                mediaObjects={pickedMediaObjects}
                 onPick={() => setPickerMode('images')}
                 onRemove={removeGalleryImage}
               />
@@ -434,11 +450,10 @@ export default function VariantDetailDrawer({ variant, product, onClose }) {
               </span>
               <button
                 type="button"
-                className={`inline-flex items-center gap-1.5 h-7 px-3 rounded-md text-xs font-medium cursor-pointer border transition-colors ${
-                  overrideSpecs
+                className={`inline-flex items-center gap-1.5 h-7 px-3 rounded-md text-xs font-medium cursor-pointer border transition-colors ${overrideSpecs
                     ? 'bg-primary text-primary-foreground border-primary hover:bg-primary/90'
                     : 'bg-muted text-muted-foreground border-border hover:bg-accent hover:text-foreground'
-                }`}
+                  }`}
                 onClick={() => {
                   if (!overrideSpecs && form.specifications.length === 0 && product?.specifications?.length > 0) {
                     // Copy from parent as starting point
