@@ -6,11 +6,14 @@ const {
   reorderBanners,
   deleteBanner,
   deleteBulkBanners,
+  trackView,
+  trackClick,
 } = require('../services/banner.service');
 
 const getPublic = async (req, res, next) => {
   try {
-    const banners = await getPublicBanners();
+    // type filter: GET /banners?type=hero
+    const banners = await getPublicBanners(req.query.type || null);
     res.json({ status: 'success', statusCode: 200, message: 'Lấy danh sách banner thành công', data: { banners } });
   } catch (error) { next(error); }
 };
@@ -25,14 +28,9 @@ const getAll = async (req, res, next) => {
 const create = async (req, res, next) => {
   try {
     const { banner, media } = await createBanner(req.file, req.body);
-    res.status(201).json({
-      status: 'success', statusCode: 201,
-      message: 'Tạo banner thành công',
-      data: { banner, media },
-    });
+    res.status(201).json({ status: 'success', statusCode: 201, message: 'Tạo banner thành công', data: { banner, media } });
   } catch (error) { next(error); }
 };
-
 
 const update = async (req, res, next) => {
   try {
@@ -58,9 +56,25 @@ const remove = async (req, res, next) => {
 
 const removeBulk = async (req, res, next) => {
   try {
-    await deleteBulkBanners(req.body.ids);
-    res.json({ status: 'success', statusCode: 200, message: `Xóa ${req.body.ids.length} banner thành công` });
+    const result = await deleteBulkBanners(req.body.ids);
+    res.json({ status: 'success', statusCode: 200, message: `Xóa ${result.deleted} banner thành công`, data: result });
   } catch (error) { next(error); }
 };
 
-module.exports = { getPublic, getAll, create, update, reorder, remove, removeBulk };
+// POST /banners/:id/view  — FE gọi khi banner hiện ra viewport
+const view = async (req, res, next) => {
+  try {
+    await trackView(req.params.id);
+    res.json({ status: 'success', statusCode: 200 });
+  } catch (error) { next(error); }
+};
+
+// POST /banners/:id/click — FE gọi khi user click vào banner
+const click = async (req, res, next) => {
+  try {
+    await trackClick(req.params.id);
+    res.json({ status: 'success', statusCode: 200 });
+  } catch (error) { next(error); }
+};
+
+module.exports = { getPublic, getAll, create, update, reorder, remove, removeBulk, view, click };

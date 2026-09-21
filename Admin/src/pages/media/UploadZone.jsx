@@ -90,25 +90,62 @@ function FolderSelectPopover({ selectedFolderId, onChange, flatFolders }) {
   );
 }
 
-function FileItem({ file, status, error }) {
-  const icon = status === 'done' ? <CheckCircle size={15} className="text-emerald-500 shrink-0" />
-    : status === 'error' ? <AlertCircle size={15} className="text-destructive shrink-0" />
-      : status === 'uploading' ? <Loader2 size={15} className="animate-spin text-primary shrink-0" />
-        : <Image size={15} className="text-muted-foreground shrink-0" />;
+function FileItem({ file, status, error, progress = 0, duplicateUrl = null }) {
+  const isUploading = status === 'uploading';
+  const isDone      = status === 'done';
+  const isError     = status === 'error';
+  const isDuplicate = status === 'duplicate';
+
+  const borderCls = isDuplicate ? 'border-amber-500/40 bg-amber-500/5'
+    : isError   ? 'border-destructive/30 bg-destructive/5'
+    : isDone    ? 'border-emerald-500/30 bg-emerald-500/5'
+    : 'border-border bg-card';
+
+  const icon = isDone      ? <CheckCircle size={15} className="text-emerald-500 shrink-0" />
+    : isError    ? <AlertCircle size={15} className="text-destructive shrink-0" />
+    : isDuplicate ? <AlertCircle size={15} className="text-amber-500 shrink-0" />
+    : isUploading ? <Loader2 size={15} className="animate-spin text-primary shrink-0" />
+    : <Image size={15} className="text-muted-foreground shrink-0" />;
+
   return (
-    <div className={`flex items-center gap-2.5 p-2.5 rounded-lg border text-xs ${status === 'error' ? 'border-destructive/30 bg-destructive/10' : status === 'done' ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-border bg-card'}`}>
-      {icon}
-      <div className="flex flex-col min-w-0 flex-1">
-        <span className="font-medium text-foreground truncate">{file.name}</span>
-        <span className="text-[11px] text-muted-foreground">{error || formatSize(file.size)}</span>
+    <div className={`flex flex-col gap-1.5 p-2.5 rounded-lg border text-xs transition-colors ${borderCls}`}>
+      <div className="flex items-center gap-2.5">
+        {icon}
+        <div className="flex flex-col min-w-0 flex-1">
+          <span className="font-medium text-foreground truncate">{file.name}</span>
+          <span className="text-[11px] text-muted-foreground">
+            {isDuplicate ? (
+              <span className="text-amber-600 dark:text-amber-400">
+                Đã tồn tại —{' '}
+                {duplicateUrl && (
+                  <a href={duplicateUrl} target="_blank" rel="noreferrer" className="underline hover:no-underline">Xem file cũ</a>
+                )}
+              </span>
+            ) : error || formatSize(file.size)}
+          </span>
+        </div>
+        {/* Progress % */}
+        {isUploading && (
+          <span className="text-[10px] text-primary font-mono shrink-0">{progress}%</span>
+        )}
       </div>
+      {/* Progress bar */}
+      {(isUploading || isDone) && (
+        <div className="h-1 w-full rounded-full bg-muted overflow-hidden">
+          <div
+            className={`h-full rounded-full transition-all duration-200 ${isDone ? 'bg-emerald-500' : 'bg-primary'}`}
+            style={{ width: `${isDone ? 100 : progress}%` }}
+          />
+        </div>
+      )}
     </div>
   );
 }
 
 function UploadFileTab({ folderId, onClose }) {
   const qc = useQueryClient();
-  const [files, setFiles] = useState([]);
+  // items: [{ file, status, error, progress, duplicateUrl }]
+  const [items, setItems] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
 
   const invalidate = () => {
@@ -116,33 +153,48 @@ function UploadFileTab({ folderId, onClose }) {
     qc.invalidateQueries({ queryKey: FOLDERS_KEY });
   };
 
+  const updateItem = (idx, patch) =>
+    setItems((prev) => prev.map((it, i) => i === idx ? { ...it, ...patch } : it));
+
   const onDropSimple = useCallback((accepted) => {
-    const newItems = accepted.map((file) => ({ file, status: 'idle', error: null }));
-    setFiles(newItems);
+    const newItems = accepted.map((file) => ({ file, status: 'idle', error: null, progress: 0, duplicateUrl: null }));
+    setItems(newItems);
+
     const doUpload = async () => {
       setIsUploading(true);
-      const results = await Promise.allSettled(
-        newItems.map(async (item, i) => {
-          setFiles(prev => prev.map((f, idx) => idx === i ? { ...f, status: 'uploading' } : f));
-          const fd = new FormData();
-          fd.append('file', item.file);
-          if (folderId) fd.append('folderId', folderId);
-          await mediaService.upload(fd, () => { });
-          setFiles(prev => prev.map((f, idx) => idx === i ? { ...f, status: 'done' } : f));
-        })
-      );
-      results.forEach((r, i) => {
-        if (r.status === 'rejected') {
-          const msg = r.reason?.response?.data?.message || 'Lỗi';
-          setFiles(prev => prev.map((f, idx) => idx === i ? { ...f, status: 'error', error: msg } : f));
+
+      // Upload tuần tự để progress bar rõ ràng hơn
+      for (let i = 0; i < newItems.length; i++) {
+        updateItem(i, { status: 'uploading', progress: 0 });
+        const fd = new FormData();
+        fd.append('file', newItems[i].file);
+        if (folderId) fd.append('folderId', folderId);
+
+        try {
+          await mediaService.upload(fd, (pct) => updateItem(i, { progress: pct }));
+          updateItem(i, { status: 'done', progress: 100 });
+        } catch (err) {
+          const res = err.response;
+          if (res?.status === 409 && res?.data?.data?.existingMedia) {
+            // Duplicate — không phải lỗi thật, hiện cảnh báo + link file cũ
+            updateItem(i, {
+              status:       'duplicate',
+              duplicateUrl: res.data.data.existingMedia.url,
+              error:        null,
+            });
+          } else {
+            updateItem(i, {
+              status: 'error',
+              error:  res?.data?.message || 'Lỗi upload',
+            });
+          }
         }
-      });
+      }
+
       invalidate();
       setIsUploading(false);
-      const ok = results.filter(r => r.status === 'fulfilled').length;
-      if (ok > 0) toast.success(`Đã upload ${ok} ảnh`);
-      if (ok === newItems.length) setTimeout(onClose, 800);
     };
+
     doUpload();
   }, [folderId]);
 
@@ -153,12 +205,14 @@ function UploadFileTab({ folderId, onClose }) {
     disabled: isUploading,
   });
 
-  const totalDone = files.filter(f => f.status === 'done').length;
-  const totalErr = files.filter(f => f.status === 'error').length;
+  const totalDone      = items.filter((f) => f.status === 'done').length;
+  const totalErr       = items.filter((f) => f.status === 'error').length;
+  const totalDuplicate = items.filter((f) => f.status === 'duplicate').length;
+  const allDone        = items.length > 0 && !isUploading;
 
   return (
     <>
-      {files.length === 0 ? (
+      {items.length === 0 ? (
         <div {...getRootProps()} className={`flex flex-col items-center justify-center p-8 rounded-xl border-2 border-dashed transition-colors cursor-pointer text-center m-4 ${isDragActive ? 'border-primary bg-primary/10' : 'border-border bg-muted/20 hover:border-primary/50'}`}>
           <input {...getInputProps()} />
           <Upload size={28} className="text-muted-foreground mb-2" />
@@ -166,18 +220,25 @@ function UploadFileTab({ folderId, onClose }) {
           <span className="text-xs text-muted-foreground mt-1">hoặc click để chọn • PNG, JPG, WebP, GIF • tối đa 5MB</span>
         </div>
       ) : (
-        <div className="flex flex-col gap-2 p-4 max-h-64 overflow-y-auto">
-          {files.map((item, i) => <FileItem key={i} {...item} />)}
+        <div className="flex flex-col gap-1.5 p-4 max-h-72 overflow-y-auto">
+          {items.map((item, i) => <FileItem key={i} {...item} />)}
         </div>
       )}
-      {files.length > 0 && (
+
+      {items.length > 0 && (
         <div className="flex items-center justify-between px-5 py-3 border-t border-border bg-muted/30">
           <span className="text-xs font-medium text-foreground">
-            {isUploading ? 'Đang upload...' : `${totalDone} thành công${totalErr > 0 ? `, ${totalErr} lỗi` : ''}`}
+            {isUploading
+              ? `Đang upload... (${items.filter(f => f.status === 'done').length}/${items.length})`
+              : [
+                  totalDone > 0 && `${totalDone} thành công`,
+                  totalDuplicate > 0 && `${totalDuplicate} trùng`,
+                  totalErr > 0 && `${totalErr} lỗi`,
+                ].filter(Boolean).join(' • ')}
           </span>
-          {!isUploading && (
+          {allDone && (
             <div className="flex items-center gap-2">
-              <button className="inline-flex h-8 items-center justify-center rounded-md px-3 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer" onClick={() => setFiles([])}>Thêm file</button>
+              <button className="inline-flex h-8 items-center justify-center rounded-md px-3 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer" onClick={() => setItems([])}>Thêm file</button>
               <button className="inline-flex h-8 items-center justify-center rounded-md px-3 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer" onClick={onClose}>Đóng</button>
             </div>
           )}
