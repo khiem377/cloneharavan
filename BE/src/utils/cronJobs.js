@@ -8,14 +8,14 @@
  * 3. Interaction threshold   — trigger khi đủ 100 interactions mới
  */
 
-const path    = require('path');
+const path = require('path');
 const { execFile } = require('child_process');
 
 // ── Structured cron logger ────────────────────────────────────────────────────────────
 const cronLog = {
-  info:  (job, msg) => console.log(`[CronJobs][${new Date().toISOString()}] ✔ ${job}: ${msg}`),
+  info: (job, msg) => console.log(`[CronJobs][${new Date().toISOString()}] ✔ ${job}: ${msg}`),
   error: (job, err) => console.error(`[CronJobs][${new Date().toISOString()}] ❌ ${job} FAILED: ${err?.message || err}`),
-  warn:  (job, msg) => console.warn(`[CronJobs][${new Date().toISOString()}] ⚠ ${job}: ${msg}`),
+  warn: (job, msg) => console.warn(`[CronJobs][${new Date().toISOString()}] ⚠ ${job}: ${msg}`),
 };
 
 let _nodeCron = null;
@@ -31,14 +31,14 @@ const getNodeCron = () => {
 };
 
 // ── Interaction counter trigger ──────────────────────────────────────────────
-let _newInteractionCount  = 0;
+let _newInteractionCount = 0;
 const INTERACTION_TRIGGER = 100; // trigger Python SVD khi đủ N interactions mới
 
 const incrementInteractionCounter = () => {
   _newInteractionCount++;
   if (_newInteractionCount >= INTERACTION_TRIGGER) {
     _newInteractionCount = 0;
-    runPythonSVDBatch().catch(() => {}); // fire-and-forget
+    runPythonSVDBatch().catch(() => { }); // fire-and-forget
   }
 };
 
@@ -103,6 +103,7 @@ const runUpsellBatch = () => {
       }
     );
   });
+
 };
 
 // ── Item-CF Matrix Batch ─────────────────────────────────────────────────────────────────────────────
@@ -151,39 +152,39 @@ const startCronJobs = () => {
 
   // Python SVD: every 4 hours (mỗi 4 tiếng)
   cron.schedule('0 */4 * * *', () => {
-    runPythonSVDBatch().catch(() => {});
+    runPythonSVDBatch().catch(() => { });
   });
   console.log('[CronJobs] Python SVD scheduled: every 4 hours');
 
   // Item-CF: every 6 hours (mỗi 6 tiếng)
   cron.schedule('0 */6 * * *', () => {
-    runItemCFBatch().catch(() => {});
+    runItemCFBatch().catch(() => { });
   });
   console.log('[CronJobs] Item-CF scheduled: every 6 hours');
 
   // Reset SearchLog count7d: every Sunday midnight
   cron.schedule('0 0 * * 0', () => {
-    resetSearchLog7d().catch(() => {});
+    resetSearchLog7d().catch(() => { });
   });
   console.log('[CronJobs] SearchLog count7d reset scheduled: every Sunday');
 
   // Banner expiry: every 30 minutes — tu dong an banner het lich
   cron.schedule('*/30 * * * *', () => {
-    autoHideExpiredBanners().catch(() => {});
+    autoHideExpiredBanners().catch(() => { });
   });
   console.log('[CronJobs] Banner auto-hide scheduled: every 30 minutes');
 
   // Upsell Engine: every 8 hours
   cron.schedule('0 */8 * * *', () => {
-    runUpsellBatch().catch(() => {});
+    runUpsellBatch().catch(() => { });
   });
   console.log('[CronJobs] Upsell Engine scheduled: every 8 hours');
 
   // Run in background 10 seconds after startup to avoid blocking server boot
   setTimeout(() => {
-    runItemCFBatch().catch(() => {});
-    autoHideExpiredBanners().catch(() => {});
-    runUpsellBatch().catch(() => {});
+    runItemCFBatch().catch(() => { });
+    autoHideExpiredBanners().catch(() => { });
+    runUpsellBatch().catch(() => { });
   }, 10000);
 };
 

@@ -146,7 +146,7 @@ function RenderMarkdown({ text = '' }) {
 export default function ChatbotBubble() {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState([
-    { role: 'bot', text: 'Xin chào! Mình là Ega, tư vấn viên của shop. Bạn cần hỗ trợ gì không?' }
+    { role: 'bot', text: 'Xin chào! Mình là Shop Assistant, tư vấn viên của shop. Bạn cần hỗ trợ gì không?' }
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -259,7 +259,7 @@ export default function ChatbotBubble() {
       <button
         onClick={() => setOpen(o => !o)}
         className="fixed bottom-6 right-6 z-[9999] rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 transition-all active:scale-95 flex items-center justify-center"
-        title="Trợ lý AI Ega"
+        title="Trợ lý AI Shop"
         style={{ width: 54, height: 54 }}
       >
         {open ? <X size={22} /> : <BotIcon />}
@@ -278,7 +278,7 @@ export default function ChatbotBubble() {
                 <BotIcon />
               </div>
               <div>
-                <p className="text-sm font-semibold leading-tight">Trợ lý AI Ega</p>
+                <p className="text-sm font-semibold leading-tight">Trợ lý AI Shop</p>
                 <p className="text-[10px] opacity-80 mt-0.5">Google Gemini 1.5 Flash · Smart Agent</p>
               </div>
             </div>

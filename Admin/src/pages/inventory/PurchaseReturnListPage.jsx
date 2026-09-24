@@ -225,7 +225,7 @@ export default function PurchaseReturnListPage() {
                       {item.supplierName}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
-                      Kho Thành Phẩm EGA
+                      Kho Thành Phẩm SHOP
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">

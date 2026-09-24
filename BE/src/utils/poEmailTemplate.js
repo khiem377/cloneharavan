@@ -44,7 +44,7 @@ function generatePOEmailHTML({ po, supplier, customNote = '' }) {
                 <table width="100%" border="0" cellspacing="0" cellpadding="0">
                   <tr>
                     <td>
-                      <div style="font-size: 20px; font-weight: 800; letter-spacing: 1px; color: #38bdf8;">EGA  PROCUREMENT</div>
+                      <div style="font-size: 20px; font-weight: 800; letter-spacing: 1px; color: #38bdf8;">SHOP PROCUREMENT</div>
                       <div style="font-size: 12px; color: #94a3b8; margin-top: 4px;">Hệ Thống Quản Lý Đơn Đặt Hàng & Nhập Kho Enterprise</div>
                     </td>
                     <td align="right">
@@ -64,7 +64,7 @@ function generatePOEmailHTML({ po, supplier, customNote = '' }) {
                   Kính gửi: ${supplierName}
                 </div>
                 <div style="font-size: 14px; color: #475569; line-height: 1.6; margin-bottom: 20px;">
-                  Bộ phận Mua Hàng & Quản Lý Kho công ty **EGA** xin trân trọng gửi tới Quý Nhà Cung Cấp đơn đặt mua hàng chính thức số <strong>${poNumber}</strong> ngày ${orderDateStr}. Kính đề nghị Quý đối tác xác nhận và sắp xếp giao hàng theo đúng số lượng và đơn giá thỏa thuận.
+                  Bộ phận Mua Hàng & Quản Lý Kho công ty **SHOP** xin trân trọng gửi tới Quý Nhà Cung Cấp đơn đặt mua hàng chính thức số <strong>${poNumber}</strong> ngày ${orderDateStr}. Kính đề nghị Quý đối tác xác nhận và sắp xếp giao hàng theo đúng số lượng và đơn giá thỏa thuận.
                 </div>
 
                 ${customNote ? `
@@ -111,7 +111,7 @@ function generatePOEmailHTML({ po, supplier, customNote = '' }) {
 
                 <div style="font-size: 13px; color: #64748b; line-height: 1.6; border-t: 1px solid #e2e8f0; padding-top: 16px;">
                   Trân trọng cảm ơn Quý Nhà Cung Cấp đối tác!<br/>
-                  <strong>Phòng Cung Ứng & Quản Lý Kho Thành Phẩm — EGA</strong>
+                  <strong>Phòng Cung Ứng & Quản Lý Kho Thành Phẩm — SHOP</strong>
                 </div>
               </td>
             </tr>
@@ -119,7 +119,7 @@ function generatePOEmailHTML({ po, supplier, customNote = '' }) {
             <!-- Footer -->
             <tr>
               <td style="background-color: #f1f5f9; padding: 16px 32px; text-align: center; font-size: 11px; color: #94a3b8; border-top: 1px solid #e2e8f0;">
-                Thư này được phát tự động từ Hệ Thống ERP EGA. Mọi thắc mắc xin vui lòng liên hệ phòng mua hàng qua hotline hoặc email này.
+                Thư này được phát tự động từ Hệ Thống ERP SHOP. Mọi thắc mắc xin vui lòng liên hệ phòng mua hàng qua hotline hoặc email này.
               </td>
             </tr>
 

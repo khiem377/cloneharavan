@@ -23,7 +23,7 @@ export default function SendPOModal({ isOpen, onClose, po, onSuccess }) {
     if (isOpen && po) {
       const supEmail = po.supplierId?.email || '';
       setRecipientEmail(supEmail);
-      setSubject(`[EGA ] - Đơn Đặt Mua Hàng Mới #${po.poNumber}`);
+      setSubject(`[SHOP] - Đơn Đặt Mua Hàng Mới #${po.poNumber}`);
       setCustomNote('');
       setManualChannel('Zalo');
       setManualNote(`Đã chốt qua Zalo/Điện thoại với đại diện ${po.supplierId?.name || 'Nhà cung cấp'}`);

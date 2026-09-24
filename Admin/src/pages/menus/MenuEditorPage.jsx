@@ -197,13 +197,62 @@ function ItemFormPanel({ item, onChange, categories, brands, blogCats }) {
         <select
           className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 transition-colors"
           value={item.linkType}
-          onChange={(e) => set('linkType', e.target.value)}
+          onChange={(e) => {
+            const newType = e.target.value;
+            const updates = { linkType: newType };
+            if (newType === 'none') {
+              updates.customUrl = '';
+              updates.linkRef = null;
+            }
+            onChange({ ...item, ...updates });
+          }}
         >
           {Object.entries(LINK_TYPE_LABELS).map(([k, v]) => (
             <option key={k} value={k}>{v}</option>
           ))}
         </select>
       </div>
+
+      {/* Ref select: category / brand / blog - Hiển thị chọn từ API */}
+      {(item.linkType === 'category' || item.linkType === 'brand' || item.linkType === 'blog') && (
+        <div className="flex flex-col gap-1.5 bg-primary/5 p-3 rounded-lg border border-primary/20">
+          <label className="text-xs font-semibold text-primary flex items-center justify-between">
+            <span>Chọn {LINK_TYPE_LABELS[item.linkType]} (từ hệ thống)</span>
+            <span className="text-[11px] font-normal text-muted-foreground">Tự động điền tên & link</span>
+          </label>
+          <select
+            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 transition-colors font-medium"
+            value={item.linkRef || ''}
+            onChange={(e) => {
+              const selectedId = e.target.value;
+              const options = refOptions[item.linkType] || [];
+              const selectedObj = options.find((o) => o._id === selectedId);
+
+              const updates = { linkRef: selectedId || null };
+              if (selectedObj) {
+                // Tự động điền Tên hiển thị
+                updates.label = selectedObj.name;
+                // Tự động cập nhật URL chuẩn SEO
+                if (item.linkType === 'category') {
+                  updates.customUrl = `/collections/${selectedObj.slug || selectedObj._id}`;
+                } else if (item.linkType === 'brand') {
+                  updates.customUrl = `/brands/${selectedObj.slug || selectedObj._id}`;
+                } else if (item.linkType === 'blog') {
+                  updates.customUrl = `/blogs/${selectedObj.slug || selectedObj._id}`;
+                }
+              }
+              onChange({ ...item, ...updates });
+            }}
+          >
+            <option value="">-- Bấm vào đây để chọn {LINK_TYPE_LABELS[item.linkType]} --</option>
+            {(refOptions[item.linkType] || []).map((opt) => (
+              <option key={opt._id} value={opt._id}>
+                {opt.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {/* URL tùy chỉnh */}
       {item.linkType === 'url' && (
@@ -215,25 +264,6 @@ function ItemFormPanel({ item, onChange, categories, brands, blogCats }) {
             onChange={(e) => set('customUrl', e.target.value)}
             placeholder="/pages/chinh-sach hoặc https://..."
           />
-        </div>
-      )}
-
-      {/* Ref select: category / brand / blog */}
-      {(item.linkType === 'category' || item.linkType === 'brand' || item.linkType === 'blog') && (
-        <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-medium text-foreground">
-            {LINK_TYPE_LABELS[item.linkType]}
-          </label>
-          <select
-            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 transition-colors"
-            value={item.linkRef || ''}
-            onChange={(e) => set('linkRef', e.target.value || null)}
-          >
-            <option value="">-- Chọn --</option>
-            {(refOptions[item.linkType] || []).map((opt) => (
-              <option key={opt._id} value={opt._id}>{opt.name}</option>
-            ))}
-          </select>
         </div>
       )}
 
@@ -377,7 +407,15 @@ export default function MenuEditorPage() {
   const handleAddChild = (parentId) => {
     const parent = flatItems.find((i) => i._id === parentId);
     if (!parent) return;
-    const item = makeItem({ parentId, depth: parent.depth + 1 });
+    const isCategoryContainer =
+      parent.label?.toLowerCase().includes('danh mục') ||
+      parent.megaMenu ||
+      parent.linkType === 'none';
+    const item = makeItem({
+      parentId,
+      depth: parent.depth + 1,
+      linkType: isCategoryContainer ? 'category' : 'url',
+    });
     // Insert right after parent + its subtree
     setFlatItems((prev) => {
       const parentIdx = prev.findIndex((i) => i._id === parentId);

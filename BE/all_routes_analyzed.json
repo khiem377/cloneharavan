@@ -1,0 +1,3624 @@
+[
+  {
+    "file": "auditLog.routes.js",
+    "mount": "audit-logs",
+    "method": "GET",
+    "subPath": "/",
+    "fullUrlPath": "audit-logs",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "requirePermission('audit_log.view'), auditLogController.getLogs);",
+    "existing": null
+  },
+  {
+    "file": "auditLog.routes.js",
+    "mount": "audit-logs",
+    "method": "GET",
+    "subPath": "/:id",
+    "fullUrlPath": "audit-logs/:id",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "requirePermission('audit_log.view'), auditLogController.getLogById);",
+    "existing": null
+  },
+  {
+    "file": "auditLog.routes.js",
+    "mount": "audit-logs",
+    "method": "POST",
+    "subPath": "/:id/rollback",
+    "fullUrlPath": "audit-logs/:id/rollback",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "requirePermission('audit_log.rollback'), auditLogController.rollback);",
+    "existing": null
+  },
+  {
+    "file": "auth.routes.js",
+    "mount": "auth",
+    "method": "POST",
+    "subPath": "/register",
+    "fullUrlPath": "auth/register",
+    "isProtected": false,
+    "validatorName": "registerSchema",
+    "isUpload": false,
+    "handlersSnippet": "validate(registerSchema), register);",
+    "existing": {
+      "name": "1.1 Register (Đăng ký tài khoản)",
+      "folder": "1. Auth",
+      "cleanUrl": "auth/register",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "auth.routes.js",
+    "mount": "auth",
+    "method": "POST",
+    "subPath": "/register-admin",
+    "fullUrlPath": "auth/register-admin",
+    "isProtected": false,
+    "validatorName": "registerAdminSchema",
+    "isUpload": false,
+    "handlersSnippet": "validate(registerAdminSchema), registerAdmin);",
+    "existing": null
+  },
+  {
+    "file": "auth.routes.js",
+    "mount": "auth",
+    "method": "POST",
+    "subPath": "/login",
+    "fullUrlPath": "auth/login",
+    "isProtected": false,
+    "validatorName": "loginSchema",
+    "isUpload": false,
+    "handlersSnippet": "validate(loginSchema), login);",
+    "existing": {
+      "name": "1.2 Login (Đăng nhập)",
+      "folder": "1. Auth",
+      "cleanUrl": "auth/login",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "auth.routes.js",
+    "mount": "auth",
+    "method": "POST",
+    "subPath": "/refresh-token",
+    "fullUrlPath": "auth/refresh-token",
+    "isProtected": false,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "refreshToken);",
+    "existing": {
+      "name": "1.3 Refresh token (Làm mới Token)",
+      "folder": "1. Auth",
+      "cleanUrl": "auth/refresh-token",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "auth.routes.js",
+    "mount": "auth",
+    "method": "GET",
+    "subPath": "/me",
+    "fullUrlPath": "auth/me",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, getProfile);",
+    "existing": {
+      "name": "1.4 Get Profile (Lấy thông tin tài khoản hiện tại)",
+      "folder": "1. Auth",
+      "cleanUrl": "auth/me",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "auth.routes.js",
+    "mount": "auth",
+    "method": "POST",
+    "subPath": "/logout",
+    "fullUrlPath": "auth/logout",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, logout); // Đổi & Khôi phục mật khẩu",
+    "existing": {
+      "name": "1.12 Logout (Đăng xuất)",
+      "folder": "1. Auth",
+      "cleanUrl": "auth/logout",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "auth.routes.js",
+    "mount": "auth",
+    "method": "POST",
+    "subPath": "/change-password",
+    "fullUrlPath": "auth/change-password",
+    "isProtected": true,
+    "validatorName": "changePasswordSchema",
+    "isUpload": false,
+    "handlersSnippet": "protect, validate(changePasswordSchema), changePassword);",
+    "existing": {
+      "name": "1.5 Change Password (Đổi mật khẩu)",
+      "folder": "1. Auth",
+      "cleanUrl": "auth/change-password",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "auth.routes.js",
+    "mount": "auth",
+    "method": "POST",
+    "subPath": "/forgot-password",
+    "fullUrlPath": "auth/forgot-password",
+    "isProtected": false,
+    "validatorName": "forgotPasswordSchema",
+    "isUpload": false,
+    "handlersSnippet": "validate(forgotPasswordSchema), forgotPassword);",
+    "existing": {
+      "name": "1.6 Forgot Password (Quên mật khẩu)",
+      "folder": "1. Auth",
+      "cleanUrl": "auth/forgot-password",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "auth.routes.js",
+    "mount": "auth",
+    "method": "POST",
+    "subPath": "/reset-password/:token",
+    "fullUrlPath": "auth/reset-password/:token",
+    "isProtected": false,
+    "validatorName": "resetPasswordSchema",
+    "isUpload": false,
+    "handlersSnippet": "validate(resetPasswordSchema), resetPassword);",
+    "existing": {
+      "name": "1.7 Reset Password (Đặt lại mật khẩu mới)",
+      "folder": "1. Auth",
+      "cleanUrl": "auth/reset-password/<resetToken>",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "auth.routes.js",
+    "mount": "auth",
+    "method": "POST",
+    "subPath": "/reset-password",
+    "fullUrlPath": "auth/reset-password",
+    "isProtected": false,
+    "validatorName": "resetPasswordSchema",
+    "isUpload": false,
+    "handlersSnippet": "validate(resetPasswordSchema), resetPassword); // Xác minh Email",
+    "existing": null
+  },
+  {
+    "file": "auth.routes.js",
+    "mount": "auth",
+    "method": "POST",
+    "subPath": "/send-verify-email",
+    "fullUrlPath": "auth/send-verify-email",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, sendVerifyEmail);",
+    "existing": {
+      "name": "1.8 Send Verify Email (Gửi lại email xác minh)",
+      "folder": "1. Auth",
+      "cleanUrl": "auth/send-verify-email",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "auth.routes.js",
+    "mount": "auth",
+    "method": "POST",
+    "subPath": "/verify-email/:token",
+    "fullUrlPath": "auth/verify-email/:token",
+    "isProtected": false,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "verifyEmail);",
+    "existing": {
+      "name": "1.9 Verify Email (Xác minh Email qua Token)",
+      "folder": "1. Auth",
+      "cleanUrl": "auth/verify-email/<verifyToken>",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "auth.routes.js",
+    "mount": "auth",
+    "method": "POST",
+    "subPath": "/verify-email",
+    "fullUrlPath": "auth/verify-email",
+    "isProtected": false,
+    "validatorName": "verifyEmailSchema",
+    "isUpload": false,
+    "handlersSnippet": "validate(verifyEmailSchema), verifyEmail); // Xác minh Số điện thoại (OTP)",
+    "existing": null
+  },
+  {
+    "file": "auth.routes.js",
+    "mount": "auth",
+    "method": "POST",
+    "subPath": "/send-verify-phone",
+    "fullUrlPath": "auth/send-verify-phone",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, sendVerifyPhone);",
+    "existing": {
+      "name": "1.10 Send Verify Phone OTP (Gửi mã OTP xác minh SĐT)",
+      "folder": "1. Auth",
+      "cleanUrl": "auth/send-verify-phone",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "auth.routes.js",
+    "mount": "auth",
+    "method": "POST",
+    "subPath": "/verify-phone",
+    "fullUrlPath": "auth/verify-phone",
+    "isProtected": true,
+    "validatorName": "verifyPhoneSchema",
+    "isUpload": false,
+    "handlersSnippet": "protect, validate(verifyPhoneSchema), verifyPhone);",
+    "existing": {
+      "name": "1.11 Verify Phone OTP (Nhập mã OTP xác minh SĐT)",
+      "folder": "1. Auth",
+      "cleanUrl": "auth/verify-phone",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "banner.routes.js",
+    "mount": "banners",
+    "method": "GET",
+    "subPath": "/",
+    "fullUrlPath": "banners",
+    "isProtected": false,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "getPublic); // Analytics — public (không cần auth, FE gọi tự động)",
+    "existing": {
+      "name": "3.1 Get Public Banners (Danh sách banner công khai)",
+      "folder": "3. Banners",
+      "cleanUrl": "banners",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "banner.routes.js",
+    "mount": "banners",
+    "method": "POST",
+    "subPath": "/:id/view",
+    "fullUrlPath": "banners/:id/view",
+    "isProtected": false,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "view);",
+    "existing": null
+  },
+  {
+    "file": "banner.routes.js",
+    "mount": "banners",
+    "method": "POST",
+    "subPath": "/:id/click",
+    "fullUrlPath": "banners/:id/click",
+    "isProtected": false,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "click); // ── Admin (cần auth) ───────────────────────────────────────────────────────",
+    "existing": null
+  },
+  {
+    "file": "banner.routes.js",
+    "mount": "banners",
+    "method": "GET",
+    "subPath": "/admin",
+    "fullUrlPath": "banners/admin",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "requirePermission('banner.view'), getAll);",
+    "existing": {
+      "name": "3.2 Admin: Get All Banners (Danh sách tất cả banner)",
+      "folder": "3. Banners",
+      "cleanUrl": "banners/admin",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "banner.routes.js",
+    "mount": "banners",
+    "method": "POST",
+    "subPath": "/admin",
+    "fullUrlPath": "banners/admin",
+    "isProtected": true,
+    "validatorName": "createBannerSchema",
+    "isUpload": true,
+    "handlersSnippet": "requirePermission('banner.manage'), upload.single('image'), validate(createBannerSchema), create);",
+    "existing": {
+      "name": "3.3 Admin: Create Banner by File Upload (Tải file tạo banner)",
+      "folder": "3. Banners",
+      "cleanUrl": "banners/admin",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "banner.routes.js",
+    "mount": "banners",
+    "method": "PATCH",
+    "subPath": "/admin/reorder",
+    "fullUrlPath": "banners/admin/reorder",
+    "isProtected": true,
+    "validatorName": "reorderSchema",
+    "isUpload": false,
+    "handlersSnippet": "requirePermission('banner.manage'), validate(reorderSchema), reorder);",
+    "existing": {
+      "name": "3.5 Admin: Reorder Banners (Sắp xếp vị trí banner)",
+      "folder": "3. Banners",
+      "cleanUrl": "banners/admin/reorder",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "banner.routes.js",
+    "mount": "banners",
+    "method": "DELETE",
+    "subPath": "/admin/bulk",
+    "fullUrlPath": "banners/admin/bulk",
+    "isProtected": true,
+    "validatorName": "deleteBulkSchema",
+    "isUpload": false,
+    "handlersSnippet": "requirePermission('banner.manage'), validate(deleteBulkSchema), removeBulk);",
+    "existing": {
+      "name": "3.8 Admin: Bulk Delete Banners (Xóa hàng loạt banner)",
+      "folder": "3. Banners",
+      "cleanUrl": "banners/admin/bulk",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "banner.routes.js",
+    "mount": "banners",
+    "method": "GET",
+    "subPath": "/admin/locate",
+    "fullUrlPath": "banners/admin/locate",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "requirePermission('banner.view'), async (req, res, next) => { try { const { id, limit } = req.query; if (!id) ",
+    "existing": null
+  },
+  {
+    "file": "banner.routes.js",
+    "mount": "banners",
+    "method": "PATCH",
+    "subPath": "/admin/:id",
+    "fullUrlPath": "banners/admin/:id",
+    "isProtected": true,
+    "validatorName": "updateBannerSchema",
+    "isUpload": false,
+    "handlersSnippet": "requirePermission('banner.manage'), validate(updateBannerSchema), update);",
+    "existing": {
+      "name": "3.5 Admin: Reorder Banners (Sắp xếp vị trí banner)",
+      "folder": "3. Banners",
+      "cleanUrl": "banners/admin/reorder",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "banner.routes.js",
+    "mount": "banners",
+    "method": "DELETE",
+    "subPath": "/admin/:id",
+    "fullUrlPath": "banners/admin/:id",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "requirePermission('banner.manage'), remove);",
+    "existing": {
+      "name": "3.7 Admin: Delete Single Banner (Xóa 1 banner)",
+      "folder": "3. Banners",
+      "cleanUrl": "banners/admin/<id>",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "blogCategory.routes.js",
+    "mount": "blog-categories",
+    "method": "GET",
+    "subPath": "/",
+    "fullUrlPath": "blog-categories",
+    "isProtected": false,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "async (req, res, next) => { try { res.json(await svc.getAllBlogCategories(req.query)); } catch(e) { next(e); } });",
+    "existing": {
+      "name": "16.10 Get All Blog Categories (Danh mục blog)",
+      "folder": "16. Blog & Content",
+      "cleanUrl": "blog-categories",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "blogCategory.routes.js",
+    "mount": "blog-categories",
+    "method": "GET",
+    "subPath": "/:slug",
+    "fullUrlPath": "blog-categories/:slug",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "async (req, res, next) => { try { res.json(await svc.getBlogCategoryBySlug(req.params.slug)); } catch(e) { next(e); } })",
+    "existing": null
+  },
+  {
+    "file": "blogCategory.routes.js",
+    "mount": "blog-categories",
+    "method": "POST",
+    "subPath": "/",
+    "fullUrlPath": "blog-categories",
+    "isProtected": true,
+    "validatorName": "createBlogCategorySchema",
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('blog_category.manage'), validate(createBlogCategorySchema), async (req, res, next) => { try ",
+    "existing": {
+      "name": "16.11 Create Blog Category (Tạo danh mục blog)",
+      "folder": "16. Blog & Content",
+      "cleanUrl": "blog-categories",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "blogCategory.routes.js",
+    "mount": "blog-categories",
+    "method": "PATCH",
+    "subPath": "/reorder",
+    "fullUrlPath": "blog-categories/reorder",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('blog_category.manage'), async (req, res, next) => { try { await svc.reorderBlogCategories(re",
+    "existing": {
+      "name": "16.12 Reorder Blog Categories (Sắp xếp danh mục blog)",
+      "folder": "16. Blog & Content",
+      "cleanUrl": "blog-categories/reorder",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "blogCategory.routes.js",
+    "mount": "blog-categories",
+    "method": "PUT",
+    "subPath": "/:id",
+    "fullUrlPath": "blog-categories/:id",
+    "isProtected": true,
+    "validatorName": "updateBlogCategorySchema",
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('blog_category.manage'), validate(updateBlogCategorySchema), async (req, res, next) => { try ",
+    "existing": null
+  },
+  {
+    "file": "blogCategory.routes.js",
+    "mount": "blog-categories",
+    "method": "PATCH",
+    "subPath": "/:id/status",
+    "fullUrlPath": "blog-categories/:id/status",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('blog_category.manage'), async (req, res, next) => { try { res.json(await svc.toggleBlogCateg",
+    "existing": {
+      "name": "16.13 Toggle Blog Category Status",
+      "folder": "16. Blog & Content",
+      "cleanUrl": "blog-categories/<catId>/status",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "blogCategory.routes.js",
+    "mount": "blog-categories",
+    "method": "DELETE",
+    "subPath": "/bulk",
+    "fullUrlPath": "blog-categories/bulk",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('blog_category.manage'), async (req, res, next) => { try { res.json(await svc.deleteBulkBlogC",
+    "existing": null
+  },
+  {
+    "file": "blogCategory.routes.js",
+    "mount": "blog-categories",
+    "method": "DELETE",
+    "subPath": "/:id",
+    "fullUrlPath": "blog-categories/:id",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('blog_category.manage'), async (req, res, next) => { try { await svc.deleteBlogCategory(req.p",
+    "existing": null
+  },
+  {
+    "file": "blogPost.routes.js",
+    "mount": "blog-posts",
+    "method": "GET",
+    "subPath": "/",
+    "fullUrlPath": "blog-posts",
+    "isProtected": false,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "async (req, res, next) => { try { res.json(await svc.getAllPosts(req.query)); } catch(e) { next(e); } });",
+    "existing": {
+      "name": "16.1 Get All Blog Posts (Danh sách bài viết)",
+      "folder": "16. Blog & Content",
+      "cleanUrl": "blog-posts",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "blogPost.routes.js",
+    "mount": "blog-posts",
+    "method": "GET",
+    "subPath": "/id/:id",
+    "fullUrlPath": "blog-posts/id/:id",
+    "isProtected": false,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "async (req, res, next) => { try { res.json(await svc.getPostById(req.params.id)); } catch(e) { next(e); } });",
+    "existing": {
+      "name": "16.2 Get Blog Post By ID",
+      "folder": "16. Blog & Content",
+      "cleanUrl": "blog-posts/id/<postId>",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "blogPost.routes.js",
+    "mount": "blog-posts",
+    "method": "GET",
+    "subPath": "/locate",
+    "fullUrlPath": "blog-posts/locate",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('blog.edit'), async (req, res, next) => { try { const { id, limit } = req.query; ",
+    "existing": null
+  },
+  {
+    "file": "blogPost.routes.js",
+    "mount": "blog-posts",
+    "method": "GET",
+    "subPath": "/:slug",
+    "fullUrlPath": "blog-posts/:slug",
+    "isProtected": false,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "async (req, res, next) => { try { res.json(await svc.getPostBySlug(req.params.slug)); } catch(e) { next(e); } });",
+    "existing": {
+      "name": "16.3 Get Blog Post By Slug (Public)",
+      "folder": "16. Blog & Content",
+      "cleanUrl": "blog-posts/<slug>",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "blogPost.routes.js",
+    "mount": "blog-posts",
+    "method": "POST",
+    "subPath": "/:slug/view",
+    "fullUrlPath": "blog-posts/:slug/view",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "async (req, res, next) => { try { await svc.incrementViews(req.params.slug); res.json({ ok: true }); } catch(e) { next(e",
+    "existing": {
+      "name": "16.7 Increment Post Views (Tăng lượt xem)",
+      "folder": "16. Blog & Content",
+      "cleanUrl": "blog-posts/<slug>/view",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "blogPost.routes.js",
+    "mount": "blog-posts",
+    "method": "POST",
+    "subPath": "/",
+    "fullUrlPath": "blog-posts",
+    "isProtected": true,
+    "validatorName": "createBlogPostSchema",
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('blog.create'), validate(createBlogPostSchema), async (req, res, next) => { try { res.status(",
+    "existing": {
+      "name": "16.4 Create Blog Post (Tạo bài viết mới)",
+      "folder": "16. Blog & Content",
+      "cleanUrl": "blog-posts",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "blogPost.routes.js",
+    "mount": "blog-posts",
+    "method": "PUT",
+    "subPath": "/:id",
+    "fullUrlPath": "blog-posts/:id",
+    "isProtected": true,
+    "validatorName": "updateBlogPostSchema",
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('blog.edit'), validate(updateBlogPostSchema), async (req, res, next) => { try { res.json(awai",
+    "existing": {
+      "name": "16.5 Update Blog Post (Cập nhật bài viết)",
+      "folder": "16. Blog & Content",
+      "cleanUrl": "blog-posts/<postId>",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "blogPost.routes.js",
+    "mount": "blog-posts",
+    "method": "PATCH",
+    "subPath": "/:id/status",
+    "fullUrlPath": "blog-posts/:id/status",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('blog.edit'), async (req, res, next) => { try { res.json(await svc.togglePostStatus(req.param",
+    "existing": {
+      "name": "16.6 Toggle Blog Post Status (Bật/Ẩn bài viết)",
+      "folder": "16. Blog & Content",
+      "cleanUrl": "blog-posts/<postId>/status",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "blogPost.routes.js",
+    "mount": "blog-posts",
+    "method": "DELETE",
+    "subPath": "/bulk",
+    "fullUrlPath": "blog-posts/bulk",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('blog.delete'), async (req, res, next) => { try { res.json(await svc.deleteBulkPosts(req.body",
+    "existing": {
+      "name": "16.9 Bulk Delete Blog Posts (Xóa hàng loạt bài viết)",
+      "folder": "16. Blog & Content",
+      "cleanUrl": "blog-posts/bulk",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "blogPost.routes.js",
+    "mount": "blog-posts",
+    "method": "DELETE",
+    "subPath": "/:id",
+    "fullUrlPath": "blog-posts/:id",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('blog.delete'), async (req, res, next) => { try { await svc.deletePost(req.params.id); res.js",
+    "existing": {
+      "name": "16.8 Delete Blog Post (Xóa 1 bài viết)",
+      "folder": "16. Blog & Content",
+      "cleanUrl": "blog-posts/<postId>",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "brand.routes.js",
+    "mount": "brands",
+    "method": "GET",
+    "subPath": "/",
+    "fullUrlPath": "brands",
+    "isProtected": false,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "brandController.getBrands);",
+    "existing": {
+      "name": "7.1 Get Public Brands (Danh sách thương hiệu công khai)",
+      "folder": "7. Brands",
+      "cleanUrl": "brands",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "brand.routes.js",
+    "mount": "brands",
+    "method": "GET",
+    "subPath": "/admin",
+    "fullUrlPath": "brands/admin",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('brand.view'), brandController.getBrandsAdmin);",
+    "existing": {
+      "name": "7.2 Admin: Get All Brands (Danh sách thương hiệu admin)",
+      "folder": "7. Brands",
+      "cleanUrl": "brands/admin",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "brand.routes.js",
+    "mount": "brands",
+    "method": "GET",
+    "subPath": "/admin/locate",
+    "fullUrlPath": "brands/admin/locate",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('brand.view'), brandController.locateBrand);",
+    "existing": null
+  },
+  {
+    "file": "brand.routes.js",
+    "mount": "brands",
+    "method": "GET",
+    "subPath": "/:id",
+    "fullUrlPath": "brands/:id",
+    "isProtected": false,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "brandController.getBrandById);",
+    "existing": {
+      "name": "7.2 Admin: Get All Brands (Danh sách thương hiệu admin)",
+      "folder": "7. Brands",
+      "cleanUrl": "brands/admin",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "brand.routes.js",
+    "mount": "brands",
+    "method": "POST",
+    "subPath": "/",
+    "fullUrlPath": "brands",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('brand.create'), brandController.createBrand);",
+    "existing": {
+      "name": "7.4 Create Brand (Tạo mới thương hiệu)",
+      "folder": "7. Brands",
+      "cleanUrl": "brands",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "brand.routes.js",
+    "mount": "brands",
+    "method": "PUT",
+    "subPath": "/:id",
+    "fullUrlPath": "brands/:id",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('brand.edit'), brandController.updateBrand);",
+    "existing": {
+      "name": "7.5 Update Brand (Cập nhật thương hiệu)",
+      "folder": "7. Brands",
+      "cleanUrl": "brands/<id>",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "brand.routes.js",
+    "mount": "brands",
+    "method": "PATCH",
+    "subPath": "/:id/status",
+    "fullUrlPath": "brands/:id/status",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('brand.edit'), brandController.toggleBrandStatus);",
+    "existing": {
+      "name": "7.6 Toggle Brand Status (Ẩn/Hiện thương hiệu)",
+      "folder": "7. Brands",
+      "cleanUrl": "brands/<id>/status",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "brand.routes.js",
+    "mount": "brands",
+    "method": "DELETE",
+    "subPath": "/bulk",
+    "fullUrlPath": "brands/bulk",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('brand.delete'), brandController.deleteBulkBrands);",
+    "existing": {
+      "name": "7.8 Bulk Delete Brands (Xóa hàng loạt thương hiệu)",
+      "folder": "7. Brands",
+      "cleanUrl": "brands/bulk",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "brand.routes.js",
+    "mount": "brands",
+    "method": "DELETE",
+    "subPath": "/:id",
+    "fullUrlPath": "brands/:id",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('brand.delete'), brandController.deleteBrand);",
+    "existing": {
+      "name": "7.7 Delete Single Brand (Xóa 1 thương hiệu)",
+      "folder": "7. Brands",
+      "cleanUrl": "brands/<id>",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "category.routes.js",
+    "mount": "categories",
+    "method": "GET",
+    "subPath": "/",
+    "fullUrlPath": "categories",
+    "isProtected": false,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "categoryController.getCategories);",
+    "existing": {
+      "name": "6.1 Get Public Categories (Danh sách danh mục công khai)",
+      "folder": "6. Categories",
+      "cleanUrl": "categories",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "category.routes.js",
+    "mount": "categories",
+    "method": "GET",
+    "subPath": "/admin",
+    "fullUrlPath": "categories/admin",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('category.view'), categoryController.getCategoriesAdmin);",
+    "existing": {
+      "name": "6.2 Admin: Get All Categories (Danh sách danh mục admin)",
+      "folder": "6. Categories",
+      "cleanUrl": "categories/admin",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "category.routes.js",
+    "mount": "categories",
+    "method": "GET",
+    "subPath": "/:id",
+    "fullUrlPath": "categories/:id",
+    "isProtected": false,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "categoryController.getCategoryById);",
+    "existing": {
+      "name": "6.2 Admin: Get All Categories (Danh sách danh mục admin)",
+      "folder": "6. Categories",
+      "cleanUrl": "categories/admin",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "category.routes.js",
+    "mount": "categories",
+    "method": "POST",
+    "subPath": "/",
+    "fullUrlPath": "categories",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('category.create'), categoryController.createCategory);",
+    "existing": {
+      "name": "6.4 Create Parent Category (Tạo danh mục gốc)",
+      "folder": "6. Categories",
+      "cleanUrl": "categories",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "category.routes.js",
+    "mount": "categories",
+    "method": "PUT",
+    "subPath": "/:id",
+    "fullUrlPath": "categories/:id",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('category.edit'), categoryController.updateCategory);",
+    "existing": {
+      "name": "6.6 Update Category (Cập nhật danh mục)",
+      "folder": "6. Categories",
+      "cleanUrl": "categories/<id>",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "category.routes.js",
+    "mount": "categories",
+    "method": "PATCH",
+    "subPath": "/:id/status",
+    "fullUrlPath": "categories/:id/status",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('category.edit'), categoryController.toggleCategoryStatus);",
+    "existing": {
+      "name": "6.7 Toggle Category Status (Ẩn/Hiện danh mục)",
+      "folder": "6. Categories",
+      "cleanUrl": "categories/<id>/status",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "category.routes.js",
+    "mount": "categories",
+    "method": "DELETE",
+    "subPath": "/bulk",
+    "fullUrlPath": "categories/bulk",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('category.delete'), categoryController.deleteBulkCategories);",
+    "existing": {
+      "name": "6.9 Bulk Delete Categories (Xóa hàng loạt danh mục)",
+      "folder": "6. Categories",
+      "cleanUrl": "categories/bulk",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "category.routes.js",
+    "mount": "categories",
+    "method": "DELETE",
+    "subPath": "/:id",
+    "fullUrlPath": "categories/:id",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('category.delete'), categoryController.deleteCategory);",
+    "existing": {
+      "name": "6.8 Delete Single Category (Xóa 1 danh mục)",
+      "folder": "6. Categories",
+      "cleanUrl": "categories/<id>",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "chatbot.routes.js",
+    "mount": "chat",
+    "method": "POST",
+    "subPath": "/",
+    "fullUrlPath": "chat",
+    "isProtected": false,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "chatRateLimit(15), handleChat);",
+    "existing": null
+  },
+  {
+    "file": "chatbot.routes.js",
+    "mount": "chat",
+    "method": "POST",
+    "subPath": "/stream",
+    "fullUrlPath": "chat/stream",
+    "isProtected": false,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "chatRateLimit(15), handleStream);",
+    "existing": null
+  },
+  {
+    "file": "chatbot.routes.js",
+    "mount": "chat",
+    "method": "DELETE",
+    "subPath": "/session",
+    "fullUrlPath": "chat/session",
+    "isProtected": false,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "clearSession);",
+    "existing": null
+  },
+  {
+    "file": "coupon.routes.js",
+    "mount": "coupons",
+    "method": "POST",
+    "subPath": "/validate",
+    "fullUrlPath": "coupons/validate",
+    "isProtected": false,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "ctrl.validate); // Public / Admin view",
+    "existing": {
+      "name": "10.8 Validate Coupon Storefront (Kiểm tra mã khi checkout)",
+      "folder": "10. Coupons",
+      "cleanUrl": "coupons/validate",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "coupon.routes.js",
+    "mount": "coupons",
+    "method": "GET",
+    "subPath": "/",
+    "fullUrlPath": "coupons",
+    "isProtected": false,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "ctrl.getAll);",
+    "existing": {
+      "name": "10.1 Get All Coupons (Danh sách mã giảm giá)",
+      "folder": "10. Coupons",
+      "cleanUrl": "coupons",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "coupon.routes.js",
+    "mount": "coupons",
+    "method": "GET",
+    "subPath": "/:id",
+    "fullUrlPath": "coupons/:id",
+    "isProtected": false,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "ctrl.getOne); // Admin manage routes (cần auth & permission)",
+    "existing": {
+      "name": "10.2 Get Coupon Detail (Xem chi tiết 1 mã)",
+      "folder": "10. Coupons",
+      "cleanUrl": "coupons/<id>",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "coupon.routes.js",
+    "mount": "coupons",
+    "method": "POST",
+    "subPath": "/",
+    "fullUrlPath": "coupons",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('coupon.manage'), ctrl.create);",
+    "existing": {
+      "name": "10.3 Create Coupon (Tạo mã giảm giá mới)",
+      "folder": "10. Coupons",
+      "cleanUrl": "coupons",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "coupon.routes.js",
+    "mount": "coupons",
+    "method": "PUT",
+    "subPath": "/:id",
+    "fullUrlPath": "coupons/:id",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('coupon.manage'), ctrl.update);",
+    "existing": {
+      "name": "10.4 Update Coupon (Cập nhật mã giảm giá)",
+      "folder": "10. Coupons",
+      "cleanUrl": "coupons/<id>",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "coupon.routes.js",
+    "mount": "coupons",
+    "method": "PATCH",
+    "subPath": "/:id/toggle-status",
+    "fullUrlPath": "coupons/:id/toggle-status",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('coupon.manage'), ctrl.toggleStatus);",
+    "existing": null
+  },
+  {
+    "file": "coupon.routes.js",
+    "mount": "coupons",
+    "method": "DELETE",
+    "subPath": "/bulk",
+    "fullUrlPath": "coupons/bulk",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('coupon.manage'), ctrl.removeBulk);",
+    "existing": {
+      "name": "10.7 Bulk Delete Coupons (Xóa hàng loạt mã giảm giá)",
+      "folder": "10. Coupons",
+      "cleanUrl": "coupons/bulk",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "coupon.routes.js",
+    "mount": "coupons",
+    "method": "DELETE",
+    "subPath": "/:id",
+    "fullUrlPath": "coupons/:id",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('coupon.manage'), ctrl.remove);",
+    "existing": {
+      "name": "10.6 Delete Single Coupon (Xóa 1 mã giảm giá)",
+      "folder": "10. Coupons",
+      "cleanUrl": "coupons/<id>",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "dashboard.routes.js",
+    "mount": "dashboard",
+    "method": "GET",
+    "subPath": "/overview",
+    "fullUrlPath": "dashboard/overview",
+    "isProtected": false,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "dashboardController.getOverviewStats);",
+    "existing": {
+      "name": "14.1 Overview Stats (Thống kê tổng quan)",
+      "folder": "14. Dashboard",
+      "cleanUrl": "dashboard/overview",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "dashboard.routes.js",
+    "mount": "dashboard",
+    "method": "GET",
+    "subPath": "/search",
+    "fullUrlPath": "dashboard/search",
+    "isProtected": false,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "dashboardController.searchGlobal);",
+    "existing": {
+      "name": "14.2 Global Search (Tìm kiếm toàn cục)",
+      "folder": "14. Dashboard",
+      "cleanUrl": "dashboard/search",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "dashboard.routes.js",
+    "mount": "dashboard",
+    "method": "GET",
+    "subPath": "/inventory-stats",
+    "fullUrlPath": "dashboard/inventory-stats",
+    "isProtected": false,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "dashboardController.getInventoryStats);",
+    "existing": null
+  },
+  {
+    "file": "flashSale.routes.js",
+    "mount": "flash-sales",
+    "method": "GET",
+    "subPath": "/active",
+    "fullUrlPath": "flash-sales/active",
+    "isProtected": false,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "flashSaleController.getActive);",
+    "existing": {
+      "name": "15.1 Get Active Flash Sales (Chương trình đang diễn ra)",
+      "folder": "15. Flash Sales",
+      "cleanUrl": "flash-sales/active",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "flashSale.routes.js",
+    "mount": "flash-sales",
+    "method": "GET",
+    "subPath": "/",
+    "fullUrlPath": "flash-sales",
+    "isProtected": false,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "flashSaleController.getAll);",
+    "existing": {
+      "name": "15.2 Get All Flash Sales (Admin)",
+      "folder": "15. Flash Sales",
+      "cleanUrl": "flash-sales",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "flashSale.routes.js",
+    "mount": "flash-sales",
+    "method": "GET",
+    "subPath": "/locate",
+    "fullUrlPath": "flash-sales/locate",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('flash_sale.manage'), async (req, res, next) => { try { const { id, limit } = req.que",
+    "existing": null
+  },
+  {
+    "file": "flashSale.routes.js",
+    "mount": "flash-sales",
+    "method": "GET",
+    "subPath": "/:id",
+    "fullUrlPath": "flash-sales/:id",
+    "isProtected": false,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "flashSaleController.getById);",
+    "existing": {
+      "name": "15.1 Get Active Flash Sales (Chương trình đang diễn ra)",
+      "folder": "15. Flash Sales",
+      "cleanUrl": "flash-sales/active",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "flashSale.routes.js",
+    "mount": "flash-sales",
+    "method": "POST",
+    "subPath": "/",
+    "fullUrlPath": "flash-sales",
+    "isProtected": false,
+    "validatorName": "createFlashSaleSchema",
+    "isUpload": false,
+    "handlersSnippet": "validate(createFlashSaleSchema), flashSaleController.create);",
+    "existing": {
+      "name": "15.4 Create Flash Sale (Tạo Flash Sale)",
+      "folder": "15. Flash Sales",
+      "cleanUrl": "flash-sales",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "flashSale.routes.js",
+    "mount": "flash-sales",
+    "method": "PUT",
+    "subPath": "/:id",
+    "fullUrlPath": "flash-sales/:id",
+    "isProtected": false,
+    "validatorName": "updateFlashSaleSchema",
+    "isUpload": false,
+    "handlersSnippet": "validate(updateFlashSaleSchema), flashSaleController.update);",
+    "existing": {
+      "name": "15.5 Update Flash Sale (Cập nhật Flash Sale)",
+      "folder": "15. Flash Sales",
+      "cleanUrl": "flash-sales/<flashSaleId>",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "flashSale.routes.js",
+    "mount": "flash-sales",
+    "method": "PATCH",
+    "subPath": "/:id",
+    "fullUrlPath": "flash-sales/:id",
+    "isProtected": false,
+    "validatorName": "updateFlashSaleSchema",
+    "isUpload": false,
+    "handlersSnippet": "validate(updateFlashSaleSchema), flashSaleController.update);",
+    "existing": null
+  },
+  {
+    "file": "flashSale.routes.js",
+    "mount": "flash-sales",
+    "method": "DELETE",
+    "subPath": "/:id",
+    "fullUrlPath": "flash-sales/:id",
+    "isProtected": false,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "flashSaleController.remove);",
+    "existing": {
+      "name": "15.7 Delete Flash Sale (Xóa Flash Sale)",
+      "folder": "15. Flash Sales",
+      "cleanUrl": "flash-sales/<flashSaleId>",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "flashSale.routes.js",
+    "mount": "flash-sales",
+    "method": "PATCH",
+    "subPath": "/:id/toggle-status",
+    "fullUrlPath": "flash-sales/:id/toggle-status",
+    "isProtected": false,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "flashSaleController.toggleStatus);",
+    "existing": {
+      "name": "15.6 Toggle Status Flash Sale (Bật/Tắt Flash Sale)",
+      "folder": "15. Flash Sales",
+      "cleanUrl": "flash-sales/<flashSaleId>/toggle-status",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "folder.routes.js",
+    "mount": "folders",
+    "method": "GET",
+    "subPath": "/",
+    "fullUrlPath": "folders",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "requirePermission('media.view'), getTree);",
+    "existing": {
+      "name": "5.1 Get Folder Tree (Toàn bộ cây thư mục)",
+      "folder": "5. Folders Media",
+      "cleanUrl": "folders",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "folder.routes.js",
+    "mount": "folders",
+    "method": "GET",
+    "subPath": "/:id/contents",
+    "fullUrlPath": "folders/:id/contents",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "requirePermission('media.view'), getContents);",
+    "existing": {
+      "name": "5.2 Get Folder Contents (Nội dung bên trong thư mục)",
+      "folder": "5. Folders Media",
+      "cleanUrl": "folders/<id>/contents",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "folder.routes.js",
+    "mount": "folders",
+    "method": "POST",
+    "subPath": "/",
+    "fullUrlPath": "folders",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "requirePermission('folder.manage'), create);",
+    "existing": {
+      "name": "5.3 Create Folder (Tạo thư mục mới)",
+      "folder": "5. Folders Media",
+      "cleanUrl": "folders",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "folder.routes.js",
+    "mount": "folders",
+    "method": "PATCH",
+    "subPath": "/reorder",
+    "fullUrlPath": "folders/reorder",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "requirePermission('folder.manage'), reorder);",
+    "existing": {
+      "name": "5.4 Reorder Folders (Sắp xếp thứ tự thư mục)",
+      "folder": "5. Folders Media",
+      "cleanUrl": "folders/reorder",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "folder.routes.js",
+    "mount": "folders",
+    "method": "PATCH",
+    "subPath": "/:id",
+    "fullUrlPath": "folders/:id",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "requirePermission('folder.manage'), rename);",
+    "existing": {
+      "name": "5.4 Reorder Folders (Sắp xếp thứ tự thư mục)",
+      "folder": "5. Folders Media",
+      "cleanUrl": "folders/reorder",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "folder.routes.js",
+    "mount": "folders",
+    "method": "DELETE",
+    "subPath": "/:id",
+    "fullUrlPath": "folders/:id",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "requirePermission('folder.manage'), remove);",
+    "existing": {
+      "name": "5.6 Delete Folder (Xóa thư mục)",
+      "folder": "5. Folders Media",
+      "cleanUrl": "folders/<id>",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "gift-program.routes.js",
+    "mount": "gift-programs",
+    "method": "POST",
+    "subPath": "/apply",
+    "fullUrlPath": "gift-programs/apply",
+    "isProtected": false,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "ctrl.apply);",
+    "existing": {
+      "name": "12.9 Apply Gift Programs (Tính quà tặng ở Checkout)",
+      "folder": "12. Gift Programs",
+      "cleanUrl": "gift-programs/apply",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "gift-program.routes.js",
+    "mount": "gift-programs",
+    "method": "GET",
+    "subPath": "/",
+    "fullUrlPath": "gift-programs",
+    "isProtected": false,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "ctrl.getAll);",
+    "existing": {
+      "name": "12.1 Get All Gift Programs (Danh sách chương trình quà tặng)",
+      "folder": "12. Gift Programs",
+      "cleanUrl": "gift-programs",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "gift-program.routes.js",
+    "mount": "gift-programs",
+    "method": "GET",
+    "subPath": "/:id",
+    "fullUrlPath": "gift-programs/:id",
+    "isProtected": false,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "ctrl.getOne);",
+    "existing": {
+      "name": "12.2 Get Gift Program Detail (Chi tiết 1 chương trình quà tặng)",
+      "folder": "12. Gift Programs",
+      "cleanUrl": "gift-programs/<id>",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "gift-program.routes.js",
+    "mount": "gift-programs",
+    "method": "POST",
+    "subPath": "/",
+    "fullUrlPath": "gift-programs",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('gift_program.manage'), ctrl.create);",
+    "existing": {
+      "name": "12.3 Create Gift Program — Same Product (Tặng sản phẩm cùng loại)",
+      "folder": "12. Gift Programs",
+      "cleanUrl": "gift-programs",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "gift-program.routes.js",
+    "mount": "gift-programs",
+    "method": "PUT",
+    "subPath": "/:id",
+    "fullUrlPath": "gift-programs/:id",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('gift_program.manage'), ctrl.update);",
+    "existing": {
+      "name": "12.5 Update Gift Program (Cập nhật chương trình quà tặng)",
+      "folder": "12. Gift Programs",
+      "cleanUrl": "gift-programs/<id>",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "gift-program.routes.js",
+    "mount": "gift-programs",
+    "method": "PATCH",
+    "subPath": "/:id/status",
+    "fullUrlPath": "gift-programs/:id/status",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('gift_program.manage'), ctrl.toggleStatus);",
+    "existing": {
+      "name": "12.6 Toggle Gift Program Status (Bật/Tắt chương trình quà tặng)",
+      "folder": "12. Gift Programs",
+      "cleanUrl": "gift-programs/<id>/status",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "gift-program.routes.js",
+    "mount": "gift-programs",
+    "method": "DELETE",
+    "subPath": "/bulk",
+    "fullUrlPath": "gift-programs/bulk",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('gift_program.manage'), ctrl.removeBulk);",
+    "existing": {
+      "name": "12.8 Bulk Delete Gift Programs (Xóa hàng loạt chương trình quà tặng)",
+      "folder": "12. Gift Programs",
+      "cleanUrl": "gift-programs/bulk",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "gift-program.routes.js",
+    "mount": "gift-programs",
+    "method": "DELETE",
+    "subPath": "/:id",
+    "fullUrlPath": "gift-programs/:id",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('gift_program.manage'), ctrl.remove);",
+    "existing": {
+      "name": "12.7 Delete Single Gift Program (Xóa 1 chương trình quà tặng)",
+      "folder": "12. Gift Programs",
+      "cleanUrl": "gift-programs/<id>",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "inventoryReport.routes.js",
+    "mount": "inventory-reports",
+    "method": "GET",
+    "subPath": "/balance-report",
+    "fullUrlPath": "inventory-reports/balance-report",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "requirePermission('stock_movement.view'), inventoryReportController.getBalanceReport);",
+    "existing": null
+  },
+  {
+    "file": "inventoryReport.routes.js",
+    "mount": "inventory-reports",
+    "method": "GET",
+    "subPath": "/export-excel",
+    "fullUrlPath": "inventory-reports/export-excel",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "requirePermission('stock_movement.view'), inventoryReportController.exportExcel);",
+    "existing": null
+  },
+  {
+    "file": "media.routes.js",
+    "mount": "media",
+    "method": "GET",
+    "subPath": "/stats",
+    "fullUrlPath": "media/stats",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "requirePermission('media.view'), stats);",
+    "existing": null
+  },
+  {
+    "file": "media.routes.js",
+    "mount": "media",
+    "method": "GET",
+    "subPath": "/search",
+    "fullUrlPath": "media/search",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "requirePermission('media.view'), search);",
+    "existing": {
+      "name": "4.4 Search Media (Tìm kiếm file media)",
+      "folder": "4. Media & Cloudinary",
+      "cleanUrl": "media/search",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "media.routes.js",
+    "mount": "media",
+    "method": "GET",
+    "subPath": "/unused",
+    "fullUrlPath": "media/unused",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "requirePermission('media.view'), unused);",
+    "existing": null
+  },
+  {
+    "file": "media.routes.js",
+    "mount": "media",
+    "method": "GET",
+    "subPath": "/by-ids",
+    "fullUrlPath": "media/by-ids",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "requirePermission('media.view'), getByIds);",
+    "existing": null
+  },
+  {
+    "file": "media.routes.js",
+    "mount": "media",
+    "method": "GET",
+    "subPath": "/",
+    "fullUrlPath": "media",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "requirePermission('media.view'), browse);",
+    "existing": {
+      "name": "4.3 Browse Media (Duyệt danh sách thư viện media)",
+      "folder": "4. Media & Cloudinary",
+      "cleanUrl": "media",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "media.routes.js",
+    "mount": "media",
+    "method": "POST",
+    "subPath": "/check-usages",
+    "fullUrlPath": "media/check-usages",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "requirePermission('media.view'), checkUsages);",
+    "existing": null
+  },
+  {
+    "file": "media.routes.js",
+    "mount": "media",
+    "method": "GET",
+    "subPath": "/:id/usages",
+    "fullUrlPath": "media/:id/usages",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "requirePermission('media.view'), getUsage); // ── Upload ──────────────────────────────────────────────────────────────",
+    "existing": null
+  },
+  {
+    "file": "media.routes.js",
+    "mount": "media",
+    "method": "POST",
+    "subPath": "/",
+    "fullUrlPath": "media",
+    "isProtected": true,
+    "validatorName": "uploadMediaSchema",
+    "isUpload": true,
+    "handlersSnippet": "requirePermission('media.upload'), multerUpload.single('file'), validate(uploadMediaSchema), upload);",
+    "existing": {
+      "name": "4.1 Upload File Media (Tải ảnh/media lên Cloudinary)",
+      "folder": "4. Media & Cloudinary",
+      "cleanUrl": "media",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "media.routes.js",
+    "mount": "media",
+    "method": "POST",
+    "subPath": "/upload-url",
+    "fullUrlPath": "media/upload-url",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "requirePermission('media.upload'), uploadFromUrl); // ── Update ───────────────────────────────────────────────────────",
+    "existing": {
+      "name": "4.2 Upload Media From URL (Tải ảnh từ đường dẫn URL)",
+      "folder": "4. Media & Cloudinary",
+      "cleanUrl": "media/upload-url",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "media.routes.js",
+    "mount": "media",
+    "method": "PATCH",
+    "subPath": "/bulk-move",
+    "fullUrlPath": "media/bulk-move",
+    "isProtected": true,
+    "validatorName": "bulkMoveMediaSchema",
+    "isUpload": false,
+    "handlersSnippet": "requirePermission('media.upload'), validate(bulkMoveMediaSchema), bulkMove);",
+    "existing": null
+  },
+  {
+    "file": "media.routes.js",
+    "mount": "media",
+    "method": "PATCH",
+    "subPath": "/:id/move",
+    "fullUrlPath": "media/:id/move",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "requirePermission('folder.manage'), moveMediaCtrl);",
+    "existing": {
+      "name": "4.5 Move Media (Di chuyển file vào thư mục)",
+      "folder": "4. Media & Cloudinary",
+      "cleanUrl": "media/<id>/move",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "media.routes.js",
+    "mount": "media",
+    "method": "PATCH",
+    "subPath": "/:id/rename",
+    "fullUrlPath": "media/:id/rename",
+    "isProtected": true,
+    "validatorName": "renameMediaSchema",
+    "isUpload": false,
+    "handlersSnippet": "requirePermission('media.upload'), validate(renameMediaSchema), rename);",
+    "existing": null
+  },
+  {
+    "file": "media.routes.js",
+    "mount": "media",
+    "method": "PATCH",
+    "subPath": "/:id/meta",
+    "fullUrlPath": "media/:id/meta",
+    "isProtected": true,
+    "validatorName": "updateMediaMetaSchema",
+    "isUpload": false,
+    "handlersSnippet": "requirePermission('media.upload'), validate(updateMediaMetaSchema), updateMeta); // ── Delete ─────────────────────────",
+    "existing": null
+  },
+  {
+    "file": "media.routes.js",
+    "mount": "media",
+    "method": "DELETE",
+    "subPath": "/bulk",
+    "fullUrlPath": "media/bulk",
+    "isProtected": true,
+    "validatorName": "deleteMediaSchema",
+    "isUpload": false,
+    "handlersSnippet": "requirePermission('media.delete'), validate(deleteMediaSchema), removeBulk);",
+    "existing": {
+      "name": "4.7 Bulk Delete Media (Xóa hàng loạt file media)",
+      "folder": "4. Media & Cloudinary",
+      "cleanUrl": "media/bulk",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "media.routes.js",
+    "mount": "media",
+    "method": "DELETE",
+    "subPath": "/:id",
+    "fullUrlPath": "media/:id",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "requirePermission('media.delete'), remove);",
+    "existing": {
+      "name": "4.6 Delete Single Media (Xóa 1 file media)",
+      "folder": "4. Media & Cloudinary",
+      "cleanUrl": "media/<id>",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "menu.routes.js",
+    "mount": "menus",
+    "method": "GET",
+    "subPath": "/handle/:handle",
+    "fullUrlPath": "menus/handle/:handle",
+    "isProtected": false,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "ctrl.getByHandle); // ── Admin routes (cần auth & permission) ──────────────────────────────────────",
+    "existing": {
+      "name": "13.2 Get Menu by Handle (Public)",
+      "folder": "13. Menu (Quản lý Menu điều hướng)",
+      "cleanUrl": "menus/handle/main-menu",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "menu.routes.js",
+    "mount": "menus",
+    "method": "GET",
+    "subPath": "/",
+    "fullUrlPath": "menus",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "requirePermission('menu.view'), ctrl.getAll);",
+    "existing": {
+      "name": "13.1 Get All Menus (Admin)",
+      "folder": "13. Menu (Quản lý Menu điều hướng)",
+      "cleanUrl": "menus",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "menu.routes.js",
+    "mount": "menus",
+    "method": "GET",
+    "subPath": "/:id",
+    "fullUrlPath": "menus/:id",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "requirePermission('menu.view'), ctrl.getById);",
+    "existing": {
+      "name": "13.3 Get Menu by ID (Admin)",
+      "folder": "13. Menu (Quản lý Menu điều hướng)",
+      "cleanUrl": "menus/<menuId>",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "menu.routes.js",
+    "mount": "menus",
+    "method": "POST",
+    "subPath": "/",
+    "fullUrlPath": "menus",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "requirePermission('menu.manage'), ctrl.create);",
+    "existing": {
+      "name": "13.4 Create Menu (Admin)",
+      "folder": "13. Menu (Quản lý Menu điều hướng)",
+      "cleanUrl": "menus",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "menu.routes.js",
+    "mount": "menus",
+    "method": "PUT",
+    "subPath": "/:id",
+    "fullUrlPath": "menus/:id",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "requirePermission('menu.manage'), ctrl.update);",
+    "existing": {
+      "name": "13.5 Update Menu (Admin)",
+      "folder": "13. Menu (Quản lý Menu điều hướng)",
+      "cleanUrl": "menus/<menuId>",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "menu.routes.js",
+    "mount": "menus",
+    "method": "DELETE",
+    "subPath": "/:id",
+    "fullUrlPath": "menus/:id",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "requirePermission('menu.manage'), ctrl.remove);",
+    "existing": {
+      "name": "13.7 Delete Menu (Admin)",
+      "folder": "13. Menu (Quản lý Menu điều hướng)",
+      "cleanUrl": "menus/<menuId>",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "menu.routes.js",
+    "mount": "menus",
+    "method": "POST",
+    "subPath": "/:id/duplicate",
+    "fullUrlPath": "menus/:id/duplicate",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "requirePermission('menu.manage'), ctrl.duplicate);",
+    "existing": {
+      "name": "13.6 Duplicate Menu (Admin)",
+      "folder": "13. Menu (Quản lý Menu điều hướng)",
+      "cleanUrl": "menus/<menuId>/duplicate",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "product.routes.js",
+    "mount": "products",
+    "method": "GET",
+    "subPath": "/template",
+    "fullUrlPath": "products/template",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('product.import'), downloadTemplate);",
+    "existing": {
+      "name": "8.11 Download Import Template (Tải Excel mẫu)",
+      "folder": "8. Products",
+      "cleanUrl": "products/template",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "product.routes.js",
+    "mount": "products",
+    "method": "GET",
+    "subPath": "/export",
+    "fullUrlPath": "products/export",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('product.import'), exportProductsCtrl);",
+    "existing": {
+      "name": "8.12 Export Products (Xuất sản phẩm ra Excel)",
+      "folder": "8. Products",
+      "cleanUrl": "products/export",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "product.routes.js",
+    "mount": "products",
+    "method": "POST",
+    "subPath": "/import",
+    "fullUrlPath": "products/import",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('product.import'), importProductsCtrl);",
+    "existing": {
+      "name": "8.13 Import Products (Nhập sản phẩm từ Excel)",
+      "folder": "8. Products",
+      "cleanUrl": "products/import",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "product.routes.js",
+    "mount": "products",
+    "method": "POST",
+    "subPath": "/sync-images",
+    "fullUrlPath": "products/sync-images",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('product.sync_images'), syncImagesCtrl);",
+    "existing": {
+      "name": "8.14 Sync Product Images (Đồng bộ link ảnh vào Media)",
+      "folder": "8. Products",
+      "cleanUrl": "products/sync-images",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "product.routes.js",
+    "mount": "products",
+    "method": "GET",
+    "subPath": "/search-inventory",
+    "fullUrlPath": "products/search-inventory",
+    "isProtected": false,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "productController.searchInventoryProducts);",
+    "existing": null
+  },
+  {
+    "file": "product.routes.js",
+    "mount": "products",
+    "method": "GET",
+    "subPath": "/",
+    "fullUrlPath": "products",
+    "isProtected": false,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "productController.getProducts);",
+    "existing": {
+      "name": "8.1 Get Public Products (Danh sách sản phẩm công khai)",
+      "folder": "8. Products",
+      "cleanUrl": "products",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "product.routes.js",
+    "mount": "products",
+    "method": "GET",
+    "subPath": "/admin",
+    "fullUrlPath": "products/admin",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('product.view'), productController.getProductsAdmin);",
+    "existing": {
+      "name": "8.2 Admin: Get All Products (Danh sách sản phẩm admin)",
+      "folder": "8. Products",
+      "cleanUrl": "products/admin",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "product.routes.js",
+    "mount": "products",
+    "method": "GET",
+    "subPath": "/admin/locate",
+    "fullUrlPath": "products/admin/locate",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('product.view'), async (req, res, next) => { try { const { id, limit } = req.query; ",
+    "existing": null
+  },
+  {
+    "file": "product.routes.js",
+    "mount": "products",
+    "method": "POST",
+    "subPath": "/compare",
+    "fullUrlPath": "products/compare",
+    "isProtected": false,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "productController.getProductsToCompare);",
+    "existing": {
+      "name": "8.5 Compare Products (So sánh sản phẩm)",
+      "folder": "8. Products",
+      "cleanUrl": "products/compare",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "product.routes.js",
+    "mount": "products",
+    "method": "GET",
+    "subPath": "/:id/deals",
+    "fullUrlPath": "products/:id/deals",
+    "isProtected": false,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "productController.getProductDeals);",
+    "existing": {
+      "name": "8.4 Get Product Deals (Chương trình ưu đãi của sản phẩm)",
+      "folder": "8. Products",
+      "cleanUrl": "products/<id_or_slug>/deals",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "product.routes.js",
+    "mount": "products",
+    "method": "GET",
+    "subPath": "/:id",
+    "fullUrlPath": "products/:id",
+    "isProtected": false,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "productController.getProductById);",
+    "existing": {
+      "name": "8.2 Admin: Get All Products (Danh sách sản phẩm admin)",
+      "folder": "8. Products",
+      "cleanUrl": "products/admin",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "product.routes.js",
+    "mount": "products",
+    "method": "POST",
+    "subPath": "/",
+    "fullUrlPath": "products",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('product.create'), productController.createProduct);",
+    "existing": {
+      "name": "8.6 Create Product (Tạo sản phẩm mới đầy đủ)",
+      "folder": "8. Products",
+      "cleanUrl": "products",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "product.routes.js",
+    "mount": "products",
+    "method": "PUT",
+    "subPath": "/:id",
+    "fullUrlPath": "products/:id",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('product.edit'), productController.updateProduct);",
+    "existing": {
+      "name": "8.7 Update Product (Cập nhật sản phẩm)",
+      "folder": "8. Products",
+      "cleanUrl": "products/<id>",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "product.routes.js",
+    "mount": "products",
+    "method": "PATCH",
+    "subPath": "/:id/status",
+    "fullUrlPath": "products/:id/status",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('product.edit'), productController.toggleProductStatus);",
+    "existing": {
+      "name": "8.8 Toggle Product Status (Ẩn/Hiện sản phẩm)",
+      "folder": "8. Products",
+      "cleanUrl": "products/<id>/status",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "product.routes.js",
+    "mount": "products",
+    "method": "PATCH",
+    "subPath": "/bulk-status",
+    "fullUrlPath": "products/bulk-status",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('product.edit'), productController.bulkUpdateProductStatus);",
+    "existing": null
+  },
+  {
+    "file": "product.routes.js",
+    "mount": "products",
+    "method": "DELETE",
+    "subPath": "/bulk",
+    "fullUrlPath": "products/bulk",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('product.delete'), productController.deleteBulkProducts);",
+    "existing": {
+      "name": "8.10 Bulk Delete Products (Xóa nhiều sản phẩm)",
+      "folder": "8. Products",
+      "cleanUrl": "products/bulk",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "product.routes.js",
+    "mount": "products",
+    "method": "DELETE",
+    "subPath": "/:id",
+    "fullUrlPath": "products/:id",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('product.delete'), productController.deleteProduct);",
+    "existing": {
+      "name": "8.9 Delete Single Product (Xóa 1 sản phẩm)",
+      "folder": "8. Products",
+      "cleanUrl": "products/<id>",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "product.routes.js",
+    "mount": "products",
+    "method": "GET",
+    "subPath": "/:productId/variants",
+    "fullUrlPath": "products/:productId/variants",
+    "isProtected": false,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "productVariantController.getVariants);",
+    "existing": {
+      "name": "9.1 Get Variants By Product (Danh sách biến thể của 1 SP)",
+      "folder": "9. Product Variants",
+      "cleanUrl": "products/<productId>/variants",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "product.routes.js",
+    "mount": "products",
+    "method": "POST",
+    "subPath": "/:productId/variants",
+    "fullUrlPath": "products/:productId/variants",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('product_variant.create'), productVariantController.createVariant);",
+    "existing": {
+      "name": "9.3 Create Single Variant (Tạo 1 biến thể thủ công)",
+      "folder": "9. Product Variants",
+      "cleanUrl": "products/<productId>/variants",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "product.routes.js",
+    "mount": "products",
+    "method": "POST",
+    "subPath": "/:productId/variants/bulk",
+    "fullUrlPath": "products/:productId/variants/bulk",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('product_variant.create'), productVariantController.bulkCreateVariants);",
+    "existing": {
+      "name": "9.4 Bulk Create Variants (Tự động sinh hàng loạt biến thể)",
+      "folder": "9. Product Variants",
+      "cleanUrl": "products/<productId>/variants/bulk",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "product.routes.js",
+    "mount": "products",
+    "method": "DELETE",
+    "subPath": "/:productId/variants/all",
+    "fullUrlPath": "products/:productId/variants/all",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('product_variant.delete'), productVariantController.deleteVariantsByProduct);",
+    "existing": {
+      "name": "9.7 Delete All Variants Of Product (Xóa toàn bộ biến thể SP)",
+      "folder": "9. Product Variants",
+      "cleanUrl": "products/<productId>/variants/all",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "productVariant.routes.js",
+    "mount": "product-variants",
+    "method": "GET",
+    "subPath": "/:id",
+    "fullUrlPath": "product-variants/:id",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('product_variant.view'), productVariantController.getVariantById);",
+    "existing": {
+      "name": "9.2 Get Variant Detail By ID (Xem chi tiết 1 biến thể)",
+      "folder": "9. Product Variants",
+      "cleanUrl": "product-variants/<id>",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "productVariant.routes.js",
+    "mount": "product-variants",
+    "method": "PUT",
+    "subPath": "/:id",
+    "fullUrlPath": "product-variants/:id",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('product_variant.edit'), productVariantController.updateVariant);",
+    "existing": {
+      "name": "9.5 Update Variant (Cập nhật 1 biến thể)",
+      "folder": "9. Product Variants",
+      "cleanUrl": "product-variants/<id>",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "productVariant.routes.js",
+    "mount": "product-variants",
+    "method": "DELETE",
+    "subPath": "/:id",
+    "fullUrlPath": "product-variants/:id",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('product_variant.delete'), productVariantController.deleteVariant);",
+    "existing": {
+      "name": "9.6 Delete Single Variant (Xóa 1 biến thể)",
+      "folder": "9. Product Variants",
+      "cleanUrl": "product-variants/<id>",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "promotion.routes.js",
+    "mount": "promotions",
+    "method": "POST",
+    "subPath": "/apply",
+    "fullUrlPath": "promotions/apply",
+    "isProtected": false,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "ctrl.apply);",
+    "existing": {
+      "name": "11.11 Apply Promotions (Tính khuyến mãi ở Checkout)",
+      "folder": "11. Promotions",
+      "cleanUrl": "promotions/apply",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "promotion.routes.js",
+    "mount": "promotions",
+    "method": "GET",
+    "subPath": "/",
+    "fullUrlPath": "promotions",
+    "isProtected": false,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "ctrl.getAll);",
+    "existing": {
+      "name": "11.1 Get All Promotions (Danh sách chương trình khuyến mãi)",
+      "folder": "11. Promotions",
+      "cleanUrl": "promotions",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "promotion.routes.js",
+    "mount": "promotions",
+    "method": "GET",
+    "subPath": "/:id",
+    "fullUrlPath": "promotions/:id",
+    "isProtected": false,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "ctrl.getOne);",
+    "existing": {
+      "name": "11.2 Get Promotion Detail (Chi tiết 1 khuyến mãi)",
+      "folder": "11. Promotions",
+      "cleanUrl": "promotions/<id>",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "promotion.routes.js",
+    "mount": "promotions",
+    "method": "POST",
+    "subPath": "/",
+    "fullUrlPath": "promotions",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('promotion.manage'), ctrl.create);",
+    "existing": {
+      "name": "11.3 Create Promotion — Percent Discount (Khuyến mãi %)",
+      "folder": "11. Promotions",
+      "cleanUrl": "promotions",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "promotion.routes.js",
+    "mount": "promotions",
+    "method": "PUT",
+    "subPath": "/:id",
+    "fullUrlPath": "promotions/:id",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('promotion.manage'), ctrl.update);",
+    "existing": {
+      "name": "11.7 Update Promotion (Cập nhật khuyến mãi)",
+      "folder": "11. Promotions",
+      "cleanUrl": "promotions/<id>",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "promotion.routes.js",
+    "mount": "promotions",
+    "method": "PATCH",
+    "subPath": "/:id/status",
+    "fullUrlPath": "promotions/:id/status",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('promotion.manage'), ctrl.toggleStatus);",
+    "existing": {
+      "name": "11.8 Toggle Promotion Status (Bật/Tắt khuyến mãi)",
+      "folder": "11. Promotions",
+      "cleanUrl": "promotions/<id>/status",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "promotion.routes.js",
+    "mount": "promotions",
+    "method": "DELETE",
+    "subPath": "/bulk",
+    "fullUrlPath": "promotions/bulk",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('promotion.manage'), ctrl.removeBulk);",
+    "existing": {
+      "name": "11.10 Bulk Delete Promotions (Xóa hàng loạt khuyến mãi)",
+      "folder": "11. Promotions",
+      "cleanUrl": "promotions/bulk",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "promotion.routes.js",
+    "mount": "promotions",
+    "method": "DELETE",
+    "subPath": "/:id",
+    "fullUrlPath": "promotions/:id",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('promotion.manage'), ctrl.remove);",
+    "existing": {
+      "name": "11.9 Delete Single Promotion (Xóa 1 khuyến mãi)",
+      "folder": "11. Promotions",
+      "cleanUrl": "promotions/<id>",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "purchaseOrder.routes.js",
+    "mount": "purchase-orders",
+    "method": "GET",
+    "subPath": "/",
+    "fullUrlPath": "purchase-orders",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('purchase_order.view'), purchaseOrderController.getPurchaseOrders);",
+    "existing": null
+  },
+  {
+    "file": "purchaseOrder.routes.js",
+    "mount": "purchase-orders",
+    "method": "GET",
+    "subPath": "/:id",
+    "fullUrlPath": "purchase-orders/:id",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('purchase_order.view'), purchaseOrderController.getPurchaseOrderById);",
+    "existing": null
+  },
+  {
+    "file": "purchaseOrder.routes.js",
+    "mount": "purchase-orders",
+    "method": "GET",
+    "subPath": "/:id/download-excel",
+    "fullUrlPath": "purchase-orders/:id/download-excel",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('purchase_order.view'), purchaseOrderController.downloadExcelSlip);",
+    "existing": null
+  },
+  {
+    "file": "purchaseOrder.routes.js",
+    "mount": "purchase-orders",
+    "method": "GET",
+    "subPath": "/:id/preview-email",
+    "fullUrlPath": "purchase-orders/:id/preview-email",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('purchase_order.view'), purchaseOrderController.previewPOEmail);",
+    "existing": null
+  },
+  {
+    "file": "purchaseOrder.routes.js",
+    "mount": "purchase-orders",
+    "method": "POST",
+    "subPath": "/",
+    "fullUrlPath": "purchase-orders",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('purchase_order.create'), purchaseOrderController.createPurchaseOrder);",
+    "existing": null
+  },
+  {
+    "file": "purchaseOrder.routes.js",
+    "mount": "purchase-orders",
+    "method": "POST",
+    "subPath": "/preview-excel",
+    "fullUrlPath": "purchase-orders/preview-excel",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('purchase_order.view'), purchaseOrderController.previewExcelSlip);",
+    "existing": null
+  },
+  {
+    "file": "purchaseOrder.routes.js",
+    "mount": "purchase-orders",
+    "method": "POST",
+    "subPath": "/:id/send-po",
+    "fullUrlPath": "purchase-orders/:id/send-po",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('purchase_order.manage'), purchaseOrderController.sendPOToSupplier);",
+    "existing": null
+  },
+  {
+    "file": "purchaseOrder.routes.js",
+    "mount": "purchase-orders",
+    "method": "PATCH",
+    "subPath": "/:id/status",
+    "fullUrlPath": "purchase-orders/:id/status",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('purchase_order.manage'), purchaseOrderController.updatePurchaseOrderStatus);",
+    "existing": null
+  },
+  {
+    "file": "purchaseReturn.routes.js",
+    "mount": "purchase-returns",
+    "method": "GET",
+    "subPath": "/",
+    "fullUrlPath": "purchase-returns",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "requirePermission('purchase_order.view'), purchaseReturnController.getPurchaseReturns);",
+    "existing": null
+  },
+  {
+    "file": "purchaseReturn.routes.js",
+    "mount": "purchase-returns",
+    "method": "POST",
+    "subPath": "/",
+    "fullUrlPath": "purchase-returns",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "requirePermission('purchase_order.create'), purchaseReturnController.createPurchaseReturn);",
+    "existing": null
+  },
+  {
+    "file": "purchaseReturn.routes.js",
+    "mount": "purchase-returns",
+    "method": "GET",
+    "subPath": "/:id",
+    "fullUrlPath": "purchase-returns/:id",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "requirePermission('purchase_order.view'), purchaseReturnController.getPurchaseReturnById);",
+    "existing": null
+  },
+  {
+    "file": "purchaseReturn.routes.js",
+    "mount": "purchase-returns",
+    "method": "PATCH",
+    "subPath": "/:id/refund-status",
+    "fullUrlPath": "purchase-returns/:id/refund-status",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "requirePermission('purchase_order.manage'), purchaseReturnController.updateRefundStatus);",
+    "existing": null
+  },
+  {
+    "file": "purchaseReturn.routes.js",
+    "mount": "purchase-returns",
+    "method": "GET",
+    "subPath": "/:id/download-excel",
+    "fullUrlPath": "purchase-returns/:id/download-excel",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "requirePermission('purchase_order.view'), purchaseReturnController.downloadExcelSlip);",
+    "existing": null
+  },
+  {
+    "file": "recommendation.routes.js",
+    "mount": "recommendations",
+    "method": "POST",
+    "subPath": "/interactions",
+    "fullUrlPath": "recommendations/interactions",
+    "isProtected": false,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "optionalAuth, controller.recordInteraction);",
+    "existing": null
+  },
+  {
+    "file": "recommendation.routes.js",
+    "mount": "recommendations",
+    "method": "GET",
+    "subPath": "/personalized",
+    "fullUrlPath": "recommendations/personalized",
+    "isProtected": false,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "optionalAuth, controller.getPersonalizedRecommendations);",
+    "existing": null
+  },
+  {
+    "file": "recommendation.routes.js",
+    "mount": "recommendations",
+    "method": "GET",
+    "subPath": "/session-based",
+    "fullUrlPath": "recommendations/session-based",
+    "isProtected": false,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "optionalAuth, controller.getSessionBasedRecommendations);",
+    "existing": null
+  },
+  {
+    "file": "recommendation.routes.js",
+    "mount": "recommendations",
+    "method": "GET",
+    "subPath": "/trending",
+    "fullUrlPath": "recommendations/trending",
+    "isProtected": false,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "controller.getTrendingRecommendations);",
+    "existing": null
+  },
+  {
+    "file": "recommendation.routes.js",
+    "mount": "recommendations",
+    "method": "GET",
+    "subPath": "/similar/:productId",
+    "fullUrlPath": "recommendations/similar/:productId",
+    "isProtected": false,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "controller.getSimilarProducts);",
+    "existing": null
+  },
+  {
+    "file": "recommendation.routes.js",
+    "mount": "recommendations",
+    "method": "POST",
+    "subPath": "/compute-item-cf",
+    "fullUrlPath": "recommendations/compute-item-cf",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, controller.computeItemCF);",
+    "existing": null
+  },
+  {
+    "file": "role.routes.js",
+    "mount": "roles",
+    "method": "GET",
+    "subPath": "/permissions",
+    "fullUrlPath": "roles/permissions",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "requirePermission('role.manage'), ctrl.getPermissions);",
+    "existing": {
+      "name": "17.1 Get All Permissions (Danh sách toàn bộ quyền)",
+      "folder": "17. Roles & Permissions (Vai trò & Phân quyền)",
+      "cleanUrl": "roles/permissions",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "role.routes.js",
+    "mount": "roles",
+    "method": "POST",
+    "subPath": "/seed-full-permissions",
+    "fullUrlPath": "roles/seed-full-permissions",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "requirePermission('role.manage'), ctrl.seedPermissions);",
+    "existing": null
+  },
+  {
+    "file": "role.routes.js",
+    "mount": "roles",
+    "method": "GET",
+    "subPath": "/",
+    "fullUrlPath": "roles",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "requirePermission('role.manage'), ctrl.getRoles);",
+    "existing": {
+      "name": "17.2 Get All Roles (Danh sách các Vai trò)",
+      "folder": "17. Roles & Permissions (Vai trò & Phân quyền)",
+      "cleanUrl": "roles",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "role.routes.js",
+    "mount": "roles",
+    "method": "POST",
+    "subPath": "/",
+    "fullUrlPath": "roles",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "requirePermission('role.manage'), ctrl.createRole);",
+    "existing": {
+      "name": "17.4 Create Role (Tạo Vai trò mới)",
+      "folder": "17. Roles & Permissions (Vai trò & Phân quyền)",
+      "cleanUrl": "roles",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "role.routes.js",
+    "mount": "roles",
+    "method": "GET",
+    "subPath": "/:id",
+    "fullUrlPath": "roles/:id",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "requirePermission('role.manage'), ctrl.getRole);",
+    "existing": {
+      "name": "17.1 Get All Permissions (Danh sách toàn bộ quyền)",
+      "folder": "17. Roles & Permissions (Vai trò & Phân quyền)",
+      "cleanUrl": "roles/permissions",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "role.routes.js",
+    "mount": "roles",
+    "method": "PUT",
+    "subPath": "/:id",
+    "fullUrlPath": "roles/:id",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "requirePermission('role.manage'), ctrl.updateRole);",
+    "existing": {
+      "name": "17.5 Update Role (Cập nhật Vai trò)",
+      "folder": "17. Roles & Permissions (Vai trò & Phân quyền)",
+      "cleanUrl": "roles/<roleId>",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "role.routes.js",
+    "mount": "roles",
+    "method": "DELETE",
+    "subPath": "/:id",
+    "fullUrlPath": "roles/:id",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "requirePermission('role.manage'), ctrl.deleteRole);",
+    "existing": {
+      "name": "17.6 Delete Role (Xóa Vai trò)",
+      "folder": "17. Roles & Permissions (Vai trò & Phân quyền)",
+      "cleanUrl": "roles/<roleId>",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "role.routes.js",
+    "mount": "roles",
+    "method": "PATCH",
+    "subPath": "/users/:userId/assign",
+    "fullUrlPath": "roles/users/:userId/assign",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "requirePermission('role.manage'), ctrl.assignUserRole);",
+    "existing": {
+      "name": "17.7 Assign Role To User (Phân quyền cho Người dùng)",
+      "folder": "17. Roles & Permissions (Vai trò & Phân quyền)",
+      "cleanUrl": "roles/users/<userId>/assign",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "search.routes.js",
+    "mount": "search",
+    "method": "POST",
+    "subPath": "/image",
+    "fullUrlPath": "search/image",
+    "isProtected": false,
+    "validatorName": null,
+    "isUpload": true,
+    "handlersSnippet": "upload.single('image'), controller.searchByImage); // Full search: GET /api/search?q=iphone&domain=products&limit=20",
+    "existing": null
+  },
+  {
+    "file": "search.routes.js",
+    "mount": "search",
+    "method": "GET",
+    "subPath": "/",
+    "fullUrlPath": "search",
+    "isProtected": false,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "controller.globalSearch);",
+    "existing": null
+  },
+  {
+    "file": "search.routes.js",
+    "mount": "search",
+    "method": "GET",
+    "subPath": "/suggest",
+    "fullUrlPath": "search/suggest",
+    "isProtected": false,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "controller.getInstantSuggestions); // Trending keywords: GET /api/search/trending?limit=10&type=rising // type: 'all' (",
+    "existing": null
+  },
+  {
+    "file": "search.routes.js",
+    "mount": "search",
+    "method": "GET",
+    "subPath": "/trending",
+    "fullUrlPath": "search/trending",
+    "isProtected": false,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "controller.getTrendingKeywords); // Export search data to CSV for Python analytics: GET /api/v1/search/export-csv",
+    "existing": null
+  },
+  {
+    "file": "search.routes.js",
+    "mount": "search",
+    "method": "GET",
+    "subPath": "/export-csv",
+    "fullUrlPath": "search/export-csv",
+    "isProtected": false,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "controller.exportSearchCSV); // Record search click (tăng CTR): POST /api/search/click { keyword: \"iphone\" } // Gọi khi",
+    "existing": null
+  },
+  {
+    "file": "search.routes.js",
+    "mount": "search",
+    "method": "POST",
+    "subPath": "/click",
+    "fullUrlPath": "search/click",
+    "isProtected": false,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "controller.recordSearchClick); // Record purchase signal (Shopee-style): POST /api/search/purchase { keywords: [\"iphone",
+    "existing": null
+  },
+  {
+    "file": "search.routes.js",
+    "mount": "search",
+    "method": "POST",
+    "subPath": "/purchase",
+    "fullUrlPath": "search/purchase",
+    "isProtected": false,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "controller.recordPurchaseKeyword); // ── Admin Only ───────────────────────────────────────────────────────────── // T",
+    "existing": null
+  },
+  {
+    "file": "search.routes.js",
+    "mount": "search",
+    "method": "PATCH",
+    "subPath": "/trending",
+    "fullUrlPath": "search/trending",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, controller.toggleKeywordTrending);",
+    "existing": null
+  },
+  {
+    "file": "stockAlert.routes.js",
+    "mount": "stock-alerts",
+    "method": "GET",
+    "subPath": "/",
+    "fullUrlPath": "stock-alerts",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "requirePermission('stock_movement.view'), stockAlertController.getLowStockItems);",
+    "existing": null
+  },
+  {
+    "file": "stockAlert.routes.js",
+    "mount": "stock-alerts",
+    "method": "PATCH",
+    "subPath": "/:id/cost-price",
+    "fullUrlPath": "stock-alerts/:id/cost-price",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "requirePermission('product.edit'), stockAlertController.updateCostPrice);",
+    "existing": null
+  },
+  {
+    "file": "stockAudit.routes.js",
+    "mount": "stock-audits",
+    "method": "GET",
+    "subPath": "/",
+    "fullUrlPath": "stock-audits",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('stock_audit.view'), stockAuditController.getStockAudits);",
+    "existing": null
+  },
+  {
+    "file": "stockAudit.routes.js",
+    "mount": "stock-audits",
+    "method": "GET",
+    "subPath": "/:id",
+    "fullUrlPath": "stock-audits/:id",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('stock_audit.view'), stockAuditController.getStockAuditById);",
+    "existing": null
+  },
+  {
+    "file": "stockAudit.routes.js",
+    "mount": "stock-audits",
+    "method": "GET",
+    "subPath": "/:id/download-excel",
+    "fullUrlPath": "stock-audits/:id/download-excel",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('stock_audit.view'), stockAuditController.downloadExcelSlip);",
+    "existing": null
+  },
+  {
+    "file": "stockAudit.routes.js",
+    "mount": "stock-audits",
+    "method": "POST",
+    "subPath": "/",
+    "fullUrlPath": "stock-audits",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('stock_audit.manage'), stockAuditController.createStockAudit);",
+    "existing": null
+  },
+  {
+    "file": "stockDocument.routes.js",
+    "mount": "stock-documents",
+    "method": "GET",
+    "subPath": "/",
+    "fullUrlPath": "stock-documents",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "requirePermission('stock_movement.view'), stockDocumentController.getAllDocuments);",
+    "existing": null
+  },
+  {
+    "file": "stockExport.routes.js",
+    "mount": "stock-exports",
+    "method": "GET",
+    "subPath": "/",
+    "fullUrlPath": "stock-exports",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('stock_export.view'), stockExportController.getStockExports);",
+    "existing": null
+  },
+  {
+    "file": "stockExport.routes.js",
+    "mount": "stock-exports",
+    "method": "GET",
+    "subPath": "/:id",
+    "fullUrlPath": "stock-exports/:id",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('stock_export.view'), stockExportController.getStockExportById);",
+    "existing": null
+  },
+  {
+    "file": "stockExport.routes.js",
+    "mount": "stock-exports",
+    "method": "GET",
+    "subPath": "/:id/download-excel",
+    "fullUrlPath": "stock-exports/:id/download-excel",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('stock_export.view'), stockExportController.downloadExcelSlip);",
+    "existing": null
+  },
+  {
+    "file": "stockExport.routes.js",
+    "mount": "stock-exports",
+    "method": "POST",
+    "subPath": "/",
+    "fullUrlPath": "stock-exports",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('stock_export.manage'), stockExportController.createStockExport);",
+    "existing": null
+  },
+  {
+    "file": "stockExport.routes.js",
+    "mount": "stock-exports",
+    "method": "PATCH",
+    "subPath": "/:id/status",
+    "fullUrlPath": "stock-exports/:id/status",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('stock_export.manage'), stockExportController.updateStatus);",
+    "existing": null
+  },
+  {
+    "file": "stockMovement.routes.js",
+    "mount": "stock-movements",
+    "method": "GET",
+    "subPath": "/",
+    "fullUrlPath": "stock-movements",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('stock_movement.view'), async (req, res, next) => { try { const { page = 1, limit = 20,",
+    "existing": null
+  },
+  {
+    "file": "stockReceiving.routes.js",
+    "mount": "stock-receivings",
+    "method": "POST",
+    "subPath": "/",
+    "fullUrlPath": "stock-receivings",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "requirePermission('purchase_order.manage'), stockReceivingController.createReceiving);",
+    "existing": null
+  },
+  {
+    "file": "stockReceiving.routes.js",
+    "mount": "stock-receivings",
+    "method": "POST",
+    "subPath": "/sync-from-pos",
+    "fullUrlPath": "stock-receivings/sync-from-pos",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "requirePermission('purchase_order.manage'), stockReceivingController.syncFromPOs);",
+    "existing": null
+  },
+  {
+    "file": "stockReceiving.routes.js",
+    "mount": "stock-receivings",
+    "method": "GET",
+    "subPath": "/",
+    "fullUrlPath": "stock-receivings",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "requirePermission('purchase_order.view'), stockReceivingController.getReceivings);",
+    "existing": null
+  },
+  {
+    "file": "stockReceiving.routes.js",
+    "mount": "stock-receivings",
+    "method": "GET",
+    "subPath": "/:id/download-excel",
+    "fullUrlPath": "stock-receivings/:id/download-excel",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "requirePermission('purchase_order.view'), stockReceivingController.downloadExcelSlip);",
+    "existing": null
+  },
+  {
+    "file": "stockReceiving.routes.js",
+    "mount": "stock-receivings",
+    "method": "GET",
+    "subPath": "/:id",
+    "fullUrlPath": "stock-receivings/:id",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "requirePermission('purchase_order.view'), stockReceivingController.getReceivingById);",
+    "existing": null
+  },
+  {
+    "file": "supplier.routes.js",
+    "mount": "suppliers",
+    "method": "GET",
+    "subPath": "/",
+    "fullUrlPath": "suppliers",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('supplier.view'), supplierController.getSuppliers);",
+    "existing": null
+  },
+  {
+    "file": "supplier.routes.js",
+    "mount": "suppliers",
+    "method": "GET",
+    "subPath": "/:id",
+    "fullUrlPath": "suppliers/:id",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('supplier.view'), supplierController.getSupplierById);",
+    "existing": null
+  },
+  {
+    "file": "supplier.routes.js",
+    "mount": "suppliers",
+    "method": "POST",
+    "subPath": "/",
+    "fullUrlPath": "suppliers",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('supplier.manage'), supplierController.createSupplier);",
+    "existing": null
+  },
+  {
+    "file": "supplier.routes.js",
+    "mount": "suppliers",
+    "method": "PUT",
+    "subPath": "/:id",
+    "fullUrlPath": "suppliers/:id",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('supplier.manage'), supplierController.updateSupplier);",
+    "existing": null
+  },
+  {
+    "file": "supplier.routes.js",
+    "mount": "suppliers",
+    "method": "DELETE",
+    "subPath": "/:id",
+    "fullUrlPath": "suppliers/:id",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('supplier.manage'), supplierController.deleteSupplier);",
+    "existing": null
+  },
+  {
+    "file": "tag.routes.js",
+    "mount": "tags",
+    "method": "GET",
+    "subPath": "/",
+    "fullUrlPath": "tags",
+    "isProtected": false,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "async (req, res, next) => { try { res.json(await svc.getAllTags(req.query)); } catch(e) { next(e); } });",
+    "existing": {
+      "name": "16.14 Get All Tags (Danh sách tag)",
+      "folder": "16. Blog & Content",
+      "cleanUrl": "tags",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "tag.routes.js",
+    "mount": "tags",
+    "method": "GET",
+    "subPath": "/:slug",
+    "fullUrlPath": "tags/:slug",
+    "isProtected": false,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "async (req, res, next) => { try { res.json(await svc.getTagBySlug(req.params.slug)); } catch(e) { next(e); } });",
+    "existing": null
+  },
+  {
+    "file": "tag.routes.js",
+    "mount": "tags",
+    "method": "POST",
+    "subPath": "/",
+    "fullUrlPath": "tags",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('tag.manage'), async (req, res, next) => { try { res.status(201).json(await svc.createTag(req",
+    "existing": {
+      "name": "16.15 Create Tag (Tạo tag mới)",
+      "folder": "16. Blog & Content",
+      "cleanUrl": "tags",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "tag.routes.js",
+    "mount": "tags",
+    "method": "PUT",
+    "subPath": "/:id",
+    "fullUrlPath": "tags/:id",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('tag.manage'), async (req, res, next) => { try { res.json(await svc.updateTag(req.params.id, ",
+    "existing": null
+  },
+  {
+    "file": "tag.routes.js",
+    "mount": "tags",
+    "method": "PATCH",
+    "subPath": "/:id/status",
+    "fullUrlPath": "tags/:id/status",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('tag.manage'), async (req, res, next) => { try { res.json(await svc.toggleTagStatus(req.param",
+    "existing": {
+      "name": "16.16 Toggle Tag Status",
+      "folder": "16. Blog & Content",
+      "cleanUrl": "tags/<tagId>/status",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "tag.routes.js",
+    "mount": "tags",
+    "method": "DELETE",
+    "subPath": "/bulk",
+    "fullUrlPath": "tags/bulk",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('tag.manage'), async (req, res, next) => { try { res.json(await svc.deleteBulkTags(req.body.i",
+    "existing": null
+  },
+  {
+    "file": "tag.routes.js",
+    "mount": "tags",
+    "method": "DELETE",
+    "subPath": "/:id",
+    "fullUrlPath": "tags/:id",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('tag.manage'), async (req, res, next) => { try { await svc.deleteTag(req.params.id, req.user,",
+    "existing": null
+  },
+  {
+    "file": "upsell.routes.js",
+    "mount": "upsell",
+    "method": "GET",
+    "subPath": "/variant/:variantId",
+    "fullUrlPath": "upsell/variant/:variantId",
+    "isProtected": false,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "controller.getByVariant);",
+    "existing": null
+  },
+  {
+    "file": "upsell.routes.js",
+    "mount": "upsell",
+    "method": "GET",
+    "subPath": "/product/:productId",
+    "fullUrlPath": "upsell/product/:productId",
+    "isProtected": false,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "controller.getByProduct);",
+    "existing": null
+  },
+  {
+    "file": "user.routes.js",
+    "mount": "users",
+    "method": "GET",
+    "subPath": "/profile",
+    "fullUrlPath": "users/profile",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, getProfile);",
+    "existing": {
+      "name": "2.1 Get Profile (Lấy thông tin cá nhân)",
+      "folder": "2. Users & Addresses",
+      "cleanUrl": "users/profile",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "user.routes.js",
+    "mount": "users",
+    "method": "GET",
+    "subPath": "/me",
+    "fullUrlPath": "users/me",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, getProfile);",
+    "existing": null
+  },
+  {
+    "file": "user.routes.js",
+    "mount": "users",
+    "method": "PUT",
+    "subPath": "/profile",
+    "fullUrlPath": "users/profile",
+    "isProtected": true,
+    "validatorName": "updateProfileSchema",
+    "isUpload": false,
+    "handlersSnippet": "protect, validate(updateProfileSchema), updateProfile);",
+    "existing": {
+      "name": "2.2 Update Profile (Cập nhật thông tin cá nhân)",
+      "folder": "2. Users & Addresses",
+      "cleanUrl": "users/profile",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "user.routes.js",
+    "mount": "users",
+    "method": "POST",
+    "subPath": "/avatar",
+    "fullUrlPath": "users/avatar",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": true,
+    "handlersSnippet": "protect, upload.single('avatar'), updateAvatar);",
+    "existing": {
+      "name": "2.3 Avatar Upload (Tải lên ảnh đại diện)",
+      "folder": "2. Users & Addresses",
+      "cleanUrl": "users/avatar",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "user.routes.js",
+    "mount": "users",
+    "method": "DELETE",
+    "subPath": "/avatar",
+    "fullUrlPath": "users/avatar",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, deleteAvatar); // ========================================== // 2. ADDRESS BOOK (User Protected) // ======",
+    "existing": {
+      "name": "2.4 Delete Avatar (Xóa ảnh đại diện)",
+      "folder": "2. Users & Addresses",
+      "cleanUrl": "users/avatar",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "user.routes.js",
+    "mount": "users",
+    "method": "GET",
+    "subPath": "/addresses",
+    "fullUrlPath": "users/addresses",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, getAddresses);",
+    "existing": {
+      "name": "2.5 Get Addresses (Sổ địa chỉ)",
+      "folder": "2. Users & Addresses",
+      "cleanUrl": "users/addresses",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "user.routes.js",
+    "mount": "users",
+    "method": "POST",
+    "subPath": "/addresses",
+    "fullUrlPath": "users/addresses",
+    "isProtected": true,
+    "validatorName": "addressSchema",
+    "isUpload": false,
+    "handlersSnippet": "protect, validate(addressSchema), addAddress);",
+    "existing": {
+      "name": "2.6 Add Address (Thêm địa chỉ giao hàng)",
+      "folder": "2. Users & Addresses",
+      "cleanUrl": "users/addresses",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "user.routes.js",
+    "mount": "users",
+    "method": "PUT",
+    "subPath": "/addresses/:addressId",
+    "fullUrlPath": "users/addresses/:addressId",
+    "isProtected": true,
+    "validatorName": "updateAddressSchema",
+    "isUpload": false,
+    "handlersSnippet": "protect, validate(updateAddressSchema), updateAddress);",
+    "existing": {
+      "name": "2.7 Update Address (Cập nhật địa chỉ)",
+      "folder": "2. Users & Addresses",
+      "cleanUrl": "users/addresses/<addressId>",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "user.routes.js",
+    "mount": "users",
+    "method": "DELETE",
+    "subPath": "/addresses/:addressId",
+    "fullUrlPath": "users/addresses/:addressId",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, deleteAddress);",
+    "existing": {
+      "name": "2.9 Delete Address (Xóa địa chỉ)",
+      "folder": "2. Users & Addresses",
+      "cleanUrl": "users/addresses/<addressId>",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "user.routes.js",
+    "mount": "users",
+    "method": "PATCH",
+    "subPath": "/addresses/:addressId/default",
+    "fullUrlPath": "users/addresses/:addressId/default",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, setDefaultAddress);",
+    "existing": {
+      "name": "2.8 Set Default Address (Đặt địa chỉ mặc định)",
+      "folder": "2. Users & Addresses",
+      "cleanUrl": "users/addresses/<addressId>/default",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "user.routes.js",
+    "mount": "users",
+    "method": "POST",
+    "subPath": "/addresses/sync-order",
+    "fullUrlPath": "users/addresses/sync-order",
+    "isProtected": true,
+    "validatorName": "addressSchema",
+    "isUpload": false,
+    "handlersSnippet": "protect, validate(addressSchema), syncOrderAddress); // ========================================== // 3. ADMIN MANAG",
+    "existing": {
+      "name": "2.10 Sync Order Address (Đồng bộ địa chỉ từ đơn hàng)",
+      "folder": "2. Users & Addresses",
+      "cleanUrl": "users/addresses/sync-order",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "user.routes.js",
+    "mount": "users",
+    "method": "POST",
+    "subPath": "/admin",
+    "fullUrlPath": "users/admin",
+    "isProtected": true,
+    "validatorName": "createAdminSchema",
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('user.create'), validate(createAdminSchema), createAdmin);",
+    "existing": null
+  },
+  {
+    "file": "user.routes.js",
+    "mount": "users",
+    "method": "POST",
+    "subPath": "/",
+    "fullUrlPath": "users",
+    "isProtected": true,
+    "validatorName": "createAdminSchema",
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('user.create'), validate(createAdminSchema), createAdmin);",
+    "existing": null
+  },
+  {
+    "file": "user.routes.js",
+    "mount": "users",
+    "method": "GET",
+    "subPath": "/",
+    "fullUrlPath": "users",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('user.view'), getAllUsers);",
+    "existing": {
+      "name": "2.11 Admin: Get All Users (Danh sách tất cả người dùng)",
+      "folder": "2. Users & Addresses",
+      "cleanUrl": "users",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "user.routes.js",
+    "mount": "users",
+    "method": "GET",
+    "subPath": "/:id",
+    "fullUrlPath": "users/:id",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('user.view'), getUserById);",
+    "existing": {
+      "name": "2.1 Get Profile (Lấy thông tin cá nhân)",
+      "folder": "2. Users & Addresses",
+      "cleanUrl": "users/profile",
+      "hasBody": false
+    }
+  },
+  {
+    "file": "user.routes.js",
+    "mount": "users",
+    "method": "PATCH",
+    "subPath": "/:id/status",
+    "fullUrlPath": "users/:id/status",
+    "isProtected": true,
+    "validatorName": "updateStatusSchema",
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('user.edit'), validate(updateStatusSchema), toggleUserStatus);",
+    "existing": {
+      "name": "2.13 Admin: Toggle User Status (Mở / Khóa tài khoản)",
+      "folder": "2. Users & Addresses",
+      "cleanUrl": "users/<id>/status",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "user.routes.js",
+    "mount": "users",
+    "method": "PATCH",
+    "subPath": "/:id/role",
+    "fullUrlPath": "users/:id/role",
+    "isProtected": true,
+    "validatorName": "updateRoleSchema",
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('role.assign'), validate(updateRoleSchema), updateUserRole);",
+    "existing": {
+      "name": "2.14 Admin: Update User Role (Phân quyền người dùng)",
+      "folder": "2. Users & Addresses",
+      "cleanUrl": "users/<id>/role",
+      "hasBody": true
+    }
+  },
+  {
+    "file": "user.routes.js",
+    "mount": "users",
+    "method": "DELETE",
+    "subPath": "/:id",
+    "fullUrlPath": "users/:id",
+    "isProtected": true,
+    "validatorName": null,
+    "isUpload": false,
+    "handlersSnippet": "protect, requirePermission('user.delete'), deleteUser);",
+    "existing": {
+      "name": "2.4 Delete Avatar (Xóa ảnh đại diện)",
+      "folder": "2. Users & Addresses",
+      "cleanUrl": "users/avatar",
+      "hasBody": false
+    }
+  }
+]

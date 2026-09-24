@@ -10,7 +10,8 @@ const { upload }  = require('../middleware/upload.middleware');
 router.post('/image',   upload.single('image'), controller.searchByImage);
 
 // Full search: GET /api/search?q=iphone&domain=products&limit=20
-router.get('/',         controller.globalSearch);
+router.get('/',  controller.globalSearch);
+router.get('',   controller.globalSearch);
 
 // Instant autocomplete: GET /api/search/suggest?q=ip
 router.get('/suggest',  controller.getInstantSuggestions);
@@ -18,6 +19,9 @@ router.get('/suggest',  controller.getInstantSuggestions);
 // Trending keywords: GET /api/search/trending?limit=10&type=rising
 // type: 'all' (default) | 'rising' (đang tăng nhanh)
 router.get('/trending', controller.getTrendingKeywords);
+
+// Export search data to CSV for Python analytics: GET /api/v1/search/export-csv
+router.get('/export-csv', controller.exportSearchCSV);
 
 // Record search click (tăng CTR): POST /api/search/click { keyword: "iphone" }
 // Gọi khi user click vào sản phẩm từ search results

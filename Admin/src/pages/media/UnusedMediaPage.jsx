@@ -125,7 +125,7 @@ export default function UnusedMediaPage() {
         <div className="flex items-start gap-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3.5 text-sm text-amber-700 dark:text-amber-300">
           <AlertTriangle size={16} className="shrink-0 mt-0.5" />
           <span>
-            Có <strong>{total}</strong> ảnh chưa sử dụng. Xóa sẽ xóa <strong>vĩnh viễn</strong> trên Cloudinary.
+            Có <strong>{total}</strong> ảnh chưa sử dụng. Xóa sẽ xóa <strong>vĩnh viễn</strong>.
             Kiểm tra kỹ trước khi xóa.
           </span>
         </div>

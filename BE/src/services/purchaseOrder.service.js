@@ -287,7 +287,7 @@ class PurchaseOrderService {
                         } else if (val.startsWith('Kính gửi:')) {
                             cell.value = `Kính gửi: Quý công ty ${supplierName}`;
                         } else if (val.startsWith('Công ty') && val.includes('có nhu cầu đặt hàng')) {
-                            cell.value = `Công ty CỔ PHẦN ĐIỆN MÁY EGA  có nhu cầu đặt hàng tại Quý công ty theo mẫu yêu cầu:`;
+                            cell.value = `Công ty CỔ PHẦN ĐIỆN MÁY SHOP có nhu cầu đặt hàng tại Quý công ty theo mẫu yêu cầu:`;
                         } else if (val.startsWith('Tổng tiền hàng:')) {
                             cell.value = `Tổng tiền hàng: ${totalAmt.toLocaleString('vi-VN')} VNĐ`;
                         } else if (val.startsWith('Thuế VAT')) {
@@ -299,7 +299,7 @@ class PurchaseOrderService {
                         } else if (val.startsWith('Thời gian giao hàng:')) {
                             cell.value = `Thời gian giao hàng: ${po.deliveryDate ? new Date(po.deliveryDate).toLocaleDateString('vi-VN') : 'Dự kiến 3 - 5 ngày làm việc'}`;
                         } else if (val.startsWith('Địa điểm giao hàng:')) {
-                            cell.value = `Địa điểm giao hàng: Kho Thành Phẩm EGA  - Tầng 35, Keangnam Hanoi Landmark Tower, Q.Nam Từ Liêm, Hà Nội`;
+                            cell.value = `Địa điểm giao hàng: Kho Thành Phẩm SHOP - Tầng 35, Keangnam Hanoi Landmark Tower, Q.Nam Từ Liêm, Hà Nội`;
                         } else if (val.includes('ngày') && val.includes('tháng') && val.includes('năm')) {
                             cell.value = dateText;
                         }
@@ -321,11 +321,11 @@ class PurchaseOrderService {
             });
         } else {
             // Fallback
-            sheet.getCell('A1').value = 'Đơn vị: CÔNG TY ĐIỆN MÁY EGA \nBộ phận: Mua Hàng & Cung Ứng';
+            sheet.getCell('A1').value = 'Đơn vị: CÔNG TY ĐIỆN MÁY SHOP\nBộ phận: Mua Hàng & Cung Ứng';
             sheet.getCell('H6').value = `Số PO: ${po.poNumber}`;
             sheet.getCell('A5').value = dateStr;
             sheet.getCell('A9').value = `- Kính gửi nhà cung cấp: ${supplierName}`;
-            sheet.getCell('A10').value = `- Theo Đơn Mua Hàng số ${po.poNumber} của CÔNG TY EGA`;
+            sheet.getCell('A10').value = `- Theo Đơn Mua Hàng số ${po.poNumber} của CÔNG TY SHOP`;
 
             const startRow = 15;
             po.items.forEach((item, index) => {
@@ -359,7 +359,7 @@ class PurchaseOrderService {
             supplierName: po.supplierId?.name || 'Nhà cung cấp',
             supplierEmail: po.supplierId?.email || '',
             supplierPhone: po.supplierId?.phone || '',
-            subject: `[EGA] - Đơn Đặt Mua Hàng Mới #${po.poNumber}`,
+            subject: `[SHOP] - Đơn Đặt Mua Hàng Mới #${po.poNumber}`,
             html,
         };
     }
@@ -380,7 +380,7 @@ class PurchaseOrderService {
             const { generatePOEmailHTML } = require('../utils/poEmailTemplate');
             const html = generatePOEmailHTML({ po, supplier: po.supplierId, customNote });
 
-            const emailSubject = subject || `[EGA] - Đơn Đặt Mua Hàng Mới #${po.poNumber}`;
+            const emailSubject = subject || `[SHOP] - Đơn Đặt Mua Hàng Mới #${po.poNumber}`;
             await sendEmail({ to: recipientEmail, subject: emailSubject, html });
 
             // Update PO status to 'sent'

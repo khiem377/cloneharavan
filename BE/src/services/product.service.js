@@ -364,10 +364,26 @@ const getAllProducts = async (query = {}) => {
   ];
   if (category) {
     const ids = await getCategoryIds(category);
-    if (ids && ids.length > 0) filter.categories = { $in: ids };
-    else if (ids !== null) filter.categories = { $in: [] };
+    if (ids && ids.length > 0) {
+      filter.categories = { $in: ids };
+    } else {
+      const brandDoc = await Brand.findOne({ slug: category }).select('_id');
+      if (brandDoc) {
+        filter.brand = brandDoc._id;
+      } else if (ids !== null) {
+        filter.categories = { $in: [] };
+      }
+    }
   }
-  if (brand) filter.brand = brand;
+  if (brand) {
+    const isObjectId = /^[0-9a-fA-F]{24}$/.test(brand);
+    const brandDoc = await Brand.findOne(
+      isObjectId ? { _id: brand } : { slug: brand }
+    ).select('_id');
+    if (brandDoc) {
+      filter.brand = brandDoc._id;
+    }
+  }
   if (isFeatured !== undefined) filter.isFeatured = isFeatured === 'true';
   if (isHot !== undefined) filter.isHot = isHot === 'true';
 
@@ -394,14 +410,21 @@ const getAllProducts = async (query = {}) => {
     return { products: [], pagination: { page: pageNum, limit: limitNum, total: 0, totalPages: 0 } };
 
   const productIds = products.map((p) => p._id);
-  const defaultVariants = await ProductVariant.find({ productId: { $in: productIds }, isDefault: true })
-    .select('productId price salePrice stock sku').lean();
-  const dvMap = {};
-  defaultVariants.forEach((v) => { dvMap[v.productId.toString()] = v; });
+  const allVariants = await ProductVariant.find({ productId: { $in: productIds } })
+    .select('productId price salePrice stock sku attributes displayName isDefault images')
+    .sort({ isDefault: -1, createdAt: 1 })
+    .lean();
+  const variantsMap = {};
+  allVariants.forEach((v) => {
+    const pid = v.productId.toString();
+    if (!variantsMap[pid]) variantsMap[pid] = [];
+    variantsMap[pid].push(v);
+  });
 
   return {
     products: products.map((p) => {
-      const dv = dvMap[p._id.toString()];
+      const pVars = variantsMap[p._id.toString()] || [];
+      const dv = pVars.find((v) => v.isDefault) || pVars[0];
       return {
         ...p,
         category: p.categories?.[0] || null,
@@ -409,6 +432,7 @@ const getAllProducts = async (query = {}) => {
         price: dv?.price ?? p.cachedPrice ?? null,
         salePrice: dv?.salePrice ?? p.cachedSalePrice ?? null,
         stock: dv?.stock ?? null,
+        variants: pVars,
       };
     }),
     pagination: { page: pageNum, limit: limitNum, total, totalPages: Math.ceil(total / limitNum) },
@@ -510,13 +534,31 @@ const getProductsToCompare = async (productIds) => {
     .lean();
 
   const ids = products.map((p) => p._id);
-  const defaultVariants = await ProductVariant.find({ productId: { $in: ids }, isDefault: true })
-    .select('productId price salePrice stock sku').lean();
+  const variants = await ProductVariant.find({ productId: { $in: ids }, isActive: true })
+    .select('productId displayName attributes price salePrice stock sku isDefault unit')
+    .lean();
+
+  const variantsMap = {};
   const dvMap = {};
-  defaultVariants.forEach((v) => { dvMap[v.productId.toString()] = v; });
+  variants.forEach((v) => {
+    const pid = v.productId.toString();
+    if (!variantsMap[pid]) variantsMap[pid] = [];
+    variantsMap[pid].push(v);
+    if (v.isDefault) dvMap[pid] = v;
+  });
+
   return products.map((p) => {
-    const dv = dvMap[p._id.toString()];
-    return { ...p, defaultVariantId: dv?._id || null, price: dv?.price ?? null, salePrice: dv?.salePrice ?? null, stock: dv?.stock ?? null };
+    const pid = p._id.toString();
+    const pVariants = variantsMap[pid] || [];
+    const dv = dvMap[pid] || pVariants[0];
+    return {
+      ...p,
+      variants: pVariants,
+      defaultVariantId: dv?._id || null,
+      price: dv?.price ?? p.price ?? null,
+      salePrice: dv?.salePrice ?? p.salePrice ?? null,
+      stock: dv?.stock ?? p.stock ?? null,
+    };
   });
 };
 

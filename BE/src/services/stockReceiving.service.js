@@ -322,14 +322,14 @@ const generateExcelSlip = async (id) => {
   const poNumber = receiving.purchaseOrderId?.poNumber || '';
 
   // === BUOC 1: Dien cac o header bang dia chi chinh xac (tieng Viet co dau) ===
-  sheet.getCell('A1').value = `Đơn vị: CÔNG TY ĐIỆN MÁY EGA\nBộ phận: Kho Thành Phẩm`;
+  sheet.getCell('A1').value = `Đơn vị: CÔNG TY ĐIỆN MÁY SHOP\nBộ phận: Kho Thành Phẩm`;
   sheet.getCell('A5').value = `Ngày ${dd} tháng ${mm} năm ${yyyy}`;
   sheet.getCell('H6').value = `Số: ${receiving.receivingNumber}`;
   sheet.getCell('A9').value = `- Họ và tên người giao: ${supplierName}`;
   sheet.getCell('A10').value = poNumber
     ? `- Theo Đơn Mua Hàng số ${poNumber} ngày ${dd}/${mm}/${yyyy}`
     : `- Theo yêu cầu nhập kho ngày ${dd}/${mm}/${yyyy}`;
-  sheet.getCell('A11').value = `Nhập tại kho: Kho Thành Phẩm EGA     Địa điểm: TP. Hồ Chí Minh`;
+  sheet.getCell('A11').value = `Nhập tại kho: Kho Thành Phẩm SHOP     Địa điểm: TP. Hồ Chí Minh`;
 
   // === BUOC 1b: Set column widths ===
   sheet.getColumn(1).width = 6;

@@ -256,13 +256,13 @@ class StockExportService {
     };
 
     // === BUOC 1: Dien header ===
-    sheet.getCell('A1').value = 'Đơn vị: CÔNG TY ĐIỆN MÁY EGA';
+    sheet.getCell('A1').value = 'Đơn vị: CÔNG TY ĐIỆN MÁY SHOP';
     sheet.getCell('A2').value = 'Bộ phận: Kho Thành Phẩm';
     sheet.getCell('A6').value = 'Ngày ' + dd + ' tháng ' + mm + ' năm ' + yyyy;
     sheet.getCell('A7').value = '             Số: ' + se.exportNumber;
     sheet.getCell('A10').value = '- Họ và tên người nhận hàng: ' + (se.recipientName || 'Khách lẻ') + '    Địa chỉ (bộ phận): ' + (se.recipientAddress || 'TP. Hồ Chí Minh');
     sheet.getCell('A11').value = '- Lý do xuất kho: ' + (se.note || (se.type === 'sale' ? 'Xuất bán hàng' : 'Xuất điều chuyển kho'));
-    sheet.getCell('A12').value = '- Xuất tại kho (ngăn lô): Kho Thành Phẩm EGA    Địa điểm: TP. Hồ Chí Minh';
+    sheet.getCell('A12').value = '- Xuất tại kho (ngăn lô): Kho Thành Phẩm SHOP    Địa điểm: TP. Hồ Chí Minh';
 
     // === BUOC 1b: Column widths ===
     sheet.getColumn(1).width = 8;   // A: STT (merged A+B)

@@ -190,7 +190,7 @@ export default function PurchaseReturnCreatePage() {
                 <input
                   type="text"
                   readOnly
-                  value="Kho Thành Phẩm EGA"
+                  value="Kho Thành Phẩm SHOP"
                   className="w-full rounded-xl border border-input bg-muted px-3 py-2.5 text-xs font-semibold text-muted-foreground"
                 />
               </div>

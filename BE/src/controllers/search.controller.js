@@ -95,6 +95,17 @@ const searchByImage = async (req, res, next) => {
   }
 };
 
+const exportSearchCSV = async (req, res, next) => {
+  try {
+    const csvContent = await searchService.exportSearchDataToCSV();
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="search_analytics_data.csv"');
+    res.status(200).send('\uFEFF' + csvContent);
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   globalSearch,
   getInstantSuggestions,
@@ -103,4 +114,5 @@ module.exports = {
   recordSearchClick,
   recordPurchaseKeyword,
   searchByImage,
+  exportSearchCSV,
 };

@@ -228,7 +228,7 @@ class StockAuditService {
     };
 
     // === BUOC 1: Dien header ===
-    sheet.getCell('A1').value = 'Đơn vị: CÔNG TY ĐIỆN MÁY EGA';
+    sheet.getCell('A1').value = 'Đơn vị: CÔNG TY ĐIỆN MÁY SHOP';
     sheet.getCell('A2').value = 'Địa chỉ: 01 Đại lộ Lê Duẩn, Quận 1, TP. Hồ Chí Minh';
     sheet.getCell('H5').value = `BIÊN BẢN KIỂM KÊ VẬT TƯ, CÔNG CỤ, SẢN PHẨM, HÀNG HOÁ (Mã: ${sa.auditNumber})`;
     sheet.getCell('A7').value = `- Thời điểm kiểm kê: 08 giờ 00 ngày ${dd} tháng ${mm} năm ${yyyy}`;

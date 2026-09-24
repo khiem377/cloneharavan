@@ -199,7 +199,7 @@ class PurchaseReturnService {
     ];
 
     sheet.mergeCells('A1:H1');
-    sheet.getCell('A1').value = 'CÔNG TY ĐIỆN MÁY EGA';
+    sheet.getCell('A1').value = 'CÔNG TY ĐIỆN MÁY SHOP';
     sheet.getCell('A1').font = { bold: true, size: 14 };
 
     sheet.mergeCells('A2:H2');

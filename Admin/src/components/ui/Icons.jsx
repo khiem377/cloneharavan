@@ -1,6 +1,6 @@
 /**
  * ╔═══════════════════════════════════════════════════════════╗
- * ║         CUSTOM SVG ICON LIBRARY — EGA Admin               ║
+ * ║         CUSTOM SVG ICON LIBRARY — SHOP Admin              ║
  * ║  Handcrafted, detailed & beautiful — replaces Lucide      ║
  * ╚═══════════════════════════════════════════════════════════╝
  *
