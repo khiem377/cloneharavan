@@ -137,29 +137,37 @@ const calculateCheckout = async ({ cartItems = [], couponCode = null }) => {
     }
   }
 
+  // Tính tổng tiền các sản phẩm thường (không thuộc Flash Sale)
+  const subtotalNonFlashSale = nonFlashSaleItems.reduce((sum, item) => sum + item.subtotal, 0);
+  const subtotalEligibleForCoupon = Math.max(0, subtotalNonFlashSale - totalPromoDiscount);
   const subtotalAfterPromo = Math.max(0, subtotalAfterFlashSale - totalPromoDiscount);
 
   // --------------------------------------------------------------------------
-  // BƯỚC 3: ÁP DỤNG COUPON (Mã giảm giá tính trên subtotalAfterPromo)
+  // BƯỚC 3: ÁP DỤNG COUPON (Chuẩn doanh nghiệp: Không giảm giá 2 lần trên Flash Sale)
   // --------------------------------------------------------------------------
   let couponDiscount = 0;
   let appliedCoupon = null;
+  let couponMessage = null;
 
   if (couponCode && couponCode.trim()) {
-    const validated = await couponService.validateCoupon(couponCode, subtotalAfterPromo);
-    couponDiscount = validated.discountAmount || 0;
-    appliedCoupon = {
-      ...validated.coupon,
-      discountAmount: couponDiscount,
-    };
+    if (subtotalEligibleForCoupon <= 0) {
+      couponMessage = 'Mã giảm giá không áp dụng cho các sản phẩm Flash Sale';
+    } else {
+      const validated = await couponService.validateCoupon(couponCode, subtotalEligibleForCoupon);
+      couponDiscount = validated.discountAmount || 0;
+      appliedCoupon = {
+        ...validated.coupon,
+        discountAmount: couponDiscount,
+      };
+    }
   }
 
   const finalTotal = Math.max(0, subtotalAfterPromo - couponDiscount);
 
   // --------------------------------------------------------------------------
-  // BƯỚC 4: TẶNG KÈM QUÀ TẶNG (Gift Program - Sản phẩm giá 0đ)
+  // BƯỚC 4: TẶNG KÈM QUÀ TẶNG (Chuẩn doanh nghiệp: Hàng Flash Sale giá sốc không kèm quà tặng)
   // --------------------------------------------------------------------------
-  const giftResult = await giftProgramService.applyGiftPrograms(processedCartItems);
+  const giftResult = await giftProgramService.applyGiftPrograms(nonFlashSaleItems);
   const giftItems = giftResult.flatMap((res) =>
     (res.gifts || []).map((g) => ({
       productId: g.productId,
@@ -175,11 +183,14 @@ const calculateCheckout = async ({ cartItems = [], couponCode = null }) => {
     summary: {
       subtotalOriginal,
       subtotalAfterFlashSale,
+      subtotalNonFlashSale,
+      subtotalEligibleForCoupon,
       totalFlashSaleDiscount,
       totalPromoDiscount,
       couponDiscount,
       totalDiscountAll: totalFlashSaleDiscount + totalPromoDiscount + couponDiscount,
       finalTotal,
+      couponMessage,
     },
     items: processedCartItems,
     appliedPromotions: promoAppliedItems,

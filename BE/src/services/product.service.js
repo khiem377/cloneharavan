@@ -6,10 +6,37 @@ const Media = require('../models/media.model');
 const Promotion = require('../models/promotion.model');
 const GiftProgram = require('../models/gift-program.model');
 const Coupon = require('../models/coupon.model');
+const FlashSale = require('../models/flashSale.model');
 const { AppError } = require('../utils/AppError');
 const { slugify } = require('../utils/slugify');
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const getActiveFlashSaleMap = async () => {
+  const now = new Date();
+  const activeSale = await FlashSale.findOne({
+    isActive: true,
+    startDate: { $lte: now },
+    endDate: { $gte: now },
+  }).lean();
+
+  if (!activeSale || !Array.isArray(activeSale.items)) return null;
+
+  const itemMap = new Map();
+  for (const item of activeSale.items) {
+    const pId = item.productId?.toString();
+    const vId = item.variantId?.toString();
+    const key = vId ? `${pId}_${vId}` : `${pId}_default`;
+    itemMap.set(key, {
+      ...item,
+      flashSaleId: activeSale._id,
+      flashSaleName: activeSale.name,
+      endDate: activeSale.endDate,
+    });
+  }
+
+  return { activeSale, itemMap };
+};
 
 const resolveMedia = async (mediaId) => {
   if (!mediaId) return null;
@@ -493,18 +520,37 @@ const getAllProductsAdmin = async (query = {}) => {
   const defaultVariantMap = {};
   defaultVariants.forEach((v) => { defaultVariantMap[v.productId.toString()] = v; });
 
+  const fsData = await getActiveFlashSaleMap();
+
   return {
     products: products.map((p) => {
       const pid = p._id.toString();
       const dv = defaultVariantMap[pid];
+      let price = dv?.price ?? p.cachedPrice ?? null;
+      let salePrice = dv?.salePrice ?? p.cachedSalePrice ?? null;
+      let isFlashSale = false;
+
+      if (fsData && fsData.itemMap) {
+        const keyWithVariant = dv ? `${pid}_${dv._id}` : `${pid}_default`;
+        const keyDefault = `${pid}_default`;
+        const matched = fsData.itemMap.get(keyWithVariant) || fsData.itemMap.get(keyDefault);
+        const fsPrice = matched ? (matched.flashSalePrice ?? matched.flashPrice) : null;
+        const fsRemaining = matched ? Math.max(0, (matched.stockLimit || 0) - (matched.soldCount || 0)) : 0;
+        if (matched && fsPrice !== null && fsRemaining > 0) {
+          isFlashSale = true;
+          salePrice = fsPrice;
+        }
+      }
+
       return {
         ...p,
         category: p.categories?.[0] || null,
         variantCount: variantCountMap[pid] ?? 0,
         defaultVariantId: dv?._id || null,
-        price: dv?.price ?? p.cachedPrice ?? null,
-        salePrice: dv?.salePrice ?? p.cachedSalePrice ?? null,
+        price,
+        salePrice,
         stock: dv?.stock ?? null,
+        isFlashSale,
       };
     }),
     pagination: { page: pageNum, limit: limitNum, total, totalPages: Math.ceil(total / limitNum) },
@@ -521,7 +567,44 @@ const getProductById = async (idOrSlug) => {
 
   const dv = await ProductVariant.findOne({ productId: product._id, isDefault: true })
     .select('price salePrice stock sku').lean();
-  return { ...product, defaultVariantId: dv?._id || null, price: dv?.price ?? null, salePrice: dv?.salePrice ?? null, stock: dv?.stock ?? null };
+
+  let price = dv?.price ?? product.cachedPrice ?? null;
+  let salePrice = dv?.salePrice ?? product.cachedSalePrice ?? null;
+  let isFlashSale = false;
+  let flashSaleData = null;
+
+  const fsData = await getActiveFlashSaleMap();
+  if (fsData && fsData.itemMap) {
+    const keyWithVariant = dv ? `${product._id}_${dv._id}` : `${product._id}_default`;
+    const keyDefault = `${product._id}_default`;
+    const matched = fsData.itemMap.get(keyWithVariant) || fsData.itemMap.get(keyDefault);
+    const fsPrice = matched ? (matched.flashSalePrice ?? matched.flashPrice) : null;
+    const fsRemaining = matched ? Math.max(0, (matched.stockLimit || 0) - (matched.soldCount || 0)) : 0;
+    if (matched && fsPrice !== null && fsRemaining > 0) {
+      isFlashSale = true;
+      salePrice = fsPrice;
+      flashSaleData = {
+        _id: matched.flashSaleId,
+        name: matched.flashSaleName,
+        flashSalePrice: fsPrice,
+        originalPrice: price,
+        remaining: fsRemaining,
+        stockLimit: matched.stockLimit,
+        soldCount: matched.soldCount,
+        endDate: matched.endDate,
+      };
+    }
+  }
+
+  return {
+    ...product,
+    defaultVariantId: dv?._id || null,
+    price,
+    salePrice,
+    stock: dv?.stock ?? null,
+    isFlashSale,
+    flashSale: flashSaleData,
+  };
 };
 
 const getProductsToCompare = async (productIds) => {
@@ -684,6 +767,19 @@ const getProductDeals = async (idOrSlug) => {
   const now = new Date();
   const categoryIds = (product.categories || []).map((c) => c._id || c);
 
+  // 1. Kiểm tra xem sản phẩm có trong Flash Sale đang chạy không
+  const fsData = await getActiveFlashSaleMap();
+  let matchedFsItem = null;
+  if (fsData && fsData.itemMap) {
+    const keyWithVariant = dv ? `${product._id}_${dv._id}` : `${product._id}_default`;
+    const keyDefault = `${product._id}_default`;
+    matchedFsItem = fsData.itemMap.get(keyWithVariant) || fsData.itemMap.get(keyDefault);
+  }
+
+  const fsPrice = matchedFsItem ? (matchedFsItem.flashSalePrice ?? matchedFsItem.flashPrice) : null;
+  const fsRemaining = matchedFsItem ? Math.max(0, (matchedFsItem.stockLimit || 0) - (matchedFsItem.soldCount || 0)) : 0;
+  const isFlashSaleActive = matchedFsItem && fsPrice !== null && fsPrice < productPrice && fsRemaining > 0;
+
   const activeFilter = {
     isActive: true,
     startDate: { $lte: now },
@@ -697,7 +793,8 @@ const getProductDeals = async (idOrSlug) => {
 
   const [promotions, giftPrograms, coupons] = await Promise.all([
     Promotion.find(activeFilter).sort({ createdAt: -1 }),
-    GiftProgram.find(activeFilter).sort({ createdAt: -1 }),
+    // Chuẩn doanh nghiệp: Khi đang hưởng giá Flash Sale sốc, không áp dụng thêm Gift Program
+    isFlashSaleActive ? [] : GiftProgram.find(activeFilter).sort({ createdAt: -1 }),
     Coupon.find({
       isActive: true, startDate: { $lte: now }, endDate: { $gte: now },
       $or: [{ usageLimit: null }, { $expr: { $lt: ['$usedCount', '$usageLimit'] } }],
@@ -706,21 +803,48 @@ const getProductDeals = async (idOrSlug) => {
 
   let effectivePrice = productSalePrice > 0 ? productSalePrice : productPrice;
   let bestPromotion = null;
+  let flashSaleDeal = null;
 
-  for (const promo of promotions) {
-    if (promo.type === 'percent_discount' && promo.discountValue > 0) {
-      let discounted = productPrice * (1 - promo.discountValue / 100);
-      if (promo.maxDiscountValue) discounted = Math.max(productPrice - promo.maxDiscountValue, discounted);
-      discounted = Math.round(discounted);
-      if (discounted < effectivePrice) { effectivePrice = discounted; bestPromotion = promo; }
-    }
-    if (promo.type === 'fixed_discount' && promo.discountValue > 0) {
-      const discounted = Math.max(0, productPrice - promo.discountValue);
-      if (discounted < effectivePrice) { effectivePrice = discounted; bestPromotion = promo; }
+  if (isFlashSaleActive) {
+    effectivePrice = fsPrice;
+    flashSaleDeal = {
+      _id: matchedFsItem.flashSaleId,
+      name: matchedFsItem.flashSaleName,
+      price: fsPrice,
+      originalPrice: productPrice,
+      remaining: fsRemaining,
+      stockLimit: matchedFsItem.stockLimit,
+      soldCount: matchedFsItem.soldCount,
+      discountPercent: Math.round(((productPrice - fsPrice) / productPrice) * 100),
+      endDate: matchedFsItem.endDate,
+    };
+  } else {
+    for (const promo of promotions) {
+      if (promo.type === 'percent_discount' && promo.discountValue > 0) {
+        let discounted = productPrice * (1 - promo.discountValue / 100);
+        if (promo.maxDiscountValue) discounted = Math.max(productPrice - promo.maxDiscountValue, discounted);
+        discounted = Math.round(discounted);
+        if (discounted < effectivePrice) { effectivePrice = discounted; bestPromotion = promo; }
+      }
+      if (promo.type === 'fixed_discount' && promo.discountValue > 0) {
+        const discounted = Math.max(0, productPrice - promo.discountValue);
+        if (discounted < effectivePrice) { effectivePrice = discounted; bestPromotion = promo; }
+      }
     }
   }
 
-  return { promotions, giftPrograms, coupons, effectivePrice, bestPromotion };
+  return {
+    promotions: isFlashSaleActive ? [] : promotions,
+    giftPrograms,
+    coupons,
+    effectivePrice,
+    bestPromotion,
+    flashSale: flashSaleDeal,
+    isFlashSale: isFlashSaleActive,
+    dealNotice: isFlashSaleActive
+      ? 'Sản phẩm đang trong Flash Sale — Giá sốc độc quyền, không áp dụng cộng dồn với khuyến mãi hoặc quà tặng kèm.'
+      : null,
+  };
 };
 
 const searchInventoryProducts = async (keyword) => {
