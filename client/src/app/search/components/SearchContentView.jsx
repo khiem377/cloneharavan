@@ -85,33 +85,39 @@ export default function SearchContentView({
         {blogs.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {blogs.map((b) => (
-              <Card key={b._id || b.slug} className="p-4 hover:shadow-md hover:border-gray-300 transition flex flex-col justify-between">
-                <div>
-                  {b.thumbnailUrl && (
-                    <div className="w-full aspect-video rounded-md overflow-hidden bg-slate-100 mb-3">
-                      <img
-                        src={b.thumbnailUrl}
-                        alt={b.title}
-                        className="w-full h-full object-cover"
-                      />
+              <Link
+                key={b._id || b.slug}
+                href={`/blogs/${b.slug}`}
+                className="group block h-full"
+              >
+                <Card className="p-4 hover:shadow-md hover:border-gray-300 transition flex flex-col justify-between h-full cursor-pointer">
+                  <div>
+                    {b.thumbnailUrl && (
+                      <div className="w-full aspect-video rounded-md overflow-hidden bg-slate-100 mb-3">
+                        <img
+                          src={b.thumbnailUrl}
+                          alt={b.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2 mb-2">
+                      <Badge variant="secondary" className="text-[10px] font-medium">Bài viết</Badge>
+                      {b.minRead && (
+                        <span className="text-[11px] text-gray-400">{b.minRead} phút đọc</span>
+                      )}
                     </div>
-                  )}
-                  <div className="flex items-center gap-2 mb-2">
-                    <Badge variant="secondary" className="text-[10px] font-medium">Bài viết</Badge>
-                    {b.minRead && (
-                      <span className="text-[11px] text-gray-400">{b.minRead} phút đọc</span>
+                    <h3 className="font-bold text-sm text-gray-900 line-clamp-2 group-hover:text-blue-600 transition">
+                      {b.title}
+                    </h3>
+                    {b.excerpt && (
+                      <p className="text-xs text-gray-500 line-clamp-2 mt-1.5 leading-relaxed">
+                        {b.excerpt}
+                      </p>
                     )}
                   </div>
-                  <h3 className="font-bold text-sm text-gray-900 line-clamp-2 hover:text-blue-600 transition">
-                    {b.title}
-                  </h3>
-                  {b.excerpt && (
-                    <p className="text-xs text-gray-500 line-clamp-2 mt-1.5 leading-relaxed">
-                      {b.excerpt}
-                    </p>
-                  )}
-                </div>
-              </Card>
+                </Card>
+              </Link>
             ))}
           </div>
         ) : (
