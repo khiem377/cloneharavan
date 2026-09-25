@@ -3,9 +3,54 @@ const FlashSale = require('../models/flashSale.model');
 const Media = require('../models/media.model');
 const Product = require('../models/product.model');
 const ProductVariant = require('../models/productVariant.model');
+const Menu = require('../models/menu.model');
 require('../models/brand.model');
 require('../models/category.model');
 const { AppError } = require('../utils/AppError');
+
+const syncFlashSalesToMenu = async () => {
+  try {
+    const menu = await Menu.findOne({ handle: 'main-menu' });
+    if (!menu) return;
+
+    const fsItemIndex = menu.items.findIndex(
+      (i) => i.label && i.label.toLowerCase().includes('flash')
+    );
+    if (fsItemIndex === -1) return;
+
+    const now = new Date();
+    const activeSales = await FlashSale.find({
+      isActive: true,
+      endDate: { $gt: now },
+    })
+      .sort({ startDate: 1 })
+      .lean();
+
+    const children = activeSales.map((sale, idx) => {
+      const isOngoing = new Date(sale.startDate) <= now && new Date(sale.endDate) > now;
+      return {
+        _id: new mongoose.Types.ObjectId(),
+        label: sale.name,
+        linkType: 'url',
+        linkRef: null,
+        customUrl: `/flash-sale/${sale.slug}`,
+        openInNewTab: false,
+        badge: isOngoing ? 'Hot' : 'Sắp diễn ra',
+        badgeColor: isOngoing ? '#ef4444' : '#3b82f6',
+        megaMenu: false,
+        order: idx,
+        isActive: true,
+        children: [],
+      };
+    });
+
+    menu.items[fsItemIndex].children = children;
+    menu.markModified('items');
+    await menu.save();
+  } catch (err) {
+    console.error('Error syncing flash sales to menu:', err.message);
+  }
+};
 
 const resolveBanner = async (bannerMediaId) => {
   if (bannerMediaId === null) return { mediaId: null, url: '' };
@@ -58,6 +103,8 @@ const createFlashSale = async (data) => {
     ...rest,
     banner: banner || { mediaId: null, url: '' },
   });
+
+  await syncFlashSalesToMenu();
 
   return flashSale;
 };
@@ -215,6 +262,7 @@ const updateFlashSale = async (id, data) => {
 
   Object.assign(flashSale, rest);
   await flashSale.save();
+  await syncFlashSalesToMenu();
 
   return flashSale;
 };
@@ -223,6 +271,7 @@ const deleteFlashSale = async (id) => {
   const flashSale = await FlashSale.findById(id);
   if (!flashSale) throw new AppError('Không tìm thấy chương trình Flash Sale', 404);
   await flashSale.deleteOne();
+  await syncFlashSalesToMenu();
   return true;
 };
 
@@ -236,6 +285,7 @@ const toggleFlashSaleStatus = async (id, isActive) => {
 
   flashSale.isActive = isActive;
   await flashSale.save();
+  await syncFlashSalesToMenu();
   return flashSale;
 };
 

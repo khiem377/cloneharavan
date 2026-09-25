@@ -92,14 +92,22 @@ export const HeaderNav = ({ onOpenCategoryDrawer }) => {
 
                 {/* Dropdown menu con: Chỉ hiển thị khi Admin cấu hình children trong Menu API */}
                 {hasChildren && isDropdownOpen && (
-                  <div className="absolute top-full left-0 min-w-56 bg-white text-gray-800 rounded-b-xl shadow-2xl border border-gray-200 py-1.5 z-50 animate-in fade-in slide-in-from-top-1 duration-150">
+                  <div className="absolute top-full left-0 min-w-64 bg-white text-gray-800 rounded-b-xl shadow-2xl border border-gray-200 py-1.5 z-50 animate-in fade-in slide-in-from-top-1 duration-150">
                     {item.children.map((sub) => (
                       <Link
                         key={sub._id || sub.label}
                         href={resolveLinkHref(sub)}
-                        className="block px-4 py-2 text-xs font-semibold text-gray-700 hover:text-red-600 hover:bg-red-50/50 transition-colors border-b border-gray-50 last:border-0"
+                        className="px-4 py-2.5 text-xs font-semibold text-gray-700 hover:text-red-600 hover:bg-red-50/50 transition-colors border-b border-gray-100 last:border-0 flex items-center justify-between group/sub"
                       >
-                        {sub.label}
+                        <span className="group-hover/sub:translate-x-0.5 transition-transform">{sub.label}</span>
+                        {sub.badge && (
+                          <span
+                            className="px-1.5 py-0.5 rounded text-[10px] font-bold text-white uppercase ml-2 shrink-0"
+                            style={{ backgroundColor: sub.badgeColor || '#ef4444' }}
+                          >
+                            {sub.badge}
+                          </span>
+                        )}
                       </Link>
                     ))}
                   </div>
