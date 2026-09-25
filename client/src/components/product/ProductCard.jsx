@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Eye, ArrowLeftRight, Check, Flame, Star } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -12,6 +13,7 @@ const FALLBACK_IMAGE =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120' fill='none'%3E%3Crect width='120' height='120' rx='8' fill='%23f8fafc'/%3E%3Crect x='30' y='35' width='60' height='45' rx='4' stroke='%23cbd5e1' stroke-width='2' fill='none'/%3E%3Cpolyline points='48 80 40 90 80 90 72 80' stroke='%23cbd5e1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E";
 
 export default function ProductCard({ product }) {
+  const router = useRouter();
   const { openQuickView } = useQuickViewStore();
   const { addProduct, isCompared } = useCompareStore();
 
@@ -203,13 +205,18 @@ export default function ProductCard({ product }) {
           <div className="flex-1 flex flex-col justify-between">
             <div>
               {product.brand?.name && (
-                <Link
-                  href={`/collections/${product.brand.slug || product.brand.name.toLowerCase()}`}
-                  onClick={(e) => e.stopPropagation()}
+                <span
+                  role="link"
+                  tabIndex={0}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    router.push(`/collections/${product.brand.slug || product.brand.name.toLowerCase()}`);
+                  }}
                   className="text-[11px] font-semibold text-gray-400 hover:text-[#e30019] uppercase tracking-wide block mb-0.5 transition-colors cursor-pointer w-fit"
                 >
                   {product.brand.name}
-                </Link>
+                </span>
               )}
 
               <h3 className="text-xs sm:text-sm font-medium text-gray-900 line-clamp-2 group-hover:text-[#e30019] transition-colors leading-snug">

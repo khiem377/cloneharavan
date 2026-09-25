@@ -35,7 +35,7 @@ export const HeaderNav = ({ onOpenCategoryDrawer }) => {
               (item.linkType === 'category'
                 ? `/collections/${item.linkRef}`
                 : item.linkType === 'blog'
-                ? `/blogs/${item.linkRef || 'news'}`
+                ? (!item.linkRef || item.linkRef === 'news' || item.linkRef === 'tin-tuc' ? '/blogs' : `/blogs?category=${item.linkRef}`)
                 : '#');
             const isFlashSales =
               item.label?.toLowerCase().includes('flash sale');

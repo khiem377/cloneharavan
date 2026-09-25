@@ -17,14 +17,15 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import {
   ChevronRight, ChevronDown, Plus, Trash2, Loader2,
-  GripVertical, ArrowLeft, Save, ExternalLink,
+  GripVertical, ArrowLeft, Save, ExternalLink, CategoriesIcon,
 } from '@/components/ui/Icons';
 import { useMenu, useUpdateMenu } from '@/hooks/useMenus';
-import { useCategories } from '@/hooks/useCategories';
+import { useCategories, useAllCategoriesSelect } from '@/hooks/useCategories';
 import { useAllBrands } from '@/hooks/useBrands';
 import { useBlogCategories } from '@/hooks/useBlog';
 import { flattenTree, buildTree } from '@/utils/treeUtils';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import { toast } from '@/providers/ToastProvider';
 
 // ─── Utils ────────────────────────────────────────────────────────────────────
 const nanoid = () => Math.random().toString(36).slice(2, 10);
@@ -158,7 +159,7 @@ function SortableItemRow({ item, depth, isSelected, onSelect, onAdd, onDelete, e
 }
 
 // ─── Item Form Panel ───────────────────────────────────────────────────────────
-function ItemFormPanel({ item, onChange, categories, brands, blogCats }) {
+function ItemFormPanel({ item, onChange, categories, brands, blogCats, flatCategoryOptions = [] }) {
   if (!item) {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground p-8">
@@ -171,7 +172,7 @@ function ItemFormPanel({ item, onChange, categories, brands, blogCats }) {
   const set = (key, val) => onChange({ ...item, [key]: val });
 
   const refOptions = {
-    category: categories,
+    category: flatCategoryOptions.length > 0 ? flatCategoryOptions : categories,
     brand: brands,
     blog: blogCats,
   };
@@ -247,7 +248,9 @@ function ItemFormPanel({ item, onChange, categories, brands, blogCats }) {
             <option value="">-- Bấm vào đây để chọn {LINK_TYPE_LABELS[item.linkType]} --</option>
             {(refOptions[item.linkType] || []).map((opt) => (
               <option key={opt._id} value={opt._id}>
-                {opt.name}
+                {item.linkType === 'category' && opt.depth
+                  ? `${'　'.repeat(opt.depth)}└ ${opt.name}`
+                  : opt.name}
               </option>
             ))}
           </select>
@@ -339,11 +342,19 @@ export default function MenuEditorPage() {
   const updateMut = useUpdateMenu();
 
   const { data: rawCategories = [] } = useCategories({});
+  const { data: rawCategoryTree = [] } = useAllCategoriesSelect(true);
   const { data: brands = [] } = useAllBrands();
   const { data: rawBlogCats = [] } = useBlogCategories({});
 
   const categories = Array.isArray(rawCategories) ? rawCategories : rawCategories?.data ?? [];
+  const categoryTree = Array.isArray(rawCategoryTree) ? rawCategoryTree : rawCategoryTree?.data ?? [];
   const blogCats = Array.isArray(rawBlogCats) ? rawBlogCats : rawBlogCats?.data ?? [];
+
+  const flatCategoryOptions = flattenTree(
+    categoryTree.length > 0 && categoryTree[0].children !== undefined
+      ? categoryTree
+      : buildTree(categories)
+  );
 
   const [flatItems, setFlatItems] = useState([]);
   const [expandedIds, setExpandedIds] = useState(new Set());
@@ -352,13 +363,92 @@ export default function MenuEditorPage() {
   const [activeId, setActiveId] = useState(null);
   const [menuName, setMenuName] = useState('');
 
+  const handleSyncCategories = () => {
+    const treeToUse =
+      categoryTree.length > 0 && categoryTree[0].children !== undefined
+        ? categoryTree
+        : buildTree(categories);
+
+    if (!treeToUse || treeToUse.length === 0) {
+      toast.error('Không tìm thấy danh mục nào trong hệ thống để đồng bộ');
+      return;
+    }
+
+    // 1. Tìm hoặc tạo mục "Danh mục sản phẩm"
+    let dmcItem = flatItems.find(
+      (i) => (i.label?.toLowerCase().includes('danh mục') || i.label?.toLowerCase().includes('sản phẩm')) && i.depth === 0
+    );
+
+    let nextFlat = [...flatItems];
+
+    if (!dmcItem) {
+      dmcItem = makeItem({
+        label: 'Danh mục sản phẩm',
+        linkType: 'none',
+        megaMenu: true,
+        depth: 0,
+        parentId: null,
+      });
+      const homeIdx = nextFlat.findIndex((i) => i.label?.toLowerCase().includes('trang chủ'));
+      if (homeIdx !== -1) {
+        nextFlat.splice(homeIdx + 1, 0, dmcItem);
+      } else {
+        nextFlat.unshift(dmcItem);
+      }
+    }
+
+    // 2. Chuyển đổi cây danh mục thành các menu items có phân cấp cha - con
+    const mapCategoryNode = (cat, depth, parentId) => {
+      const id = nanoid();
+      const childItems = (cat.children || []).map((ch) =>
+        mapCategoryNode(ch, depth + 1, id)
+      );
+      return {
+        _id: id,
+        label: cat.name,
+        linkType: 'category',
+        linkRef: cat._id,
+        customUrl: `/collections/${cat.slug || cat._id}`,
+        openInNewTab: false,
+        badge: '',
+        badgeColor: '#ef4444',
+        megaMenu: depth === 1,
+        isActive: cat.isActive !== false,
+        parentId,
+        depth,
+        children: childItems,
+      };
+    };
+
+    const newChildrenTree = treeToUse.map((cat) => mapCategoryNode(cat, 1, dmcItem._id));
+
+    // 3. Xoá toàn bộ các con cũ dưới dmcItem
+    const dmcIdx = nextFlat.findIndex((i) => i._id === dmcItem._id);
+    let end = dmcIdx + 1;
+    while (end < nextFlat.length && nextFlat[end].depth > dmcItem.depth) {
+      end++;
+    }
+    nextFlat.splice(dmcIdx + 1, end - (dmcIdx + 1));
+
+    // 4. Flatten các con mới và chèn ngay sau dmcItem
+    const flatNewChildren = flattenTree(newChildrenTree, 1, dmcItem._id);
+    nextFlat.splice(dmcIdx + 1, 0, ...flatNewChildren);
+
+    setFlatItems(nextFlat);
+    const childIdsToExpand = flatNewChildren
+      .filter((i) => i.children?.length > 0 || flatNewChildren.some((f) => f.parentId === i._id))
+      .map((i) => i._id);
+    setExpandedIds((prev) => new Set([...prev, dmcItem._id, ...childIdsToExpand]));
+    toast.success(`Đã nạp ${treeToUse.length} nhóm danh mục cha - con! Hãy bấm 'Lưu menu' để lưu lại.`);
+  };
+
   useEffect(() => {
     if (!menu) return;
     setMenuName(menu.name || '');
     const flat = flattenTree(menu.items || []);
     setFlatItems(flat);
-    // Expand tất cả cấp 1 mặc định
-    setExpandedIds(new Set(flat.filter((i) => i.depth === 0 && i.children?.length > 0).map((i) => i._id)));
+    // Expand tất cả cấp 0 và các mục cha mặc định để dễ nhìn cấu trúc
+    setExpandedIds(new Set(flat.filter((i) => i.depth === 0 || i.children?.length > 0 || flat.some((f) => f.parentId === i._id)).map((i) => i._id)));
   }, [menu]);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
@@ -502,12 +592,24 @@ export default function MenuEditorPage() {
         <div className="flex flex-col w-full sm:w-1/2 lg:w-2/5 rounded-xl border border-border bg-card shadow-2xs overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30">
             <span className="text-sm font-semibold text-foreground">Cấu trúc menu</span>
-            <button
-              className="inline-flex h-7 items-center justify-center gap-1 rounded-md bg-primary px-2.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer"
-              onClick={handleAddRoot}
-            >
-              <Plus size={12} /> Thêm mục
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                className="inline-flex h-7 items-center justify-center gap-1.5 rounded-md border border-border bg-background hover:bg-accent px-2.5 text-xs font-medium text-foreground transition-colors cursor-pointer shadow-2xs"
+                onClick={handleSyncCategories}
+                title="Tự động đồng bộ toàn bộ cây danh mục sản phẩm (cha - con) vào menu"
+              >
+                <CategoriesIcon size={12} className="text-primary" />
+                <span className="hidden sm:inline">Đồng bộ danh mục</span>
+                <span className="sm:hidden">Đồng bộ</span>
+              </button>
+              <button
+                className="inline-flex h-7 items-center justify-center gap-1 rounded-md bg-primary px-2.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer shadow-2xs"
+                onClick={handleAddRoot}
+              >
+                <Plus size={12} /> Thêm mục
+              </button>
+            </div>
           </div>
 
           <div className="flex-1 overflow-y-auto">
@@ -580,6 +682,7 @@ export default function MenuEditorPage() {
             categories={categories}
             brands={brands}
             blogCats={blogCats}
+            flatCategoryOptions={flatCategoryOptions}
           />
         </div>
       </div>
@@ -598,6 +701,7 @@ export default function MenuEditorPage() {
             categories={categories}
             brands={brands}
             blogCats={blogCats}
+            flatCategoryOptions={flatCategoryOptions}
           />
         </div>
       )}

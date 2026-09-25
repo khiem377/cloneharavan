@@ -77,7 +77,14 @@ const updateCategoryCounts = async (oldCatIds = [], newCatIds = []) => {
 
 const getAllPosts = async (query = {}) => {
   const filter = {};
-  if (query.keyword)    filter.title = { $regex: query.keyword, $options: 'i' };
+  const kw = query.keyword || query.q || query.search;
+  if (kw) {
+    filter.$or = [
+      { title: { $regex: kw, $options: 'i' } },
+      { slug: { $regex: kw, $options: 'i' } },
+      { excerpt: { $regex: kw, $options: 'i' } },
+    ];
+  }
   if (query.status)     filter.status = query.status;
   if (query.categoryId) filter.categories = query.categoryId;
   if (query.tag)        filter.tags = query.tag;

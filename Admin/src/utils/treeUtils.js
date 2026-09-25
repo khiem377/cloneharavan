@@ -4,25 +4,39 @@
  *          MediaPickerModal, MediaPage (FolderTree/breadcrumb).
  */
 
+const generateId = () =>
+  typeof crypto !== 'undefined' && crypto.randomUUID
+    ? crypto.randomUUID()
+    : Math.random().toString(36).slice(2, 10);
+
 // ─── Flatten tree → flat array với depth & parentId ──────────────────────────
 export function flattenTree(items, depth = 0, parentId = null) {
-  return (items || []).flatMap((item) => [
-    { ...item, depth, parentId, children: item.children || [] },
-    ...flattenTree(item.children || [], depth + 1, item._id),
-  ]);
+  return (items || []).flatMap((item) => {
+    const id = item._id || generateId();
+    const normalized = { ...item, _id: id, depth, parentId, children: item.children || [] };
+    return [
+      normalized,
+      ...flattenTree(item.children || [], depth + 1, id),
+    ];
+  });
 }
 
 // ─── Rebuild tree từ flat array ───────────────────────────────────────────────
 export function buildTree(flat) {
   const map = {};
   (flat || []).forEach((item) => {
-    map[item._id] = { ...item, children: [] };
+    const id = item._id || generateId();
+    map[id] = { ...item, _id: id, children: [] };
   });
   const roots = [];
   (flat || []).forEach((item) => {
+    const id = item._id;
     const pid = item.parentId?._id || item.parentId;
-    if (pid && map[pid]) map[pid].children.push(map[item._id]);
-    else roots.push(map[item._id]);
+    if (pid && map[pid]) {
+      map[pid].children.push(map[id]);
+    } else {
+      roots.push(map[id]);
+    }
   });
   return roots;
 }

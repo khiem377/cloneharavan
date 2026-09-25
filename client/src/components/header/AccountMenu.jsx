@@ -15,10 +15,12 @@ import {
 export const AccountMenu = () => {
   const { user, isAuthenticated, clearAuth } = useAuthStore();
   const [isOpen, setIsOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const menuRef = useRef(null);
   const router = useRouter();
 
   useEffect(() => {
+    setMounted(true);
     const handleClickOutside = (e) => {
       if (menuRef.current && !menuRef.current.contains(e.target)) {
         setIsOpen(false);
@@ -34,7 +36,7 @@ export const AccountMenu = () => {
     router.push('/login');
   };
 
-  if (isAuthenticated()) {
+  if (mounted && isAuthenticated()) {
     const displayName = user?.fullName || user?.name || user?.email?.split('@')[0] || 'Tài khoản';
     const initial = displayName.charAt(0).toUpperCase();
 

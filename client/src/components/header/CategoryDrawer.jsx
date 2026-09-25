@@ -12,6 +12,17 @@ export const CategoryDrawer = ({ isOpen, onClose }) => {
   const { user, isAuthenticated } = useAuthStore();
   const [activeCategoryId, setActiveCategoryId] = useState(null);
   const [expandedMobileIds, setExpandedMobileIds] = useState(new Set());
+  const [mounted, setMounted] = useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  React.useEffect(() => {
+    if (!isOpen) {
+      setActiveCategoryId(null);
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -32,9 +43,9 @@ export const CategoryDrawer = ({ isOpen, onClose }) => {
       c.isActive !== false
   );
 
-  const currentActive =
-    topCategories.find((c) => c._id === activeCategoryId) ||
-    (topCategories.length > 0 ? topCategories[0] : null);
+  const currentActive = activeCategoryId
+    ? topCategories.find((c) => c._id === activeCategoryId) || null
+    : null;
 
   const subGroups = currentActive?.children || [];
 
@@ -45,10 +56,16 @@ export const CategoryDrawer = ({ isOpen, onClose }) => {
         onClick={onClose}
       />
 
-      <div className="relative flex h-full max-h-screen z-10">
+      <div
+        className="relative flex h-full max-h-screen z-10"
+        onMouseLeave={() => setActiveCategoryId(null)}
+      >
         <div className="w-72 sm:w-80 bg-white h-full shadow-2xl flex flex-col overflow-y-auto border-r border-slate-100">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 shrink-0">
-            {isAuthenticated() ? (
+          <div
+            onMouseEnter={() => setActiveCategoryId(null)}
+            className="flex items-center justify-between px-4 py-3 border-b border-slate-100 shrink-0"
+          >
+            {mounted && isAuthenticated() ? (
               <Link
                 href="/account"
                 onClick={onClose}
@@ -184,7 +201,7 @@ export const CategoryDrawer = ({ isOpen, onClose }) => {
           </div>
         </div>
 
-        {subGroups.length > 0 && (
+        {currentActive && subGroups.length > 0 && (
           <div className="hidden md:block bg-white h-full shadow-2xl border-l border-slate-100 p-6 overflow-y-auto w-[480px] lg:w-[680px] xl:w-[840px] max-w-[calc(100vw-340px)] animate-fadeIn">
             <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 items-start">
               {subGroups.map((group) => (

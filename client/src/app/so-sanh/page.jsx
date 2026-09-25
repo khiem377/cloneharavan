@@ -21,7 +21,8 @@ export default async function ComparePage({ searchParams }) {
   let initialProducts = [];
   if (ids.length > 0) {
     try {
-      const res = await fetch('http://127.0.0.1:5000/api/v1/products/compare', {
+      const API_BASE = process.env.API_SERVER_URL || 'http://127.0.0.1:5000/api/v1';
+      const res = await fetch(`${API_BASE}/products/compare`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids }),

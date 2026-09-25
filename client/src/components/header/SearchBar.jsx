@@ -24,7 +24,7 @@ export const SearchBar = () => {
   const [selectedScope, setSelectedScope] = useState('products');
   const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
-  const [suggestData, setSuggestData] = useState({ categories: [], products: [] });
+  const [suggestData, setSuggestData] = useState({ categories: [], products: [], blogs: [], brands: [] });
   const [loading, setLoading] = useState(false);
   const [isVisualModalOpen, setIsVisualModalOpen] = useState(false);
 
@@ -53,7 +53,7 @@ export const SearchBar = () => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
     if (!val.trim()) {
-      setSuggestData({ categories: [], products: [] });
+      setSuggestData({ categories: [], products: [], blogs: [], brands: [] });
       return;
     }
 
@@ -64,6 +64,8 @@ export const SearchBar = () => {
         setSuggestData({
           categories: res.categories || [],
           products: res.products || [],
+          blogs: res.blogs || [],
+          brands: res.brands || [],
         });
       } catch (err) {
         console.error('Suggest error:', err);
@@ -80,7 +82,7 @@ export const SearchBar = () => {
     const trimmed = query.trim();
 
     if (selectedScope === 'blogs') {
-      router.push(`/search?q=${encodeURIComponent(trimmed)}&domain=blogs`);
+      router.push(`/blogs?keyword=${encodeURIComponent(trimmed)}`);
     } else if (selectedScope === 'brands') {
       router.push(`/search?q=${encodeURIComponent(trimmed)}&brand=${encodeURIComponent(trimmed.toLowerCase())}`);
     } else {
@@ -91,11 +93,17 @@ export const SearchBar = () => {
   const handleKeywordClick = (kw) => {
     setQuery(kw);
     setIsOpen(false);
-    router.push(`/search?q=${encodeURIComponent(kw)}`);
+    if (selectedScope === 'blogs') {
+      router.push(`/blogs?keyword=${encodeURIComponent(kw)}`);
+    } else {
+      router.push(`/search?q=${encodeURIComponent(kw)}`);
+    }
   };
 
   const hasSuggestions =
-    suggestData.categories?.length > 0 || suggestData.products?.length > 0;
+    suggestData.categories?.length > 0 ||
+    suggestData.products?.length > 0 ||
+    suggestData.blogs?.length > 0;
 
   const getPlaceholder = () => {
     if (selectedScope === 'blogs') return 'Tìm theo bài viết, tin tức...';
@@ -166,6 +174,7 @@ export const SearchBar = () => {
           {query.trim() && (
             <SearchSuggestionsDropdown
               query={query}
+              selectedScope={selectedScope}
               suggestData={suggestData}
               loading={loading}
               hasSuggestions={hasSuggestions}
