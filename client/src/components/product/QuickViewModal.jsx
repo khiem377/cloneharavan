@@ -114,16 +114,20 @@ export const QuickViewModal = () => {
 
   const currentImage = images[activeImageIdx] || images[0];
 
-  // Dynamic pricing based on selected variant
-  const activeSalePrice =
-    selectedVariant?.salePrice !== undefined && selectedVariant?.salePrice !== null && selectedVariant.salePrice > 0
-      ? selectedVariant.salePrice
-      : product.salePrice || product.cachedSalePrice || 0;
+  // Dynamic pricing based on selected variant, with Flash Sale taking TOP priority
+  const isFlashSale = !!(product.isFlashSale && product.flashSalePrice > 0);
 
-  const activeRegularPrice =
-    selectedVariant?.price !== undefined && selectedVariant?.price !== null && selectedVariant.price > 0
-      ? selectedVariant.price
-      : product.price || product.cachedPrice || 0;
+  const activeSalePrice = isFlashSale
+    ? product.flashSalePrice
+    : selectedVariant?.salePrice !== undefined && selectedVariant?.salePrice !== null && selectedVariant.salePrice > 0
+    ? selectedVariant.salePrice
+    : product.salePrice || product.cachedSalePrice || 0;
+
+  const activeRegularPrice = isFlashSale && product.flashSaleOriginalPrice
+    ? product.flashSaleOriginalPrice
+    : selectedVariant?.price !== undefined && selectedVariant?.price !== null && selectedVariant.price > 0
+    ? selectedVariant.price
+    : product.price || product.cachedPrice || 0;
 
   const hasDiscount = activeSalePrice > 0 && activeRegularPrice > activeSalePrice;
   const displayPrice = activeSalePrice > 0 ? activeSalePrice : activeRegularPrice;
@@ -290,7 +294,7 @@ export const QuickViewModal = () => {
               </div>
 
               {/* Price Box */}
-              <div className="p-3 rounded-lg bg-gray-50 border border-gray-100 flex items-baseline gap-2.5 flex-wrap">
+              <div className={`p-3 rounded-lg flex items-baseline gap-2.5 flex-wrap ${isFlashSale ? 'bg-red-50/70 border border-red-200' : 'bg-gray-50 border border-gray-100'}`}>
                 <span className="text-2xl font-black text-[#e30019]">
                   {displayPrice > 0 ? `${displayPrice.toLocaleString('vi-VN')}₫` : 'Liên hệ'}
                 </span>
@@ -302,6 +306,11 @@ export const QuickViewModal = () => {
                 {hasDiscount && (
                   <span className="px-1.5 py-0.5 rounded bg-[#e30019] text-white text-xs font-bold">
                     -{discountPercent}%
+                  </span>
+                )}
+                {isFlashSale && (
+                  <span className="ml-auto px-2 py-0.5 rounded text-[11px] font-black uppercase text-white bg-gradient-to-r from-red-600 to-amber-500 shadow-2xs">
+                    Giá Flash Sale
                   </span>
                 )}
               </div>

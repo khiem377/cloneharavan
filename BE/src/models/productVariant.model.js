@@ -70,6 +70,11 @@ const productVariantSchema = new mongoose.Schema(
       default: 0,
       min: [0, 'Số lượng tồn kho không được nhỏ hơn 0'],
     },
+    sold: {
+      type: Number,
+      default: 0,
+      min: [0, 'Số lượng đã bán không được nhỏ hơn 0'],
+    },
     thumbnail: {
       mediaId: { type: mongoose.Schema.Types.ObjectId, ref: 'Media', default: null },
       url: { type: String, default: '' },

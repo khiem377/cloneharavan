@@ -218,7 +218,20 @@ export default function FlashSalePage() {
                         )}
                         <div className="min-w-0">
                           <p className="font-semibold text-sm text-foreground truncate">{item.name}</p>
-                          {item.description && <p className="text-xs text-muted-foreground truncate max-w-sm">{item.description}</p>}
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-[11px] font-mono text-muted-foreground bg-muted px-1.5 py-0.5 rounded border border-border">
+                              /{item.slug || '—'}
+                            </span>
+                            <a
+                              href={`http://localhost:3000/flash-sale/${item.slug || item._id}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-[11px] font-semibold text-primary hover:underline inline-flex items-center gap-0.5"
+                            >
+                              Xem trang &rarr;
+                            </a>
+                          </div>
+                          {item.description && <p className="text-xs text-muted-foreground truncate max-w-sm mt-0.5">{item.description}</p>}
                         </div>
                       </div>
                     </td>

@@ -120,8 +120,9 @@ export const SearchSuggestionsDropdown = ({
                     prod.thumbnail ||
                     prod.images?.[0]?.url ||
                     '/placeholder.png';
-                  const price = prod.salePrice || prod.price || 0;
-                  const originalPrice = prod.salePrice ? prod.price : 0;
+                  const isFs = Boolean(prod.isFlashSale || (prod.flashSalePrice && prod.flashSalePrice > 0));
+                  const price = isFs && prod.flashSalePrice ? prod.flashSalePrice : (prod.salePrice || prod.price || 0);
+                  const originalPrice = isFs && prod.flashSaleOriginalPrice ? prod.flashSaleOriginalPrice : (prod.salePrice ? prod.price : 0);
                   const discountPercent =
                     originalPrice > price
                       ? Math.round(((originalPrice - price) / originalPrice) * 100)
@@ -143,9 +144,16 @@ export const SearchSuggestionsDropdown = ({
                         className="w-12 h-12 object-contain rounded-lg border border-slate-100 bg-white shrink-0"
                       />
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold text-slate-800 truncate group-hover:text-[#284ea1] transition">
-                          {prod.name}
-                        </p>
+                        <div className="flex items-center gap-1.5">
+                          {isFs && (
+                            <span className="shrink-0 text-[9px] font-black text-white bg-red-600 px-1 py-0.2 rounded uppercase">
+                              Flash Sale
+                            </span>
+                          )}
+                          <p className="text-xs font-semibold text-slate-800 truncate group-hover:text-[#284ea1] transition">
+                            {prod.name}
+                          </p>
+                        </div>
                         <div className="flex items-center gap-2 mt-0.5">
                           {price > 0 ? (
                             <span className="text-xs font-bold text-red-600">

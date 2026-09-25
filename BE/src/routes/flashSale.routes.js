@@ -10,6 +10,7 @@ const {
 } = require('../validators/flashSale.validator');
 
 router.get('/active', flashSaleController.getActive);
+router.get('/available', flashSaleController.getAvailable);
 router.get('/', flashSaleController.getAll);
 router.get('/locate', protect, requirePermission('flash_sale.manage'), async (req, res, next) => {
   try {

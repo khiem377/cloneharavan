@@ -40,8 +40,19 @@ export default function ProductCard({ product }) {
     }
   }
 
-  const salePrice = product.salePrice || product.cachedSalePrice || 0;
-  const regularPrice = product.price || product.cachedPrice || 0;
+  const isFlashSale = Boolean(
+    product.isFlashSale ||
+    (product.flashSalePrice && product.flashSalePrice > 0)
+  );
+  const flashSalePrice = product.flashSalePrice || 0;
+
+  const salePrice = isFlashSale && flashSalePrice > 0
+    ? flashSalePrice
+    : (product.salePrice || product.cachedSalePrice || 0);
+
+  const regularPrice = (isFlashSale && product.flashSaleOriginalPrice)
+    ? product.flashSaleOriginalPrice
+    : (product.price || product.cachedPrice || 0);
 
   const hasDiscount = salePrice > 0 && regularPrice > salePrice;
   const displayPrice = salePrice > 0 ? salePrice : regularPrice;
@@ -91,7 +102,12 @@ export default function ProductCard({ product }) {
   const handleQuickViewClick = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    openQuickView(product);
+    openQuickView({
+      ...product,
+      isFlashSale,
+      flashSalePrice: isFlashSale ? flashSalePrice : undefined,
+      flashSaleOriginalPrice: isFlashSale ? regularPrice : undefined,
+    });
   };
 
   const handleCompareClick = (e) => {
@@ -110,13 +126,19 @@ export default function ProductCard({ product }) {
           {/* Top Badge: HOT, NỔI BẬT or Giảm giá */}
           <div className="w-full aspect-square bg-white rounded-md overflow-hidden flex items-center justify-center p-2 mb-2 relative">
             <div className="absolute top-1.5 left-1.5 z-10 flex flex-col gap-1 items-start">
-              {product.isHot && (
+              {isFlashSale && (
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-black bg-gradient-to-r from-red-600 to-amber-500 text-white shadow-xs uppercase tracking-wider animate-pulse">
+                  <Flame size={10} className="fill-current text-yellow-300" />
+                  FLASH SALE
+                </span>
+              )}
+              {product.isHot && !isFlashSale && (
                 <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#e30019] text-white shadow-xs">
                   <Flame size={10} className="fill-current" />
                   HOT
                 </span>
               )}
-              {product.isFeatured && !product.isHot && (
+              {product.isFeatured && !product.isHot && !isFlashSale && (
                 <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500 text-white shadow-xs">
                   <Star size={10} className="fill-current" />
                   NỔI BẬT

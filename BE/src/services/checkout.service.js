@@ -79,10 +79,13 @@ const calculateCheckout = async ({ cartItems = [], couponCode = null }) => {
       let unitPrice = originalPrice;
       let flashSaleDiscount = 0;
 
-      if (matchedFsItem && matchedFsItem.flashPrice < originalPrice) {
+      const fsPrice = matchedFsItem ? (matchedFsItem.flashSalePrice ?? matchedFsItem.flashPrice) : null;
+      const fsStockRemaining = matchedFsItem ? Math.max(0, (matchedFsItem.stockLimit || 0) - (matchedFsItem.soldCount || 0)) : 0;
+
+      if (matchedFsItem && fsPrice !== null && fsPrice < originalPrice && fsStockRemaining > 0) {
         isFlashSale = true;
-        unitPrice = matchedFsItem.flashPrice;
-        flashSaleDiscount = (originalPrice - matchedFsItem.flashPrice) * qty;
+        unitPrice = fsPrice;
+        flashSaleDiscount = (originalPrice - fsPrice) * qty;
       }
 
       const itemSubtotal = unitPrice * qty;

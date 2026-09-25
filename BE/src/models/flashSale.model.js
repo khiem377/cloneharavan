@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { slugify } = require('../utils/slugify');
 
 const flashSaleItemSchema = new mongoose.Schema(
   {
@@ -33,8 +34,21 @@ const flashSaleItemSchema = new mongoose.Schema(
       min: 0,
     },
   },
-  { _id: true }
+  {
+    _id: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
+  }
 );
+
+flashSaleItemSchema.virtual('flashSaleRemaining').get(function () {
+  return Math.max(0, (this.stockLimit || 0) - (this.soldCount || 0));
+});
+
+flashSaleItemSchema.virtual('percentSold').get(function () {
+  if (!this.stockLimit || this.stockLimit <= 0) return 0;
+  return Math.min(100, Math.round(((this.soldCount || 0) / this.stockLimit) * 100));
+});
 
 const flashSaleSchema = new mongoose.Schema(
   {
@@ -42,6 +56,13 @@ const flashSaleSchema = new mongoose.Schema(
       type: String,
       required: [true, 'Tên chương trình Flash Sale là bắt buộc'],
       trim: true,
+    },
+    slug: {
+      type: String,
+      unique: true,
+      sparse: true,
+      trim: true,
+      lowercase: true,
     },
     description: {
       type: String,
@@ -75,6 +96,19 @@ const flashSaleSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+flashSaleSchema.pre('save', async function () {
+  if (this.isModified('name') || !this.slug) {
+    let base = slugify(this.name);
+    let candidate = base;
+    let count = 1;
+    while (await mongoose.models.FlashSale.findOne({ slug: candidate, _id: { $ne: this._id } })) {
+      candidate = `${base}-${count}`;
+      count++;
+    }
+    this.slug = candidate;
+  }
+});
 
 flashSaleSchema.virtual('status').get(function () {
   if (!this.isActive) return 'disabled';

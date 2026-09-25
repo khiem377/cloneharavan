@@ -7,6 +7,7 @@ import StoreProvider from '@/providers/StoreProvider';
 import Header from '@/components/header/Header';
 import QuickViewModal from '@/components/product/QuickViewModal';
 import CompareBar from '@/components/product/CompareBar';
+import TopProgressBar from '@/components/common/TopProgressBar';
 
 const beVietnamPro = Be_Vietnam_Pro({
   subsets: ['latin', 'vietnamese'],
@@ -30,6 +31,7 @@ export default async function RootLayout({ children }) {
   return (
     <html lang="vi" className={`h-full ${beVietnamPro.variable}`}>
       <body className={`min-h-full flex flex-col bg-white text-slate-900 antialiased ${beVietnamPro.className}`}>
+        <TopProgressBar />
         <StoreProvider
           initialMenu={initialMenu}
           initialCategories={initialCategories}

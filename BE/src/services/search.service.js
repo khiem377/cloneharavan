@@ -6,6 +6,44 @@ const Media = require('../models/media.model');
 const Brand = require('../models/brand.model');
 const Category = require('../models/category.model');
 const SearchLog = require('../models/searchLog.model');
+const FlashSale = require('../models/flashSale.model');
+
+async function getActiveFlashSaleMap() {
+  try {
+    const now = new Date();
+    const activeSales = await FlashSale.find({
+      isActive: true,
+      startDate: { $lte: now },
+      endDate: { $gte: now },
+    }).lean();
+
+    const fsMap = new Map();
+    activeSales.forEach((sale) => {
+      (sale.items || []).forEach((item) => {
+        const pId = item.productId?.toString() || item.productId;
+        if (pId) {
+          const current = fsMap.get(pId);
+          if (!current || (item.flashSalePrice && item.flashSalePrice < current.flashSalePrice)) {
+            fsMap.set(pId, {
+              flashSaleId: sale._id,
+              flashSaleName: sale.name,
+              flashSaleSlug: sale.slug,
+              flashSalePrice: item.flashSalePrice,
+              originalPrice: item.originalPrice,
+              stockLimit: item.stockLimit,
+              soldCount: item.soldCount,
+            });
+          }
+        }
+      });
+    });
+    return fsMap;
+  } catch (err) {
+    console.error('[SearchService] getActiveFlashSaleMap error:', err.message);
+    return new Map();
+  }
+}
+
 const {
   removeVietnameseTones,
   extractAcronyms,
@@ -706,14 +744,22 @@ const globalSearch = async (query = {}, req = null) => {
       variantsByProd[pid].push(v);
     });
 
+    const activeFsMap = await getActiveFlashSaleMap();
+
     const scoredProducts = rawProducts
       .map((p) => {
         const pVariants = variantsByProd[p._id.toString()] || [];
         const defaultVar = pVariants.find((v) => v.isDefault) || pVariants[0];
         const score = calculateRelevanceScore(p, parsed);
 
-        const price = defaultVar?.price || p.cachedPrice || p.price || 0;
-        const salePrice = defaultVar?.salePrice || p.cachedSalePrice || p.salePrice || 0;
+        const basePrice = defaultVar?.price || p.cachedPrice || p.price || 0;
+        const baseSalePrice = defaultVar?.salePrice || p.cachedSalePrice || p.salePrice || 0;
+
+        const fsInfo = activeFsMap.get(p._id.toString());
+        const isFs = Boolean(fsInfo && fsInfo.flashSalePrice > 0);
+        const price = (isFs && fsInfo.originalPrice) ? fsInfo.originalPrice : basePrice;
+        const salePrice = isFs ? fsInfo.flashSalePrice : baseSalePrice;
+
         const stock = defaultVar?.stock || p.stock || 0;
         const sku = defaultVar?.sku || p.sku || p.productCode || '';
         const extractedAttributes = extractProductAttributes(p, pVariants);
@@ -722,6 +768,11 @@ const globalSearch = async (query = {}, req = null) => {
           ...p,
           price,
           salePrice,
+          isFlashSale: isFs,
+          flashSalePrice: isFs ? fsInfo.flashSalePrice : undefined,
+          flashSaleOriginalPrice: (isFs && fsInfo.originalPrice) ? fsInfo.originalPrice : basePrice,
+          flashSaleName: isFs ? fsInfo.flashSaleName : undefined,
+          flashSaleSlug: isFs ? fsInfo.flashSaleSlug : undefined,
           stock,
           sku,
           variants: pVariants,
@@ -1133,18 +1184,34 @@ const getInstantSuggestions = async (q = '') => {
     getTrendingKeywords(),
   ]);
 
+  const activeFsMap = await getActiveFlashSaleMap();
+
   // Score đơn giản hơn — không cần lọc thỗ vì DB đã filter
   const scoredProducts = matchedProducts
-    .map((p) => ({
-      _id: p._id,
-      name: p.name,
-      slug: p.slug,
-      price: p.cachedPrice || p.price || 0,
-      salePrice: p.cachedSalePrice || p.salePrice || 0,
-      thumbnail: p.thumbnail,
-      productCode: p.productCode || p.sku || '',
-      score: calculateRelevanceScore(p, parsed),
-    }))
+    .map((p) => {
+      const fsInfo = activeFsMap.get(p._id.toString());
+      const basePrice = p.cachedPrice || p.price || 0;
+      const baseSalePrice = p.cachedSalePrice || p.salePrice || 0;
+
+      const isFs = Boolean(fsInfo && fsInfo.flashSalePrice > 0);
+      const effSalePrice = isFs ? fsInfo.flashSalePrice : baseSalePrice;
+      const effPrice = (isFs && fsInfo.originalPrice) ? fsInfo.originalPrice : basePrice;
+
+      return {
+        _id: p._id,
+        name: p.name,
+        slug: p.slug,
+        price: effPrice,
+        salePrice: effSalePrice,
+        isFlashSale: isFs,
+        flashSalePrice: isFs ? fsInfo.flashSalePrice : undefined,
+        flashSaleOriginalPrice: isFs ? effPrice : undefined,
+        flashSaleName: isFs ? fsInfo.flashSaleName : undefined,
+        thumbnail: p.thumbnail,
+        productCode: p.productCode || p.sku || '',
+        score: calculateRelevanceScore(p, parsed),
+      };
+    })
     .sort((a, b) => b.score - a.score);
 
   return {

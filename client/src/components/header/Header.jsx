@@ -18,7 +18,7 @@ export const Header = () => {
   if (isAuthRoute) return null;
 
   return (
-    <header className="w-full bg-white shadow-xs z-30 sticky top-0">
+    <header className="w-full bg-white shadow-xs z-50 sticky top-0">
       <HeaderTop onOpenCategoryDrawer={() => setIsCategoryDrawerOpen(true)} />
       <HeaderNav onOpenCategoryDrawer={() => setIsCategoryDrawerOpen(true)} />
       <CategoryDrawer

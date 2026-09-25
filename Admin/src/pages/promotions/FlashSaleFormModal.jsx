@@ -38,12 +38,21 @@ export default function FlashSaleFormModal({ flashSale, onClose, onSuccess }) {
         }
       }
 
+      const invStock = typeof item.productId === 'object'
+        ? (item.variantId && typeof item.variantId === 'object' ? item.variantId.stock : item.productId?.stock)
+        : null;
+      const allSold = typeof item.productId === 'object'
+        ? (item.variantId && typeof item.variantId === 'object' ? item.variantId.sold : item.productId?.sold || 0)
+        : 0;
+
       return {
         productId: typeof item.productId === 'object' ? item.productId._id : item.productId,
         productName: typeof item.productId === 'object' ? item.productId.name : 'Sản phẩm',
         productImage: typeof item.productId === 'object' ? item.productId.thumbnail?.url : '',
         variantId: item.variantId ? (typeof item.variantId === 'object' ? item.variantId._id : item.variantId) : null,
         variantName: vName,
+        inventoryStock: invStock,
+        totalSold: allSold,
         originalPrice: orig,
         discountType: 'percent',
         discountValue: pct,
@@ -127,6 +136,8 @@ export default function FlashSaleFormModal({ flashSale, onClose, onSuccess }) {
       productImage: product.thumbnail?.url || '',
       variantId: null,
       variantName: '',
+      inventoryStock: product.stock ?? 0,
+      totalSold: product.sold ?? 0,
       originalPrice: price,
       discountType: 'percent',
       discountValue: defaultPct,
@@ -159,6 +170,8 @@ export default function FlashSaleFormModal({ flashSale, onClose, onSuccess }) {
       productImage: variant.image?.url || product.thumbnail?.url || '',
       variantId: variant._id,
       variantName: attrString,
+      inventoryStock: variant.stock ?? product.stock ?? 0,
+      totalSold: variant.sold ?? product.sold ?? 0,
       originalPrice: price,
       discountType: 'percent',
       discountValue: defaultPct,
@@ -495,83 +508,116 @@ export default function FlashSaleFormModal({ flashSale, onClose, onSuccess }) {
                       <tr className="border-b border-border bg-muted/40 font-semibold text-muted-foreground uppercase tracking-wider">
                         <th className="px-3 py-2.5">Sản phẩm</th>
                         <th className="px-3 py-2.5 w-24">Giá gốc</th>
-                        <th className="px-3 py-2.5 w-36">Loại giảm</th>
-                        <th className="px-3 py-2.5 w-28">Giá trị giảm</th>
-                        <th className="px-3 py-2.5 w-32 font-semibold text-emerald-600">Giá Flash Sale</th>
-                        <th className="px-3 py-2.5 w-20 text-center">Số suất</th>
+                        <th className="px-3 py-2.5 w-32">Loại giảm</th>
+                        <th className="px-3 py-2.5 w-24">Mức giảm</th>
+                        <th className="px-3 py-2.5 w-28 font-semibold text-emerald-600">Giá FS</th>
+                        <th className="px-3 py-2.5 w-20 text-center">Tồn kho</th>
+                        <th className="px-3 py-2.5 w-24 text-center">Suất FS</th>
+                        <th className="px-3 py-2.5 w-20 text-center">Đã bán FS</th>
+                        <th className="px-3 py-2.5 w-24 text-center">Còn lại FS</th>
                         <th className="px-3 py-2.5 w-10"></th>
                       </tr>
                     </thead>
                     <tbody>
-                      {items.map((item, idx) => (
-                        <tr key={idx} className="border-b border-border/50 hover:bg-muted/30">
-                          <td className="px-3 py-2">
-                            <div className="flex items-center gap-2">
-                              {item.productImage ? (
-                                <img src={item.productImage} alt="" className="size-8 object-cover rounded border border-border shrink-0" />
-                              ) : (
-                                <div className="size-8 rounded bg-muted shrink-0" />
-                              )}
-                              <div className="truncate max-w-xs">
-                                <p className="font-medium text-foreground truncate">{item.productName}</p>
-                                {item.variantName && (
-                                  <p className="text-[11px] font-semibold text-primary truncate">↳ Biến thể: {item.variantName}</p>
+                      {items.map((item, idx) => {
+                        const fsRemaining = Math.max(0, (item.stockLimit || 0) - (item.soldCount || 0));
+                        const isOverStock = item.inventoryStock !== null && item.inventoryStock !== undefined && item.stockLimit > item.inventoryStock;
+                        return (
+                          <tr key={idx} className="border-b border-border/50 hover:bg-muted/30">
+                            <td className="px-3 py-2">
+                              <div className="flex items-center gap-2">
+                                {item.productImage ? (
+                                  <img src={item.productImage} alt="" className="size-8 object-cover rounded border border-border shrink-0" />
+                                ) : (
+                                  <div className="size-8 rounded bg-muted shrink-0" />
+                                )}
+                                <div className="truncate max-w-xs">
+                                  <p className="font-medium text-foreground truncate">{item.productName}</p>
+                                  {item.variantName && (
+                                    <p className="text-[11px] font-semibold text-primary truncate">↳ Biến thể: {item.variantName}</p>
+                                  )}
+                                  <p className="text-[10px] text-muted-foreground">Tổng bán shop: <span className="font-medium text-foreground">{item.totalSold ?? 0}</span></p>
+                                </div>
+                              </div>
+                            </td>
+
+                            <td className="px-3 py-2 font-mono font-medium text-muted-foreground whitespace-nowrap">
+                              {item.originalPrice.toLocaleString('vi-VN')}đ
+                            </td>
+
+                            <td className="px-3 py-2">
+                              <select
+                                className="w-full h-7 px-1.5 rounded border border-input bg-background text-xs font-medium outline-none focus:border-ring cursor-pointer"
+                                value={item.discountType}
+                                onChange={(e) => handleDiscountTypeChange(idx, e.target.value)}
+                              >
+                                <option value="percent">Giảm %</option>
+                                <option value="fixed_discount">Giảm bớt (đ)</option>
+                                <option value="fixed_price">Giá cố định (đ)</option>
+                              </select>
+                            </td>
+
+                            <td className="px-3 py-2">
+                              <input
+                                type="number"
+                                min={0}
+                                className="w-full h-7 px-2 rounded border border-input bg-background font-mono font-semibold text-xs text-foreground outline-none focus:border-ring"
+                                value={item.discountValue}
+                                onChange={(e) => handleDiscountValueChange(idx, e.target.value)}
+                              />
+                            </td>
+
+                            <td className="px-3 py-2 font-mono font-bold text-emerald-600 whitespace-nowrap">
+                              {item.flashSalePrice.toLocaleString('vi-VN')}đ
+                            </td>
+
+                            <td className="px-3 py-2 text-center font-mono">
+                              <span className="font-semibold text-foreground">
+                                {item.inventoryStock !== null && item.inventoryStock !== undefined ? item.inventoryStock : '—'}
+                              </span>
+                            </td>
+
+                            <td className="px-3 py-2 text-center">
+                              <div className="flex flex-col items-center gap-0.5">
+                                <input
+                                  type="number"
+                                  min={1}
+                                  className={`w-16 h-7 px-1.5 rounded border font-mono text-xs outline-none text-center ${isOverStock ? 'border-amber-500 bg-amber-50 text-amber-900 font-bold' : 'border-input bg-background'}`}
+                                  value={item.stockLimit}
+                                  onChange={(e) => handleStockChange(idx, e.target.value)}
+                                />
+                                {isOverStock && (
+                                  <span className="text-[10px] text-amber-600 whitespace-nowrap font-medium" title="Số suất vượt quá số lượng trong kho thực tế">
+                                    Vượt tồn
+                                  </span>
                                 )}
                               </div>
-                            </div>
-                          </td>
+                            </td>
 
-                          <td className="px-3 py-2 font-mono font-medium text-muted-foreground whitespace-nowrap">
-                            {item.originalPrice.toLocaleString('vi-VN')}đ
-                          </td>
+                            <td className="px-3 py-2 text-center font-mono">
+                              <span className="inline-flex px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 font-medium text-[11px]">
+                                {item.soldCount || 0}
+                              </span>
+                            </td>
 
-                          <td className="px-3 py-2">
-                            <select
-                              className="w-full h-7 px-1.5 rounded border border-input bg-background text-xs font-medium outline-none focus:border-ring cursor-pointer"
-                              value={item.discountType}
-                              onChange={(e) => handleDiscountTypeChange(idx, e.target.value)}
-                            >
-                              <option value="percent">Giảm %</option>
-                              <option value="fixed_discount">Giảm bớt (đ)</option>
-                              <option value="fixed_price">Giá cố định (đ)</option>
-                            </select>
-                          </td>
+                            <td className="px-3 py-2 text-center font-mono">
+                              <span className={`inline-flex px-1.5 py-0.5 rounded font-medium text-[11px] ${fsRemaining === 0 ? 'bg-destructive/10 text-destructive' : 'bg-emerald-50 text-emerald-700'}`}>
+                                {fsRemaining}
+                              </span>
+                            </td>
 
-                          <td className="px-3 py-2">
-                            <input
-                              type="number"
-                              min={0}
-                              className="w-full h-7 px-2 rounded border border-input bg-background font-mono font-semibold text-xs text-foreground outline-none focus:border-ring"
-                              value={item.discountValue}
-                              onChange={(e) => handleDiscountValueChange(idx, e.target.value)}
-                            />
-                          </td>
-
-                          <td className="px-3 py-2 font-mono font-bold text-emerald-600 whitespace-nowrap">
-                            {item.flashSalePrice.toLocaleString('vi-VN')}đ
-                          </td>
-
-                          <td className="px-3 py-2 text-center">
-                            <input
-                              type="number"
-                              min={1}
-                              className="w-full h-7 px-1.5 rounded border border-input bg-background font-mono text-xs outline-none focus:border-ring text-center"
-                              value={item.stockLimit}
-                              onChange={(e) => handleStockChange(idx, e.target.value)}
-                            />
-                          </td>
-
-                          <td className="px-3 py-2 text-center">
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveItem(idx)}
-                              className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors cursor-pointer"
-                            >
-                              <Trash2 className="size-3.5" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                            <td className="px-3 py-2 text-center">
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveItem(idx)}
+                                className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors cursor-pointer"
+                              >
+                                <Trash2 className="size-3.5" />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
