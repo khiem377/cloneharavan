@@ -7,3 +7,14 @@ build/
 
 # Seed / migration scripts (local only)
 scripts/
+seed*
+
+# Route analysis & inspection tools
+*analyze*
+*analyzed*
+*inspect*
+
+# Scratch & test scripts
+scratch_*
+test_*
+update_postman_collection.js

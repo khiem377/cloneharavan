@@ -1,0 +1,15 @@
+# Operating System files
+desktop.ini
+Thumbs.db
+.DS_Store
+
+# IDE and Editor files
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Logs
+*.log

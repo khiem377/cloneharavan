@@ -39,3 +39,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Debug, test, inspect & seed api routes (local/debug only)
+src/app/api/check-*
+src/app/api/debug-*
+src/app/api/inspect-*
+src/app/api/run-seed
+src/app/api/samsung-now
+src/app/api/test-*
