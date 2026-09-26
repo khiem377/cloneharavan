@@ -47,3 +47,4 @@ src/app/api/inspect-*
 src/app/api/run-seed
 src/app/api/samsung-now
 src/app/api/test-*
+AGENTS.md

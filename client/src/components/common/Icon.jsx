@@ -325,6 +325,89 @@ export const Icon = ({
         </svg>
       );
 
+    case 'express-delivery':
+    case 'service-express':
+      return (
+        <svg {...iconProps} viewBox="0 0 36 36">
+          <path d="M1.5 11H7M1 18H5M1.5 25H7.5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+          <path
+            d="M8 8.5C8 7.12 9.12 6 10.5 6H21C22.1 6 23.1 6.5 23.8 7.4L30 14.5C30.6 15.2 31 16.1 31 17V24.5C31 25.88 29.88 27 28.5 27H26"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <path d="M8 12.5V27H10" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+          <path d="M20 8.5H22.5L27.5 14.5H20V8.5Z" fill="currentColor" />
+          <path d="M23 9.5L26.5 13.5" stroke="white" strokeWidth="1.2" strokeLinecap="round" />
+          <circle cx="14" cy="26.5" r="4" fill="currentColor" />
+          <circle cx="14" cy="26.5" r="2" fill="white" />
+          <circle cx="14" cy="26.5" r="0.8" fill="currentColor" />
+          <circle cx="23.5" cy="26.5" r="4" fill="currentColor" />
+          <circle cx="23.5" cy="26.5" r="2" fill="white" />
+          <circle cx="23.5" cy="26.5" r="0.8" fill="currentColor" />
+          <path
+            d="M16 10.5L13 15.5H18L15 21"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      );
+
+    case 'free-return':
+    case 'service-return':
+      return (
+        <svg {...iconProps} viewBox="0 0 36 36">
+          <path d="M29 13.5C28 7.5 23 3 17 3C10.2 3 4.5 8.2 4 15" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" />
+          <path d="M24 14H29.5V8.5" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M7 22.5C8 28.5 13 33 19 33C25.8 33 31.5 27.8 32 21" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" />
+          <path d="M12 22H6.5V27.5" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M18 9L24.5 12V18C24.5 22.5 18 25.5 18 25.5C18 25.5 11.5 22.5 11.5 18V12L18 9Z" fill="currentColor" />
+          <path d="M15 17.5L17 19.5L21.5 14.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M31 5V9M29 7H33" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
+      );
+
+    case 'support-247':
+    case 'service-support':
+      return (
+        <svg {...iconProps} viewBox="0 0 36 36">
+          <path d="M5.5 17C5.5 9.8 11.1 4 18 4C24.9 4 30.5 9.8 30.5 17" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" />
+          <path d="M11 6C13.1 5 15.5 4.5 18 4.5C20.5 4.5 22.9 5 25 6" stroke="currentColor" strokeWidth="4.5" strokeLinecap="round" />
+          <rect x="3" y="15" width="6" height="11" rx="3" fill="currentColor" />
+          <rect x="27" y="15" width="6" height="11" rx="3" fill="currentColor" />
+          <circle cx="6" cy="20.5" r="1.2" fill="white" />
+          <circle cx="30" cy="20.5" r="1.2" fill="white" />
+          <path d="M29 23V26.5C29 28.5 27.5 30 25.5 30H20" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+          <circle cx="17.5" cy="30" r="2" fill="currentColor" />
+          <circle cx="17.5" cy="30" r="0.8" fill="white" />
+          <path d="M12.5 17V22M15.2 14V25M18 11V28M20.8 14V25M23.5 17V22" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+        </svg>
+      );
+
+    case 'hot-deals':
+    case 'service-deals':
+      return (
+        <svg {...iconProps} viewBox="0 0 36 36">
+          <path
+            d="M18 2C18 2 22 7 20.5 12C24 9.5 27.5 12 27.5 17.5C27.5 24.5 22 29.5 15.5 29.5C9 29.5 5 24.5 5 18C5 12.5 9 7.5 9 7.5C9 7.5 12 10.5 13.5 10.5C15.8 10.5 18 2 18 2Z"
+            fill="currentColor"
+          />
+          <path
+            d="M17.5 10.5L13 17.5H19L15 25"
+            stroke="white"
+            strokeWidth="2.4"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <path d="M30 2V9M26.5 5.5H33.5" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+          <path d="M27.5 3L32.5 8M32.5 3L27.5 8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+          <circle cx="32" cy="14" r="1.5" fill="currentColor" />
+        </svg>
+      );
+
     default:
       return (
         <svg {...iconProps}>

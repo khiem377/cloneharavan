@@ -1,6 +1,7 @@
 import axios from 'axios';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
+const API_SERVER_URL = process.env.API_SERVER_URL || 'http://localhost:5000/api/v1';
 
 export const couponService = {
   async getActiveCoupons(limit = 10) {
@@ -21,13 +22,14 @@ export const couponService = {
 
   async getServerActiveCoupons(limit = 10) {
     try {
-      const res = await fetch(`${API_BASE_URL}/coupons?isActive=true&limit=${limit}`, {
+      const res = await fetch(`${API_SERVER_URL}/coupons?isActive=true&limit=${limit}`, {
         next: { revalidate: 60 },
       });
       if (!res.ok) return [];
       const json = await res.json();
       return json?.data || [];
-    } catch {
+    } catch (err) {
+      console.error('SSR ActiveCoupons error:', err?.message);
       return [];
     }
   },

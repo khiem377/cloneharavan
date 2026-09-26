@@ -31,3 +31,12 @@ MORE CLI:
   swizzle <Name>     eject component source for deep customization
   upgrade --apply    run after any @astryxdesign/core bump
 <!-- ASTRYX:END -->
+
+## UI Design Rules (Bản sắc riêng biệt - Tránh AI Generic)
+- **KHÔNG Gradient**: Không dùng dải chuyển màu sặc sỡ. Dùng solid colors.
+- **KHÔNG Glassmorphism**: Không dùng `backdrop-blur`, nền bán trong suốt, viền mờ giả kính.
+- **KHÔNG Card lồng Card**: Dense data dùng Table hoặc List phẳng, phân tách bằng đường kẻ viền.
+- **KHÔNG Shadow khắp nơi**: Tránh lạm dụng bóng đổ. Ưu tiên viền border phẳng sắc nét. Chỉ dùng shadow-xs/shadow-sm khi cần thiết.
+- **Bo góc cố định 6px**: Dùng `rounded-[6px]`.
+- **Một hệ Spacing đồng nhất**: Bội số 4px (4, 8, 12, 16, 20, 24, 32px).
+
