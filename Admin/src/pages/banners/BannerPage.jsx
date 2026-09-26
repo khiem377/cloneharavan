@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   DndContext, closestCenter, PointerSensor,
   useSensor, useSensors, DragOverlay,
@@ -10,10 +10,10 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import {
   Plus, Pencil, Trash2, Eye, EyeOff,
-  LayoutGrid, List, Check, ExternalLink, Image,
+  LayoutGrid, List, Check, ExternalLink, Image, Calendar, MousePointer2,
 } from '@/components/ui/Icons';
 import { useBanners, useDeleteBanner, useDeleteBulkBanners, useUpdateBanner } from '@/hooks/useBanners';
-import { bannerService } from '@/services/banner.service';
+import { bannerService, BANNER_TYPE_LABELS } from '@/services/banner.service';
 import { toast } from '@/providers/ToastProvider';
 import BannerFormModal from './BannerFormModal';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
@@ -21,6 +21,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { BANNERS_KEY } from '@/hooks/useBanners';
 import DataTablePagination from '@/components/ui/DataTablePagination';
 import { useSearchParams } from 'react-router-dom';
+import { MediaThumbnailHover } from '@/components/ui/MediaFolderBadge';
+import { useMediaByIds } from '@/hooks/useMedia';
 
 function VisibleBadge({ isVisible }) {
   return (
@@ -28,6 +30,45 @@ function VisibleBadge({ isVisible }) {
       <span className={`size-1.5 rounded-full ${isVisible ? 'bg-emerald-500' : 'bg-muted-foreground'}`} />
       {isVisible ? 'Hiển thị' : 'Đang ẩn'}
     </span>
+  );
+}
+
+function TypeBadge({ type }) {
+  const label = BANNER_TYPE_LABELS?.[type] || type || 'hero';
+  const short = label.split(' ')[0]; // chỉ lấy từ đầu
+  return (
+    <span className="inline-flex items-center rounded-md bg-violet-500/10 text-violet-700 dark:text-violet-300 border border-violet-500/20 px-2 py-0.5 text-xs font-medium">
+      {short}
+    </span>
+  );
+}
+
+function ScheduleBadge({ startAt, endAt }) {
+  if (!startAt && !endAt) return <span className="text-muted-foreground text-xs">—</span>;
+  const now = new Date();
+  const start = startAt ? new Date(startAt) : null;
+  const end = endAt ? new Date(endAt) : null;
+  const fmt = (d) => d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: '2-digit' });
+
+  let statusCls = 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20';
+  let label = '';
+  if (end && now > end) { statusCls = 'bg-muted text-muted-foreground border-border'; label = 'Hết hạn'; }
+  else if (start && now < start) { label = `Bắt đầu ${fmt(start)}`; }
+  else if (end) { label = `→ ${fmt(end)}`; }
+
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-medium ${statusCls}`}>
+      <Calendar size={10} />{label}
+    </span>
+  );
+}
+
+function AnalyticsChip({ views = 0, clicks = 0 }) {
+  return (
+    <div className="flex flex-col gap-0.5 text-[10px] text-muted-foreground font-mono">
+      <span className="flex items-center gap-1"><Eye size={9} />{views.toLocaleString()} views</span>
+      <span className="flex items-center gap-1"><MousePointer2 size={9} />{clicks.toLocaleString()} clicks</span>
+    </div>
   );
 }
 
@@ -103,7 +144,9 @@ function SortableBannerRow({ banner, index, selected, onToggle, onEdit, onDelete
 
       <td className="px-3.5 py-3 align-middle w-24">
         <div className="relative inline-block">
-          <img src={banner.imageUrl} alt={banner.title || 'banner'} className="h-12 w-20 object-cover rounded border border-border bg-muted" />
+          <MediaThumbnailHover media={banner._mediaObj}>
+            <img src={banner.imageUrl} alt={banner.title || 'banner'} className="h-12 w-20 object-cover rounded border border-border bg-muted" />
+          </MediaThumbnailHover>
           {!banner.isVisible && <div className="absolute inset-0 rounded bg-background/60" />}
         </div>
       </td>
@@ -132,13 +175,13 @@ function SortableBannerRow({ banner, index, selected, onToggle, onEdit, onDelete
       </td>
 
       <td className="px-3.5 py-3 align-middle"><VisibleBadge isVisible={banner.isVisible} /></td>
+      <td className="px-3.5 py-3 align-middle"><ScheduleBadge startAt={banner.startAt} endAt={banner.endAt} /></td>
+      <td className="px-3.5 py-3 align-middle"><AnalyticsChip views={banner.viewCount} clicks={banner.clickCount} /></td>
       <td className="px-3.5 py-3 align-middle text-center">
         <span className="inline-flex items-center justify-center min-w-6 h-5 px-1.5 bg-muted border border-border rounded text-xs font-mono font-semibold text-muted-foreground">
           {displayPosition}
         </span>
       </td>
-      <td className="px-3.5 py-3 align-middle text-xs text-muted-foreground">{new Date(banner.createdAt).toLocaleDateString('vi-VN')}</td>
-
       <td className="px-3.5 py-3 align-middle" onPointerDown={stopDrag}>
         <InlineActions banner={banner} onEdit={onEdit} onDelete={onDelete} onToggleVisible={onToggleVisible} />
       </td>
@@ -150,7 +193,7 @@ function BannerCard({ banner, selected, onToggle, onEdit, onDelete, onToggleVisi
   return (
     <div className={`rounded-xl border border-border bg-card text-card-foreground shadow-2xs overflow-hidden transition-all hover:border-primary/50 ${selected ? 'border-primary ring-2 ring-primary/30' : ''}`}>
       <div className="relative aspect-video w-full bg-muted cursor-pointer overflow-hidden" onClick={() => onToggle(banner._id)}>
-        <img src={banner.imageUrl} alt={banner.title || 'banner'} className="size-full object-cover" />
+        <img src={banner.imageUrl} alt={banner.altText || banner.title || 'banner'} className="size-full object-cover" />
         {selected && (
           <div className="absolute top-2 right-2 size-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-xs z-10">
             <Check size={12} />
@@ -161,12 +204,22 @@ function BannerCard({ banner, selected, onToggle, onEdit, onDelete, onToggleVisi
             <EyeOff size={14} /> Đang ẩn
           </div>
         )}
+        {/* Schedule badge overlay */}
+        {(banner.startAt || banner.endAt) && (
+          <div className="absolute top-2 left-2">
+            <ScheduleBadge startAt={banner.startAt} endAt={banner.endAt} />
+          </div>
+        )}
       </div>
       <div className="p-3 flex flex-col gap-2">
-        <span className="font-semibold text-sm text-foreground line-clamp-1">
-          {banner.title || <span className="text-muted-foreground italic text-xs">Chưa đặt tiêu đề</span>}
-        </span>
+        <div className="flex items-start justify-between gap-2">
+          <span className="font-semibold text-sm text-foreground line-clamp-1 flex-1">
+            {banner.title || <span className="text-muted-foreground italic text-xs">Chưa đặt tiêu đề</span>}
+          </span>
+          <TypeBadge type={banner.type} />
+        </div>
         <VisibleBadge isVisible={banner.isVisible} />
+        <AnalyticsChip views={banner.viewCount} clicks={banner.clickCount} />
         <div className="flex items-center justify-end gap-1 pt-2 border-t border-border">
           <button className="inline-flex items-center gap-1 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 px-2 py-1 text-xs font-medium transition-colors cursor-pointer" onClick={onEdit}><Pencil size={12} /></button>
           <button className="inline-flex items-center gap-1 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400 hover:bg-purple-500/20 px-2 py-1 text-xs font-medium transition-colors cursor-pointer" onClick={onToggleVisible}>
@@ -191,6 +244,7 @@ export default function BannerPage() {
   const [activeId, setActiveId] = useState(null);
   const [localOrder, setLocalOrder] = useState(null);
   const [searchParams, setSearchParams] = useSearchParams();
+  const rowRefs = useRef({});
 
   const res = useBanners({ page, limit });
   const bannerData = res.data;
@@ -199,9 +253,27 @@ export default function BannerPage() {
   const isLoading = res.isLoading;
   const banners = localOrder ?? remoteBanners;
 
+  // Batch-fetch media objects de lay folder info cho thumbnail hover
+  // mediaId co the la string hoac populated object
+  const resolveId = (v) => (v && typeof v === 'object' ? v._id : v);
+  const allMediaIds = banners.map((b) => resolveId(b.mediaId)).filter(Boolean);
+  const { data: mediaMap = {} } = useMediaByIds(allMediaIds);
+  const bannersWithMedia = banners.map((b) => {
+    const mid = resolveId(b.mediaId);
+    return { ...b, _mediaObj: mid ? mediaMap[mid] : null };
+  });
+
   const highlightId = searchParams.get('highlight');
   useEffect(() => {
+    if (!highlightId) return;
+    bannerService.locate(highlightId, limit)
+      .then((res) => { setPage(res.data?.data?.page || 1); })
+      .catch(() => {});
+  }, [highlightId]);
+  useEffect(() => {
     if (!highlightId || !banners.length) return;
+    const found = banners.find((b) => b._id === highlightId);
+    if (!found) return;
     setSelectedIds((prev) => { const n = new Set(prev); n.add(highlightId); return n; });
     setSearchParams((p) => { p.delete('highlight'); return p; }, { replace: true });
   }, [highlightId, banners]);
@@ -342,18 +414,19 @@ export default function BannerPage() {
                         {allSelected && <Check size={10} />}
                       </button>
                     </th>
-                    <th className="px-3.5 py-3">Ảnh</th>
+                    <th className="px-3.5 py-3">Hình</th>
                     <th className="px-3.5 py-3">Tiêu đề</th>
                     <th className="px-3.5 py-3">Link</th>
-                    <th className="px-3.5 py-3">Trạng thái</th>
+                    <th className="px-3.5 py-3">Trang thai</th>
+                    <th className="px-3.5 py-3">Lich</th>
+                    <th className="px-3.5 py-3">Analytics</th>
                     <th className="px-3.5 py-3 text-center">Vị trí</th>
-                    <th className="px-3.5 py-3">Ngày tạo</th>
                     <th className="px-3.5 py-3"></th>
                   </tr>
                 </thead>
                 <tbody>
-                  <SortableContext items={banners.map(b => b._id)} strategy={verticalListSortingStrategy}>
-                    {banners.map((b, idx) => (
+                  <SortableContext items={bannersWithMedia.map(b => b._id)} strategy={verticalListSortingStrategy}>
+                    {bannersWithMedia.map((b, idx) => (
                       <SortableBannerRow
                         key={b._id} banner={b} index={idx}
                         selected={selectedIds.has(b._id)}
@@ -381,7 +454,7 @@ export default function BannerPage() {
                       <td className="px-3.5 py-3">
                         <span className="text-sm font-medium text-foreground">{activeItem.title || '—'}</span>
                       </td>
-                      <td colSpan={5} />
+                      <td colSpan={4} />
                     </tr>
                   </tbody>
                 </table>
@@ -390,7 +463,7 @@ export default function BannerPage() {
           </DndContext>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4">
-            {banners.map(b => (
+            {bannersWithMedia.map(b => (
               <BannerCard
                 key={b._id} banner={b}
                 selected={selectedIds.has(b._id)}
@@ -418,8 +491,9 @@ export default function BannerPage() {
       )}
       {deleteTarget && (
         <ConfirmDialog
+          open={!!deleteTarget}
           title="Xóa banner"
-          message={`Xóa banner "${deleteTarget.title || 'này'}"? Hành động không thể hoàn tác.`}
+          message={`Xóa banner "${deleteTarget.title || 'nay'}"? Hanh dong khong the hoan tac.`}
           confirmText="Xóa" variant="danger"
           onConfirm={() => handleDelete(deleteTarget._id)}
           onCancel={() => setDeleteTarget(null)}
@@ -427,9 +501,10 @@ export default function BannerPage() {
       )}
       {showBulkDel && (
         <ConfirmDialog
+          open={showBulkDel}
           title="Xóa banner"
-          message={`Xóa ${selectedIds.size} banner đã chọn? Hành động không thể hoàn tác.`}
-          confirmText="Xóa tất cả" variant="danger"
+          message={`Xóa ${selectedIds.size} banner da chon? Hanh dong khong the hoan tac.`}
+          confirmText="Xóa tat ca" variant="danger"
           onConfirm={handleBulkDelete}
           onCancel={() => setShowBulkDel(false)}
         />

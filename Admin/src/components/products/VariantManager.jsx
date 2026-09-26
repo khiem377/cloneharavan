@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Plus, Trash2, RefreshCw, Image, ChevronDown, ChevronUp, Check, X, Loader2, Save, Edit } from '@/components/ui/Icons';
 import { toast } from '@/providers/ToastProvider';
 import MediaPickerModal from '@/components/ui/MediaPickerModal';
+import { MediaThumbnailHover } from '@/components/ui/MediaFolderBadge';
 import {
   useProductVariants,
   useBulkCreateVariants,
@@ -171,29 +172,33 @@ function PriceCell({ value, onChange, placeholder = '' }) {
 }
 
 /* ─── Variant Row (always editable inline) ─── */
-function VariantRow({ local, onChange, onPickImage, onPickGallery, onRemoveImage, onDelete, onEdit, basePrice, baseSalePrice }) {
+function VariantRow({ local, mediaObjects = {}, onChange, onPickImage, onPickGallery, onRemoveImage, onDelete, onEdit, basePrice, baseSalePrice }) {
   return (
     <tr className={`border-b border-border last:border-0 transition-colors ${local._dirty ? 'bg-amber-500/5 hover:bg-amber-500/8' : 'hover:bg-muted/20'}`}>
       {/* Thumbnail + Gallery */}
       <td className="px-2 py-1.5 w-24">
         <div className="flex flex-col gap-1">
           {/* Main thumbnail */}
-          <div
-            className="size-10 rounded-md border border-border overflow-hidden bg-muted cursor-pointer hover:ring-2 hover:ring-primary/40 transition-all relative group"
-            onClick={() => onPickImage(local._rowId)}
-            title="Ảnh đại diện (click để thay)"
+          <MediaThumbnailHover media={local.thumbnailMediaId ? mediaObjects[local.thumbnailMediaId] : null}
+            className="size-10 rounded-md border border-border overflow-hidden bg-muted cursor-pointer hover:ring-2 hover:ring-primary/40 transition-all"
           >
-            {local.thumbnailUrl ? (
-              <img src={local.thumbnailUrl} alt="thumb" className="size-full object-cover" />
-            ) : (
-              <div className="flex size-full items-center justify-center text-muted-foreground/50">
-                <Image size={14} />
+            <div
+              className="size-10 rounded-md relative group"
+              onClick={() => onPickImage(local._rowId)}
+              title="Anh dai dien (click de thay)"
+            >
+              {local.thumbnailUrl ? (
+                <img src={local.thumbnailUrl} alt="thumb" className="size-full object-cover" />
+              ) : (
+                <div className="flex size-full items-center justify-center text-muted-foreground/50">
+                  <Image size={14} />
+                </div>
+              )}
+              <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <Image size={11} className="text-white" />
               </div>
-            )}
-            <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-              <Image size={11} className="text-white" />
             </div>
-          </div>
+          </MediaThumbnailHover>
           {/* Gallery strip */}
           <div className="flex gap-1 flex-wrap">
             {(local.imageUrls || []).map((url, i) => (
@@ -220,7 +225,12 @@ function VariantRow({ local, onChange, onPickImage, onPickGallery, onRemoveImage
 
       {/* Attribute chips */}
       <td className="px-2 py-1.5">
-        <div className="flex flex-wrap gap-1">
+        <div className="flex flex-wrap items-center gap-1">
+          {local.isDefault && (
+            <span className="inline-flex items-center gap-1 text-[11px] rounded-md bg-primary/15 border border-primary/30 text-primary font-bold px-2 py-0.5 shadow-2xs">
+              Mặc định
+            </span>
+          )}
           {(local.attributes || []).map((attr, i) => (
             <span key={i} className="inline-flex items-center gap-1 text-[11px] rounded bg-muted border border-border px-1.5 py-0.5">
               <span className="text-muted-foreground">{attr.name}:</span>
@@ -387,6 +397,7 @@ function serverToLocal(v) {
     _rowId: rid(),
     _serverId: v._id,
     _dirty: false,
+    isDefault: v.isDefault ?? false,
     attributes: v.attributes || [],
     displayName: v.displayName || v.attributes?.map((a) => a.value).join(' / ') || '',
     sku: v.sku || '',
@@ -441,20 +452,27 @@ export default function VariantManager({ productId, product, options = [], onOpt
   const handlePickImage = (rowId) => setPickerMode({ rowId, type: 'thumbnail' });
   const handlePickGallery = (rowId) => setPickerMode({ rowId, type: 'images' });
 
+  const [pickedMediaObjects, setPickedMediaObjects] = useState({}); // Map<mediaId, media>
+
   const handleImageSelected = (media) => {
     if (!pickerMode) return;
     const { rowId, type } = pickerMode;
     if (type === 'thumbnail') {
       const m = Array.isArray(media) ? media[0] : media;
-      if (m) updateLocal(rowId, { thumbnailMediaId: m._id, thumbnailUrl: m.url });
+      if (m) {
+        updateLocal(rowId, { thumbnailMediaId: m._id, thumbnailUrl: m.url });
+        setPickedMediaObjects((prev) => ({ ...prev, [m._id]: m }));
+      }
     } else {
       const list = Array.isArray(media) ? media : [media];
+      const newObjs = {};
       setLocals((prev) => prev.map((l) => {
         if (l._rowId !== rowId) return l;
         const ids = [...(l.imageMediaIds || [])], urls = [...(l.imageUrls || [])];
-        list.forEach((m) => { if (!ids.includes(m._id)) { ids.push(m._id); urls.push(m.url); } });
+        list.forEach((m) => { if (!ids.includes(m._id)) { ids.push(m._id); urls.push(m.url); newObjs[m._id] = m; } });
         return { ...l, imageMediaIds: ids, imageUrls: urls, _dirty: true };
       }));
+      setPickedMediaObjects((prev) => ({ ...prev, ...newObjs }));
     }
     setPickerMode(null);
   };
@@ -659,6 +677,7 @@ export default function VariantManager({ productId, product, options = [], onOpt
                   <VariantRow
                     key={local._rowId}
                     local={local}
+                    mediaObjects={pickedMediaObjects}
                     onChange={(patch) => updateLocal(local._rowId, patch)}
                     onPickImage={handlePickImage}
                     onPickGallery={handlePickGallery}

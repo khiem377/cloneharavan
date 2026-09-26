@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Plus, Edit, Trash2, Search, Loader2 } from '@/components/ui/Icons';
 import { useBlogTags } from '@/hooks/useBlog';
 import { tagService } from '@/services/blog.service';
@@ -9,8 +10,11 @@ import DataTablePagination from '@/components/ui/DataTablePagination';
 const EMPTY = { name: '', description: '', isActive: true };
 
 export default function BlogTagPage() {
-  const [query, setQuery]     = useState({ page: 1, limit: 20 });
-  const [keyword, setKeyword] = useState('');
+  const [searchParams] = useSearchParams();
+  const initialSearch = searchParams.get('search') || '';
+
+  const [keyword, setKeyword] = useState(initialSearch);
+  const [query, setQuery]     = useState({ page: 1, limit: 20, keyword: initialSearch });
   const [modal, setModal]     = useState(null);
   const [form, setForm]       = useState(EMPTY);
   const [saving, setSaving]   = useState(false);

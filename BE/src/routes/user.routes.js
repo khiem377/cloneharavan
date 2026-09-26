@@ -23,7 +23,8 @@ const {
   createAdmin,
 } = require('../controllers/user.controller');
 
-const { protect, authorize } = require('../middleware/auth.middleware');
+const { protect } = require('../middleware/auth.middleware');
+const { requirePermission } = require('../middleware/permission.middleware');
 const { validate } = require('../middleware/validate.middleware');
 const { upload } = require('../middleware/upload.middleware');
 const {
@@ -56,15 +57,15 @@ router.patch('/addresses/:addressId/default', protect, setDefaultAddress);
 router.post('/addresses/sync-order', protect, validate(addressSchema), syncOrderAddress);
 
 // ==========================================
-// 3. ADMIN MANAGEMENT (Admin Only)
+// 3. ADMIN MANAGEMENT (RBAC Protected)
 // ==========================================
-router.post('/admin', protect, authorize('admin'), validate(createAdminSchema), createAdmin);
-router.post('/', protect, authorize('admin'), validate(createAdminSchema), createAdmin);
-router.get('/', protect, authorize('admin'), getAllUsers);
-router.get('/:id', protect, authorize('admin'), getUserById);
-router.patch('/:id/status', protect, authorize('admin'), validate(updateStatusSchema), toggleUserStatus);
-router.patch('/:id/role', protect, authorize('admin'), validate(updateRoleSchema), updateUserRole);
-router.delete('/:id', protect, authorize('admin'), deleteUser);
+router.post('/admin', protect, requirePermission('user.create'), validate(createAdminSchema), createAdmin);
+router.post('/', protect, requirePermission('user.create'), validate(createAdminSchema), createAdmin);
+router.get('/', protect, requirePermission('user.view'), getAllUsers);
+router.get('/:id', protect, requirePermission('user.view'), getUserById);
+router.patch('/:id/status', protect, requirePermission('user.edit'), validate(updateStatusSchema), toggleUserStatus);
+router.patch('/:id/role', protect, requirePermission('role.assign'), validate(updateRoleSchema), updateUserRole);
+router.delete('/:id', protect, requirePermission('user.delete'), deleteUser);
 
 module.exports = router;
 

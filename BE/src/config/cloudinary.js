@@ -31,6 +31,17 @@ const uploadToCloudinary = (buffer, folderPath) => {
   });
 };
 
+const uploadRawToCloudinary = (buffer, folderPath) => {
+  configure();
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      { folder: folderPath, resource_type: 'raw' },
+      (error, result) => (error ? reject(error) : resolve(result))
+    );
+    streamifier.createReadStream(buffer).pipe(stream);
+  });
+};
+
 const deleteFromCloudinary = (publicId) => {
   configure();
   return cloudinary.uploader.destroy(publicId);
@@ -46,4 +57,4 @@ const listCloudinaryFolder = (folder) => {
   });
 };
 
-module.exports = { uploadToCloudinary, deleteFromCloudinary, buildFolder, listCloudinaryFolder };
+module.exports = { uploadToCloudinary, uploadRawToCloudinary, deleteFromCloudinary, buildFolder, listCloudinaryFolder };

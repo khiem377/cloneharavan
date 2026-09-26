@@ -1,21 +1,35 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  Shield, Plus, Edit3, Trash2, CheckCircle2, Lock, KeyRound, 
-  Search, ShieldCheck, CheckSquare, Square, Layers, RefreshCw,
+import { Shield, Plus, Edit3, Trash2, CheckCircle2, Lock, KeyRound,
+  SearchIcon as Search, ShieldCheck, CheckSquare, Square, Layers, RefreshCw,
   Info, AlertTriangle, Save
-} from 'lucide-react';
-import roleService from '../../services/role.service';
+} from '@/components/ui/Icons';
 import Can from '../../components/auth/Can';
+import SearchableSelect from '@/components/ui/SearchableSelect';
+import { toast } from '@/providers/ToastProvider';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import {
+  useRoles,
+  usePermissions,
+  useCreateRole,
+  useUpdateRole,
+  useDeleteRole,
+  useSeedFullPermissions,
+} from '@/hooks/useRoles';
 
 export default function RoleListPage() {
-  const [roles, setRoles] = useState([]);
-  const [permissionsGrouped, setPermissionsGrouped] = useState({});
-  const [loading, setLoading] = useState(true);
+  // React Query — thay fetchData() thủ công
+  const { data: roles = [], isLoading: loading, refetch: refetchRoles } = useRoles();
+  const { data: permissionsGrouped = {} } = usePermissions();
+  const createMut = useCreateRole();
+  const updateMut = useUpdateRole();
+  const deleteMut = useDeleteRole();
+  const seedMut   = useSeedFullPermissions();
+
   const [saving, setSaving] = useState(false);
-  
+
   // Role đang được chọn để xem/chỉnh sửa ở cột bên phải
   const [activeRoleId, setActiveRoleId] = useState(null);
-  
+
   // State tìm kiếm quyền
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedModule, setSelectedModule] = useState('all');
@@ -30,32 +44,17 @@ export default function RoleListPage() {
 
   // Mode tạo mới hay chỉnh sửa
   const [isCreating, setIsCreating] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const [resRoles, resPerms] = await Promise.all([
-        roleService.getRoles(),
-        roleService.getPermissions(),
-      ]);
-      const fetchedRoles = resRoles.data || [];
-      setRoles(fetchedRoles);
-      setPermissionsGrouped(resPerms.data?.grouped || {});
+  const handleSeedFullPermissions = () => seedMut.mutate();
 
-      // Mặc định chọn vai trò đầu tiên (hoặc administrator)
-      if (fetchedRoles.length > 0 && !activeRoleId) {
-        selectRole(fetchedRoles[0]);
-      }
-    } catch (e) {
-      console.error('Lỗi lấy danh sách vai trò & quyền:', e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Tự động chọn role đầu tiên khi data load xong lần đầu
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (roles.length > 0 && !activeRoleId) {
+      selectRole(roles[0]);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roles.length]);
 
   const selectRole = (role) => {
     setIsCreating(false);
@@ -129,45 +128,44 @@ export default function RoleListPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.name.trim() || !formData.code.trim()) {
-      alert('Vui lòng điền đầy đủ Tên và Mã vai trò!');
+      toast.error('Vui lòng điền đầy đủ Tên và Mã vai trò!');
       return;
     }
-
     setSaving(true);
     try {
       if (isCreating) {
-        const res = await roleService.createRole(formData);
-        alert('Tạo vai trò thành công!');
-        fetchData();
+        const res = await createMut.mutateAsync(formData);
+        setIsCreating(false);
         if (res.data?._id) setActiveRoleId(res.data._id);
       } else {
-        await roleService.updateRole(activeRoleId, formData);
-        alert('Lưu thay đổi vai trò thành công!');
-        fetchData();
+        await updateMut.mutateAsync({ id: activeRoleId, data: formData });
       }
-    } catch (e) {
-      alert(e.response?.data?.message || 'Có lỗi xảy ra khi lưu vai trò');
+    } catch {
+      // errors handled by hook
     } finally {
       setSaving(false);
     }
   };
 
-  const handleDelete = async (role) => {
+  const handleDelete = (role) => {
     if (role.isSystem) {
-      alert('Không thể xóa vai trò mặc định của hệ thống!');
+      toast.error('Không thể xóa vai trò mặc định của hệ thống!');
       return;
     }
-    if (window.confirm(`Bạn có chắc chắn muốn xóa vai trò "${role.name}"?`)) {
-      try {
-        await roleService.deleteRole(role._id);
-        alert('Đã xóa vai trò thành công!');
-        const remaining = roles.filter((r) => r._id !== role._id);
-        setRoles(remaining);
-        if (remaining.length > 0) selectRole(remaining[0]);
-      } catch (e) {
-        alert(e.response?.data?.message || 'Có lỗi xảy ra khi xóa vai trò');
-      }
-    }
+    setDeleteTarget(role);
+  };
+
+  const confirmDelete = () => {
+    if (!deleteTarget) return;
+    deleteMut.mutate(deleteTarget._id, {
+      onSuccess: () => {
+        setDeleteTarget(null);
+        if (activeRoleId === deleteTarget._id && roles.length > 1) {
+          const remaining = roles.filter((r) => r._id !== deleteTarget._id);
+          if (remaining.length > 0) selectRole(remaining[0]);
+        }
+      },
+    });
   };
 
   const MODULE_NAMES = {
@@ -251,7 +249,7 @@ export default function RoleListPage() {
               <Layers className="size-4 text-primary" /> Danh sách Vai trò ({roles.length})
             </span>
             <button
-              onClick={fetchData}
+              onClick={refetchRoles}
               title="Làm mới"
               className="p-1 text-muted-foreground hover:text-foreground rounded hover:bg-muted transition-colors"
             >
@@ -450,18 +448,20 @@ export default function RoleListPage() {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <select
+                    <SearchableSelect
+                      className="w-56"
+                      options={[
+                        { label: `Tất cả nhóm (${Object.keys(permissionsGrouped).length} nhóm)`, value: 'all' },
+                        ...Object.keys(permissionsGrouped).map((modKey) => ({
+                          label: MODULE_NAMES[modKey] || modKey,
+                          value: modKey,
+                        })),
+                      ]}
                       value={selectedModule}
-                      onChange={(e) => setSelectedModule(e.target.value)}
-                      className="h-9 px-3 bg-background border border-input rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-primary"
-                    >
-                      <option value="all">Tất cả nhóm ({Object.keys(permissionsGrouped).length} nhóm)</option>
-                      {Object.keys(permissionsGrouped).map((modKey) => (
-                        <option key={modKey} value={modKey}>
-                          {MODULE_NAMES[modKey] || modKey}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(val) => setSelectedModule(val)}
+                      creatable={false}
+                      placeholder="Tất cả nhóm"
+                    />
 
                     <button
                       type="button"

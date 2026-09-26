@@ -16,11 +16,16 @@ const {
   verifyPhoneOtp,
   COOKIE_OPTIONS,
 } = require('../services/auth.service');
+const { mergeSessionInteractions } = require('../services/recommendation.service');
 
 const register = async (req, res, next) => {
   try {
-    const user = await registerUser(req.body);
+    const { sessionId, ...registerData } = req.body;
+    const user = await registerUser(registerData);
     const { accessToken, refreshToken } = await buildTokenResponse(user, res);
+
+    // Merge guest session interactions vào userId mới tạo (fire-and-forget)
+    if (sessionId) mergeSessionInteractions(sessionId, user._id);
 
     res.status(201).json({
       status: 'success',
@@ -46,9 +51,12 @@ const register = async (req, res, next) => {
 
 const login = async (req, res, next) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, sessionId } = req.body;
     const user = await loginUser(email, password);
     const { accessToken, refreshToken } = await buildTokenResponse(user, res);
+
+    // Merge guest session interactions vào userId (fire-and-forget)
+    if (sessionId) mergeSessionInteractions(sessionId, user._id);
 
     const populatedUser = await User.findById(user._id)
       .populate({ path: 'roleId', populate: { path: 'permissions', select: 'code name module' } })

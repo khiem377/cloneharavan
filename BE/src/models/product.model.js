@@ -44,6 +44,11 @@ const productSchema = new mongoose.Schema(
       ref: 'Brand',
       required: [true, 'Thương hiệu sản phẩm là bắt buộc'],
     },
+    supplierId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Supplier',
+      default: null,
+    },
     // price / salePrice / stock: deprecated — giờ nằm ở Default Variant
     // Giữ lại để không break data cũ, không bắt buộc
     price: {
@@ -56,10 +61,36 @@ const productSchema = new mongoose.Schema(
       default: null,
       min: [0, 'Giá khuyến mãi không được nhỏ hơn 0'],
     },
-    stock: {
+    costPrice: {
+      type: Number,
+      default: 0,
+      min: [0, 'Giá vốn không được nhỏ hơn 0'],
+    },
+    // cachedPrice / cachedSalePrice — denormalized từ Default Variant
+    // Sync tự động khi tạo/update variant, dùng để filter giá TRƯỚC paginate
+    cachedPrice: {
       type: Number,
       default: null,
+      index: true,
+    },
+    cachedSalePrice: {
+      type: Number,
+      default: null,
+    },
+    allocated: {
+      type: Number,
+      default: 0,
+      min: [0, 'Số lượng giữ chỗ không được nhỏ hơn 0'],
+    },
+    stock: {
+      type: Number,
+      default: 0,
       min: [0, 'Số lượng tồn kho không được nhỏ hơn 0'],
+    },
+    sold: {
+      type: Number,
+      default: 0,
+      min: [0, 'Số lượng đã bán không được nhỏ hơn 0'],
     },
     thumbnail: {
       mediaId: { type: mongoose.Schema.Types.ObjectId, ref: 'Media', default: null },
@@ -92,6 +123,16 @@ const productSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    unit: {
+      type: String,
+      default: 'Cái',
+      trim: true,
+    },
+    itemType: {
+      type: String,
+      enum: ['merchandise', 'finished_good', 'raw_material', 'service'],
+      default: 'merchandise',
+    },
     status: {
       type: String,
       enum: ['published', 'draft', 'out_of_stock'],
@@ -113,6 +154,7 @@ const productSchema = new mongoose.Schema(
         ],
       },
     ],
+    searchTokens: [{ type: String, index: true }],
   },
   { timestamps: true }
 );
@@ -121,8 +163,28 @@ productSchema.pre('save', async function () {
   if (this.isModified('name') || !this.slug) {
     this.slug = slugify(this.name);
   }
-  // Không tự đổi status theo stock nữa (stock nằm ở variant)
+  
+  try {
+    const { removeVietnameseTones, extractAcronyms } = require('../utils/searchEngine');
+    const nameNorm = removeVietnameseTones(this.name);
+    const acronyms = extractAcronyms(this.name);
+    const words = nameNorm.split(/\s+/).filter(Boolean);
+
+    const tokens = new Set([
+      nameNorm,
+      ...acronyms,
+      ...words,
+      (this.productCode || '').toLowerCase(),
+      (this.sku || '').toLowerCase(),
+    ]);
+
+    this.searchTokens = Array.from(tokens).filter(Boolean);
+  } catch (err) {
+    // Ignore error if searchEngine not loaded yet
+  }
 });
+
+productSchema.index({ name: 'text', sku: 'text' });
 
 const Product = mongoose.model('Product', productSchema);
 module.exports = Product;

@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { AlertTriangle, X, ExternalLink, Trash2 } from '@/components/ui/Icons';
+import { AlertTriangle, Info, X, ExternalLink, Trash2 } from '@/components/ui/Icons';
 
 const BADGE_COLORS = {
   'Banner': 'bg-blue-500/15 text-blue-600 border-blue-500/30',
@@ -9,7 +9,7 @@ const BADGE_COLORS = {
   'Biến thể sản phẩm': 'bg-orange-500/15 text-orange-600 border-orange-500/30',
 };
 
-export default function MediaUsageModal({ mediaItems, usages, onForceDelete, onCancel, isDeleting }) {
+export default function MediaUsageModal({ mediaItems, usages, onForceDelete, onCancel, isDeleting, viewOnly = false }) {
   const navigate = useNavigate();
 
   const usedItems = mediaItems.filter((m) => usages[m._id]?.length > 0);
@@ -25,11 +25,15 @@ export default function MediaUsageModal({ mediaItems, usages, onForceDelete, onC
       <div className="w-full max-w-lg rounded-2xl border border-border bg-card shadow-2xl overflow-hidden flex flex-col" style={{ maxHeight: '85vh' }}>
         <div className="flex items-start justify-between gap-3 px-5 py-4 border-b border-border shrink-0">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-500/15 shrink-0">
-              <AlertTriangle size={18} className="text-amber-500" />
+            <div className={`flex h-9 w-9 items-center justify-center rounded-full shrink-0 ${viewOnly ? 'bg-primary/15' : 'bg-amber-500/15'}`}>
+              {viewOnly
+                ? <Info size={18} className="text-primary" />
+                : <AlertTriangle size={18} className="text-amber-500" />}
             </div>
             <div>
-              <h2 className="text-base font-semibold text-foreground">Ảnh đang được sử dụng</h2>
+              <h2 className="text-base font-semibold text-foreground">
+                {viewOnly ? 'Ảnh được sử dụng ở' : 'Ảnh đang được sử dụng'}
+              </h2>
               <p className="text-xs text-muted-foreground mt-0.5">
                 {usedItems.length} ảnh đang được dùng ở các vị trí bên dưới
                 {unusedCount > 0 && `, ${unusedCount} ảnh chưa được dùng`}
@@ -79,16 +83,18 @@ export default function MediaUsageModal({ mediaItems, usages, onForceDelete, onC
             onClick={onCancel}
             className="h-9 px-4 rounded-lg border border-border text-sm font-medium text-foreground hover:bg-accent transition-colors cursor-pointer"
           >
-            Hủy
+            {viewOnly ? 'Dong' : 'Huy'}
           </button>
-          <button
-            onClick={onForceDelete}
-            disabled={isDeleting}
-            className="h-9 px-4 rounded-lg bg-destructive text-destructive-foreground text-sm font-medium hover:bg-destructive/90 transition-colors cursor-pointer disabled:opacity-60 inline-flex items-center gap-1.5"
-          >
-            <Trash2 size={14} />
-            {isDeleting ? 'Đang xóa...' : `Vẫn xóa vĩnh viễn (${mediaItems.length})`}
-          </button>
+          {!viewOnly && (
+            <button
+              onClick={onForceDelete}
+              disabled={isDeleting}
+              className="h-9 px-4 rounded-lg bg-destructive text-destructive-foreground text-sm font-medium hover:bg-destructive/90 transition-colors cursor-pointer disabled:opacity-60 inline-flex items-center gap-1.5"
+            >
+              <Trash2 size={14} />
+              {isDeleting ? 'Dang xoa...' : `Van xoa vinh vien (${mediaItems.length})`}
+            </button>
+          )}
         </div>
       </div>
     </div>

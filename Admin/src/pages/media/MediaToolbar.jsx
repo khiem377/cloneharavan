@@ -1,5 +1,6 @@
 import { Search, Trash2, X, ArrowUpDown, LayoutGrid, List } from '@/components/ui/Icons';
 import { useRef } from 'react';
+import SearchableSelect from '@/components/ui/SearchableSelect';
 
 const SORT_OPTIONS = [
   { value: 'createdAt|desc', label: 'Mới nhất' },
@@ -42,20 +43,17 @@ export default function MediaToolbar({
       </div>
 
       <div className="flex items-center gap-2">
-        <div className="relative flex items-center rounded-md border border-input bg-background">
-          <ArrowUpDown size={12} className="absolute left-2 text-muted-foreground pointer-events-none" />
-          <select
-            className="h-8 pl-7 pr-2 text-xs bg-transparent outline-none cursor-pointer text-foreground"
+        <div className="w-36 shrink-0">
+          <SearchableSelect
+            options={SORT_OPTIONS}
             value={sortVal}
-            onChange={(e) => {
-              const [by, dir] = e.target.value.split('|');
+            onChange={(val) => {
+              const [by, dir] = val.split('|');
               onSortChange(by, dir);
             }}
-          >
-            {SORT_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
+            creatable={false}
+            placeholder="Sắp xếp..."
+          />
         </div>
 
         <div className="flex items-center rounded-md border border-border bg-muted p-0.5">

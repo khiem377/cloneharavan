@@ -32,11 +32,19 @@ const processQueue = (error, token = null) => {
   failedQueue = [];
 };
 
-// ── Request interceptor – gắn accessToken vào header ─────────────────────────
+// ── Request interceptor – gắn accessToken + x-session-id vào header ──────────
 api.interceptors.request.use(
   (config) => {
-    const token = useAuthStore.getState().accessToken;
-    if (token) config.headers.Authorization = `Bearer ${token}`;
+    const { accessToken, anonymousId, getOrCreateAnonymousId } = useAuthStore.getState();
+
+    // Gắn JWT nếu đã login
+    if (accessToken) config.headers.Authorization = `Bearer ${accessToken}`;
+
+    // Gắn anonymousId làm x-session-id cho tất cả request
+    // BE dùng header này để track interaction dù user đã login hay chưa
+    const sessionId = anonymousId || getOrCreateAnonymousId();
+    if (sessionId) config.headers['x-session-id'] = sessionId;
+
     return config;
   },
   (error) => Promise.reject(error)

@@ -18,6 +18,14 @@ export const useAllProductsSelect = (extraParams = {}) =>
     staleTime: 5 * 60 * 1000, // 5 phút cache
   });
 
+export const useSearchInventoryProducts = (keyword) =>
+  useQuery({
+    queryKey: [...PRODUCTS_KEY, 'search-inventory', keyword],
+    queryFn: () => productService.searchInventory(keyword).then((r) => r.data?.data || []),
+    enabled: !!keyword && keyword.trim().length > 0,
+    staleTime: 10_000,
+  });
+
 export const useProduct = (id) =>
   useQuery({
     queryKey: [...PRODUCTS_KEY, id],
@@ -54,6 +62,14 @@ export const useDeleteProduct = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id) => productService.remove(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: PRODUCTS_KEY }),
+  });
+};
+
+export const useBulkUpdateProductStatus = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ ids, status }) => productService.bulkUpdateStatus(ids, status),
     onSuccess: () => qc.invalidateQueries({ queryKey: PRODUCTS_KEY }),
   });
 };

@@ -290,6 +290,7 @@ function PreviewPanel({ item, onClose }) {
 export default function MediaPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedFolder = searchParams.get('folderId') || null;
+  const targetMediaId = searchParams.get('mediaId') || null;
 
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [previewItem, setPreviewItem] = useState(null);
@@ -326,13 +327,28 @@ export default function MediaPage() {
 
   const invalidateAll = () => qc.invalidateQueries({ predicate: (q) => q.queryKey[0] === 'media' });
 
+  // Dùng stable string key thay vì array reference để tránh vòng lặp vô tận
+  const mediaItemIds = mediaItems.map((m) => m._id).join(',');
+
   useEffect(() => {
     if (!mediaItems.length) { setUsagesMap({}); return; }
     const ids = mediaItems.map((m) => m._id);
     mediaService.checkUsages(ids)
       .then((res) => setUsagesMap(res.data.data.usages || {}))
       .catch(() => setUsagesMap({}));
-  }, [mediaItems]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mediaItemIds]);
+
+  // Auto-select + mo preview khi mediaId co trong URL
+  useEffect(() => {
+    if (!targetMediaId || !mediaItems.length) return;
+    const found = mediaItems.find((m) => m._id === targetMediaId);
+    if (!found) return;
+    setPreviewItem(found);
+    setSelectedIds(new Set([found._id]));
+    setSearchParams((p) => { p.delete('mediaId'); return p; }, { replace: true });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [targetMediaId, mediaItemIds]);
 
   const { mutate: bulkDelete, isPending: isDeletingBulk } = useMutation({
     mutationFn: (ids) => mediaService.deleteBulk(ids),
@@ -352,6 +368,16 @@ export default function MediaPage() {
     onError: (err) => toast.error(err.response?.data?.message || 'Xóa thất bại'),
   });
 
+  // Drag & drop single file vào folder card
+  const { mutate: dropMove } = useMutation({
+    mutationFn: ({ mediaId, folderId }) => mediaService.move(mediaId, folderId),
+    onSuccess: () => { toast.success('Đã di chuyển file'); invalidateAll(); },
+    onError:   () => toast.error('Lỗi di chuyển file'),
+  });
+  const handleDropToFolder = useCallback((mediaId, folderId) => {
+    dropMove({ mediaId, folderId });
+  }, [dropMove]);
+
   const handleDeleteRequest = (item) => {
     const usages = usagesMap[item._id];
     if (usages && usages.length > 0) {
@@ -359,6 +385,12 @@ export default function MediaPage() {
     } else {
       setConfirmDeleteItem(item);
     }
+  };
+
+  const handleViewUsage = (item) => {
+    const usages = usagesMap[item._id];
+    if (!usages || usages.length === 0) return;
+    setUsageModal({ items: [item], usages: { [item._id]: usages }, type: 'view', ids: [] });
   };
 
   const handleBulkDeleteCheck = async () => {
@@ -487,14 +519,16 @@ export default function MediaPage() {
 
             {/* Media grid — the only scrollable part */}
             <div className="flex-1 overflow-y-auto p-4">
-              <MediaGrid
+            <MediaGrid
                 items={mediaItems}
                 folders={isSearching ? (searchData?.folders || []) : (browseData?.type === 'parent' ? (browseData?.subFolders || []) : [])}
                 onFolderClick={handleFolderSelect}
+                onDropToFolder={handleDropToFolder}
                 selectedIds={selectedIds}
                 onToggle={toggleSelect}
                 onPreview={setPreviewItem}
                 onDeleteRequest={handleDeleteRequest}
+                onUsage={handleViewUsage}
                 onRefresh={invalidateAll}
                 isLoading={isLoading}
                 viewMode={viewMode}
@@ -560,6 +594,7 @@ export default function MediaPage() {
         <MediaUsageModal
           mediaItems={usageModal.items}
           usages={usageModal.usages}
+          viewOnly={usageModal.type === 'view'}
           isDeleting={isDeletingBulk || isDeletingOne}
           onForceDelete={() => {
             if (usageModal.type === 'single') deleteOne(usageModal.ids[0]);

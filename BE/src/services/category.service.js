@@ -2,6 +2,7 @@ const Category = require('../models/category.model');
 const Media = require('../models/media.model');
 const { AppError } = require('../utils/AppError');
 const { slugify } = require('../utils/slugify');
+const cacheService = require('../utils/cache.service');
 
 const resolveMedia = async (mediaId) => {
   if (!mediaId) return null;
@@ -15,7 +16,8 @@ const buildTree = (list) => {
   const tree = [];
 
   list.forEach((cat) => {
-    map[cat._id.toString()] = { ...cat.toObject(), children: [] };
+    const raw = typeof cat.toObject === 'function' ? cat.toObject() : cat;
+    map[cat._id.toString()] = { ...raw, children: [] };
   });
 
   list.forEach((cat) => {
@@ -72,21 +74,30 @@ const createCategory = async (data) => {
     metaDescription: data.metaDescription,
   });
 
+  invalidateCategoryCache();
   return category.populate('parentId', 'name slug');
 };
 
+const invalidateCategoryCache = () => {
+  cacheService.delByPrefix('categories:');
+};
+
 const getAllCategories = async (query = {}) => {
-  const filter = { isActive: true };
-  if (query.showOnMenu !== undefined) filter.showOnMenu = query.showOnMenu === 'true';
-  if (query.keyword) filter.name = { $regex: query.keyword, $options: 'i' };
+  const cacheKey = `categories:public:${JSON.stringify(query)}`;
+  return cacheService.getOrSet(cacheKey, async () => {
+    const filter = { isActive: true };
+    if (query.showOnMenu !== undefined) filter.showOnMenu = query.showOnMenu === 'true';
+    if (query.keyword) filter.name = { $regex: query.keyword, $options: 'i' };
 
-  const categories = await Category.find(filter)
-    .populate('parentId', 'name slug')
-    .populate('brandId', 'name slug logo')
-    .sort({ order: 1, createdAt: 1 });
+    const categories = await Category.find(filter)
+      .populate('parentId', 'name slug')
+      .populate('brandId', 'name slug logo')
+      .sort({ order: 1, createdAt: 1 })
+      .lean();
 
-  if (query.tree === 'true') return buildTree(categories);
-  return categories;
+    if (query.tree === 'true') return buildTree(categories);
+    return categories;
+  }, 300);
 };
 
 const getAllCategoriesAdmin = async (query = {}) => {

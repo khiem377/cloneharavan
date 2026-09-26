@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShieldAlert, ArrowLeft } from 'lucide-react';
+import { ShieldAlert, ArrowLeft } from '@/components/ui/Icons';
 
 const AccessDeniedPage = () => {
   const navigate = useNavigate();

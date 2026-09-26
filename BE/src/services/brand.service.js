@@ -128,6 +128,23 @@ const deleteBulkBrands = async (ids) => {
   return { message: `Đã xóa thành công ${result.deletedCount} thương hiệu` };
 };
 
+// Tra ve page chua brand co ID nay (cung sort: order ASC, createdAt DESC)
+const locateBrand = async (id, limit = 10) => {
+  const brand = await Brand.findById(id).select('_id order createdAt');
+  if (!brand) throw new AppError('Không tìm thấy thương hiệu', 404);
+
+  // Dem bao nhieu brand xep truoc brand nay theo cung thu tu sort
+  const positionBefore = await Brand.countDocuments({
+    $or: [
+      { order: { $lt: brand.order } },
+      { order: brand.order, createdAt: { $gt: brand.createdAt } },
+    ],
+  });
+
+  const page = Math.ceil((positionBefore + 1) / limit);
+  return { page: Math.max(1, page), brandId: id };
+};
+
 module.exports = {
   createBrand,
   getAllBrands,
@@ -137,4 +154,5 @@ module.exports = {
   toggleBrandStatus,
   deleteBrand,
   deleteBulkBrands,
+  locateBrand,
 };

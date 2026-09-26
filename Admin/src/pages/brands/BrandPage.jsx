@@ -15,9 +15,12 @@ import {
 } from '@/hooks/useBrands';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import MediaPickerModal from '@/components/ui/MediaPickerModal';
+import { MediaThumbnailHover } from '@/components/ui/MediaFolderBadge';
 import DataTablePagination from '@/components/ui/DataTablePagination';
 import { useSearchParams } from 'react-router-dom';
+import { brandService } from '@/services/brand.service';
 import Can from '@/components/auth/Can';
+import SearchableSelect from '@/components/ui/SearchableSelect';
 
 const DEFAULT_FORM = {
   name: '',
@@ -30,7 +33,10 @@ const DEFAULT_FORM = {
 };
 
 export default function BrandPage() {
-  const [keyword, setKeyword] = useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialSearch = searchParams.get('search') || '';
+
+  const [keyword, setKeyword] = useState(initialSearch);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [selected, setSelected] = useState([]);
@@ -41,7 +47,6 @@ export default function BrandPage() {
   const [showMediaPicker, setShowMediaPicker] = useState(false);
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
   const rowRefs = useRef({});
-  const [searchParams, setSearchParams] = useSearchParams();
 
   const res = useBrands({ keyword, page, limit });
 
@@ -52,15 +57,34 @@ export default function BrandPage() {
   const isLoading = res.isLoading;
 
   const highlightId = searchParams.get('highlight');
+
+  // Buoc 1: Khi co highlightId, goi API de biet brand o trang nao -> setPage
+  useEffect(() => {
+    if (!highlightId) return;
+    brandService.locate(highlightId, limit)
+      .then((res) => {
+        const targetPage = res.data?.data?.page || 1;
+        setPage(targetPage);
+      })
+      .catch(() => {
+        // Neu locate that bai, giu nguyen trang hien tai
+      });
+  }, [highlightId]);
+
+  // Buoc 2: Khi brands da load, scroll den row va xoa param
   useEffect(() => {
     if (!highlightId || !brands.length) return;
+    const found = brands.find((b) => b._id === highlightId);
+    if (!found) return;
     setSelected((prev) => prev.includes(highlightId) ? prev : [...prev, highlightId]);
-    const el = rowRefs.current[highlightId];
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      setSearchParams((p) => { p.delete('highlight'); return p; }, { replace: true });
-    }
+    setTimeout(() => {
+      const el = rowRefs.current[highlightId];
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
+    setSearchParams((p) => { p.delete('highlight'); return p; }, { replace: true });
   }, [highlightId, brands]);
+
+
 
   const createMut = useCreateBrand();
   const updateMut = useUpdateBrand();
@@ -185,9 +209,11 @@ export default function BrandPage() {
       logoMediaId: media._id,
       logoUrl: media.url,
     }));
-
+    setPickedMedia(media); // track full object for folder hover
     setShowMediaPicker(false);
   };
+
+  const [pickedMedia, setPickedMedia] = useState(null);
 
   const isMutating = createMut.isPending || updateMut.isPending;
 
@@ -546,26 +572,16 @@ export default function BrandPage() {
                     Trạng thái
                   </label>
 
-                  <select
-                    className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 transition-colors"
-                    value={
-                      form.isActive ? 'true' : 'false'
-                    }
-                    onChange={(e) =>
-                      setForm((f) => ({
-                        ...f,
-                        isActive:
-                          e.target.value === 'true',
-                      }))
-                    }
-                  >
-                    <option value="true">
-                      Hoạt động
-                    </option>
-                    <option value="false">
-                      Ẩn
-                    </option>
-                  </select>
+                  <SearchableSelect
+                    options={[
+                      { label: 'Hoạt động', value: 'true' },
+                      { label: 'Ẩn', value: 'false' },
+                    ]}
+                    value={form.isActive ? 'true' : 'false'}
+                    onChange={(val) => setForm((f) => ({ ...f, isActive: val === 'true' }))}
+                    creatable={false}
+                    placeholder="Chọn trạng thái..."
+                  />
                 </div>
               </div>
 
@@ -577,11 +593,13 @@ export default function BrandPage() {
 
                 <div className="flex items-center gap-3 mt-1">
                   {form.logoUrl && (
-                    <img
-                      src={form.logoUrl}
-                      alt="logo"
-                      className="size-12 rounded-md object-contain border border-border bg-muted shrink-0 p-1"
-                    />
+                    <MediaThumbnailHover media={pickedMedia} className="shrink-0">
+                      <img
+                        src={form.logoUrl}
+                        alt="logo"
+                        className="size-12 rounded-md object-contain border border-border bg-muted shrink-0 p-1"
+                      />
+                    </MediaThumbnailHover>
                   )}
 
                   <button

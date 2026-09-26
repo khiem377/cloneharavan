@@ -38,10 +38,10 @@ const mediaRegistry = [
   },
   {
     model: ProductVariant,
-    displayName: 'Biến thể sản phẩm',
+    displayName: 'Bien the san pham',
     mediaFields: ['thumbnail.mediaId', 'images.mediaId'],
-    getEntityName: (doc) => doc.nameOverride || doc.sku || 'Biến thể',
-    getAdminUrl: (doc) => `/products/${doc.productId}?tab=variants&highlight=${doc._id}`,
+    getEntityName: (doc) => doc.displayName || doc.nameOverride || doc.sku || 'Bien the',
+    getAdminUrl: (doc) => `/products/${doc.productId?.toString?.() || doc.productId}/variants`,
   },
   {
     model: BlogPost,
