@@ -1,9 +1,9 @@
 const Banner = require('../models/banner.model');
-const Media  = require('../models/media.model');
+const Media = require('../models/media.model');
 const Folder = require('../models/folder.model');
-const { AppError }            = require('../utils/AppError');
+const { AppError } = require('../utils/AppError');
 const { deleteFromCloudinary } = require('../config/cloudinary');
-const { uploadMedia }          = require('./media.service');
+const { uploadMedia } = require('./media.service');
 
 // ---------------------------------------------------------------------------
 // Public: chỉ banner đang visible + đúng lịch
@@ -14,7 +14,7 @@ const getPublicBanners = (type = null) => {
     isVisible: true,
     $and: [
       { $or: [{ startAt: null }, { startAt: { $lte: now } }] },
-      { $or: [{ endAt:   null }, { endAt:   { $gte: now } }] },
+      { $or: [{ endAt: null }, { endAt: { $gte: now } }] },
     ],
   };
   if (type) filter.type = type;
@@ -29,9 +29,9 @@ const getAllBanners = async (query = {}) => {
   if (query.isVisible !== undefined) filter.isVisible = query.isVisible === 'true';
   if (query.type) filter.type = query.type;
 
-  const page  = Math.max(1, parseInt(query.page)  || 1);
+  const page = Math.max(1, parseInt(query.page) || 1);
   const limit = Math.max(1, parseInt(query.limit) || 10);
-  const skip  = (page - 1) * limit;
+  const skip = (page - 1) * limit;
 
   const [data, total] = await Promise.all([
     Banner.find(filter).sort('position').skip(skip).limit(limit).populate('mediaId', 'url folderId size'),
@@ -62,16 +62,16 @@ const createBanner = async (file, data) => {
   }
 
   const banner = await Banner.create({
-    mediaId:   media._id,
-    imageUrl:  media.url,
-    publicId:  media.publicId,
-    title:     data.title,
-    altText:   data.altText   || media.altText || '',
-    link:      data.link,
-    type:      data.type      || 'hero',
+    mediaId: media._id,
+    imageUrl: media.url,
+    publicId: media.publicId,
+    title: data.title,
+    altText: data.altText || media.altText || '',
+    link: data.link,
+    type: data.type || 'hero',
     isVisible: data.isVisible !== undefined ? data.isVisible : true,
-    startAt:   data.startAt   || null,
-    endAt:     data.endAt     || null,
+    startAt: data.startAt || null,
+    endAt: data.endAt || null,
   });
 
   await media.populate({ path: 'folderId', populate: { path: 'parentId', select: 'name slug _id' } });
@@ -107,7 +107,7 @@ const deleteBanner = async (id) => {
   // Nếu banner dùng ảnh từ Media Library → giữ nguyên, không xóa Cloudinary
   // Nếu banner tự upload (không có mediaId) → xóa luôn trên Cloudinary
   if (!banner.mediaId) {
-    await deleteFromCloudinary(banner.publicId).catch(() => {});
+    await deleteFromCloudinary(banner.publicId).catch(() => { });
   }
 };
 
