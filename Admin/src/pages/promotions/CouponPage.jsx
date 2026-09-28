@@ -10,6 +10,8 @@ import {
   useDeleteBulkCoupons,
 } from '@/hooks/useCoupons';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import SearchableSelect from '@/components/ui/SearchableSelect';
+import DateTimePicker from '@/components/ui/DateTimePicker';
 import DataTablePagination from '@/components/ui/DataTablePagination';
 import CurrencyInput from '@/components/ui/CurrencyInput';
 
@@ -53,8 +55,13 @@ const DEFAULT_FORM = {
   usageLimit: '',
 };
 
+import { useSearchParams } from 'react-router-dom';
+
 export default function CouponPage() {
-  const [keyword, setKeyword] = useState('');
+  const [searchParams] = useSearchParams();
+  const initialSearch = searchParams.get('search') || '';
+
+  const [keyword, setKeyword] = useState(initialSearch);
   const [filterStatus, setFilterStatus] = useState('');
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
@@ -604,21 +611,20 @@ export default function CouponPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs font-medium text-foreground">Ngày bắt đầu <span className="text-destructive">*</span></label>
-                    <input
-                      type="datetime-local"
-                      className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-ring transition-colors cursor-pointer"
+                    <DateTimePicker
                       value={form.startDate}
-                      onChange={(e) => setForm((f) => ({ ...f, startDate: e.target.value }))}
+                      onChange={(val) => setForm((f) => ({ ...f, startDate: val }))}
+                      placeholder="Chọn ngày bắt đầu..."
                     />
                   </div>
 
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs font-medium text-foreground">Ngày kết thúc <span className="text-destructive">*</span></label>
-                    <input
-                      type="datetime-local"
-                      className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-ring transition-colors cursor-pointer"
+                    <DateTimePicker
                       value={form.endDate}
-                      onChange={(e) => setForm((f) => ({ ...f, endDate: e.target.value }))}
+                      onChange={(val) => setForm((f) => ({ ...f, endDate: val }))}
+                      placeholder="Chọn ngày kết thúc..."
+                      align="right"
                     />
                   </div>
                 </div>

@@ -1,14 +1,28 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Trash2, Edit, Eye, EyeOff, Search, Loader2, RefreshCw, Pin, Star, ExternalLink } from '@/components/ui/Icons';
 import { useBlogPosts } from '@/hooks/useBlog';
+import { useMediaByIds } from '@/hooks/useMedia';
+import { MediaThumbnailHover } from '@/components/ui/MediaFolderBadge';
 import { blogPostService } from '@/services/blog.service';
 import { toast } from '@/providers/ToastProvider';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import DataTablePagination from '@/components/ui/DataTablePagination';
 import Can from '@/components/auth/Can';
+import SearchableSelect from '@/components/ui/SearchableSelect';
+import useColumnVisibility from '@/hooks/useColumnVisibility';
+import ColumnToggleDropdown from '@/components/ui/ColumnToggleDropdown';
 
 const CLIENT_STORE_URL = import.meta.env.VITE_STORE_FRONTEND_URL || import.meta.env.VITE_CLIENT_URL || 'http://localhost:3000';
+
+const BLOG_POST_COLUMNS = [
+  { id: 'post', label: 'Bài viết', defaultVisible: true, alwaysVisible: true },
+  { id: 'categories', label: 'Danh mục', defaultVisible: true },
+  { id: 'status', label: 'Trạng thái', defaultVisible: true },
+  { id: 'views', label: 'Lượt xem', defaultVisible: true },
+  { id: 'publishedAt', label: 'Ngày đăng', defaultVisible: true },
+  { id: 'actions', label: 'Thao tác', defaultVisible: true, alwaysVisible: true },
+];
 
 const STATUS_BADGE = {
   draft:          'bg-gray-100 text-gray-600',
@@ -23,16 +37,48 @@ const STATUS_LABEL = {
   archived:       'Lưu trữ',
 };
 
+import { useSearchParams } from 'react-router-dom';
+
 export default function BlogPostListPage() {
   const navigate = useNavigate();
-  const [query, setQuery]       = useState({ page: 1, limit: 10 });
-  const [keyword, setKeyword]   = useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialSearch = searchParams.get('search') || '';
+  const rowRefs = useRef({});
+
+  const [keyword, setKeyword]   = useState(initialSearch);
+  const [query, setQuery]       = useState({ page: 1, limit: 10, keyword: initialSearch });
   const [selected, setSelected] = useState([]);
   const [confirm, setConfirm]   = useState(null);
+
+  const columnVisibility = useColumnVisibility('admin_blog_posts_columns', BLOG_POST_COLUMNS);
+  const { isColumnVisible } = columnVisibility;
 
   const { data: resPosts, isLoading: loading, refetch } = useBlogPosts(query);
   const posts = resPosts?.data || [];
   const pagination = resPosts?.pagination || {};
+
+  const resolveId = (v) => (v && typeof v === 'object' ? v._id : v);
+  const thumbIds = posts.map((p) => resolveId(p.thumbnailMediaId)).filter(Boolean);
+  const { data: mediaMap = {} } = useMediaByIds(thumbIds);
+
+  const highlightId = searchParams.get('highlight');
+  useEffect(() => {
+    if (!highlightId) return;
+    blogPostService.locate(highlightId, query.limit)
+      .then((res) => { setQuery(q => ({ ...q, page: res.data?.data?.page || 1 })); })
+      .catch(() => {});
+  }, [highlightId]);
+  useEffect(() => {
+    if (!highlightId || !posts.length) return;
+    const found = posts.find((p) => p._id === highlightId);
+    if (!found) return;
+    setSelected((prev) => prev.includes(highlightId) ? prev : [...prev, highlightId]);
+    setTimeout(() => {
+      const el = rowRefs.current[highlightId];
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
+    setSearchParams((p) => { p.delete('highlight'); return p; }, { replace: true });
+  }, [highlightId, posts]);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -120,17 +166,22 @@ export default function BlogPostListPage() {
             </button>
           </form>
 
-          <select
-            className="h-9 px-3 rounded-md border border-input bg-background text-sm outline-none focus:border-ring"
+          <SearchableSelect
+            className="w-44 shrink-0"
+            options={[
+              { label: 'Tất cả trạng thái', value: '' },
+              { label: 'Nháp', value: 'draft' },
+              { label: 'Chờ duyệt', value: 'pending_review' },
+              { label: 'Đã đăng', value: 'published' },
+              { label: 'Lưu trữ', value: 'archived' },
+            ]}
             value={query.status || ''}
-            onChange={e => setQuery(q => ({ ...q, status: e.target.value || undefined, page: 1 }))}
-          >
-            <option value="">Tất cả trạng thái</option>
-            <option value="draft">Nháp</option>
-            <option value="pending_review">Chờ duyệt</option>
-            <option value="published">Đã đăng</option>
-            <option value="archived">Lưu trữ</option>
-          </select>
+            onChange={(val) => setQuery((q) => ({ ...q, status: val || undefined, page: 1 }))}
+            creatable={false}
+            placeholder="Tất cả trạng thái"
+          />
+
+          <ColumnToggleDropdown columnVisibility={columnVisibility} />
 
           {selected.length > 0 && (
             <button
@@ -149,90 +200,113 @@ export default function BlogPostListPage() {
                 <th className="w-10 px-4 py-3">
                   <input type="checkbox" checked={selected.length === posts.length && posts.length > 0} onChange={toggleAll} />
                 </th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Bài viết</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground w-32">Danh mục</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground w-28">Trạng thái</th>
-                <th className="px-4 py-3 text-right font-medium text-muted-foreground w-28">Lượt xem</th>
-                <th className="px-4 py-3 text-right font-medium text-muted-foreground w-32">Ngày đăng</th>
-                <th className="px-4 py-3 w-28"></th>
+                {isColumnVisible('post') && <th className="px-4 py-3 text-left font-medium text-muted-foreground">Bài viết</th>}
+                {isColumnVisible('categories') && <th className="px-4 py-3 text-left font-medium text-muted-foreground w-32">Danh mục</th>}
+                {isColumnVisible('status') && <th className="px-4 py-3 text-left font-medium text-muted-foreground w-28">Trạng thái</th>}
+                {isColumnVisible('views') && <th className="px-4 py-3 text-right font-medium text-muted-foreground w-28">Lượt xem</th>}
+                {isColumnVisible('publishedAt') && <th className="px-4 py-3 text-right font-medium text-muted-foreground w-32">Ngày đăng</th>}
+                {isColumnVisible('actions') && <th className="px-4 py-3 w-28">Thao tác</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {loading ? (
-                <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">Đang tải...</td></tr>
+                <tr><td colSpan={columnVisibility.visibleCount + 1} className="px-4 py-8 text-center text-muted-foreground">Đang tải...</td></tr>
               ) : posts.length === 0 ? (
-                <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">Chưa có bài viết nào</td></tr>
+                <tr><td colSpan={columnVisibility.visibleCount + 1} className="px-4 py-8 text-center text-muted-foreground">Chưa có bài viết nào</td></tr>
               ) : posts.map(post => (
-                <tr key={post._id} className={`hover:bg-muted/30 transition-colors ${!post.isActive ? 'opacity-60' : ''}`}>
+                <tr
+                  key={post._id}
+                  ref={(el) => { rowRefs.current[post._id] = el; }}
+                  className={`hover:bg-muted/30 transition-colors ${post._id === highlightId || selected.includes(post._id) ? 'bg-primary/8 ring-1 ring-inset ring-primary/30' : ''} ${!post.isActive ? 'opacity-60' : ''}`}
+                >
                   <td className="px-4 py-3">
                     <input type="checkbox" checked={selected.includes(post._id)} onChange={() => toggleSelect(post._id)} />
                   </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-start gap-3">
-                      {(post.thumbnailUrl || post.thumbnailMediaId?.url) && (
-                        <img src={post.thumbnailUrl || post.thumbnailMediaId?.url} alt="" className="w-12 h-9 object-cover rounded shrink-0" />
-                      )}
-                      <div className="min-w-0">
-                        <div className="font-medium text-foreground line-clamp-1 flex items-center gap-1">
-                          {post.isPinned && <Pin className="size-3 text-primary shrink-0" />}
-                          {post.isFeatured && <Star className="size-3 text-yellow-500 shrink-0" />}
-                          {post.title}
+                  {isColumnVisible('post') && (
+                    <td className="px-4 py-3">
+                      <div className="flex items-start gap-3">
+                        {(post.thumbnailUrl || post.thumbnailMediaId?.url) && (() => {
+                          const mid = resolveId(post.thumbnailMediaId);
+                          return (
+                            <MediaThumbnailHover media={mid ? mediaMap[mid] : null} className="w-12 h-9 shrink-0 rounded overflow-hidden">
+                              <img src={post.thumbnailUrl || post.thumbnailMediaId?.url} alt="" className="w-full h-full object-cover" />
+                            </MediaThumbnailHover>
+                          );
+                        })()}
+                        <div className="min-w-0">
+                          <div className="font-medium text-foreground line-clamp-1 flex items-center gap-1">
+                            {post.isPinned && <Pin className="size-3 text-primary shrink-0" />}
+                            {post.isFeatured && <Star className="size-3 text-yellow-500 shrink-0" />}
+                            {post.title}
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-0.5">{post.slug}</div>
+                          <div className="text-xs text-muted-foreground">{post.minRead} phút đọc</div>
                         </div>
-                        <div className="text-xs text-muted-foreground mt-0.5">{post.slug}</div>
-                        <div className="text-xs text-muted-foreground">{post.minRead} phút đọc</div>
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">
-                    {Array.isArray(post.categories) && post.categories.length > 0
-                      ? post.categories.map(c => c.name || c).join(', ')
-                      : (post.categoryId?.name || '—')}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_BADGE[post.status]}`}>
-                      {STATUS_LABEL[post.status]}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-right text-muted-foreground">{post.viewsCount.toLocaleString()}</td>
-                  <td className="px-4 py-3 text-right text-muted-foreground text-xs">
-                    {post.publishedAt ? new Date(post.publishedAt).toLocaleDateString('vi-VN') : '—'}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center justify-end gap-1">
-                      <button
-                        onClick={() => window.open(`${CLIENT_STORE_URL}/blogs/news/${post.slug}`, '_blank')}
-                        title="Xem trên Cửa hàng"
-                        className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        <ExternalLink className="size-4" />
-                      </button>
-                      <Can do="blog.edit">
+                    </td>
+                  )}
+                  {isColumnVisible('categories') && (
+                    <td className="px-4 py-3 text-muted-foreground">
+                      {Array.isArray(post.categories) && post.categories.length > 0
+                        ? post.categories.map(c => c.name || c).join(', ')
+                        : (post.categoryId?.name || '—')}
+                    </td>
+                  )}
+                  {isColumnVisible('status') && (
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_BADGE[post.status]}`}>
+                        {STATUS_LABEL[post.status]}
+                      </span>
+                    </td>
+                  )}
+                  {isColumnVisible('views') && (
+                    <td className="px-4 py-3 text-right text-muted-foreground">{post.viewsCount.toLocaleString()}</td>
+                  )}
+                  {isColumnVisible('publishedAt') && (
+                    <td className="px-4 py-3 text-right text-muted-foreground text-xs">
+                      {post.publishedAt ? new Date(post.publishedAt).toLocaleDateString('vi-VN') : '—'}
+                    </td>
+                  )}
+                  {isColumnVisible('actions') && (
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-1">
                         <button
-                          onClick={() => handleToggleStatus(post)}
-                          title={post.isActive ? 'Ẩn' : 'Hiện'}
+                          onClick={() => window.open(`${CLIENT_STORE_URL}/blogs/news/${post.slug}`, '_blank')}
+                          title="Xem trên Cửa hàng"
                           className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
                         >
-                          {post.isActive ? <Eye className="size-4 text-emerald-600" /> : <EyeOff className="size-4" />}
+                          <ExternalLink className="size-4" />
                         </button>
-                        <button
-                          onClick={() => navigate(`/blog/posts/${post._id}/edit`)}
-                          title="Chỉnh sửa"
-                          className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                        >
-                          <Edit className="size-4" />
-                        </button>
-                      </Can>
-                      <Can do="blog.delete">
-                        <button
-                          onClick={() => setConfirm({ type: 'single', id: post._id, title: post.title })}
-                          title="Xóa"
-                          className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-                        >
-                          <Trash2 className="size-4" />
-                        </button>
-                      </Can>
-                    </div>
-                  </td>
+                        <Can do="blog.edit">
+                          <button
+                            onClick={() => handleToggleStatus(post)}
+                            title={post.isActive ? 'Ẩn' : 'Hiện'}
+                            className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            {post.isActive ? <Eye className="size-4 text-emerald-600" /> : <EyeOff className="size-4" />}
+                          </button>
+                        </Can>
+                        <Can do="blog.edit">
+                          <button
+                            onClick={() => navigate(`/blog/posts/${post._id}/edit`)}
+                            title="Sửa"
+                            className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            <Edit className="size-4" />
+                          </button>
+                        </Can>
+                        <Can do="blog.delete">
+                          <button
+                            onClick={() => setConfirm({ type: 'single', post })}
+                            title="Xóa"
+                            className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                          >
+                            <Trash2 className="size-4" />
+                          </button>
+                        </Can>
+                      </div>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Plus, Edit, Trash2, Search, Eye, EyeOff, Sparkles, Clock } from '@/components/ui/Icons';
 import { useFlashSales } from '@/hooks/useFlashSales';
+import { useMediaByIds } from '@/hooks/useMedia';
+import { MediaThumbnailHover } from '@/components/ui/MediaFolderBadge';
 import { flashSaleService } from '@/services/flashSale.service';
 import { toast } from '@/providers/ToastProvider';
 import DataTablePagination from '@/components/ui/DataTablePagination';
@@ -48,13 +50,41 @@ function StatusBadge({ status }) {
   );
 }
 
+import { useSearchParams } from 'react-router-dom';
+
 export default function FlashSalePage() {
-  const [query, setQuery] = useState({ page: 1, limit: 10, search: '', status: '' });
-  const [searchInput, setSearchInput] = useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialSearch = searchParams.get('search') || '';
+  const rowRefs = useRef({});
+
+  const [query, setQuery] = useState({ page: 1, limit: 10, search: initialSearch, status: '' });
+  const [searchInput, setSearchInput] = useState(initialSearch);
   const [modalTarget, setModalTarget] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
 
   const { data: flashSales, pagination, loading, refetch } = useFlashSales(query);
+
+  const resolveId = (v) => (v && typeof v === 'object' ? v._id : v);
+  const bannerIds = (flashSales || []).map((s) => resolveId(s.banner?.mediaId || s.banner?._id)).filter(Boolean);
+  const { data: mediaMap = {} } = useMediaByIds(bannerIds);
+
+  const highlightId = searchParams.get('highlight');
+  useEffect(() => {
+    if (!highlightId) return;
+    flashSaleService.locate(highlightId, query.limit)
+      .then((res) => { setQuery(q => ({ ...q, page: res.data?.data?.page || 1 })); })
+      .catch(() => {});
+  }, [highlightId]);
+  useEffect(() => {
+    if (!highlightId || !flashSales?.length) return;
+    const found = flashSales.find((s) => s._id === highlightId);
+    if (!found) return;
+    setTimeout(() => {
+      const el = rowRefs.current[highlightId];
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
+    setSearchParams((p) => { p.delete('highlight'); return p; }, { replace: true });
+  }, [highlightId, flashSales]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -165,11 +195,22 @@ export default function FlashSalePage() {
               </thead>
               <tbody>
                 {flashSales.map((item) => (
-                  <tr key={item._id} className="border-b border-border/60 transition-colors hover:bg-muted/40">
+                  <tr
+                    key={item._id}
+                    ref={(el) => { rowRefs.current[item._id] = el; }}
+                    className={`border-b border-border/60 transition-colors hover:bg-muted/40 ${item._id === highlightId ? 'bg-primary/8 ring-1 ring-inset ring-primary/30' : ''}`}
+                  >
                     <td className="px-4 py-3.5 align-middle">
                       <div className="flex items-center gap-3">
                         {item.banner?.url ? (
-                          <img src={item.banner.url} alt="" className="h-12 w-20 object-cover rounded border border-border bg-muted shrink-0" />
+                          (() => {
+                            const mid = resolveId(item.banner?.mediaId || item.banner?._id);
+                            return (
+                              <MediaThumbnailHover media={mid ? mediaMap[mid] : null} className="h-12 w-20 shrink-0 rounded overflow-hidden border border-border bg-muted">
+                                <img src={item.banner.url} alt="" className="h-full w-full object-cover" />
+                              </MediaThumbnailHover>
+                            );
+                          })()
                         ) : (
                           <div className="h-12 w-20 rounded border border-border bg-muted shrink-0 flex items-center justify-center text-xs text-muted-foreground">
                             No Banner
@@ -177,7 +218,20 @@ export default function FlashSalePage() {
                         )}
                         <div className="min-w-0">
                           <p className="font-semibold text-sm text-foreground truncate">{item.name}</p>
-                          {item.description && <p className="text-xs text-muted-foreground truncate max-w-sm">{item.description}</p>}
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-[11px] font-mono text-muted-foreground bg-muted px-1.5 py-0.5 rounded border border-border">
+                              /{item.slug || '—'}
+                            </span>
+                            <a
+                              href={`http://localhost:3000/flash-sale/${item.slug || item._id}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-[11px] font-semibold text-primary hover:underline inline-flex items-center gap-0.5"
+                            >
+                              Xem trang &rarr;
+                            </a>
+                          </div>
+                          {item.description && <p className="text-xs text-muted-foreground truncate max-w-sm mt-0.5">{item.description}</p>}
                         </div>
                       </div>
                     </td>
@@ -232,7 +286,7 @@ export default function FlashSalePage() {
         )}
 
         <DataTablePagination
-          page={page => setQuery((p) => ({ ...p, page }))}
+          page={query.page}
           pageSize={query.limit}
           total={pagination.total || 0}
           totalPages={pagination.totalPages || 1}

@@ -21,13 +21,17 @@ const registerSchema = z.object({
     errorMap: () => ({ message: 'Giới tính phải là male, female hoặc other' }),
   }),
 
-  email:    z.string().email('Email không đúng định dạng'),
-  password: passwordRule,
+  email:     z.string().email('Email không đúng định dạng'),
+  password:  passwordRule,
+  // sessionId: browser UUID từ localStorage, optional, dùng để merge guest interactions
+  sessionId: z.string().optional(),
 });
 
 const loginSchema = z.object({
-  email:    z.string().email('Email không đúng định dạng'),
-  password: z.string().min(1, 'Vui lòng nhập mật khẩu'),
+  email:     z.string().email('Email không đúng định dạng'),
+  password:  z.string().min(1, 'Vui lòng nhập mật khẩu'),
+  // sessionId: browser UUID từ localStorage, optional
+  sessionId: z.string().optional(),
 });
 
 const changePasswordSchema = z

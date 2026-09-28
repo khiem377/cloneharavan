@@ -38,25 +38,71 @@ const getTagBySlug = async (slug) => {
   return tag;
 };
 
-const createTag = async (data) => {
+const { recordAuditLog } = require('./auditLog.service');
+
+const createTag = async (data, user = null, req = null) => {
   data.slug = await ensureUniqueSlug(data.slug || data.name);
-  return Tag.create(data);
+  const tag = await Tag.create(data);
+
+  if (user || req) {
+    await recordAuditLog({
+      req,
+      user,
+      action: 'CREATE',
+      module: 'TAG',
+      targetId: tag._id,
+      targetName: tag.name,
+      oldData: null,
+      newData: tag.toObject(),
+    });
+  }
+
+  return tag;
 };
 
-const updateTag = async (id, data) => {
+const updateTag = async (id, data, user = null, req = null) => {
+  const oldTag = await Tag.findById(id);
+  if (!oldTag) throw new AppError('Không tìm thấy tag', 404);
+
   if (data.name && !data.slug) {
     data.slug = await ensureUniqueSlug(data.name, id);
   } else if (data.slug) {
     data.slug = await ensureUniqueSlug(data.slug, id);
   }
   const tag = await Tag.findByIdAndUpdate(id, data, { new: true, runValidators: true });
-  if (!tag) throw new AppError('Không tìm thấy tag', 404);
+
+  if (user || req) {
+    await recordAuditLog({
+      req,
+      user,
+      action: 'UPDATE',
+      module: 'TAG',
+      targetId: tag._id,
+      targetName: tag.name,
+      oldData: oldTag.toObject(),
+      newData: tag.toObject(),
+    });
+  }
+
   return tag;
 };
 
-const deleteTag = async (id) => {
+const deleteTag = async (id, user = null, req = null) => {
   const tag = await Tag.findByIdAndDelete(id);
   if (!tag) throw new AppError('Không tìm thấy tag', 404);
+
+  if (user || req) {
+    await recordAuditLog({
+      req,
+      user,
+      action: 'DELETE',
+      module: 'TAG',
+      targetId: tag._id,
+      targetName: tag.name,
+      oldData: tag.toObject(),
+      newData: null,
+    });
+  }
 };
 
 const deleteBulkTags = async (ids) => {
@@ -65,9 +111,25 @@ const deleteBulkTags = async (ids) => {
   return { deleted: result.deletedCount };
 };
 
-const toggleTagStatus = async (id, isActive) => {
+const toggleTagStatus = async (id, isActive, user = null, req = null) => {
+  const oldTag = await Tag.findById(id);
+  if (!oldTag) throw new AppError('Không tìm thấy tag', 404);
+
   const tag = await Tag.findByIdAndUpdate(id, { isActive }, { new: true });
-  if (!tag) throw new AppError('Không tìm thấy tag', 404);
+
+  if (user || req) {
+    await recordAuditLog({
+      req,
+      user,
+      action: 'UPDATE',
+      module: 'TAG',
+      targetId: tag._id,
+      targetName: tag.name,
+      oldData: oldTag.toObject(),
+      newData: tag.toObject(),
+    });
+  }
+
   return tag;
 };
 

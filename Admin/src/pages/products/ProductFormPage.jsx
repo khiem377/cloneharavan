@@ -1,12 +1,19 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Plus, Trash2, Loader2, Image, ChevronDown, Layers } from '@/components/ui/Icons';
+import { ArrowLeft, Plus, Trash2, Loader2, Image, ChevronDown, Layers, Search, X } from '@/components/ui/Icons';
 import { toast } from '@/providers/ToastProvider';
 import { useProduct, useCreateProduct, useUpdateProduct } from '@/hooks/useProducts';
+import { useMediaByIds } from '@/hooks/useMedia';
 import { useCategories } from '@/hooks/useCategories';
 import { useBrands, useAllBrands } from '@/hooks/useBrands';
+import { useSuppliers } from '@/hooks/useSuppliers';
 import RichTextEditor from '@/components/ui/RichTextEditor';
 import MediaPickerModal from '@/components/ui/MediaPickerModal';
+import { MediaThumbnailHover } from '@/components/ui/MediaFolderBadge';
+import SearchableSelect from '@/components/ui/SearchableSelect';
+import PriceInput, { formatVND } from '@/components/ui/PriceInput';
+import SortableGalleryItem from '@/components/products/SortableGalleryItem';
+import { buildTree, buildRelationMaps, getAncestors, getDescendants } from '@/utils/treeUtils';
 import {
   DndContext,
   closestCenter,
@@ -17,57 +24,32 @@ import {
 import {
   SortableContext,
   rectSortingStrategy,
-  useSortable,
   arrayMove,
 } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 
-function SortableGalleryItem({ id, url, idx, onRemove }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+const UNIT_OPTIONS = [
+  'Cái', 'Chiếc', 'Hộp', 'Thùng', 'Lốc', 'Lon', 'Bộ', 'Gói', 'Chai', 'Mét', 'Kg', 'Cuộn', 'Bao', 'Tấm', 'Cặp', 'Thỏi'
+];
 
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.4 : 1,
-    cursor: isDragging ? 'grabbing' : 'grab',
-    touchAction: 'none',
-  };
+const ITEM_TYPE_OPTIONS = [
+  { label: 'Hàng hóa (Mua bán)', value: 'merchandise' },
+  { label: 'Thành phẩm', value: 'finished_good' },
+  { label: 'Nguyên vật liệu', value: 'raw_material' },
+  { label: 'Dịch vụ', value: 'service' },
+];
 
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      {...attributes}
-      {...listeners}
-      className="relative aspect-square rounded-md border border-border overflow-hidden bg-muted group select-none hover:ring-2 hover:ring-primary/40 transition-all cursor-grab active:cursor-grabbing"
-    >
-      <img src={url} alt={`gallery-${idx}`} className="size-full object-cover pointer-events-none" />
-      <button
-        type="button"
-        onPointerDown={(e) => e.stopPropagation()}
-        onClick={(e) => {
-          e.stopPropagation();
-          onRemove(idx);
-        }}
-        className="absolute top-1 right-1 size-6 rounded-full bg-destructive/90 hover:bg-destructive text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-xs cursor-pointer shadow-xs z-10 font-bold"
-        title="Xóa ảnh"
-      >
-        ×
-      </button>
-      <div className="absolute inset-x-0 bottom-0 bg-black/60 py-0.5 text-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-        <span className="text-[9px] font-medium text-white">Kéo để đổi vị trí</span>
-      </div>
-    </div>
-  );
-}
 
 const DEFAULT_FORM = {
   name: '',
   sku: '',
+  unit: 'Cái',
+  itemType: 'merchandise',
   categories: [],
   brand: '',
+  supplierId: '',
   price: '',
   salePrice: '',
+  costPrice: '',
   stock: 0,
   description: '',
   status: 'published',
@@ -82,132 +64,120 @@ const DEFAULT_FORM = {
   imageUrls: [],
 };
 
-function formatVND(val) {
-  if (!val || isNaN(val)) return '0';
-  return Number(val).toLocaleString('vi-VN');
-}
+// formatVND imported from @/components/ui/PriceInput
 
-function parseVND(str) {
-  if (!str) return 0;
-  return Number(String(str).replace(/\D/g, '')) || 0;
-}
+// PriceInput imported from @/components/ui/PriceInput
 
-function PriceInput({ value, onChange, placeholder = '0', className = '' }) {
-  const [display, setDisplay] = useState(() => (value ? formatVND(value) : ''));
 
-  useEffect(() => {
-    setDisplay(value ? formatVND(value) : '');
-  }, [value]);
+// buildTree, getAncestors, getDescendants imported from @/utils/treeUtils
 
-  const handleChange = (e) => {
-    const raw = parseVND(e.target.value);
-    setDisplay(raw ? formatVND(raw) : '');
-    onChange(raw);
-  };
-
+// ─── Highlight matched text ────────────────────────────────────────────────
+function HighlightText({ text, query }) {
+  if (!query) return text;
+  const idx = text.toLowerCase().indexOf(query.toLowerCase());
+  if (idx === -1) return text;
   return (
-    <input
-      type="text"
-      className={`h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 placeholder:text-muted-foreground transition-colors ${className}`}
-      value={display}
-      onChange={handleChange}
-      placeholder={placeholder}
-    />
+    <>
+      {text.slice(0, idx)}
+      <mark className="bg-amber-200 dark:bg-amber-700/50 text-foreground rounded-[2px] not-italic">{text.slice(idx, idx + query.length)}</mark>
+      {text.slice(idx + query.length)}
+    </>
   );
-}
-
-function buildTree(flat) {
-  const map = Object.fromEntries((flat || []).map((c) => [c._id, { ...c, children: [] }]));
-  const roots = [];
-  (flat || []).forEach((c) => {
-    const pid = c.parentId?._id || c.parentId;
-    if (pid && map[pid]) map[pid].children.push(map[c._id]);
-    else roots.push(map[c._id]);
-  });
-  return roots;
 }
 
 function CategoryTreeMultiPicker({ categories, value = [], onChange }) {
   const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState({});
+  const [search, setSearch] = useState('');
   const ref = useRef(null);
+  const searchRef = useRef(null);
 
   const tree = buildTree(categories);
+  const { parentMap, childrenMap } = buildRelationMaps(categories);
+  const getAncestorIds = (id) => getAncestors(parentMap, id);
+  const getDescendantIds = (id) => getDescendants(childrenMap, id);
 
-  const parentMap = Object.fromEntries(
-    (categories || []).map((c) => [c._id, c.parentId?._id || c.parentId || null])
-  );
-  const childrenMap = (() => {
-    const m = {};
-    (categories || []).forEach((c) => {
-      const pid = c.parentId?._id || c.parentId;
-      if (pid) { if (!m[pid]) m[pid] = []; m[pid].push(c._id); }
+  // Tính tập node visible khi search
+  const searchQ = search.trim().toLowerCase();
+  const visibleIds = useMemo(() => {
+    if (!searchQ) return null;
+    const matched = new Set();
+    categories.forEach((c) => {
+      if (c.name.toLowerCase().includes(searchQ)) {
+        matched.add(c._id);
+        getAncestorIds(c._id).forEach((a) => matched.add(a));
+      }
     });
-    return m;
-  })();
+    return matched;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQ, categories.length]);
 
-  const getAncestors = (id) => {
-    const result = [];
-    let cur = parentMap[id];
-    while (cur) { result.push(cur); cur = parentMap[cur]; }
-    return result;
-  };
-
-  const getDescendants = (id) => {
-    const kids = childrenMap[id] || [];
-    return [...kids, ...kids.flatMap((kid) => getDescendants(kid))];
-  };
-
+  // Auto-expand ancestors
   useEffect(() => {
-    if (!value?.length || !categories?.length) return;
+    if (!categories?.length) return;
     const toExpand = {};
-    value.forEach((id) => { getAncestors(id).forEach((aid) => { toExpand[aid] = true; }); });
+    if (searchQ && visibleIds) {
+      visibleIds.forEach((id) => { toExpand[id] = true; });
+    } else {
+      value.forEach((id) => { getAncestorIds(id).forEach((a) => { toExpand[a] = true; }); });
+    }
     setExpanded((prev) => ({ ...prev, ...toExpand }));
-  }, [value?.join(','), categories?.length]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQ, value?.join(','), categories?.length]);
 
+  // Close on outside click
   useEffect(() => {
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) {
+        setOpen(false);
+        setSearch('');
+      }
+    };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  const toggleExpand = (id, e) => {
-    e.stopPropagation();
-    setExpanded((p) => ({ ...p, [id]: !p[id] }));
-  };
+  // Focus search input khi mo dropdown
+  useEffect(() => {
+    if (open) setTimeout(() => searchRef.current?.focus(), 60);
+  }, [open]);
+
+  const toggleExpand = (id, e) => { e.stopPropagation(); setExpanded((p) => ({ ...p, [id]: !p[id] })); };
 
   const toggleCheck = (id) => {
     const isChecked = value.includes(id);
     if (isChecked) {
-      const desc = getDescendants(id);
-      onChange(value.filter((v) => v !== id && !desc.includes(v)));
+      onChange(value.filter((v) => v !== id && !getDescendantIds(id).includes(v)));
     } else {
-      const ancestors = getAncestors(id);
-      onChange([...new Set([...value, id, ...ancestors])]);
+      onChange([...new Set([...value, id, ...getAncestorIds(id)])]);
     }
   };
 
   const removeCat = (id, e) => {
     e.stopPropagation();
-    const desc = getDescendants(id);
-    onChange(value.filter((v) => v !== id && !desc.includes(v)));
+    onChange(value.filter((v) => v !== id && !getDescendantIds(id).includes(v)));
   };
 
   const selectedCats = value.map((id) => categories.find((c) => c._id === id)).filter(Boolean);
 
   const renderNode = (node, depth = 0) => {
+    if (visibleIds && !visibleIds.has(node._id)) return null;
     const hasChildren = node.children?.length > 0;
     const isChecked = value.includes(node._id);
     const isExpanded = expanded[node._id];
+    const isSearchMatch = searchQ && node.name.toLowerCase().includes(searchQ);
+
     return (
       <div key={node._id}>
         <div
           style={{ paddingLeft: `${depth * 16 + 6}px` }}
-          className={`flex items-center gap-2 py-1.5 pr-2 rounded-md transition-colors ${isChecked ? 'bg-primary/5' : 'hover:bg-muted'}`}
+          className={`flex items-center gap-2 py-1.5 pr-2 rounded-md transition-colors ${isChecked ? 'bg-primary/5' : 'hover:bg-muted'
+            } ${isSearchMatch ? 'ring-1 ring-inset ring-amber-400/50' : ''}`}
         >
           <button
             type="button"
-            className={`size-4 flex items-center justify-center shrink-0 text-muted-foreground transition-transform ${hasChildren ? 'hover:text-foreground cursor-pointer' : 'opacity-0 pointer-events-none'}`}
+            className={`size-4 flex items-center justify-center shrink-0 text-muted-foreground transition-transform ${hasChildren ? 'hover:text-foreground cursor-pointer' : 'opacity-0 pointer-events-none'
+              }`}
             onClick={(e) => toggleExpand(node._id, e)}
           >
             <ChevronDown size={12} className={isExpanded ? '' : '-rotate-90'} />
@@ -220,49 +190,77 @@ function CategoryTreeMultiPicker({ categories, value = [], onChange }) {
               onChange={() => toggleCheck(node._id)}
             />
             <span className={`text-sm truncate ${isChecked ? 'font-medium text-primary' : 'text-foreground'}`}>
-              {node.name}
+              <HighlightText text={node.name} query={searchQ} />
             </span>
           </label>
         </div>
-        {hasChildren && isExpanded && (
+        {hasChildren && (isExpanded || (visibleIds && visibleIds.has(node._id))) && (
           <div>{node.children.map((child) => renderNode(child, depth + 1))}</div>
         )}
       </div>
     );
   };
 
+  const hasResults = !visibleIds || visibleIds.size > 0;
+
   return (
     <div ref={ref} className="relative">
+      {/* Trigger button */}
       <button
         type="button"
         className="min-h-9 w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-left text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 transition-colors cursor-pointer flex flex-wrap items-center gap-1.5"
         onClick={() => setOpen((v) => !v)}
       >
         {selectedCats.length === 0 ? (
-          <span className="text-muted-foreground py-0.5">-- Chọn danh mục --</span>
+          <span className="text-muted-foreground py-0.5">-- Chon danh muc --</span>
         ) : (
           selectedCats.map((c) => (
             <span key={c._id} className="inline-flex items-center gap-1 rounded-md bg-primary/10 border border-primary/20 text-primary px-2 py-0.5 text-xs font-medium">
               {c.name}
-              <button type="button" className="hover:text-destructive cursor-pointer leading-none" onClick={(e) => removeCat(c._id, e)}>×</button>
+              <button type="button" className="hover:text-destructive cursor-pointer leading-none" onClick={(e) => removeCat(c._id, e)}>x</button>
             </span>
           ))
         )}
         <ChevronDown size={14} className={`ml-auto shrink-0 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
+
+      {/* Dropdown */}
       {open && (
-        <div className="absolute top-full left-0 right-0 z-50 mt-1 max-h-64 overflow-y-auto rounded-md border border-border bg-background shadow-lg p-1">
-          {tree.length === 0 ? (
-            <p className="px-3 py-2 text-xs text-muted-foreground">Không có danh mục</p>
-          ) : tree.map((node) => renderNode(node))}
+        <div className="absolute top-full left-0 right-0 z-50 mt-1 rounded-md border border-border bg-background shadow-lg flex flex-col overflow-hidden">
+          {/* Search */}
+          <div className="p-2 border-b border-border">
+            <div className="relative flex items-center">
+              <Search size={13} className="absolute left-2.5 text-muted-foreground pointer-events-none" />
+              <input
+                ref={searchRef}
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Tim danh muc..."
+                className="h-8 w-full rounded-md border border-input bg-muted/40 pl-8 pr-7 text-xs outline-none focus:border-ring focus:ring-1 focus:ring-ring/20 placeholder:text-muted-foreground"
+              />
+              {search && (
+                <button type="button" onClick={() => setSearch('')} className="absolute right-2 text-muted-foreground hover:text-foreground cursor-pointer">
+                  <X size={11} />
+                </button>
+              )}
+            </div>
+          </div>
+          {/* Tree */}
+          <div className="max-h-56 overflow-y-auto p-1">
+            {!hasResults ? (
+              <p className="px-3 py-3 text-xs text-center text-muted-foreground">Khong tim thay ket qua</p>
+            ) : tree.length === 0 ? (
+              <p className="px-3 py-2 text-xs text-muted-foreground">Khong co danh muc</p>
+            ) : (
+              tree.map((node) => renderNode(node))
+            )}
+          </div>
         </div>
       )}
     </div>
   );
 }
-
-
-
 
 export default function ProductFormPage() {
   const navigate = useNavigate();
@@ -276,6 +274,65 @@ export default function ProductFormPage() {
   const { data: productData, isLoading: productLoading } = useProduct(id);
   const { data: categories = [] } = useCategories({});
   const { data: brands = [] } = useAllBrands();
+  const { data: supplierRes = {} } = useSuppliers({ limit: 100 });
+  const suppliers = supplierRes.data || supplierRes.suppliers || [];
+
+  // Batch-fetch media objects de lay folder info cho thumbnail hover
+  const allMediaIds = useMemo(() => [
+    ...(form.thumbnailMediaId ? [form.thumbnailMediaId] : []),
+    ...(form.imageMediaIds || []),
+  ].filter(Boolean), [form.thumbnailMediaId, form.imageMediaIds]);
+  const { data: mediaMap = {} } = useMediaByIds(allMediaIds);
+
+  // State quản lý tạo biến thể trực tiếp khi tạo sản phẩm mới
+  const [hasVariants, setHasVariants] = useState(false);
+  const [options, setOptions] = useState([]);
+  const [optionInputs, setOptionInputs] = useState({});
+  const [generatedVariants, setGeneratedVariants] = useState([]);
+  const [bulkPrice, setBulkPrice] = useState('');
+  const [bulkSalePrice, setBulkSalePrice] = useState('');
+  const [bulkStock, setBulkStock] = useState('');
+
+  // Cartesian product generator cho biến thể
+  const generateCartesianVariants = (opts, baseSku, basePrice, baseSalePrice, baseStock) => {
+    const validOpts = opts.filter((o) => o.name?.trim() && o.values?.length > 0);
+    if (validOpts.length === 0) return [];
+
+    const cartesian = (args) => {
+      const r = [];
+      const max = args.length - 1;
+      function helper(arr, i) {
+        for (let j = 0; j < args[i].values.length; j++) {
+          const a = [...arr, { name: args[i].name.trim(), value: args[i].values[j].trim() }];
+          if (i === max) r.push(a);
+          else helper(a, i + 1);
+        }
+      }
+      helper([], 0);
+      return r;
+    };
+
+    const combinations = cartesian(validOpts);
+    return combinations.map((attrs, idx) => {
+      const displayName = attrs.map((a) => a.value).join(' / ');
+      const attrSkuPart = attrs
+        .map((a) => a.value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 6))
+        .filter(Boolean)
+        .join('-');
+      const sku = baseSku
+        ? (attrSkuPart ? `${baseSku}-${attrSkuPart}` : `${baseSku}-${idx + 1}`)
+        : (attrSkuPart ? `SKU-${attrSkuPart}` : `SKU-${idx + 1}`);
+
+      return {
+        attributes: attrs,
+        displayName,
+        sku,
+        price: basePrice ? Number(basePrice) : 0,
+        salePrice: baseSalePrice ? Number(baseSalePrice) : 0,
+        stock: baseStock ? Number(baseStock) : 0,
+      };
+    });
+  };
 
   const createMut = useCreateProduct();
   const updateMut = useUpdateProduct();
@@ -286,10 +343,14 @@ export default function ProductFormPage() {
       setForm({
         name: p.name || '',
         sku: p.sku || '',
+        unit: p.unit || 'Cái',
+        itemType: p.itemType || 'merchandise',
         categories: (p.categories || []).map((c) => c._id || c),
         brand: p.brand?._id || p.brand || '',
+        supplierId: p.supplierId?._id || p.supplierId || '',
         price: p.price || 0,
         salePrice: p.salePrice || 0,
+        costPrice: p.costPrice || 0,
         stock: p.stock || 0,
         description: p.description || '',
         status: p.status || 'published',
@@ -298,9 +359,14 @@ export default function ProductFormPage() {
         isHot: p.isHot ?? false,
         specifications: p.specifications || [],
         options: p.options || [],
-        thumbnailMediaId: p.thumbnail?.mediaId || p.thumbnail?._id || '',
+        thumbnailMediaId: (typeof (p.thumbnail?.mediaId || p.thumbnail) === 'object'
+          ? (p.thumbnail?.mediaId?._id || p.thumbnail?._id)
+          : (p.thumbnail?.mediaId || p.thumbnail?._id)) || '',
         thumbnailUrl: p.thumbnail?.url || '',
-        imageMediaIds: p.images?.map((i) => i.mediaId || i._id) || [],
+        imageMediaIds: (p.images || []).map((i) => {
+          const mid = i.mediaId || i;
+          return typeof mid === 'object' ? mid._id : mid;
+        }),
         imageUrls: p.images?.map((i) => i.url) || [],
       });
     }
@@ -381,8 +447,10 @@ export default function ProductFormPage() {
       sku: form.sku.trim(),
       categories: form.categories,
       brand: form.brand || undefined,
+      supplierId: form.supplierId || undefined,
       price: Number(form.price),
       salePrice: Number(form.salePrice) || 0,
+      costPrice: Number(form.costPrice) || 0,
       stock: Number(form.stock),
       description: form.description,
       status: form.status,
@@ -390,10 +458,21 @@ export default function ProductFormPage() {
       isFeatured: form.isFeatured,
       isHot: form.isHot,
       specifications: form.specifications.filter((s) => s.key && s.value),
-      options: form.options,
+      options: (!isEdit && hasVariants) ? options.filter(o => o.name?.trim() && o.values?.length > 0) : form.options,
       thumbnailMediaId: form.thumbnailMediaId,
       imageMediaIds: form.imageMediaIds,
     };
+
+    if (!isEdit && hasVariants && generatedVariants.length > 0) {
+      payload.variants = generatedVariants.map((v) => ({
+        sku: v.sku,
+        displayName: v.displayName,
+        attributes: v.attributes,
+        price: Number(v.price || 0),
+        salePrice: Number(v.salePrice || 0),
+        stock: Number(v.stock || 0),
+      }));
+    }
 
     const opts = {
       onSuccess: () => { toast.success(isEdit ? 'Cập nhật sản phẩm thành công' : 'Tạo sản phẩm thành công'); navigate('/products'); },
@@ -474,24 +553,49 @@ export default function ProductFormPage() {
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1.5">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+              <div className="flex flex-col gap-1.5 sm:col-span-1">
                 <label className="text-xs font-medium text-foreground">
                   Mã SKU
-                  <span className="ml-1.5 text-[10px] font-normal text-muted-foreground">(Tùy chọn — tự sinh nếu để trống)</span>
+                  <span className="ml-1 text-[10px] font-normal text-muted-foreground">(Tùy chọn)</span>
                 </label>
                 <input
                   className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 placeholder:text-muted-foreground transition-colors"
                   value={form.sku}
                   onChange={(e) => setField('sku', e.target.value)}
-                  placeholder="Để trống để tự sinh từ tên sản phẩm"
+                  placeholder="Mã SKU"
                 />
               </div>
-              <div className="flex flex-col gap-1.5">
+
+              <div className="flex flex-col gap-1.5 sm:col-span-1">
+                <label className="text-xs font-medium text-foreground">
+                  Đơn vị tính (ĐVT) <span className="text-destructive ml-0.5">*</span>
+                </label>
+                <SearchableSelect
+                  options={UNIT_OPTIONS}
+                  value={form.unit || 'Cái'}
+                  onChange={(v) => setField('unit', v)}
+                  creatable={true}
+                  placeholder="Chọn hoặc gõ ĐVT..."
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5 sm:col-span-1">
+                <label className="text-xs font-medium text-foreground">Tính chất VTHH</label>
+                <SearchableSelect
+                  options={ITEM_TYPE_OPTIONS}
+                  value={form.itemType || 'merchandise'}
+                  onChange={(v) => setField('itemType', v)}
+                  creatable={false}
+                  placeholder="Chọn tính chất..."
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5 sm:col-span-1">
                 <label className="text-xs font-medium text-foreground">Tồn kho <span className="text-destructive ml-0.5">*</span></label>
                 <input
                   type="number"
-                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 transition-colors"
+                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 transition-colors font-bold"
                   value={form.stock}
                   onChange={(e) => setField('stock', e.target.value)}
                   min="0"
@@ -499,11 +603,19 @@ export default function ProductFormPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-foreground">
+                  Giá nhập vốn (Giá gốc)
+                  <span className="ml-1 text-[10px] font-normal text-muted-foreground">(Quản lý kho/kế toán)</span>
+                </label>
+                <PriceInput value={form.costPrice} onChange={(v) => setField('costPrice', v)} placeholder="5,000,000" />
+              </div>
+
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-medium text-foreground">
                   Giá niêm yết <span className="text-destructive ml-0.5">*</span>
-                  <span className="ml-1.5 text-[10px] font-normal text-muted-foreground">(Biến thể mặc định)</span>
+                  <span className="ml-1.5 text-[10px] font-normal text-muted-foreground">(Giá bán)</span>
                 </label>
                 <PriceInput value={form.price} onChange={(v) => setField('price', v)} placeholder="8,000,000" />
               </div>
@@ -566,6 +678,311 @@ export default function ProductFormPage() {
             </div>
           </div>
 
+          {/* SECTION: BẬT TẠO BIẾN THỂ CÙNG LÚC KHI TẠO MỚI */}
+          {!isEdit && (
+            <div className="rounded-xl border border-border bg-card p-5 text-card-foreground shadow-2xs flex flex-col gap-4">
+              <div className="flex items-center justify-between pb-2 border-b border-border">
+                <div>
+                  <h3 className="text-base font-semibold text-foreground">Biến thể & Phiên bản sản phẩm</h3>
+                  <p className="text-xs text-muted-foreground">Tùy chọn tạo nhiều kích thước, màu sắc cùng lúc (Hoặc để trống tạo sau)</p>
+                </div>
+                <label className="flex items-center gap-2 text-xs font-medium text-foreground cursor-pointer bg-muted/50 px-3 py-1.5 rounded-lg border border-border hover:bg-muted transition-colors">
+                  <input
+                    type="checkbox"
+                    className="size-4 rounded border-input text-primary focus:ring-ring cursor-pointer"
+                    checked={hasVariants}
+                    onChange={(e) => {
+                      const enabled = e.target.checked;
+                      setHasVariants(enabled);
+                      if (enabled && options.length === 0) {
+                        setOptions([{ name: 'Kích thước', values: [] }]);
+                      }
+                    }}
+                  />
+                  <span>Sản phẩm này có nhiều phiên bản</span>
+                </label>
+              </div>
+
+              {hasVariants && (
+                <div className="flex flex-col gap-5 pt-1">
+                  {/* Quản lý các thuộc tính */}
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-semibold text-foreground">1. Danh sách thuộc tính (Ví dụ: Kích thước, Màu sắc)</label>
+                      <button
+                        type="button"
+                        className="inline-flex h-7 items-center justify-center gap-1 rounded-md bg-primary/10 border border-primary/20 text-primary px-2.5 text-xs font-medium hover:bg-primary/20 transition-colors cursor-pointer"
+                        onClick={() => setOptions([...options, { name: '', values: [] }])}
+                      >
+                        <Plus size={13} /> Thêm thuộc tính khác
+                      </button>
+                    </div>
+
+                    {options.map((opt, optIdx) => (
+                      <div key={optIdx} className="p-3.5 rounded-lg border border-border bg-muted/20 flex flex-col gap-2.5">
+                        <div className="flex items-center gap-2">
+                          <input
+                            className="h-8.5 flex-1 max-w-xs rounded-md border border-input bg-background px-3 text-xs font-medium text-foreground outline-none focus:border-ring focus:ring-1 focus:ring-ring/20 placeholder:text-muted-foreground"
+                            placeholder="Tên thuộc tính (VD: Kích thước)"
+                            value={opt.name}
+                            onChange={(e) => {
+                              const copy = [...options];
+                              copy[optIdx].name = e.target.value;
+                              setOptions(copy);
+                            }}
+                          />
+                          <button
+                            type="button"
+                            className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors cursor-pointer ml-auto"
+                            onClick={() => {
+                              const copy = options.filter((_, i) => i !== optIdx);
+                              setOptions(copy);
+                            }}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+
+                        {/* Thêm chip giá trị */}
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {opt.values.map((val, valIdx) => (
+                            <span key={valIdx} className="inline-flex items-center gap-1 rounded-md bg-background border border-border px-2 py-1 text-xs font-medium text-foreground shadow-2xs">
+                              {val}
+                              <button
+                                type="button"
+                                className="text-muted-foreground hover:text-destructive cursor-pointer ml-0.5"
+                                onClick={() => {
+                                  const copy = [...options];
+                                  copy[optIdx].values = copy[optIdx].values.filter((_, i) => i !== valIdx);
+                                  setOptions(copy);
+                                }}
+                              >
+                                <X size={12} />
+                              </button>
+                            </span>
+                          ))}
+
+                          <div className="flex items-center gap-1 flex-1 min-w-[180px]">
+                            <input
+                              className="h-7 flex-1 rounded-md border border-dashed border-input bg-background px-2.5 text-xs text-foreground outline-none focus:border-primary placeholder:text-muted-foreground"
+                              placeholder="Nhập giá trị (VD: Đỏ, Xanh, XL)..."
+                              value={optionInputs[optIdx] || ''}
+                              onChange={(e) => setOptionInputs({ ...optionInputs, [optIdx]: e.target.value })}
+                              onBlur={() => {
+                                const val = (optionInputs[optIdx] || '').trim();
+                                if (val && !opt.values.includes(val)) {
+                                  const copy = [...options];
+                                  copy[optIdx].values.push(val);
+                                  setOptions(copy);
+                                  setOptionInputs({ ...optionInputs, [optIdx]: '' });
+                                }
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ',') {
+                                  e.preventDefault();
+                                  const val = (optionInputs[optIdx] || '').trim();
+                                  if (val && !opt.values.includes(val)) {
+                                    const copy = [...options];
+                                    copy[optIdx].values.push(val);
+                                    setOptions(copy);
+                                    setOptionInputs({ ...optionInputs, [optIdx]: '' });
+                                  }
+                                }
+                              }}
+                            />
+                            {optionInputs[optIdx]?.trim() && (
+                              <button
+                                type="button"
+                                className="h-7 px-2 text-xs rounded bg-primary/10 hover:bg-primary/20 text-primary font-medium cursor-pointer shrink-0 transition-colors"
+                                onClick={() => {
+                                  const val = (optionInputs[optIdx] || '').trim();
+                                  if (val && !opt.values.includes(val)) {
+                                    const copy = [...options];
+                                    copy[optIdx].values.push(val);
+                                    setOptions(copy);
+                                    setOptionInputs({ ...optionInputs, [optIdx]: '' });
+                                  }
+                                }}
+                              >
+                                + Thêm
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Nút bấm sinh ma trận biến thể */}
+                  <div className="flex items-center justify-between pt-2 border-t border-border">
+                    <span className="text-xs font-semibold text-foreground">2. Ma trận phiên bản ({generatedVariants.length} loại)</span>
+                    <button
+                      type="button"
+                      className="inline-flex h-8 items-center justify-center gap-1.5 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer shadow-xs"
+                      onClick={() => {
+                        // Tự động gộp tất cả các giá trị đang gõ dở trong input mà người dùng quên bấm Enter
+                        const latestOpts = options.map((opt, optIdx) => {
+                          const pendingVal = (optionInputs[optIdx] || '').trim();
+                          if (pendingVal && !opt.values.includes(pendingVal)) {
+                            return { ...opt, values: [...opt.values, pendingVal] };
+                          }
+                          return opt;
+                        });
+                        setOptions(latestOpts);
+                        setOptionInputs({});
+
+                        const vars = generateCartesianVariants(latestOpts, form.sku, form.price, form.salePrice, form.stock);
+                        setGeneratedVariants(vars);
+                        if (vars.length > 0) toast.success(`Đã tự động sinh ${vars.length} biến thể`);
+                        else toast.error('Vui lòng nhập ít nhất 1 tên thuộc tính và 1 giá trị');
+                      }}
+                    >
+                      <Layers size={14} /> Sinh ma trận biến thể
+                    </button>
+                  </div>
+
+                  {/* Bảng ma trận biến thể */}
+                  {generatedVariants.length > 0 && (
+                    <div className="flex flex-col gap-3">
+                      {/* Hàng Áp dụng hàng loạt */}
+                      <div className="p-3 rounded-lg bg-muted/40 border border-border flex flex-wrap items-center gap-3 text-xs">
+                        <span className="font-semibold text-foreground shrink-0">Áp dụng cho tất cả:</span>
+                        <div className="flex items-center gap-1.5">
+                          <PriceInput
+                            value={bulkPrice}
+                            onChange={(v) => setBulkPrice(v)}
+                            placeholder="Giá niêm yết"
+                            className="h-8 w-28 text-xs"
+                          />
+                          <button
+                            type="button"
+                            className="h-8 px-2.5 rounded-md bg-background border border-border hover:bg-accent font-medium cursor-pointer"
+                            onClick={() => {
+                              if (!bulkPrice) return;
+                              setGeneratedVariants(generatedVariants.map(v => ({ ...v, price: Number(bulkPrice) })));
+                              toast.success('Đã áp dụng Giá niêm yết cho tất cả');
+                            }}
+                          >
+                            Áp dụng
+                          </button>
+                        </div>
+
+                        <div className="flex items-center gap-1.5">
+                          <PriceInput
+                            value={bulkSalePrice}
+                            onChange={(v) => setBulkSalePrice(v)}
+                            placeholder="Giá KM"
+                            className="h-8 w-28 text-xs"
+                          />
+                          <button
+                            type="button"
+                            className="h-8 px-2.5 rounded-md bg-background border border-border hover:bg-accent font-medium cursor-pointer"
+                            onClick={() => {
+                              setGeneratedVariants(generatedVariants.map(v => ({ ...v, salePrice: Number(bulkSalePrice || 0) })));
+                              toast.success('Đã áp dụng Giá KM cho tất cả');
+                            }}
+                          >
+                            Áp dụng
+                          </button>
+                        </div>
+
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            type="number"
+                            value={bulkStock}
+                            onChange={(e) => setBulkStock(e.target.value)}
+                            placeholder="Tồn kho"
+                            className="h-8 w-20 rounded-md border border-input bg-background px-2 text-xs outline-none focus:border-ring"
+                          />
+                          <button
+                            type="button"
+                            className="h-8 px-2.5 rounded-md bg-background border border-border hover:bg-accent font-medium cursor-pointer"
+                            onClick={() => {
+                              setGeneratedVariants(generatedVariants.map(v => ({ ...v, stock: Number(bulkStock || 0) })));
+                              toast.success('Đã áp dụng Tồn kho cho tất cả');
+                            }}
+                          >
+                            Áp dụng
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Bảng chi tiết */}
+                      <div className="overflow-x-auto rounded-lg border border-border">
+                        <table className="w-full text-xs text-left border-collapse">
+                          <thead className="bg-muted/80 text-foreground font-semibold">
+                            <tr>
+                              <th className="px-3 py-2 border-b border-border">#</th>
+                              <th className="px-3 py-2 border-b border-border">Tên phiên bản</th>
+                              <th className="px-3 py-2 border-b border-border">Mã SKU</th>
+                              <th className="px-3 py-2 border-b border-border">Giá niêm yết</th>
+                              <th className="px-3 py-2 border-b border-border">Giá KM</th>
+                              <th className="px-3 py-2 border-b border-border">Tồn kho</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-border">
+                            {generatedVariants.map((v, vIdx) => (
+                              <tr key={vIdx} className="hover:bg-muted/20">
+                                <td className="px-3 py-2 font-mono text-muted-foreground">{vIdx + 1}</td>
+                                <td className="px-3 py-2 font-medium text-foreground">{v.displayName}</td>
+                                <td className="px-3 py-2">
+                                  <input
+                                    className="h-7 w-28 rounded border border-input bg-background px-2 text-xs font-mono outline-none focus:border-ring"
+                                    value={v.sku}
+                                    onChange={(e) => {
+                                      const copy = [...generatedVariants];
+                                      copy[vIdx].sku = e.target.value;
+                                      setGeneratedVariants(copy);
+                                    }}
+                                  />
+                                </td>
+                                <td className="px-3 py-2">
+                                  <PriceInput
+                                    value={v.price}
+                                    onChange={(val) => {
+                                      const copy = [...generatedVariants];
+                                      copy[vIdx].price = val;
+                                      setGeneratedVariants(copy);
+                                    }}
+                                    className="h-7 w-28 text-xs"
+                                  />
+                                </td>
+                                <td className="px-3 py-2">
+                                  <PriceInput
+                                    value={v.salePrice}
+                                    onChange={(val) => {
+                                      const copy = [...generatedVariants];
+                                      copy[vIdx].salePrice = val;
+                                      setGeneratedVariants(copy);
+                                    }}
+                                    className="h-7 w-28 text-xs"
+                                  />
+                                </td>
+                                <td className="px-3 py-2">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    className="h-7 w-20 rounded border border-input bg-background px-2 text-xs font-bold outline-none focus:border-ring"
+                                    value={v.stock}
+                                    onChange={(e) => {
+                                      const copy = [...generatedVariants];
+                                      copy[vIdx].stock = Number(e.target.value);
+                                      setGeneratedVariants(copy);
+                                    }}
+                                  />
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="rounded-xl border border-border bg-card p-5 text-card-foreground shadow-2xs flex flex-col gap-4">
             <h3 className="text-base font-semibold text-foreground pb-2 border-b border-border">Mô tả sản phẩm</h3>
             <RichTextEditor
@@ -626,10 +1043,12 @@ export default function ProductFormPage() {
               <label className="text-xs font-medium text-foreground">Ảnh đại diện <span className="text-destructive ml-0.5">*</span></label>
               {form.thumbnailUrl ? (
                 <div className="relative aspect-square w-full rounded-lg border border-border overflow-hidden bg-muted group">
-                  <img src={form.thumbnailUrl} alt="thumbnail" className="size-full object-cover" />
+                  <MediaThumbnailHover media={mediaMap[form.thumbnailMediaId]} className="size-full">
+                    <img src={form.thumbnailUrl} alt="thumbnail" className="size-full object-cover" />
+                  </MediaThumbnailHover>
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                     <button type="button" className="inline-flex h-8 items-center justify-center gap-1 rounded-md border border-input bg-background px-3 text-xs font-medium text-foreground hover:bg-accent cursor-pointer" onClick={() => setPickerMode('thumbnail')}>
-                      Thay ảnh
+                      Thay đổi ảnh
                     </button>
                     <button type="button" className="inline-flex h-8 items-center justify-center gap-1 rounded-md bg-destructive/10 text-destructive px-3 text-xs font-medium hover:bg-destructive/20 cursor-pointer" onClick={() => setForm((f) => ({ ...f, thumbnailMediaId: '', thumbnailUrl: '' }))}>
                       Xóa
@@ -670,6 +1089,7 @@ export default function ProductFormPage() {
                           url={url}
                           idx={idx}
                           onRemove={removeGalleryImage}
+                          media={mediaMap[itemId] || null}
                         />
                       );
                     })}
@@ -703,31 +1123,39 @@ export default function ProductFormPage() {
 
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium text-foreground">Thương hiệu</label>
-              <select
-                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 transition-colors cursor-pointer"
+              <SearchableSelect
+                options={(Array.isArray(brands) ? brands : []).map((b) => ({ label: b.name, value: b._id }))}
                 value={form.brand}
-                onChange={(e) => setField('brand', e.target.value)}
-              >
-                <option value="">-- Chọn thương hiệu --</option>
-                {(Array.isArray(brands) ? brands : []).map((b) => (
-                  <option key={b._id} value={b._id}>{b.name}</option>
-                ))}
-              </select>
+                onChange={(v) => setField('brand', v)}
+                creatable={false}
+                placeholder="-- Chọn thương hiệu --"
+              />
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-foreground">Trạng thái sản phẩm
+              <label className="text-xs font-medium text-foreground">Nhà Cung Cấp (Procurement)</label>
+              <SearchableSelect
+                options={(Array.isArray(suppliers) ? suppliers : []).map((s) => ({ label: `${s.name} (${s.code})`, value: s._id }))}
+                value={form.supplierId}
+                onChange={(v) => setField('supplierId', v)}
+                creatable={false}
+                placeholder="-- Chọn nhà cung cấp mặc định --"
+              />
+            </div>
 
-              </label>
-              <select
-                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 transition-colors cursor-pointer"
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-foreground">Trạng thái sản phẩm</label>
+              <SearchableSelect
+                options={[
+                  { label: 'Công khai', value: 'published' },
+                  { label: 'Nháp', value: 'draft' },
+                  { label: 'Hết hàng', value: 'out_of_stock' },
+                ]}
                 value={form.status}
-                onChange={(e) => setField('status', e.target.value)}
-              >
-                <option value="published">Công khai</option>
-                <option value="draft">Nháp</option>
-                <option value="out_of_stock">Hết hàng</option>
-              </select>
+                onChange={(v) => setField('status', v)}
+                creatable={false}
+                placeholder="Chọn trạng thái..."
+              />
             </div>
 
             <div className="flex flex-col gap-2 pt-2 border-t border-border">

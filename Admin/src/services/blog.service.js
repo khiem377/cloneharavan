@@ -4,6 +4,7 @@ export const blogPostService = {
   getAll:  (params) => api.get('/blog-posts', { params }),
   getById: (id)     => api.get(`/blog-posts/id/${id}`),
   getBySlug: (slug) => api.get(`/blog-posts/${slug}`),
+  locate:  (id, limit) => api.get('/blog-posts/locate', { params: { id, limit } }),
   create:  (data)   => api.post('/blog-posts', data),
   update:  (id, data) => api.put(`/blog-posts/${id}`, data),
   remove:  (id)     => api.delete(`/blog-posts/${id}`),

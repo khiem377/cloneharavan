@@ -17,13 +17,15 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import {
   ChevronRight, ChevronDown, Plus, Trash2, Loader2,
-  GripVertical, ArrowLeft, Save, ExternalLink,
+  GripVertical, ArrowLeft, Save, ExternalLink, CategoriesIcon,
 } from '@/components/ui/Icons';
 import { useMenu, useUpdateMenu } from '@/hooks/useMenus';
-import { useCategories } from '@/hooks/useCategories';
+import { useCategories, useAllCategoriesSelect } from '@/hooks/useCategories';
 import { useAllBrands } from '@/hooks/useBrands';
 import { useBlogCategories } from '@/hooks/useBlog';
+import { flattenTree, buildTree } from '@/utils/treeUtils';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import { toast } from '@/providers/ToastProvider';
 
 // ─── Utils ────────────────────────────────────────────────────────────────────
 const nanoid = () => Math.random().toString(36).slice(2, 10);
@@ -61,27 +63,7 @@ const BADGE_COLORS = [
   { label: 'Tím', value: '#a855f7' },
 ];
 
-// ─── Flatten / Tree helpers ────────────────────────────────────────────────────
-function flattenTree(items, depth = 0, parentId = null) {
-  return items.flatMap((item) => [
-    { ...item, depth, parentId, children: item.children || [] },
-    ...flattenTree(item.children || [], depth + 1, item._id),
-  ]);
-}
-
-function buildTree(flat) {
-  const map = {};
-  flat.forEach((item) => { map[item._id] = { ...item, children: [] }; });
-  const roots = [];
-  flat.forEach((item) => {
-    if (item.parentId && map[item.parentId]) {
-      map[item.parentId].children.push(map[item._id]);
-    } else {
-      roots.push(map[item._id]);
-    }
-  });
-  return roots;
-}
+// flattenTree, buildTree được import từ @/utils/treeUtils
 
 // ─── Sortable Item Row ─────────────────────────────────────────────────────────
 function SortableItemRow({ item, depth, isSelected, onSelect, onAdd, onDelete, expanded, onToggle, hasChildren }) {
@@ -177,7 +159,7 @@ function SortableItemRow({ item, depth, isSelected, onSelect, onAdd, onDelete, e
 }
 
 // ─── Item Form Panel ───────────────────────────────────────────────────────────
-function ItemFormPanel({ item, onChange, categories, brands, blogCats }) {
+function ItemFormPanel({ item, onChange, categories, brands, blogCats, flatCategoryOptions = [] }) {
   if (!item) {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground p-8">
@@ -190,7 +172,7 @@ function ItemFormPanel({ item, onChange, categories, brands, blogCats }) {
   const set = (key, val) => onChange({ ...item, [key]: val });
 
   const refOptions = {
-    category: categories,
+    category: flatCategoryOptions.length > 0 ? flatCategoryOptions : categories,
     brand: brands,
     blog: blogCats,
   };
@@ -216,13 +198,64 @@ function ItemFormPanel({ item, onChange, categories, brands, blogCats }) {
         <select
           className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 transition-colors"
           value={item.linkType}
-          onChange={(e) => set('linkType', e.target.value)}
+          onChange={(e) => {
+            const newType = e.target.value;
+            const updates = { linkType: newType };
+            if (newType === 'none') {
+              updates.customUrl = '';
+              updates.linkRef = null;
+            }
+            onChange({ ...item, ...updates });
+          }}
         >
           {Object.entries(LINK_TYPE_LABELS).map(([k, v]) => (
             <option key={k} value={k}>{v}</option>
           ))}
         </select>
       </div>
+
+      {/* Ref select: category / brand / blog - Hiển thị chọn từ API */}
+      {(item.linkType === 'category' || item.linkType === 'brand' || item.linkType === 'blog') && (
+        <div className="flex flex-col gap-1.5 bg-primary/5 p-3 rounded-lg border border-primary/20">
+          <label className="text-xs font-semibold text-primary flex items-center justify-between">
+            <span>Chọn {LINK_TYPE_LABELS[item.linkType]} (từ hệ thống)</span>
+            <span className="text-[11px] font-normal text-muted-foreground">Tự động điền tên & link</span>
+          </label>
+          <select
+            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 transition-colors font-medium"
+            value={item.linkRef || ''}
+            onChange={(e) => {
+              const selectedId = e.target.value;
+              const options = refOptions[item.linkType] || [];
+              const selectedObj = options.find((o) => o._id === selectedId);
+
+              const updates = { linkRef: selectedId || null };
+              if (selectedObj) {
+                // Tự động điền Tên hiển thị
+                updates.label = selectedObj.name;
+                // Tự động cập nhật URL chuẩn SEO
+                if (item.linkType === 'category') {
+                  updates.customUrl = `/collections/${selectedObj.slug || selectedObj._id}`;
+                } else if (item.linkType === 'brand') {
+                  updates.customUrl = `/brands/${selectedObj.slug || selectedObj._id}`;
+                } else if (item.linkType === 'blog') {
+                  updates.customUrl = `/blogs/${selectedObj.slug || selectedObj._id}`;
+                }
+              }
+              onChange({ ...item, ...updates });
+            }}
+          >
+            <option value="">-- Bấm vào đây để chọn {LINK_TYPE_LABELS[item.linkType]} --</option>
+            {(refOptions[item.linkType] || []).map((opt) => (
+              <option key={opt._id} value={opt._id}>
+                {item.linkType === 'category' && opt.depth
+                  ? `${'　'.repeat(opt.depth)}└ ${opt.name}`
+                  : opt.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {/* URL tùy chỉnh */}
       {item.linkType === 'url' && (
@@ -234,25 +267,6 @@ function ItemFormPanel({ item, onChange, categories, brands, blogCats }) {
             onChange={(e) => set('customUrl', e.target.value)}
             placeholder="/pages/chinh-sach hoặc https://..."
           />
-        </div>
-      )}
-
-      {/* Ref select: category / brand / blog */}
-      {(item.linkType === 'category' || item.linkType === 'brand' || item.linkType === 'blog') && (
-        <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-medium text-foreground">
-            {LINK_TYPE_LABELS[item.linkType]}
-          </label>
-          <select
-            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 transition-colors"
-            value={item.linkRef || ''}
-            onChange={(e) => set('linkRef', e.target.value || null)}
-          >
-            <option value="">-- Chọn --</option>
-            {(refOptions[item.linkType] || []).map((opt) => (
-              <option key={opt._id} value={opt._id}>{opt.name}</option>
-            ))}
-          </select>
         </div>
       )}
 
@@ -328,11 +342,19 @@ export default function MenuEditorPage() {
   const updateMut = useUpdateMenu();
 
   const { data: rawCategories = [] } = useCategories({});
+  const { data: rawCategoryTree = [] } = useAllCategoriesSelect(true);
   const { data: brands = [] } = useAllBrands();
   const { data: rawBlogCats = [] } = useBlogCategories({});
 
   const categories = Array.isArray(rawCategories) ? rawCategories : rawCategories?.data ?? [];
+  const categoryTree = Array.isArray(rawCategoryTree) ? rawCategoryTree : rawCategoryTree?.data ?? [];
   const blogCats = Array.isArray(rawBlogCats) ? rawBlogCats : rawBlogCats?.data ?? [];
+
+  const flatCategoryOptions = flattenTree(
+    categoryTree.length > 0 && categoryTree[0].children !== undefined
+      ? categoryTree
+      : buildTree(categories)
+  );
 
   const [flatItems, setFlatItems] = useState([]);
   const [expandedIds, setExpandedIds] = useState(new Set());
@@ -341,13 +363,92 @@ export default function MenuEditorPage() {
   const [activeId, setActiveId] = useState(null);
   const [menuName, setMenuName] = useState('');
 
+  const handleSyncCategories = () => {
+    const treeToUse =
+      categoryTree.length > 0 && categoryTree[0].children !== undefined
+        ? categoryTree
+        : buildTree(categories);
+
+    if (!treeToUse || treeToUse.length === 0) {
+      toast.error('Không tìm thấy danh mục nào trong hệ thống để đồng bộ');
+      return;
+    }
+
+    // 1. Tìm hoặc tạo mục "Danh mục sản phẩm"
+    let dmcItem = flatItems.find(
+      (i) => (i.label?.toLowerCase().includes('danh mục') || i.label?.toLowerCase().includes('sản phẩm')) && i.depth === 0
+    );
+
+    let nextFlat = [...flatItems];
+
+    if (!dmcItem) {
+      dmcItem = makeItem({
+        label: 'Danh mục sản phẩm',
+        linkType: 'none',
+        megaMenu: true,
+        depth: 0,
+        parentId: null,
+      });
+      const homeIdx = nextFlat.findIndex((i) => i.label?.toLowerCase().includes('trang chủ'));
+      if (homeIdx !== -1) {
+        nextFlat.splice(homeIdx + 1, 0, dmcItem);
+      } else {
+        nextFlat.unshift(dmcItem);
+      }
+    }
+
+    // 2. Chuyển đổi cây danh mục thành các menu items có phân cấp cha - con
+    const mapCategoryNode = (cat, depth, parentId) => {
+      const id = nanoid();
+      const childItems = (cat.children || []).map((ch) =>
+        mapCategoryNode(ch, depth + 1, id)
+      );
+      return {
+        _id: id,
+        label: cat.name,
+        linkType: 'category',
+        linkRef: cat._id,
+        customUrl: `/collections/${cat.slug || cat._id}`,
+        openInNewTab: false,
+        badge: '',
+        badgeColor: '#ef4444',
+        megaMenu: depth === 1,
+        isActive: cat.isActive !== false,
+        parentId,
+        depth,
+        children: childItems,
+      };
+    };
+
+    const newChildrenTree = treeToUse.map((cat) => mapCategoryNode(cat, 1, dmcItem._id));
+
+    // 3. Xoá toàn bộ các con cũ dưới dmcItem
+    const dmcIdx = nextFlat.findIndex((i) => i._id === dmcItem._id);
+    let end = dmcIdx + 1;
+    while (end < nextFlat.length && nextFlat[end].depth > dmcItem.depth) {
+      end++;
+    }
+    nextFlat.splice(dmcIdx + 1, end - (dmcIdx + 1));
+
+    // 4. Flatten các con mới và chèn ngay sau dmcItem
+    const flatNewChildren = flattenTree(newChildrenTree, 1, dmcItem._id);
+    nextFlat.splice(dmcIdx + 1, 0, ...flatNewChildren);
+
+    setFlatItems(nextFlat);
+    const childIdsToExpand = flatNewChildren
+      .filter((i) => i.children?.length > 0 || flatNewChildren.some((f) => f.parentId === i._id))
+      .map((i) => i._id);
+    setExpandedIds((prev) => new Set([...prev, dmcItem._id, ...childIdsToExpand]));
+    toast.success(`Đã nạp ${treeToUse.length} nhóm danh mục cha - con! Hãy bấm 'Lưu menu' để lưu lại.`);
+  };
+
   useEffect(() => {
     if (!menu) return;
     setMenuName(menu.name || '');
     const flat = flattenTree(menu.items || []);
     setFlatItems(flat);
-    // Expand tất cả cấp 1 mặc định
-    setExpandedIds(new Set(flat.filter((i) => i.depth === 0 && i.children?.length > 0).map((i) => i._id)));
+    // Expand tất cả cấp 0 và các mục cha mặc định để dễ nhìn cấu trúc
+    setExpandedIds(new Set(flat.filter((i) => i.depth === 0 || i.children?.length > 0 || flat.some((f) => f.parentId === i._id)).map((i) => i._id)));
   }, [menu]);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
@@ -396,7 +497,15 @@ export default function MenuEditorPage() {
   const handleAddChild = (parentId) => {
     const parent = flatItems.find((i) => i._id === parentId);
     if (!parent) return;
-    const item = makeItem({ parentId, depth: parent.depth + 1 });
+    const isCategoryContainer =
+      parent.label?.toLowerCase().includes('danh mục') ||
+      parent.megaMenu ||
+      parent.linkType === 'none';
+    const item = makeItem({
+      parentId,
+      depth: parent.depth + 1,
+      linkType: isCategoryContainer ? 'category' : 'url',
+    });
     // Insert right after parent + its subtree
     setFlatItems((prev) => {
       const parentIdx = prev.findIndex((i) => i._id === parentId);
@@ -483,12 +592,24 @@ export default function MenuEditorPage() {
         <div className="flex flex-col w-full sm:w-1/2 lg:w-2/5 rounded-xl border border-border bg-card shadow-2xs overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30">
             <span className="text-sm font-semibold text-foreground">Cấu trúc menu</span>
-            <button
-              className="inline-flex h-7 items-center justify-center gap-1 rounded-md bg-primary px-2.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer"
-              onClick={handleAddRoot}
-            >
-              <Plus size={12} /> Thêm mục
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                className="inline-flex h-7 items-center justify-center gap-1.5 rounded-md border border-border bg-background hover:bg-accent px-2.5 text-xs font-medium text-foreground transition-colors cursor-pointer shadow-2xs"
+                onClick={handleSyncCategories}
+                title="Tự động đồng bộ toàn bộ cây danh mục sản phẩm (cha - con) vào menu"
+              >
+                <CategoriesIcon size={12} className="text-primary" />
+                <span className="hidden sm:inline">Đồng bộ danh mục</span>
+                <span className="sm:hidden">Đồng bộ</span>
+              </button>
+              <button
+                className="inline-flex h-7 items-center justify-center gap-1 rounded-md bg-primary px-2.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer shadow-2xs"
+                onClick={handleAddRoot}
+              >
+                <Plus size={12} /> Thêm mục
+              </button>
+            </div>
           </div>
 
           <div className="flex-1 overflow-y-auto">
@@ -561,6 +682,7 @@ export default function MenuEditorPage() {
             categories={categories}
             brands={brands}
             blogCats={blogCats}
+            flatCategoryOptions={flatCategoryOptions}
           />
         </div>
       </div>
@@ -579,6 +701,7 @@ export default function MenuEditorPage() {
             categories={categories}
             brands={brands}
             blogCats={blogCats}
+            flatCategoryOptions={flatCategoryOptions}
           />
         </div>
       )}

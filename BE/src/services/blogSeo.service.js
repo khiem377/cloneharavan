@@ -1,6 +1,6 @@
 const { stripHtml } = require('../utils/htmlUtils');
 
-const SITE_NAME     = process.env.SITE_NAME     || 'EGA Điện Máy';
+const SITE_NAME     = process.env.SITE_NAME     || 'SHOP';
 const SITE_URL      = process.env.SITE_URL       || 'http://localhost:3000';
 const SITE_LOGO_URL = process.env.SITE_LOGO_URL  || `${SITE_URL}/logo.png`;
 

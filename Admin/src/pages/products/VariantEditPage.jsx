@@ -1,11 +1,15 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Plus, Trash2, Loader2, Image, Check, Save } from '@/components/ui/Icons';
+import { ArrowLeft, Loader2, Image, Check, Save, Plus } from '@/components/ui/Icons';
 import { toast } from '@/providers/ToastProvider';
 import { useProduct } from '@/hooks/useProducts';
 import { useVariant, useUpdateVariant } from '@/hooks/useProductVariants';
 import RichTextEditor from '@/components/ui/RichTextEditor';
 import MediaPickerModal from '@/components/ui/MediaPickerModal';
+import SearchableSelect from '@/components/ui/SearchableSelect';
+import PriceInput from '@/components/ui/PriceInput';
+import SpecsEditor from '@/components/products/SpecsEditor';
+import SortableGalleryItem from '@/components/products/SortableGalleryItem';
 import {
   DndContext,
   closestCenter,
@@ -16,147 +20,15 @@ import {
 import {
   SortableContext,
   rectSortingStrategy,
-  useSortable,
   arrayMove,
 } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 
-/* ─── helpers ─── */
-function fmtVND(v) {
-  if (!v && v !== 0) return '';
-  const n = Number(v);
-  return isNaN(n) || n === 0 ? '' : n.toLocaleString('vi-VN');
-}
-function parseVND(s) {
-  if (!s) return null;
-  const n = Number(String(s).replace(/\D/g, ''));
-  return isNaN(n) || n === 0 ? null : n;
-}
 
-/* ─── Price input (same style as ProductFormPage) ─── */
-function PriceInput({ value, onChange, placeholder = '0' }) {
-  const [display, setDisplay] = useState(() => fmtVND(value));
-  useEffect(() => { setDisplay(fmtVND(value)); }, [value]);
-  return (
-    <div className="relative">
-      <input
-        type="text"
-        className="h-9 w-full rounded-md border border-input bg-background pl-3 pr-10 text-sm text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 placeholder:text-muted-foreground transition-colors"
-        value={display}
-        placeholder={placeholder}
-        onChange={(e) => {
-          const raw = parseVND(e.target.value);
-          setDisplay(raw ? fmtVND(raw) : '');
-          onChange(raw);
-        }}
-      />
-      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">₫</span>
-    </div>
-  );
-}
+// PriceInput, SpecsEditor, SortableGalleryItem imported from shared components
 
-/* ─── Specs editor (same structure as product) ─── */
-function SpecsEditor({ specs = [], onChange }) {
-  const add = () => onChange([...specs, { group: 'Thông tin chung', key: '', value: '' }]);
-  const remove = (i) => onChange(specs.filter((_, idx) => idx !== i));
-  const update = (i, field, val) => onChange(specs.map((s, idx) => idx === i ? { ...s, [field]: val } : s));
-
-  return (
-    <div className="flex flex-col gap-3">
-      {specs.length > 0 && (
-        <div className="rounded-lg border border-border overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-muted/40 border-b border-border">
-                <th className="text-left px-3 py-2 text-xs font-medium text-muted-foreground w-32">Nhóm</th>
-                <th className="text-left px-3 py-2 text-xs font-medium text-muted-foreground">Tên thông số</th>
-                <th className="text-left px-3 py-2 text-xs font-medium text-muted-foreground">Giá trị</th>
-                <th className="w-10" />
-              </tr>
-            </thead>
-            <tbody>
-              {specs.map((s, i) => (
-                <tr key={i} className="border-b border-border last:border-0">
-                  <td className="px-2 py-1.5">
-                    <input
-                      className="h-7 w-full rounded border border-transparent bg-transparent px-2 text-sm outline-none focus:border-input focus:bg-background hover:bg-muted/40 transition-colors text-foreground"
-                      value={s.group}
-                      onChange={(e) => update(i, 'group', e.target.value)}
-                      placeholder="Nhóm"
-                    />
-                  </td>
-                  <td className="px-2 py-1.5">
-                    <input
-                      className="h-7 w-full rounded border border-transparent bg-transparent px-2 text-sm outline-none focus:border-input focus:bg-background hover:bg-muted/40 transition-colors text-foreground"
-                      value={s.key}
-                      onChange={(e) => update(i, 'key', e.target.value)}
-                      placeholder="VD: CPU, RAM, Màu sắc..."
-                    />
-                  </td>
-                  <td className="px-2 py-1.5">
-                    <input
-                      className="h-7 w-full rounded border border-transparent bg-transparent px-2 text-sm outline-none focus:border-input focus:bg-background hover:bg-muted/40 transition-colors text-foreground"
-                      value={s.value}
-                      onChange={(e) => update(i, 'value', e.target.value)}
-                      placeholder="Giá trị"
-                    />
-                  </td>
-                  <td className="px-2 py-1.5 text-center">
-                    <button type="button" onClick={() => remove(i)} className="size-6 flex items-center justify-center text-muted-foreground hover:text-destructive cursor-pointer">
-                      <Trash2 size={13} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-      <button
-        type="button"
-        onClick={add}
-        className="inline-flex items-center gap-1.5 text-sm text-primary hover:text-primary/80 transition-colors cursor-pointer w-fit"
-      >
-        <Plus size={14} /> Thêm thông số
-      </button>
-    </div>
-  );
-}
-
-/* ─── Image grid (Sortable dnd-kit gallery) ─── */
-function SortableImageTile({ id, url, idx, onRemove }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.4 : 1,
-    cursor: isDragging ? 'grabbing' : 'grab',
-    touchAction: 'none',
-  };
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      {...attributes}
-      {...listeners}
-      className="relative size-20 rounded-lg overflow-hidden border border-border group bg-muted select-none cursor-grab active:cursor-grabbing hover:ring-2 hover:ring-primary/40 transition-all"
-    >
-      <img src={url} alt="" className="size-full object-cover pointer-events-none" />
-      <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-        <button
-          type="button"
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={(e) => { e.stopPropagation(); onRemove(idx); }}
-          className="size-6 rounded-full bg-destructive/90 text-destructive-foreground flex items-center justify-center text-xs hover:scale-105 cursor-pointer font-bold shadow-xs"
-          title="Xóa ảnh"
-        >
-          ×
-        </button>
-      </div>
-    </div>
-  );
-}
+const UNIT_OPTIONS = [
+  'Cái', 'Chiếc', 'Hộp', 'Thùng', 'Lốc', 'Lon', 'Bộ', 'Gói', 'Chai', 'Mét', 'Kg', 'Cuộn', 'Bao', 'Tấm', 'Cặp'
+];
 
 function ImageGrid({ urls = [], ids = [], onAdd, onRemove, onReorder }) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
@@ -180,7 +52,7 @@ function ImageGrid({ urls = [], ids = [], onAdd, onRemove, onReorder }) {
         <div className="flex flex-wrap gap-2">
           {urls.map((url, i) => {
             const tileId = ids[i] || `v-img-${i}`;
-            return <SortableImageTile key={tileId} id={tileId} url={url} idx={i} onRemove={onRemove} />;
+            return <SortableGalleryItem key={tileId} id={tileId} url={url} idx={i} onRemove={onRemove} size="sm" />;
           })}
           <button
             type="button"
@@ -214,6 +86,7 @@ export default function VariantEditPage() {
     if (!variant) return null;
     return {
       sku: variant.sku || '',
+      unit: variant.unit || 'Cái',
       price: variant.price ?? null,
       salePrice: variant.salePrice ?? null,
       stock: variant.stock ?? 0,
@@ -435,15 +308,28 @@ export default function VariantEditPage() {
               />
             </div>
 
-            {/* SKU */}
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-foreground">Mã SKU <span className="text-destructive">*</span></label>
-              <input
-                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm font-mono text-foreground uppercase outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 transition-colors"
-                value={form.sku}
-                onChange={(e) => set({ sku: e.target.value.toUpperCase() })}
-                placeholder="VD: SP001-DO-256GB"
-              />
+            {/* SKU & Unit */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-foreground">Mã SKU <span className="text-destructive">*</span></label>
+                <input
+                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm font-mono text-foreground uppercase outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 transition-colors"
+                  value={form.sku}
+                  onChange={(e) => set({ sku: e.target.value.toUpperCase() })}
+                  placeholder="VD: SP001-DO-256GB"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-foreground">Đơn vị tính (ĐVT)</label>
+                <SearchableSelect
+                  options={UNIT_OPTIONS}
+                  value={form.unit || 'Cái'}
+                  onChange={(v) => set({ unit: v })}
+                  creatable={true}
+                  placeholder="Chọn hoặc gõ ĐVT..."
+                />
+              </div>
             </div>
 
             {/* Price + Sale */}

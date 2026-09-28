@@ -6,6 +6,7 @@ const { requirePermission } = require('../middleware/permission.middleware');
 
 router.get('/', brandController.getBrands);
 router.get('/admin', protect, requirePermission('brand.view'), brandController.getBrandsAdmin);
+router.get('/admin/locate', protect, requirePermission('brand.view'), brandController.locateBrand);
 router.get('/:id', brandController.getBrandById);
 
 router.post('/', protect, requirePermission('brand.create'), brandController.createBrand);

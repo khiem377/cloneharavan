@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Loader2 } from '@/components/ui/Icons';
+import { ArrowLeft, Loader2, RefreshCwIcon, ImageIcon, GlobeIcon } from '@/components/ui/Icons';
 import { useBlogPost, useBlogCategories, useBlogTags } from '@/hooks/useBlog';
 import { blogPostService } from '@/services/blog.service';
 import { toast } from '@/providers/ToastProvider';
 import RichTextEditor from '@/components/ui/RichTextEditor';
 import MediaPickerModal from '@/components/ui/MediaPickerModal';
+import { MediaThumbnailHover } from '@/components/ui/MediaFolderBadge';
 import MultiSelectSearch from '@/components/ui/MultiSelectSearch';
+import SearchableSelect from '@/components/ui/SearchableSelect';
+import DateTimePicker from '@/components/ui/DateTimePicker';
 import useAuthStore from '@/store/authStore';
 
 const decodeHtml = (html) => {
@@ -39,20 +42,21 @@ const DEFAULT_FORM = {
 
 export default function BlogPostFormPage() {
   const navigate = useNavigate();
-  const { id }   = useParams();
-  const isEdit   = Boolean(id);
+  const { id } = useParams();
+  const isEdit = Boolean(id);
   const { user } = useAuthStore();
 
   const { data: existing, isLoading: loadingPost } = useBlogPost(id);
   const { data: categoriesData } = useBlogCategories({ limit: 100 });
-  const { data: allTagsData }    = useBlogTags({ limit: 200 });
+  const { data: allTagsData } = useBlogTags({ limit: 200 });
 
   const categories = categoriesData?.data || [];
   const allTags = allTagsData?.data || [];
 
-  const [form, setForm]           = useState(DEFAULT_FORM);
-  const [saving, setSaving]       = useState(false);
+  const [form, setForm] = useState(DEFAULT_FORM);
+  const [saving, setSaving] = useState(false);
   const [showMedia, setShowMedia] = useState(false);
+  const [pickedMedia, setPickedMedia] = useState(null); // track full media object for folder hover
 
   const FRONTEND_URL = import.meta.env.VITE_FRONTEND_URL || 'http://localhost:3000';
 
@@ -67,7 +71,8 @@ export default function BlogPostFormPage() {
       .replace(/\s+/g, '-')
       .replace(/-+/g, '-') || 'bai-viet';
 
-  const canonicalUrl = `${FRONTEND_URL}/blog/${computedSlug(form.title)}`;
+  const activeSlug = form.slug || computedSlug(form.title);
+  const canonicalUrl = `${FRONTEND_URL}/blog/${activeSlug}`;
 
   useEffect(() => {
     if (existing) {
@@ -97,16 +102,18 @@ export default function BlogPostFormPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.title.trim())          return toast.error('Vui lòng nhập tiêu đề');
-    if (!form.categories?.length)    return toast.error('Vui lòng chọn ít nhất một danh mục');
-    if (!form.content.trim())        return toast.error('Vui lòng nhập nội dung');
+    if (!form.title.trim()) return toast.error('Vui lòng nhập tiêu đề');
+    if (!form.categories?.length) return toast.error('Vui lòng chọn ít nhất một danh mục');
+    if (!form.content.trim()) return toast.error('Vui lòng nhập nội dung');
 
     setSaving(true);
     try {
+      const finalSlug = form.slug.trim() || computedSlug(form.title);
       const payload = {
         ...form,
+        slug: finalSlug,
         authorId: user?._id,
-        canonicalUrl,
+        canonicalUrl: `${FRONTEND_URL}/blog/${finalSlug}`,
         scheduledAt: form.scheduledAt || null,
       };
       if (isEdit) {
@@ -150,7 +157,7 @@ export default function BlogPostFormPage() {
         <div className="flex gap-2">
           <button
             type="button"
-            onClick={() => { set('status', 'draft'); handleSubmit({ preventDefault: () => {} }); }}
+            onClick={() => { set('status', 'draft'); handleSubmit({ preventDefault: () => { } }); }}
             className="px-4 py-1.5 rounded-lg border border-border text-sm font-medium hover:bg-muted transition-colors"
           >
             Lưu nháp
@@ -181,6 +188,42 @@ export default function BlogPostFormPage() {
                 value={form.title}
                 onChange={e => set('title', e.target.value)}
               />
+            </div>
+
+            {/* Custom Slug / Permalink Input */}
+            <div>
+              <label className="text-xs font-medium text-foreground block mb-1.5">
+                Slug
+              </label>
+              <div className="flex gap-2">
+                <input
+                  className="w-full h-10 px-3 rounded-md border border-input bg-background font-mono text-xs text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20"
+                  placeholder="Nhấp Generate hoặc tự nhập slug..."
+                  value={form.slug}
+                  onChange={e => set('slug', computedSlug(e.target.value))}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!form.title.trim()) {
+                      toast.error('Vui lòng nhập tiêu đề trước khi sinh slug');
+                      return;
+                    }
+                    set('slug', computedSlug(form.title));
+                    toast.success('Đã tạo slug từ tiêu đề');
+                  }}
+                  className="h-10 px-3.5 rounded-md border border-border bg-muted/40 hover:bg-muted text-xs font-semibold text-foreground transition-colors shrink-0 flex items-center gap-1.5 cursor-pointer"
+                  title="Tự động tạo slug từ tiêu đề bài viết"
+                >
+                  <RefreshCwIcon className="size-3.5" />
+                  <span>Generate</span>
+                </button>
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-1.5 flex items-center gap-1 font-mono">
+                <GlobeIcon className="size-3.5 text-primary shrink-0" />
+                <span>URL Preview:</span>
+                <span className="text-primary font-semibold truncate">{FRONTEND_URL}/blog/{form.slug || computedSlug(form.title || 'bai-viet')}</span>
+              </p>
             </div>
             <div>
               <label className="text-sm font-medium text-foreground block mb-1.5">Mô tả ngắn (excerpt)</label>
@@ -217,10 +260,10 @@ export default function BlogPostFormPage() {
                 <div className="border border-border rounded-lg p-4 bg-background space-y-1.5">
                   <div className="flex items-center gap-2">
                     <div className="size-4 rounded-full bg-muted flex items-center justify-center shrink-0">
-                      <svg className="size-2.5 text-muted-foreground" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg>
+                      <svg className="size-2.5 text-muted-foreground" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10" /></svg>
                     </div>
                     <span className="text-xs text-[#202124] dark:text-zinc-400 truncate">{canonicalUrl}</span>
-                    <svg className="size-3 text-muted-foreground shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9l6 6 6-6"/></svg>
+                    <svg className="size-3 text-muted-foreground shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9l6 6 6-6" /></svg>
                   </div>
                   <div className="text-[#1a0dab] dark:text-[#8ab4f8] text-lg leading-snug line-clamp-1 hover:underline cursor-pointer">
                     {form.metaTitle || form.title || 'Tiêu đề bài viết sẽ hiển thị ở đây'}
@@ -301,31 +344,33 @@ export default function BlogPostFormPage() {
             <h3 className="text-sm font-semibold text-foreground">Xuất bản</h3>
             <div>
               <label className="text-xs text-muted-foreground block mb-1">Trạng thái</label>
-              <select
-                className="w-full h-9 px-3 rounded-md border border-input bg-background text-sm outline-none focus:border-ring"
+              <SearchableSelect
+                options={[
+                  { label: 'Nháp', value: 'draft' },
+                  { label: 'Chờ duyệt', value: 'pending_review' },
+                  { label: 'Đã đăng', value: 'published' },
+                  { label: 'Lưu trữ', value: 'archived' },
+                ]}
                 value={form.status}
-                onChange={e => set('status', e.target.value)}
-              >
-                <option value="draft">Nháp</option>
-                <option value="pending_review">Chờ duyệt</option>
-                <option value="published">Đã đăng</option>
-                <option value="archived">Lưu trữ</option>
-              </select>
+                onChange={(val) => set('status', val)}
+                creatable={false}
+                placeholder="Chọn trạng thái..."
+              />
             </div>
             <div>
               <label className="text-xs text-muted-foreground block mb-1">Lên lịch đăng</label>
-              <input
-                type="datetime-local"
-                className="w-full h-9 px-3 rounded-md border border-input bg-background text-sm outline-none focus:border-ring"
+              <DateTimePicker
                 value={form.scheduledAt}
-                onChange={e => set('scheduledAt', e.target.value)}
+                onChange={(val) => set('scheduledAt', val)}
+                placeholder="Chọn thời gian lên lịch đăng..."
+                align="right"
               />
             </div>
             <div className="space-y-2 pt-1">
               {[
-                { key: 'isActive',     label: 'Hiển thị' },
-                { key: 'isPinned',     label: 'Ghim lên đầu' },
-                { key: 'isFeatured',   label: 'Nổi bật' },
+                { key: 'isActive', label: 'Hiển thị' },
+                { key: 'isPinned', label: 'Ghim lên đầu' },
+                { key: 'isFeatured', label: 'Nổi bật' },
                 { key: 'allowComment', label: 'Cho phép bình luận' },
               ].map(({ key, label }) => (
                 <label key={key} className="flex items-center gap-2 cursor-pointer">
@@ -345,10 +390,12 @@ export default function BlogPostFormPage() {
             <h3 className="text-sm font-semibold text-foreground">Thumbnail</h3>
             {form.thumbnailUrl ? (
               <div className="relative group">
-                <img src={form.thumbnailUrl} alt="" className="w-full aspect-video object-cover rounded-lg" />
+                <MediaThumbnailHover media={pickedMedia} className="w-full">
+                  <img src={form.thumbnailUrl} alt="" className="w-full aspect-video object-cover rounded-lg" />
+                </MediaThumbnailHover>
                 <button
                   type="button"
-                  onClick={() => { set('thumbnailMediaId', ''); set('thumbnailUrl', ''); }}
+                  onClick={() => { set('thumbnailMediaId', ''); set('thumbnailUrl', ''); setPickedMedia(null); }}
                   className="absolute top-2 right-2 p-1.5 bg-destructive text-white rounded-md opacity-0 group-hover:opacity-100 transition-opacity text-xs"
                 >
                   Xóa
@@ -358,9 +405,9 @@ export default function BlogPostFormPage() {
               <button
                 type="button"
                 onClick={() => setShowMedia(true)}
-                className="w-full aspect-video border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center gap-2 text-muted-foreground hover:border-primary hover:text-primary transition-colors"
+                className="w-full aspect-video border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center gap-2 text-muted-foreground hover:border-primary hover:text-primary transition-colors cursor-pointer"
               >
-                <span className="text-2xl">🖼</span>
+                <ImageIcon className="size-8 opacity-70" />
                 <span className="text-xs">Chọn ảnh thumbnail</span>
               </button>
             )}
@@ -395,6 +442,7 @@ export default function BlogPostFormPage() {
           onSelect={(media) => {
             set('thumbnailMediaId', media._id);
             set('thumbnailUrl', media.url);
+            setPickedMedia(media);
             setShowMedia(false);
           }}
           onClose={() => setShowMedia(false)}

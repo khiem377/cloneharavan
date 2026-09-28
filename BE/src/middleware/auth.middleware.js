@@ -58,4 +58,28 @@ const authorize = (...roles) => {
   };
 };
 
-module.exports = { protect, authorize };
+const optionalAuth = async (req, res, next) => {
+  try {
+    let token;
+    if (req.headers.authorization?.startsWith('Bearer ')) {
+      token = req.headers.authorization.split(' ')[1];
+    } else if (req.cookies?.accessToken) {
+      token = req.cookies.accessToken;
+    }
+
+    if (token) {
+      const decoded = verifyAccessToken(token);
+      if (decoded?.id) {
+        const user = await User.findById(decoded.id);
+        if (user && user.isActive) {
+          req.user = user;
+        }
+      }
+    }
+  } catch (error) {
+    // Silent fail for optional auth
+  }
+  next();
+};
+
+module.exports = { protect, authorize, optionalAuth };
