@@ -89,10 +89,10 @@ export default async function ProductDetailPage({ params }) {
     productServerService.getProductVariants(productId),
     productServerService.getProductDeals(handle),
     productServerService.getProductUpsell(productId),
-    productServerService.getSimilarProducts(productId, primaryCategoryId, 8),
-    productServerService.getPersonalizedRecommendations(8),
+    productServerService.getSimilarProducts(productId, primaryCategoryId, 12),
+    productServerService.getPersonalizedRecommendations(12),
     productServerService.getGiftPrograms(),
-    productServerService.getComplementaryProducts(productId, categoryIds, 6),
+    productServerService.getComplementaryProducts(productId, categoryIds, 10),
   ]);
 
   // Xây dựng danh sách quà tặng kèm & sản phẩm mua cùng thật từ chương trình tặng kèm:

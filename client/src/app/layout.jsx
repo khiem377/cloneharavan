@@ -25,9 +25,75 @@ export const viewport = {
   maximumScale: 5,
 };
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+
 export const metadata = {
-  title: 'SHOP — Siêu thị điện máy & công nghệ chính hãng',
-  description: 'Siêu thị điện máy & công nghệ chính hãng SHOP',
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: 'SHOP — Siêu thị điện máy & công nghệ chính hãng',
+    template: '%s | SHOP',
+  },
+  description:
+    'Hệ thống siêu thị điện máy, công nghệ chính hãng hàng đầu. Mua sắm tivi, tủ lạnh, máy giặt, điều hòa, đồ gia dụng & thiết bị công nghệ với giá tốt nhất, hỗ trợ trả góp 0%, giao hàng toàn quốc.',
+  keywords: [
+    'siêu thị điện máy',
+    'điện máy chính hãng',
+    'tivi',
+    'tủ lạnh',
+    'máy giặt',
+    'điều hòa',
+    'đồ gia dụng',
+    'thiết bị công nghệ',
+    'SHOP',
+  ],
+  authors: [{ name: 'SHOP' }],
+  creator: 'SHOP',
+  publisher: 'SHOP',
+  icons: {
+    icon: [
+      { url: '/icon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.ico', sizes: 'any' },
+    ],
+    apple: [
+      { url: '/apple-icon.png', sizes: '180x180', type: 'image/png' },
+    ],
+    shortcut: ['/icon.svg'],
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'vi_VN',
+    url: SITE_URL,
+    siteName: 'SHOP — Siêu thị điện máy & công nghệ chính hãng',
+    title: 'SHOP — Siêu thị điện máy & công nghệ chính hãng',
+    description:
+      'Hệ thống siêu thị điện máy, công nghệ chính hãng hàng đầu. Mua sắm tivi, tủ lạnh, máy giặt, điều hòa, đồ gia dụng & thiết bị công nghệ với giá tốt nhất, hỗ trợ trả góp 0%, giao hàng toàn quốc.',
+    images: [
+      {
+        url: '/images/og-shop.png',
+        width: 1200,
+        height: 630,
+        alt: 'SHOP — Siêu thị điện máy & công nghệ chính hãng',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'SHOP — Siêu thị điện máy & công nghệ chính hãng',
+    description:
+      'Hệ thống siêu thị điện máy, công nghệ chính hãng hàng đầu. Cam kết 100% chính hãng, trả góp 0%, giao hàng toàn quốc.',
+    images: ['/images/og-shop.png'],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
 };
 
 export default async function RootLayout({ children }) {
