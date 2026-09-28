@@ -87,7 +87,28 @@ const getAllPosts = async (query = {}) => {
   }
   if (query.status)     filter.status = query.status;
   if (query.categoryId) filter.categories = query.categoryId;
-  if (query.tag)        filter.tags = query.tag;
+  if (query.tag) {
+    const mongoose = require('mongoose');
+    let tagId = null;
+    if (mongoose.Types.ObjectId.isValid(query.tag)) {
+      tagId = query.tag;
+    } else {
+      const tagStr = String(query.tag).trim();
+      const foundTag = await Tag.findOne({
+        $or: [
+          { slug: tagStr },
+          { slug: tagStr.toLowerCase() },
+          { name: new RegExp(`^${tagStr}$`, 'i') },
+        ],
+      }).select('_id');
+      tagId = foundTag ? foundTag._id : null;
+    }
+    if (tagId) {
+      filter.tags = tagId;
+    } else {
+      filter.tags = new mongoose.Types.ObjectId(); // Không tìm thấy tag → 0 kết quả hợp lệ
+    }
+  }
   if (query.isFeatured !== undefined) filter.isFeatured = query.isFeatured === 'true';
   if (query.isPinned   !== undefined) filter.isPinned   = query.isPinned   === 'true';
 
@@ -243,6 +264,32 @@ const incrementViews = async (slug) => {
   await BlogPost.findOneAndUpdate({ slug }, { $inc: { viewsCount: 1 } });
 };
 
+const togglePostLike = async (slug, identifier) => {
+  const post = await BlogPost.findOne({ slug });
+  if (!post) throw new AppError('Không tìm thấy bài viết', 404);
+
+  if (!Array.isArray(post.likedUsers)) {
+    post.likedUsers = [];
+  }
+
+  const idStr = String(identifier || 'anonymous');
+  const index = post.likedUsers.findIndex((id) => String(id) === idStr);
+
+  let isLiked = false;
+  if (index > -1) {
+    post.likedUsers.splice(index, 1);
+    post.likesCount = Math.max(0, (post.likesCount || 1) - 1);
+    isLiked = false;
+  } else {
+    post.likedUsers.push(idStr);
+    post.likesCount = (post.likesCount || 0) + 1;
+    isLiked = true;
+  }
+
+  await post.save();
+  return { likesCount: post.likesCount, isLiked };
+};
+
 const locatePost = async (id, limit = 10) => {
   const post = await BlogPost.findById(id).select('_id createdAt');
   if (!post) throw new AppError('Không tìm thấy bài viết', 404);
@@ -261,6 +308,7 @@ module.exports = {
   deleteBulkPosts,
   togglePostStatus,
   incrementViews,
+  togglePostLike,
   stripHtml,
   locatePost,
 };

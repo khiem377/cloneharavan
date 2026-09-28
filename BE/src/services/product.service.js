@@ -794,7 +794,11 @@ const getProductDeals = async (idOrSlug) => {
   const [promotions, giftPrograms, coupons] = await Promise.all([
     Promotion.find(activeFilter).sort({ createdAt: -1 }),
     // Chuẩn doanh nghiệp: Khi đang hưởng giá Flash Sale sốc, không áp dụng thêm Gift Program
-    isFlashSaleActive ? [] : GiftProgram.find(activeFilter).sort({ createdAt: -1 }),
+    isFlashSaleActive
+      ? []
+      : GiftProgram.find(activeFilter)
+          .populate('giftProducts.productId', 'name slug thumbnail price')
+          .sort({ createdAt: -1 }),
     Coupon.find({
       isActive: true, startDate: { $lte: now }, endDate: { $gte: now },
       $or: [{ usageLimit: null }, { $expr: { $lt: ['$usedCount', '$usageLimit'] } }],

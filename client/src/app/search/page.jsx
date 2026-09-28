@@ -46,7 +46,17 @@ export default async function SearchPage({ searchParams }) {
     attrs,
   };
 
-  const data = q
+  const shouldFetch = Boolean(
+    q ||
+    category ||
+    brand ||
+    minPrice ||
+    maxPrice ||
+    inStock ||
+    attrs
+  );
+
+  const data = shouldFetch
     ? await searchService.getServerSearchResults({
         q,
         domain,
@@ -95,7 +105,13 @@ export default async function SearchPage({ searchParams }) {
           <BreadcrumbSeparator />
           <BreadcrumbItem>
             <BreadcrumbPage>
-              {q ? `Tìm kiếm "${q}"` : 'Tìm kiếm'}
+              {q
+                ? `Tìm kiếm "${q}"`
+                : brand
+                ? `Thương hiệu ${brand.toUpperCase()}`
+                : category
+                ? `Danh mục ${category}`
+                : 'Tìm kiếm'}
             </BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
@@ -106,6 +122,14 @@ export default async function SearchPage({ searchParams }) {
           {q ? (
             <>
               Kết quả tìm kiếm cho <span className="text-red-600">&ldquo;{q}&rdquo;</span>
+            </>
+          ) : brand ? (
+            <>
+              Sản phẩm thương hiệu <span className="text-red-600 uppercase">&ldquo;{brand}&rdquo;</span>
+            </>
+          ) : category ? (
+            <>
+              Sản phẩm theo danh mục <span className="text-red-600">&ldquo;{category}&rdquo;</span>
             </>
           ) : (
             'Tìm kiếm sản phẩm'

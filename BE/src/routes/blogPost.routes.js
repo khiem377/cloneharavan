@@ -19,6 +19,13 @@ router.get('/locate',       protect, requirePermission('blog.edit'), async (req,
 });
 router.get('/:slug',        async (req, res, next) => { try { res.json(await svc.getPostBySlug(req.params.slug)); } catch(e) { next(e); } });
 router.post('/:slug/view',  async (req, res, next) => { try { await svc.incrementViews(req.params.slug); res.json({ ok: true }); } catch(e) { next(e); } });
+router.post('/:slug/like',  async (req, res, next) => {
+  try {
+    const identifier = req.body.userId || req.body.anonymousId || req.ip;
+    const result = await svc.togglePostLike(req.params.slug, identifier);
+    res.json({ status: 'success', data: result });
+  } catch(e) { next(e); }
+});
 
 // Protected Admin routes
 router.post('/',            protect, requirePermission('blog.create'), validate(createBlogPostSchema), async (req, res, next) => { try { res.status(201).json(await svc.createPost(req.body, req.user?._id || req.body.authorId)); } catch(e) { next(e); } });

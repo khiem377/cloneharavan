@@ -1,14 +1,14 @@
-import axios from 'axios';
+import { api } from '@/lib/axios';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
-const API_SERVER_URL = process.env.API_SERVER_URL || 'http://localhost:5000/api/v1';
+const API_BASE = process.env.API_SERVER_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
 
 export const couponService = {
+  // Client-side helper (dùng instance api có interceptors)
   async getActiveCoupons(limit = 10) {
     try {
-      const response = await axios.get(`${API_BASE_URL}/coupons`, {
+      const response = await api.get('/coupons', {
         params: {
-          isActive: true,
+          availableOnly: true,
           limit,
         },
         timeout: 5000,
@@ -20,10 +20,11 @@ export const couponService = {
     }
   },
 
+  // Server-side helper cho SSR
   async getServerActiveCoupons(limit = 10) {
     try {
-      const res = await fetch(`${API_SERVER_URL}/coupons?isActive=true&limit=${limit}`, {
-        next: { revalidate: 60 },
+      const res = await fetch(`${API_BASE}/coupons?availableOnly=true&limit=${limit}`, {
+        cache: 'no-store',
       });
       if (!res.ok) return [];
       const json = await res.json();

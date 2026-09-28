@@ -1,4 +1,4 @@
-import api from '../lib/axios';
+import { api } from '@/lib/axios';
 
 const API_BASE = process.env.API_SERVER_URL || 'http://127.0.0.1:5000/api/v1';
 
@@ -120,6 +120,14 @@ export const blogService = {
     } catch {
       // Non-critical, ignore error
     }
+  },
+
+  togglePostLike: async (slug, { userId, anonymousId } = {}) => {
+    const res = await api.post(`/blog-posts/${encodeURIComponent(slug)}/like`, {
+      userId,
+      anonymousId,
+    });
+    return res.data?.data || res.data;
   },
 };
 

@@ -526,18 +526,27 @@ const globalSearch = async (query = {}, req = null) => {
     }
   }
 
+  const escapeRegExp = (str) => String(str || '').replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+
   let explicitBrandId = null;
   if (brand) {
-    const isBrandObjId = /^[0-9a-fA-F]{24}$/.test(brand);
+    const brandStr = String(brand).trim();
+    const isBrandObjId = /^[0-9a-fA-F]{24}$/.test(brandStr);
     const bDoc = await Brand.findOne(
-      isBrandObjId ? { _id: brand } : { slug: brand }
+      isBrandObjId
+        ? { _id: brandStr }
+        : {
+            $or: [
+              { slug: brandStr.toLowerCase() },
+              { slug: new RegExp(`^${escapeRegExp(brandStr)}$`, 'i') },
+              { name: new RegExp(`^${escapeRegExp(brandStr)}$`, 'i') },
+            ],
+          }
     ).select('_id');
     if (bDoc) {
       explicitBrandId = bDoc._id;
     }
   }
-
-  const escapeRegExp = (str) => str.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
 
   // Detect category intents and negative exclusions
   const normLower = (parsed.normalized || '').toLowerCase();
@@ -917,9 +926,10 @@ const globalSearch = async (query = {}, req = null) => {
     let filteredProducts = scoredProducts;
 
     if (explicitBrandId) {
-      filteredProducts = filteredProducts.filter(
-        (p) => p.brand?._id?.toString() === explicitBrandId.toString()
-      );
+      filteredProducts = filteredProducts.filter((p) => {
+        const bId = p.brand?._id ? p.brand._id.toString() : p.brand?.toString();
+        return bId === explicitBrandId.toString();
+      });
     }
 
     if (minPrice && !isNaN(Number(minPrice))) {

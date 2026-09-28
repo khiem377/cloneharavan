@@ -1,4 +1,4 @@
-import api from '../lib/axios';
+import { api } from '@/lib/axios';
 
 const API_BASE = process.env.API_SERVER_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
 

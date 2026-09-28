@@ -275,7 +275,7 @@ export default function HomeFlashSaleSection({ initialData = null }) {
           <button
             type="button"
             onClick={() => handleScroll('left')}
-            className="absolute -left-2 sm:-left-3 top-1/2 -translate-y-1/2 size-10 rounded-full bg-white text-gray-900 shadow-2xl border border-gray-200 hover:bg-yellow-400 hover:text-red-950 transition-all flex items-center justify-center z-20 cursor-pointer active:scale-95"
+            className="hidden sm:flex absolute -left-2 sm:-left-3 top-1/2 -translate-y-1/2 size-10 rounded-full bg-white text-gray-900 shadow-2xl border border-gray-200 hover:bg-yellow-400 hover:text-red-950 transition-all items-center justify-center z-20 cursor-pointer active:scale-95"
             title="Trước"
           >
             <ChevronLeft size={22} className="stroke-[2.5]" />
@@ -285,7 +285,7 @@ export default function HomeFlashSaleSection({ initialData = null }) {
           <button
             type="button"
             onClick={() => handleScroll('right')}
-            className="absolute -right-2 sm:-right-3 top-1/2 -translate-y-1/2 size-10 rounded-full bg-white text-gray-900 shadow-2xl border border-gray-200 hover:bg-yellow-400 hover:text-red-950 transition-all flex items-center justify-center z-20 cursor-pointer active:scale-95"
+            className="hidden sm:flex absolute -right-2 sm:-right-3 top-1/2 -translate-y-1/2 size-10 rounded-full bg-white text-gray-900 shadow-2xl border border-gray-200 hover:bg-yellow-400 hover:text-red-950 transition-all items-center justify-center z-20 cursor-pointer active:scale-95"
             title="Sau"
           >
             <ChevronRight size={22} className="stroke-[2.5]" />

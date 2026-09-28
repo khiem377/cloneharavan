@@ -75,7 +75,10 @@ export default function SearchSortBar({
   );
 
   const activeBrand = facets.brands?.find(
-    (b) => b._id === currentFilters.brand || b.slug === currentFilters.brand
+    (b) =>
+      b._id === currentFilters.brand ||
+      b.slug?.toLowerCase() === currentFilters.brand?.toLowerCase() ||
+      b.name?.toLowerCase() === currentFilters.brand?.toLowerCase()
   );
 
   let priceLabel = '';
@@ -168,7 +171,7 @@ export default function SearchSortBar({
 
           {currentFilters.brand && (
             <Badge variant="secondary" className="gap-1 font-normal text-xs py-0.5 px-2">
-              <span>{activeBrand?.name || currentFilters.brand}</span>
+              <span>{activeBrand?.name || currentFilters.brand?.toUpperCase()}</span>
               <button
                 onClick={() => removeFilter('brand')}
                 className="text-gray-400 hover:text-gray-700 ml-0.5 cursor-pointer"

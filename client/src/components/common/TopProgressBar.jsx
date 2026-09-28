@@ -8,6 +8,9 @@ function NavigationEvents({ onNavigateComplete }) {
   const searchParams = useSearchParams();
 
   useEffect(() => {
+    if (typeof window !== 'undefined' && !window.location.hash) {
+      window.scrollTo(0, 0);
+    }
     onNavigateComplete();
   }, [pathname, searchParams, onNavigateComplete]);
 
@@ -66,6 +69,14 @@ export default function TopProgressBar() {
   // Listen to clicks on links and history changes
   useEffect(() => {
     const handleDocumentClick = (e) => {
+      // Ignore if event was already prevented by an inner click handler
+      if (e.defaultPrevented) return;
+
+      // Ignore clicks on buttons, inputs, interactive widgets or elements marked no-progress
+      if (e.target.closest('button, [role="button"], input, select, textarea, [data-no-progress]')) {
+        return;
+      }
+
       // Find closest anchor tag
       const anchor = e.target.closest('a');
       if (!anchor) return;
@@ -118,11 +129,11 @@ export default function TopProgressBar() {
       start();
     };
 
-    document.addEventListener('click', handleDocumentClick, { capture: true });
+    document.addEventListener('click', handleDocumentClick);
     window.addEventListener('popstate', handlePopState);
 
     return () => {
-      document.removeEventListener('click', handleDocumentClick, { capture: true });
+      document.removeEventListener('click', handleDocumentClick);
       window.removeEventListener('popstate', handlePopState);
       clearAllTimers();
     };
