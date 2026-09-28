@@ -5,9 +5,12 @@ import { categoryService } from '@/services/category.service';
 import { searchService } from '@/services/search.service';
 import StoreProvider from '@/providers/StoreProvider';
 import Header from '@/components/header/Header';
+import Footer from '@/components/layout/Footer';
 import QuickViewModal from '@/components/product/QuickViewModal';
 import CompareBar from '@/components/product/CompareBar';
 import TopProgressBar from '@/components/common/TopProgressBar';
+import ScrollToTop from '@/components/common/ScrollToTop';
+import { ToastContainer } from '@/components/ui/toast';
 
 const beVietnamPro = Be_Vietnam_Pro({
   subsets: ['latin', 'vietnamese'],
@@ -16,29 +19,105 @@ const beVietnamPro = Be_Vietnam_Pro({
   display: 'swap',
 });
 
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+};
+
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+
 export const metadata = {
-  title: 'SHOP — Siêu thị điện máy & công nghệ chính hãng',
-  description: 'Siêu thị điện máy & công nghệ chính hãng SHOP',
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: 'SHOP — Siêu thị điện máy & công nghệ chính hãng',
+    template: '%s | SHOP',
+  },
+  description:
+    'Hệ thống siêu thị điện máy, công nghệ chính hãng hàng đầu. Mua sắm tivi, tủ lạnh, máy giặt, điều hòa, đồ gia dụng & thiết bị công nghệ với giá tốt nhất, hỗ trợ trả góp 0%, giao hàng toàn quốc.',
+  keywords: [
+    'siêu thị điện máy',
+    'điện máy chính hãng',
+    'tivi',
+    'tủ lạnh',
+    'máy giặt',
+    'điều hòa',
+    'đồ gia dụng',
+    'thiết bị công nghệ',
+    'SHOP',
+  ],
+  authors: [{ name: 'SHOP' }],
+  creator: 'SHOP',
+  publisher: 'SHOP',
+  icons: {
+    icon: [
+      { url: '/icon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.ico', sizes: 'any' },
+    ],
+    apple: [
+      { url: '/apple-icon.png', sizes: '180x180', type: 'image/png' },
+    ],
+    shortcut: ['/icon.svg'],
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'vi_VN',
+    url: SITE_URL,
+    siteName: 'SHOP — Siêu thị điện máy & công nghệ chính hãng',
+    title: 'SHOP — Siêu thị điện máy & công nghệ chính hãng',
+    description:
+      'Hệ thống siêu thị điện máy, công nghệ chính hãng hàng đầu. Mua sắm tivi, tủ lạnh, máy giặt, điều hòa, đồ gia dụng & thiết bị công nghệ với giá tốt nhất, hỗ trợ trả góp 0%, giao hàng toàn quốc.',
+    images: [
+      {
+        url: '/images/og-shop.png',
+        width: 1200,
+        height: 630,
+        alt: 'SHOP — Siêu thị điện máy & công nghệ chính hãng',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'SHOP — Siêu thị điện máy & công nghệ chính hãng',
+    description:
+      'Hệ thống siêu thị điện máy, công nghệ chính hãng hàng đầu. Cam kết 100% chính hãng, trả góp 0%, giao hàng toàn quốc.',
+    images: ['/images/og-shop.png'],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
 };
 
 export default async function RootLayout({ children }) {
-  const [initialMenu, initialCategories, initialTrending] = await Promise.all([
+  const [initialMenu, initialFooterMenu, initialCategories, initialTrending] = await Promise.all([
     menuService.getServerMenu('main-menu'),
+    menuService.getServerMenu('footer'),
     categoryService.getServerCategoryTree(),
     searchService.getServerTrending(10, 'all'),
   ]);
 
   return (
     <html lang="vi" className={`h-full ${beVietnamPro.variable}`}>
-      <body className={`min-h-full flex flex-col bg-white text-slate-900 antialiased ${beVietnamPro.className}`}>
+      <body className={`min-h-[100dvh] flex flex-col bg-white text-slate-900 antialiased overflow-x-hidden w-full max-w-full ${beVietnamPro.className}`}>
         <TopProgressBar />
+        <ScrollToTop />
+        <ToastContainer />
         <StoreProvider
           initialMenu={initialMenu}
           initialCategories={initialCategories}
           initialTrending={initialTrending}
         >
           <Header />
-          <main className="flex-1">{children}</main>
+          <main className="flex-1 w-full max-w-full overflow-x-hidden">{children}</main>
+          <Footer initialMenu={initialFooterMenu} />
           <QuickViewModal />
           <CompareBar />
         </StoreProvider>

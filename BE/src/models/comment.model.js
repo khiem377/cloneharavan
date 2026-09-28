@@ -15,12 +15,43 @@ const reactionSchema = new mongoose.Schema(
 
 const commentSchema = new mongoose.Schema(
   {
-    postId:   { type: mongoose.Schema.Types.ObjectId, ref: 'BlogPost', required: true },
-    authorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    content:  { type: String, required: true, maxlength: 5000 },
+    // Đối tượng bình luận: 'product' hoặc 'blog'
+    targetType: {
+      type: String,
+      enum: ['product', 'blog'],
+      default: 'blog',
+      required: true,
+      index: true,
+    },
+    productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', default: null, index: true },
+    postId:    { type: mongoose.Schema.Types.ObjectId, ref: 'BlogPost', default: null, index: true },
 
-    parentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Comment', default: null },
-    rootId:   { type: mongoose.Schema.Types.ObjectId, ref: 'Comment', default: null },
+    // Đánh giá sao (1 - 5★) — Chỉ áp dụng cho sản phẩm và comment gốc (depth: 0)
+    rating: {
+      type: Number,
+      min: 1,
+      max: 5,
+      default: null,
+    },
+
+    // Xác nhận đã mua hàng (Verified Purchase)
+    isPurchased: {
+      type: Boolean,
+      default: false,
+    },
+
+    authorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    authorInfo: {
+      name:   { type: String, default: 'Khách hàng' },
+      avatar: { type: String, default: '' },
+      role:   { type: String, default: 'customer' }, // 'customer' | 'admin' | 'staff'
+    },
+
+    content: { type: String, required: true, maxlength: 5000 },
+
+    // Cấu trúc lồng 3 cấp chuẩn Facebook (depth: 0 -> 1 -> 2)
+    parentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Comment', default: null, index: true },
+    rootId:   { type: mongoose.Schema.Types.ObjectId, ref: 'Comment', default: null, index: true },
     depth:    { type: Number, default: 0, min: 0, max: 2 },
     path:     { type: String, default: '' },
 
@@ -41,20 +72,24 @@ const commentSchema = new mongoose.Schema(
       type: String,
       enum: ['pending', 'approved', 'spam', 'rejected'],
       default: 'approved',
+      index: true,
     },
+    rejectionReason: { type: String, default: '' },
+
     isEdited:  { type: Boolean, default: false },
     editedAt:  { type: Date, default: null },
 
     isDeleted: { type: Boolean, default: false },
     deletedAt: { type: Date, default: null },
 
-    mentions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    mentions:    [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    attachments: [{ url: String, type: { type: String, default: 'image' } }],
   },
   { timestamps: true }
 );
 
-commentSchema.index({ postId: 1, parentId: 1, status: 1, createdAt: 1 });
-commentSchema.index({ postId: 1, rootId: 1, depth: 1, createdAt: 1 });
+commentSchema.index({ targetType: 1, productId: 1, parentId: 1, status: 1, createdAt: -1 });
+commentSchema.index({ targetType: 1, postId: 1, parentId: 1, status: 1, createdAt: -1 });
 commentSchema.index({ authorId: 1 });
 commentSchema.index({ path: 1 });
 commentSchema.index({ 'reactions.userId': 1 });

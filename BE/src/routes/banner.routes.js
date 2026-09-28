@@ -35,9 +35,9 @@ router.patch('/admin/reorder',             requirePermission('banner.manage'), v
 router.delete('/admin/bulk',               requirePermission('banner.manage'), validate(deleteBulkSchema),   removeBulk);
 router.get('/admin/locate',                requirePermission('banner.view'), async (req, res, next) => {
   try {
-    const { id, limit } = req.query;
+    const { id, limit, type } = req.query;
     if (!id) return res.status(400).json({ message: 'Thiếu param id' });
-    const result = await bannerSvc.locateBanner(id, Number(limit) || 10);
+    const result = await bannerSvc.locateBanner(id, Number(limit) || 10, type || null);
     res.json({ status: 'success', data: result });
   } catch (e) { next(e); }
 });

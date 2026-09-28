@@ -117,12 +117,12 @@ export default function ProductCard({ product }) {
   };
 
   return (
-    <div className="relative h-full group">
+    <div className="relative h-full group flex flex-col flex-1">
       <Link
         href={`/products/${product.slug || product._id}`}
-        className="block h-full"
+        className="flex flex-col flex-1 h-full"
       >
-        <Card className="h-full flex flex-col hover:border-gray-300 hover:shadow-md transition-all duration-200 p-2.5 sm:p-3 relative overflow-hidden bg-white rounded-lg">
+        <Card className="flex-1 flex flex-col hover:border-gray-300 hover:shadow-md transition-all duration-200 p-2.5 sm:p-3 relative overflow-hidden bg-white rounded-lg">
           {/* Top Badge: HOT, NỔI BẬT or Giảm giá */}
           <div className="w-full aspect-square bg-white rounded-md overflow-hidden flex items-center justify-center p-2 mb-2 relative">
             <div className="absolute top-1.5 left-1.5 z-10 flex flex-col gap-1 items-start">
@@ -157,6 +157,7 @@ export default function ProductCard({ product }) {
               {/* Quick View Button */}
               <button
                 type="button"
+                data-no-progress="true"
                 onClick={handleQuickViewClick}
                 className="w-8 h-8 rounded-full bg-white hover:bg-[#e30019] text-gray-700 hover:text-white shadow-md flex items-center justify-center transition cursor-pointer"
                 title="Xem nhanh sản phẩm"
@@ -167,6 +168,7 @@ export default function ProductCard({ product }) {
               {/* Compare Button */}
               <button
                 type="button"
+                data-no-progress="true"
                 onClick={handleCompareClick}
                 className={`w-8 h-8 rounded-full shadow-md flex items-center justify-center transition cursor-pointer ${compared
                     ? 'bg-emerald-600 text-white'
@@ -226,41 +228,43 @@ export default function ProductCard({ product }) {
 
           <div className="flex-1 flex flex-col justify-between">
             <div>
-              {product.brand?.name && (
-                <span
-                  role="link"
-                  tabIndex={0}
-                  onClick={(e) => {
+              <span
+                role="link"
+                tabIndex={0}
+                onClick={(e) => {
+                  if (product.brand?.name) {
                     e.preventDefault();
                     e.stopPropagation();
                     router.push(`/collections/${product.brand.slug || product.brand.name.toLowerCase()}`);
-                  }}
-                  className="text-[11px] font-semibold text-gray-400 hover:text-[#e30019] uppercase tracking-wide block mb-0.5 transition-colors cursor-pointer w-fit"
-                >
-                  {product.brand.name}
-                </span>
-              )}
+                  }
+                }}
+                className={`text-[11px] font-semibold uppercase tracking-wide block mb-0.5 transition-colors h-4 line-clamp-1 ${
+                  product.brand?.name
+                    ? 'text-gray-400 hover:text-[#e30019] cursor-pointer w-fit'
+                    : 'text-transparent select-none'
+                }`}
+              >
+                {product.brand?.name || '—'}
+              </span>
 
-              <h3 className="text-xs sm:text-sm font-medium text-gray-900 line-clamp-2 group-hover:text-[#e30019] transition-colors leading-snug">
+              <h3 className="text-xs sm:text-sm font-medium text-gray-900 line-clamp-2 group-hover:text-[#e30019] transition-colors leading-snug h-8 sm:h-9">
                 {product.name}
               </h3>
 
-              {tags.length > 0 && (
-                <div className="flex flex-wrap gap-1 mt-1.5">
-                  {tags.map((t, idx) => (
-                    <Badge
-                      key={idx}
-                      variant="secondary"
-                      className="px-1.5 py-0.5 text-gray-600 rounded text-[10px] font-medium"
-                    >
-                      {t}
-                    </Badge>
-                  ))}
-                </div>
-              )}
+              <div className="min-h-[22px] flex flex-wrap gap-1 mt-1.5">
+                {tags.map((t, idx) => (
+                  <Badge
+                    key={idx}
+                    variant="secondary"
+                    className="px-1.5 py-0.5 text-gray-600 rounded text-[10px] font-medium"
+                  >
+                    {t}
+                  </Badge>
+                ))}
+              </div>
             </div>
 
-            <div className="mt-3 pt-2 border-t border-gray-100">
+            <div className="mt-auto pt-2 border-t border-gray-100">
               <div className="flex items-center gap-1.5 flex-wrap">
                 {originalPrice > 0 && (
                   <span className="text-xs text-gray-400 line-through">

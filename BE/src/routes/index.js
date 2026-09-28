@@ -35,6 +35,7 @@ const searchRoutes        = require('./search.routes');
 const recommendationRoutes = require('./recommendation.routes');
 const chatbotRoutes        = require('./chatbot.routes');
 const upsellRoutes         = require('./upsell.routes');
+const commentRoutes        = require('./comment.routes');
 
 router.use('/auth',             authRoutes);
 router.use('/users',            userRoutes);
@@ -70,5 +71,6 @@ router.use('/search',           searchRoutes);
 router.use('/recommendations',  recommendationRoutes);
 router.use('/chat',             chatbotRoutes);
 router.use('/upsell',           upsellRoutes);
+router.use('/comments',         commentRoutes);
 
 module.exports = router;

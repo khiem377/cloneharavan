@@ -1,8 +1,8 @@
-import bannerService from '../../services/banner.service';
+import bannerServerService from '../../services/banner.server.service';
 import HeroBannerSliderClient from './HeroBannerSliderClient';
 
 export default async function HomeHeroBannerSlider() {
-  const slides = await bannerService.getPublicBanners('hero');
+  const slides = await bannerServerService.getPublicBanners('hero');
 
   if (!Array.isArray(slides) || slides.length === 0) {
     return null;

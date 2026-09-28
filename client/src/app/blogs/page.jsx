@@ -35,13 +35,22 @@ export default async function BlogPage({ searchParams }) {
     }
   }
 
+  // Find tag ID if slug provided
+  let tagId = undefined;
+  if (tagSlug) {
+    const matchedTag = tags.find((t) => t.slug === tagSlug);
+    if (matchedTag) {
+      tagId = matchedTag._id;
+    }
+  }
+
   // 2. Fetch posts with filters
   const postsResult = await blogService.getServerBlogPosts({
     page,
     limit: 10,
     keyword: keyword || undefined,
     categoryId,
-    tag: tagSlug || undefined,
+    tag: tagId || tagSlug || undefined,
     sort,
   });
 

@@ -16,6 +16,8 @@ export default function SearchEmptyState({ query = '', hasFilters = false, onRes
         <p className="text-xs text-gray-500">
           {query
             ? `Không có kết quả nào khớp với "${query}". Hãy thử kiểm tra lỗi chính tả hoặc giảm bớt bộ lọc.`
+            : hasFilters
+            ? 'Không tìm thấy sản phẩm nào phù hợp với bộ lọc hiện tại. Vui lòng thử nới lỏng hoặc xóa bớt bộ lọc.'
             : 'Vui lòng nhập từ khóa tìm kiếm để khám phá các sản phẩm nổi bật.'}
         </p>
       </div>

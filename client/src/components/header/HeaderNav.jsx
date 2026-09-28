@@ -33,7 +33,7 @@ export const HeaderNav = ({ onOpenCategoryDrawer }) => {
       style={{ backgroundColor: PALETTE.primary }}
     >
       <div className="max-w-7xl mx-auto px-2 sm:px-4 flex items-center justify-between h-9 sm:h-10">
-        <div className="flex items-center h-full overflow-x-visible no-scrollbar">
+        <div className="flex items-center h-full overflow-x-auto no-scrollbar scroll-smooth w-full">
           
           {/* Category Drawer Trigger */}
           <button

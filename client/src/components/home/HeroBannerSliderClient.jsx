@@ -12,6 +12,7 @@ export default function HeroBannerSliderClient({ slides = [] }) {
 
     const touchStartX = useRef(0);
     const touchEndX = useRef(0);
+    const trackedSlides = useRef(new Set());
 
     const totalSlides = slides.length;
 
@@ -31,12 +32,13 @@ export default function HeroBannerSliderClient({ slides = [] }) {
         setCurrentIndex(idx);
     };
 
-    // Track view
+    // Track view (chỉ track 1 lần mỗi slide trong 1 page session để tránh spam khi slider lặp lại)
     useEffect(() => {
         const slideId = slides[currentIndex]?._id;
 
-        if (!slideId) return;
+        if (!slideId || trackedSlides.current.has(slideId)) return;
 
+        trackedSlides.current.add(slideId);
         bannerService.trackView(slideId);
     }, [currentIndex, slides]);
 
@@ -53,6 +55,7 @@ export default function HeroBannerSliderClient({ slides = [] }) {
 
     const handleTouchStart = (e) => {
         touchStartX.current = e.targetTouches[0].clientX;
+        touchEndX.current = 0;
     };
 
     const handleTouchMove = (e) => {
@@ -82,7 +85,7 @@ export default function HeroBannerSliderClient({ slides = [] }) {
 
     return (
         <section
-            className="w-full overflow-hidden bg-slate-900 select-none relative mb-6 shadow-md"
+            className="w-full overflow-hidden bg-slate-900 select-none relative mb-6 rounded-[6px] border border-slate-800"
             aria-label="Khuyến mãi nổi bật"
             onMouseEnter={() => setIsPaused(true)}
             onMouseLeave={() => setIsPaused(false)}
@@ -111,12 +114,11 @@ export default function HeroBannerSliderClient({ slides = [] }) {
                                         slide.altText ||
                                         `Banner ${index + 1}`
                                     }
-                                    className={`w-full h-full object-cover object-center transition-transform duration-1000 ease-out ${isCurrent ? 'scale-100' : 'scale-105'
-                                        }`}
+                                    className={`w-full h-full object-cover object-center transition-transform duration-700 ease-out ${
+                                        isCurrent ? 'scale-100' : 'scale-105'
+                                    }`}
                                     loading={index === 0 ? 'eager' : 'lazy'}
                                 />
-
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent pointer-events-none" />
                             </div>
                         );
 
@@ -152,9 +154,9 @@ export default function HeroBannerSliderClient({ slides = [] }) {
                             prevSlide();
                         }}
                         aria-label="Slide trước"
-                        className="absolute left-3 sm:left-6 md:left-10 top-1/2 -translate-y-1/2 size-10 sm:size-12 rounded-full bg-black/40 hover:bg-black/80 backdrop-blur-md text-white flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 hover:scale-110 cursor-pointer z-10 border border-white/20 shadow-xl"
+                        className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 size-9 sm:size-10 rounded-[6px] bg-black/75 hover:bg-black text-white flex items-center justify-center transition-colors opacity-0 group-hover:opacity-100 cursor-pointer z-10 border border-white/20"
                     >
-                        <ChevronLeft className="size-6 sm:size-7" />
+                        <ChevronLeft className="size-5 sm:size-6" />
                     </button>
                 )}
 
@@ -166,14 +168,14 @@ export default function HeroBannerSliderClient({ slides = [] }) {
                             nextSlide();
                         }}
                         aria-label="Slide tiếp theo"
-                        className="absolute right-3 sm:right-6 md:right-10 top-1/2 -translate-y-1/2 size-10 sm:size-12 rounded-full bg-black/40 hover:bg-black/80 backdrop-blur-md text-white flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 hover:scale-110 cursor-pointer z-10 border border-white/20 shadow-xl"
+                        className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 size-9 sm:size-10 rounded-[6px] bg-black/75 hover:bg-black text-white flex items-center justify-center transition-colors opacity-0 group-hover:opacity-100 cursor-pointer z-10 border border-white/20"
                     >
-                        <ChevronRight className="size-6 sm:size-7" />
+                        <ChevronRight className="size-5 sm:size-6" />
                     </button>
                 )}
 
                 {totalSlides > 1 && (
-                    <div className="absolute bottom-2.5 sm:bottom-3.5 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-md border border-white/15">
+                    <div className="absolute bottom-2.5 sm:bottom-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 px-2.5 py-1 rounded-[6px] bg-black/75 border border-white/20">
                         {slides.map((_, idx) => {
                             const active = idx === currentIndex;
 
@@ -183,10 +185,11 @@ export default function HeroBannerSliderClient({ slides = [] }) {
                                     type="button"
                                     onClick={() => goToSlide(idx)}
                                     aria-label={`Đi tới banner ${idx + 1}`}
-                                    className={`h-2 rounded-full transition-all duration-300 cursor-pointer ${active
-                                            ? 'w-7 sm:w-8 bg-yellow-400 shadow-sm'
+                                    className={`h-1.5 rounded-[2px] transition-all duration-300 cursor-pointer ${
+                                        active
+                                            ? 'w-6 bg-yellow-400'
                                             : 'w-2 bg-white/50 hover:bg-white/80'
-                                        }`}
+                                    }`}
                                 />
                             );
                         })}

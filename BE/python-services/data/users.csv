@@ -1,1 +1,16 @@
-user_id,full_name,email,gender,age,city,customer_tier
+user_id,full_name,email,phone,gender,age,city,customer_tier
+6a826e965e28a8faa31803ec,Nguyen Van A,nguyenvana@gmail.com,0901234567,Male,27,TP. Hồ Chí Minh,Silver
+6a826ef0f5105f0b4d509b56,Nguyen Van A,nguyenvanb@gmail.com,0903478621,Female,35,Hà Nội,Regular
+6a8275054f2c31cd59ca7824,Admin,admin@gmail.com,0900000000,Male,27,Đà Nẵng,Silver
+6a82f80be94f6bbbad32cc4c,Nguyễn Văn Đã Đổi Tên,hken2628@gmail.com,0903478623,Female,34,Hải Phòng,Silver
+6a8690433765b9fb51bf832f,Nguyen Van A,user@example.com,0903478671,Male,45,Hải Phòng,VIP
+6a87077103c8018865bf6ee3,Super Administrator,superadmin@example.com,0987654321,Female,23,Hải Phòng,Gold
+6a8708a503c8018865bf6ee4,Nguyễn Văn Quản Trị,admin2@example.com,0912345678,Male,36,Cần Thơ,VIP
+6a8b998dfd7c2559c7e745b6,Admin 1,admin1@gmail.com,0900000001,Female,37,Cần Thơ,Silver
+6a8be4612dca1c2f6c0207ed,Quản Lý Cửa Hàng (Test),manager.test@gmail.com,0988111222,Male,26,Hà Nội,Gold
+6a8be4612dca1c2f6c0207ee,Nhân Viên Vận Hành (Test),staff.test@gmail.com,0988222333,Female,30,Cần Thơ,Gold
+6a8be4612dca1c2f6c0207ef,Quản Lý Kho & Sản Phẩm (Test),inventory.test@gmail.com,0988333444,Male,27,Hải Phòng,Gold
+6a8be4622dca1c2f6c0207f0,Biên Tập Viên Content (Test),content.test@gmail.com,0988444555,Female,23,Cần Thơ,Gold
+6a8be4622dca1c2f6c0207f1,Chăm Sóc Khách Hàng (Test),customer.test@gmail.com,0988555666,Male,44,Đà Nẵng,VIP
+6ab13c1c5c939fc43f4b9969,Admin Moi,admin2@gmail.com,0912345673,Female,31,TP. Hồ Chí Minh,Regular
+6ab4aa22a8961acf923ff384,Nguyễn Văn Test,user_292103@example.com,0329210389,Male,42,Cần Thơ,Silver

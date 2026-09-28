@@ -47,6 +47,7 @@ const blogPostSchema = new mongoose.Schema(
 
     viewsCount:    { type: Number, default: 0 },
     likesCount:    { type: Number, default: 0 },
+    likedUsers:    [{ type: String }],
     commentsCount: { type: Number, default: 0 },
 
     tableOfContents: [tocItemSchema],

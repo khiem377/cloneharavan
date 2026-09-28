@@ -32,7 +32,16 @@ const SERVICE_FEATURES = [
 ];
 
 export default function HomeServiceAndCoupons({ initialCoupons = [] }) {
-  const coupons = initialCoupons;
+  const coupons = React.useMemo(() => {
+    const now = new Date();
+    return (initialCoupons || []).filter((c) => {
+      if (!c || c.isActive === false) return false;
+      if (c.endDate && new Date(c.endDate) < now) return false;
+      if (c.startDate && new Date(c.startDate) > now) return false;
+      if (c.usageLimit !== null && c.usageLimit !== undefined && c.usedCount >= c.usageLimit) return false;
+      return true;
+    });
+  }, [initialCoupons]);
   const [copiedCode, setCopiedCode] = useState(null);
   const [hoveredTooltip, setHoveredTooltip] = useState(null);
 
@@ -126,21 +135,21 @@ export default function HomeServiceAndCoupons({ initialCoupons = [] }) {
     <section className="max-w-7xl mx-auto px-3 sm:px-4 my-5">
       {/* ─── ROW 1: 4 DỊCH VỤ VỚI ICON ĐEN ĐỘC QUYỀN, SẮC SẢO, CHI TIẾT ─── */}
       <div className="bg-white rounded-[6px] p-4 sm:p-5 border border-slate-200 mb-5">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 divide-y sm:divide-y-0 sm:divide-x divide-slate-100">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 divide-y sm:divide-y-0 sm:divide-x divide-slate-100">
           {SERVICE_FEATURES.map((item, idx) => (
             <div
               key={item.id}
-              className={`flex items-center gap-3 group cursor-default ${idx > 1 ? 'pt-3 sm:pt-0' : ''} ${idx > 0 ? 'sm:pl-6' : ''}`}
+              className={`flex items-center gap-2.5 sm:gap-3 group cursor-default ${idx > 1 ? 'pt-2.5 sm:pt-0' : ''} ${idx > 0 ? 'sm:pl-6' : ''}`}
             >
-              <div className="shrink-0 size-12 rounded-[6px] bg-slate-100 flex items-center justify-center text-black group-hover:bg-black group-hover:text-white transition-colors duration-200">
-                <Icon name={item.iconName} size={28} color="currentColor" />
+              <div className="shrink-0 size-9 sm:size-12 rounded-[6px] bg-slate-100 flex items-center justify-center text-black group-hover:bg-black group-hover:text-white transition-colors duration-200">
+                <Icon name={item.iconName} size={22} color="currentColor" />
               </div>
 
               <div className="min-w-0">
-                <h3 className="text-xs sm:text-sm font-extrabold text-slate-900 tracking-tight leading-tight uppercase group-hover:text-black transition-colors">
+                <h3 className="text-[11px] sm:text-sm font-extrabold text-slate-900 tracking-tight leading-tight uppercase group-hover:text-black transition-colors truncate">
                   {item.title}
                 </h3>
-                <p className="text-[11px] sm:text-xs text-slate-500 font-medium truncate mt-0.5">
+                <p className="text-[10px] sm:text-xs text-slate-500 font-medium truncate mt-0.5">
                   {item.desc}
                 </p>
               </div>
@@ -150,7 +159,8 @@ export default function HomeServiceAndCoupons({ initialCoupons = [] }) {
       </div>
 
       {/* ─── ROW 2: TICKET VOUCHERS (BỐ CỤC CHUẨN GỌN GÀNG, KHÔNG THỪA THÃI, 2 VẾT CẮT KHUYẾT THẬT) ─── */}
-      <div className="relative">
+      {coupons.length > 0 && (
+        <div className="relative">
         <div className="flex items-center justify-between mb-2.5 px-1">
           <div>
             <h2 className="text-sm sm:text-base font-black text-slate-900 tracking-tight flex items-center gap-2">
@@ -307,6 +317,7 @@ export default function HomeServiceAndCoupons({ initialCoupons = [] }) {
           })}
         </div>
       </div>
+      )}
 
       {hoveredTooltip && (
         <div
