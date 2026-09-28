@@ -25,6 +25,18 @@ export const PALETTE = {
   textMuted: '#94a3b8',
   textWhite: '#ffffff',
   textLink: '#284ea1',
+
+  // Footer & Social
+  footerBg: '#ffffff',
+  footerBorder: '#e2e8f0',
+  footerText: '#475569',
+  footerHeading: '#0f172a',
+  footerCopyrightBg: '#ffffff',
+  socialFacebook: '#1877f2',
+  socialYoutube: '#ff0000',
+  socialTiktok: '#000000',
+  socialInstagram: '#e4405f',
+  socialZalo: '#0068ff',
 };
 
 export default PALETTE;

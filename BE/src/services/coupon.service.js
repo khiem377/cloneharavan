@@ -12,8 +12,49 @@ const calcDiscount = (coupon, orderTotal) => {
 
 const getAllCoupons = async (query = {}) => {
   const filter = {};
-  if (query.keyword) filter.name = { $regex: query.keyword, $options: 'i' };
-  if (query.isActive !== undefined) filter.isActive = query.isActive === 'true';
+  const now = new Date();
+
+  // Tìm kiếm theo tên hoặc mã code
+  if (query.keyword) {
+    filter.$or = [
+      { name: { $regex: query.keyword, $options: 'i' } },
+      { code: { $regex: query.keyword, $options: 'i' } },
+    ];
+  }
+
+  // 1. Dành cho Storefront: availableOnly = true (hoặc validOnly = true)
+  // Chỉ lấy coupon ĐANG CÓ HIỆU LỰC:
+  // - isActive = true
+  // - startDate <= now (đã đến ngày bắt đầu)
+  // - endDate >= now (chưa hết hạn)
+  // - Chưa vượt giới hạn lượt dùng toàn hệ thống (usageLimit === null hoặc usedCount < usageLimit)
+  if (query.availableOnly === 'true' || query.validOnly === 'true') {
+    filter.isActive = true;
+    filter.startDate = { $lte: now };
+    filter.endDate = { $gte: now };
+    filter.$and = filter.$and || [];
+    filter.$and.push({
+      $or: [
+        { usageLimit: null },
+        { $expr: { $lt: ['$usedCount', '$usageLimit'] } },
+      ],
+    });
+  } else {
+    // 2. Dành cho Admin: lọc theo isActive hoặc status nếu có
+    if (query.isActive !== undefined) {
+      filter.isActive = query.isActive === 'true';
+    }
+
+    if (query.status === 'active') {
+      filter.isActive = true;
+      filter.startDate = { $lte: now };
+      filter.endDate = { $gte: now };
+    } else if (query.status === 'expired') {
+      filter.endDate = { $lt: now };
+    } else if (query.status === 'upcoming') {
+      filter.startDate = { $gt: now };
+    }
+  }
 
   const page = Math.max(1, parseInt(query.page) || 1);
   const limit = Math.max(1, parseInt(query.limit) || 10);

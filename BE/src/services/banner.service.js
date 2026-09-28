@@ -18,7 +18,7 @@ const getPublicBanners = (type = null) => {
     ],
   };
   if (type) filter.type = type;
-  return Banner.find(filter).sort('position');
+  return Banner.find(filter).sort({ position: 1, _id: 1 });
 };
 
 // ---------------------------------------------------------------------------
@@ -34,7 +34,7 @@ const getAllBanners = async (query = {}) => {
   const skip = (page - 1) * limit;
 
   const [data, total] = await Promise.all([
-    Banner.find(filter).sort('position').skip(skip).limit(limit).populate('mediaId', 'url folderId size'),
+    Banner.find(filter).sort({ position: 1, _id: 1 }).skip(skip).limit(limit).populate('mediaId', 'url folderId size'),
     Banner.countDocuments(filter),
   ]);
 
@@ -61,6 +61,15 @@ const createBanner = async (file, data) => {
     throw new AppError('Vui lòng upload ảnh hoặc chọn ảnh từ Media Library', 400);
   }
 
+  const bannerType = data.type || 'hero';
+
+  // Tự động tính position nếu chưa có: gán vào cuối danh sách của type đó
+  let nextPosition = data.position;
+  if (nextPosition === undefined || nextPosition === null) {
+    const lastBanner = await Banner.findOne({ type: bannerType }).sort('-position').select('position');
+    nextPosition = lastBanner && typeof lastBanner.position === 'number' ? lastBanner.position + 1 : 1;
+  }
+
   const banner = await Banner.create({
     mediaId: media._id,
     imageUrl: media.url,
@@ -68,7 +77,8 @@ const createBanner = async (file, data) => {
     title: data.title,
     altText: data.altText || media.altText || '',
     link: data.link,
-    type: data.type || 'hero',
+    position: nextPosition,
+    type: bannerType,
     isVisible: data.isVisible !== undefined ? data.isVisible : true,
     startAt: data.startAt || null,
     endAt: data.endAt || null,
@@ -82,7 +92,18 @@ const createBanner = async (file, data) => {
 // Update
 // ---------------------------------------------------------------------------
 const updateBanner = async (id, data) => {
-  const banner = await Banner.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+  const updatePayload = { ...data };
+
+  // Nếu có mediaId mới, cập nhật lại imageUrl và publicId từ Media Library
+  if (data.mediaId) {
+    const media = await Media.findById(data.mediaId);
+    if (!media) throw new AppError('Không tìm thấy ảnh trong Media Library', 404);
+    updatePayload.imageUrl = media.url;
+    updatePayload.publicId = media.publicId;
+    updatePayload.mediaId = media._id;
+  }
+
+  const banner = await Banner.findByIdAndUpdate(id, updatePayload, { new: true, runValidators: true });
   if (!banner) throw new AppError('Không tìm thấy banner', 404);
   return banner;
 };
@@ -138,10 +159,21 @@ const trackClick = async (id) => {
   await Banner.findByIdAndUpdate(id, { $inc: { clickCount: 1 } });
 };
 
-const locateBanner = async (id, limit = 10) => {
-  const banner = await Banner.findById(id).select('_id position');
+const locateBanner = async (id, limit = 10, type = null) => {
+  const banner = await Banner.findById(id).select('_id position type');
   if (!banner) throw new AppError('Không tìm thấy banner', 404);
-  const positionBefore = await Banner.countDocuments({ position: { $lt: banner.position } });
+
+  const filter = {};
+  if (type) filter.type = type;
+
+  // Tính số lượng banner đứng trước: position nhỏ hơn HOẶC cùng position nhưng _id nhỏ hơn
+  const positionBefore = await Banner.countDocuments({
+    ...filter,
+    $or: [
+      { position: { $lt: banner.position } },
+      { position: banner.position, _id: { $lt: banner._id } },
+    ],
+  });
   const page = Math.ceil((positionBefore + 1) / limit);
   return { page: Math.max(1, page), bannerId: id };
 };

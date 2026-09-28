@@ -9,6 +9,7 @@ import BlogDetailContent from '../../../components/blog/BlogDetailContent';
 import BlogRelatedPosts from '../../../components/blog/BlogRelatedPosts';
 import BlogSidebar from '../../../components/blog/BlogSidebar';
 import BlogViewTracker from '../../../components/blog/BlogViewTracker';
+import BlogCommentsSection from '../../../components/blog/BlogCommentsSection';
 import { Button } from '../../../components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 
@@ -131,6 +132,9 @@ export default async function BlogDetailPage({ params }) {
 
             {/* Post Rich Content */}
             <BlogDetailContent content={post.content} tags={post.tags || []} />
+
+            {/* BÌNH LUẬN BÀI VIẾT (3 CẤP, KHÔNG RATING, KHÔNG RÀNG BUỘC MUA HÀNG) */}
+            <BlogCommentsSection postId={post._id || post.id} postTitle={post.title} />
 
             {/* Related Posts */}
             {relatedPosts.length > 0 && (

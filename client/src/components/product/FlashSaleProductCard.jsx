@@ -178,6 +178,7 @@ export default function FlashSaleProductCard({ item, onAddToCartMock, onBuyNowMo
             <div className="absolute top-2 right-2 flex flex-col gap-1.5 opacity-0 translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200 z-20">
               <button
                 type="button"
+                data-no-progress="true"
                 onClick={handleQuickViewClick}
                 title="Xem nhanh"
                 className="size-8 rounded-full bg-white/90 hover:bg-white text-gray-700 hover:text-red-600 shadow-md flex items-center justify-center transition-colors cursor-pointer"
@@ -186,6 +187,7 @@ export default function FlashSaleProductCard({ item, onAddToCartMock, onBuyNowMo
               </button>
               <button
                 type="button"
+                data-no-progress="true"
                 onClick={handleCompareClick}
                 title="So sánh"
                 className={`size-8 rounded-full shadow-md flex items-center justify-center transition-colors cursor-pointer ${compared ? 'bg-red-600 text-white' : 'bg-white/90 hover:bg-white text-gray-700 hover:text-red-600'

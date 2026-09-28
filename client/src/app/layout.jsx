@@ -5,9 +5,12 @@ import { categoryService } from '@/services/category.service';
 import { searchService } from '@/services/search.service';
 import StoreProvider from '@/providers/StoreProvider';
 import Header from '@/components/header/Header';
+import Footer from '@/components/layout/Footer';
 import QuickViewModal from '@/components/product/QuickViewModal';
 import CompareBar from '@/components/product/CompareBar';
 import TopProgressBar from '@/components/common/TopProgressBar';
+import ScrollToTop from '@/components/common/ScrollToTop';
+import { ToastContainer } from '@/components/ui/toast';
 
 const beVietnamPro = Be_Vietnam_Pro({
   subsets: ['latin', 'vietnamese'],
@@ -16,29 +19,39 @@ const beVietnamPro = Be_Vietnam_Pro({
   display: 'swap',
 });
 
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+};
+
 export const metadata = {
   title: 'SHOP — Siêu thị điện máy & công nghệ chính hãng',
   description: 'Siêu thị điện máy & công nghệ chính hãng SHOP',
 };
 
 export default async function RootLayout({ children }) {
-  const [initialMenu, initialCategories, initialTrending] = await Promise.all([
+  const [initialMenu, initialFooterMenu, initialCategories, initialTrending] = await Promise.all([
     menuService.getServerMenu('main-menu'),
+    menuService.getServerMenu('footer'),
     categoryService.getServerCategoryTree(),
     searchService.getServerTrending(10, 'all'),
   ]);
 
   return (
     <html lang="vi" className={`h-full ${beVietnamPro.variable}`}>
-      <body className={`min-h-full flex flex-col bg-white text-slate-900 antialiased ${beVietnamPro.className}`}>
+      <body className={`min-h-[100dvh] flex flex-col bg-white text-slate-900 antialiased overflow-x-hidden w-full max-w-full ${beVietnamPro.className}`}>
         <TopProgressBar />
+        <ScrollToTop />
+        <ToastContainer />
         <StoreProvider
           initialMenu={initialMenu}
           initialCategories={initialCategories}
           initialTrending={initialTrending}
         >
           <Header />
-          <main className="flex-1">{children}</main>
+          <main className="flex-1 w-full max-w-full overflow-x-hidden">{children}</main>
+          <Footer initialMenu={initialFooterMenu} />
           <QuickViewModal />
           <CompareBar />
         </StoreProvider>

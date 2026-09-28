@@ -24,10 +24,19 @@ import { useSearchParams } from 'react-router-dom';
 import { MediaThumbnailHover } from '@/components/ui/MediaFolderBadge';
 import { useMediaByIds } from '@/hooks/useMedia';
 
+const TYPE_TABS = [
+  { key: 'all', label: 'Tất cả' },
+  { key: 'hero', label: 'Hero (Slider chính)' },
+  { key: 'popup', label: 'Popup' },
+  { key: 'sidebar', label: 'Sidebar' },
+  { key: 'category-top', label: 'Đầu danh mục' },
+  { key: 'product-top', label: 'Đầu sản phẩm' },
+];
+
 function VisibleBadge({ isVisible }) {
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium border ${isVisible ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20' : 'bg-muted text-muted-foreground border-border'}`}>
-      <span className={`size-1.5 rounded-full ${isVisible ? 'bg-emerald-500' : 'bg-muted-foreground'}`} />
+    <span className={`inline-flex items-center gap-1.5 rounded-[6px] px-2.5 py-0.5 text-xs font-medium border ${isVisible ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20' : 'bg-muted text-muted-foreground border-border'}`}>
+      <span className={`size-1.5 rounded-[2px] ${isVisible ? 'bg-emerald-500' : 'bg-muted-foreground'}`} />
       {isVisible ? 'Hiển thị' : 'Đang ẩn'}
     </span>
   );
@@ -37,7 +46,7 @@ function TypeBadge({ type }) {
   const label = BANNER_TYPE_LABELS?.[type] || type || 'hero';
   const short = label.split(' ')[0]; // chỉ lấy từ đầu
   return (
-    <span className="inline-flex items-center rounded-md bg-violet-500/10 text-violet-700 dark:text-violet-300 border border-violet-500/20 px-2 py-0.5 text-xs font-medium">
+    <span className="inline-flex items-center rounded-[6px] bg-violet-500/10 text-violet-700 dark:text-violet-300 border border-violet-500/20 px-2 py-0.5 text-xs font-medium">
       {short}
     </span>
   );
@@ -57,7 +66,7 @@ function ScheduleBadge({ startAt, endAt }) {
   else if (end) { label = `→ ${fmt(end)}`; }
 
   return (
-    <span className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-medium ${statusCls}`}>
+    <span className={`inline-flex items-center gap-1 rounded-[6px] border px-2 py-0.5 text-xs font-medium ${statusCls}`}>
       <Calendar size={10} />{label}
     </span>
   );
@@ -191,16 +200,16 @@ function SortableBannerRow({ banner, index, selected, onToggle, onEdit, onDelete
 
 function BannerCard({ banner, selected, onToggle, onEdit, onDelete, onToggleVisible }) {
   return (
-    <div className={`rounded-xl border border-border bg-card text-card-foreground shadow-2xs overflow-hidden transition-all hover:border-primary/50 ${selected ? 'border-primary ring-2 ring-primary/30' : ''}`}>
+    <div className={`rounded-[6px] border border-border bg-card text-card-foreground overflow-hidden transition-colors hover:border-primary/50 ${selected ? 'border-primary ring-1 ring-primary/40' : ''}`}>
       <div className="relative aspect-video w-full bg-muted cursor-pointer overflow-hidden" onClick={() => onToggle(banner._id)}>
         <img src={banner.imageUrl} alt={banner.altText || banner.title || 'banner'} className="size-full object-cover" />
         {selected && (
-          <div className="absolute top-2 right-2 size-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-xs z-10">
+          <div className="absolute top-2 right-2 size-5 rounded-[4px] bg-primary text-primary-foreground flex items-center justify-center shadow-xs z-10">
             <Check size={12} />
           </div>
         )}
         {!banner.isVisible && (
-          <div className="absolute inset-0 bg-background/70 backdrop-blur-xs flex items-center justify-center gap-1.5 text-xs font-medium text-muted-foreground">
+          <div className="absolute inset-0 bg-background/80 flex items-center justify-center gap-1.5 text-xs font-medium text-muted-foreground">
             <EyeOff size={14} /> Đang ẩn
           </div>
         )}
@@ -221,11 +230,11 @@ function BannerCard({ banner, selected, onToggle, onEdit, onDelete, onToggleVisi
         <VisibleBadge isVisible={banner.isVisible} />
         <AnalyticsChip views={banner.viewCount} clicks={banner.clickCount} />
         <div className="flex items-center justify-end gap-1 pt-2 border-t border-border">
-          <button className="inline-flex items-center gap-1 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 px-2 py-1 text-xs font-medium transition-colors cursor-pointer" onClick={onEdit}><Pencil size={12} /></button>
-          <button className="inline-flex items-center gap-1 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400 hover:bg-purple-500/20 px-2 py-1 text-xs font-medium transition-colors cursor-pointer" onClick={onToggleVisible}>
+          <button className="inline-flex items-center gap-1 rounded-[6px] bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 px-2 py-1 text-xs font-medium transition-colors cursor-pointer" onClick={onEdit}><Pencil size={12} /></button>
+          <button className="inline-flex items-center gap-1 rounded-[6px] bg-purple-500/10 text-purple-600 dark:text-purple-400 hover:bg-purple-500/20 px-2 py-1 text-xs font-medium transition-colors cursor-pointer" onClick={onToggleVisible}>
             {banner.isVisible ? <EyeOff size={12} /> : <Eye size={12} />}
           </button>
-          <button className="inline-flex items-center gap-1 rounded-md bg-destructive/10 text-destructive hover:bg-destructive/20 px-2 py-1 text-xs font-medium transition-colors cursor-pointer" onClick={onDelete}><Trash2 size={12} /></button>
+          <button className="inline-flex items-center gap-1 rounded-[6px] bg-destructive/10 text-destructive hover:bg-destructive/20 px-2 py-1 text-xs font-medium transition-colors cursor-pointer" onClick={onDelete}><Trash2 size={12} /></button>
         </div>
       </div>
     </div>
@@ -236,6 +245,7 @@ export default function BannerPage() {
   const qc = useQueryClient();
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
+  const [typeFilter, setTypeFilter] = useState('all');
   const [viewMode, setViewMode] = useState('table');
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [formTarget, setFormTarget] = useState(undefined);
@@ -246,7 +256,7 @@ export default function BannerPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const rowRefs = useRef({});
 
-  const res = useBanners({ page, limit });
+  const res = useBanners({ page, limit, type: typeFilter === 'all' ? undefined : typeFilter });
   const bannerData = res.data;
   const remoteBanners = bannerData?.data ?? (Array.isArray(bannerData) ? bannerData : []);
   const pagination = bannerData?.pagination;
@@ -266,17 +276,18 @@ export default function BannerPage() {
   const highlightId = searchParams.get('highlight');
   useEffect(() => {
     if (!highlightId) return;
-    bannerService.locate(highlightId, limit)
+    bannerService.locate(highlightId, limit, typeFilter === 'all' ? undefined : typeFilter)
       .then((res) => { setPage(res.data?.data?.page || 1); })
       .catch(() => {});
-  }, [highlightId]);
+  }, [highlightId, typeFilter, limit]);
+
   useEffect(() => {
     if (!highlightId || !banners.length) return;
     const found = banners.find((b) => b._id === highlightId);
     if (!found) return;
     setSelectedIds((prev) => { const n = new Set(prev); n.add(highlightId); return n; });
     setSearchParams((p) => { p.delete('highlight'); return p; }, { replace: true });
-  }, [highlightId, banners]);
+  }, [highlightId, banners, setSearchParams]);
 
   const { mutate: deleteBanner } = useDeleteBanner();
   const { mutate: deleteBulk } = useDeleteBulkBanners();
@@ -294,9 +305,10 @@ export default function BannerPage() {
 
     const oldIndex = banners.findIndex(b => b._id === active.id);
     const newIndex = banners.findIndex(b => b._id === over.id);
+    const startPosition = (page - 1) * limit;
     const reordered = arrayMove(banners, oldIndex, newIndex).map((b, i) => ({
       ...b,
-      position: i + 1,
+      position: startPosition + i + 1,
     }));
 
     setLocalOrder(reordered);
@@ -353,6 +365,7 @@ export default function BannerPage() {
 
   return (
     <div className="p-3 sm:p-6 flex flex-col gap-4 sm:gap-6 w-full max-w-full overflow-x-hidden min-h-full bg-background text-foreground">
+      {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-border">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground">Banners</h1>
@@ -366,36 +379,62 @@ export default function BannerPage() {
         <div className="flex items-center gap-2">
           {selectedIds.size > 0 && (
             <>
-              <span className="inline-flex items-center rounded-full bg-accent px-2.5 py-0.5 text-xs font-medium text-accent-foreground">{selectedIds.size} đã chọn</span>
-              <button className="inline-flex h-8 items-center justify-center gap-1 rounded-md bg-destructive/10 text-destructive px-3 text-xs font-medium hover:bg-destructive/20 transition-colors cursor-pointer" onClick={() => setShowBulkDel(true)}>
+              <span className="inline-flex items-center rounded-[6px] bg-accent px-2.5 py-0.5 text-xs font-medium text-accent-foreground">{selectedIds.size} đã chọn</span>
+              <button className="inline-flex h-8 items-center justify-center gap-1 rounded-[6px] bg-destructive/10 text-destructive px-3 text-xs font-medium hover:bg-destructive/20 transition-colors cursor-pointer" onClick={() => setShowBulkDel(true)}>
                 <Trash2 size={13} /> Xóa
               </button>
-              <button className="inline-flex h-8 items-center justify-center gap-1 rounded-md px-3 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer" onClick={() => setSelectedIds(new Set())}>Bỏ chọn</button>
+              <button className="inline-flex h-8 items-center justify-center gap-1 rounded-[6px] px-3 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer" onClick={() => setSelectedIds(new Set())}>Bỏ chọn</button>
             </>
           )}
-          <div className="flex items-center rounded-md border border-border bg-muted p-0.5">
-            <button className={`p-1.5 rounded transition-colors cursor-pointer ${viewMode === 'table' ? 'bg-background text-foreground font-semibold shadow-2xs' : 'text-muted-foreground hover:text-foreground'}`} onClick={() => setViewMode('table')} title="Bảng">
+          <div className="flex items-center rounded-[6px] border border-border bg-muted p-0.5">
+            <button className={`p-1.5 rounded-[4px] transition-colors cursor-pointer ${viewMode === 'table' ? 'bg-background text-foreground font-semibold shadow-xs' : 'text-muted-foreground hover:text-foreground'}`} onClick={() => setViewMode('table')} title="Bảng">
               <List size={14} />
             </button>
-            <button className={`p-1.5 rounded transition-colors cursor-pointer ${viewMode === 'grid' ? 'bg-background text-foreground font-semibold shadow-2xs' : 'text-muted-foreground hover:text-foreground'}`} onClick={() => setViewMode('grid')} title="Lưới">
+            <button className={`p-1.5 rounded-[4px] transition-colors cursor-pointer ${viewMode === 'grid' ? 'bg-background text-foreground font-semibold shadow-xs' : 'text-muted-foreground hover:text-foreground'}`} onClick={() => setViewMode('grid')} title="Lưới">
               <LayoutGrid size={14} />
             </button>
           </div>
-          <button className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground shadow-xs hover:bg-primary/90 transition-colors cursor-pointer" onClick={() => setFormTarget(null)}>
+          <button className="inline-flex h-9 items-center justify-center gap-1.5 rounded-[6px] bg-primary px-4 text-sm font-medium text-primary-foreground shadow-xs hover:bg-primary/90 transition-colors cursor-pointer" onClick={() => setFormTarget(null)}>
             <Plus size={15} /> Tạo mới
           </button>
         </div>
       </div>
 
-      <div className="rounded-xl border border-border bg-card text-card-foreground shadow-2xs overflow-hidden">
+      {/* Type Filter Tabs */}
+      <div className="flex items-center gap-1.5 border-b border-border pb-3 overflow-x-auto">
+        {TYPE_TABS.map((tab) => {
+          const active = typeFilter === tab.key;
+          return (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => {
+                setTypeFilter(tab.key);
+                setPage(1);
+                setSelectedIds(new Set());
+                setLocalOrder(null);
+              }}
+              className={`px-3 py-1.5 text-xs font-medium rounded-[6px] transition-colors cursor-pointer border ${
+                active
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'bg-muted/40 text-muted-foreground hover:text-foreground hover:bg-muted border-transparent'
+              }`}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="rounded-[6px] border border-border bg-card text-card-foreground overflow-hidden">
         {isLoading ? (
           <div className="flex justify-center items-center py-20 text-sm text-muted-foreground">Đang tải...</div>
         ) : banners.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-3 py-20 text-center text-sm text-muted-foreground">
             <Image size={40} className="text-muted-foreground/60" />
-            <p>Chưa có banner nào</p>
-            <button className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground shadow-xs hover:bg-primary/90 transition-colors cursor-pointer" onClick={() => setFormTarget(null)}>
-              <Plus size={14} /> Tạo banner đầu tiên
+            <p>Chưa có banner nào{typeFilter !== 'all' ? ` thuộc nhóm ${BANNER_TYPE_LABELS?.[typeFilter] || typeFilter}` : ''}</p>
+            <button className="inline-flex h-9 items-center justify-center gap-1.5 rounded-[6px] bg-primary px-4 text-sm font-medium text-primary-foreground shadow-xs hover:bg-primary/90 transition-colors cursor-pointer" onClick={() => setFormTarget(null)}>
+              <Plus size={14} /> Tạo banner
             </button>
           </div>
         ) : viewMode === 'table' ? (
@@ -444,7 +483,7 @@ export default function BannerPage() {
 
             <DragOverlay>
               {activeItem && (
-                <table className="w-full text-left text-sm border-collapse bg-background shadow-xl rounded-lg border border-border">
+                <table className="w-full text-left text-sm border-collapse bg-background shadow-sm rounded-[6px] border border-border">
                   <tbody>
                     <tr className="bg-background">
                       <td className="px-3.5 py-3 w-10" />

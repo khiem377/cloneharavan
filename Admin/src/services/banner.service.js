@@ -20,7 +20,7 @@ export const bannerService = {
 
   // ── Admin ─────────────────────────────────────────────────────────────────
   getAll:     (params = {}) => api.get('/banners/admin', { params }),
-  locate:     (id, limit)   => api.get('/banners/admin/locate', { params: { id, limit } }),
+  locate:     (id, limit, type) => api.get('/banners/admin/locate', { params: { id, limit, type } }),
   create:     (data)        => api.post('/banners/admin', data),
   update:     (id, data)    => api.patch(`/banners/admin/${id}`, data),
   remove:     (id)          => api.delete(`/banners/admin/${id}`),

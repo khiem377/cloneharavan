@@ -74,11 +74,11 @@ export default function BannerFormModal({ banner, onClose }) {
   return (
     <>
       <div
-        className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
+        className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
         onClick={onClose}
       >
         <div
-          className="bg-card border border-border rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col"
+          className="bg-card border border-border rounded-[6px] shadow-sm w-full max-w-lg max-h-[90vh] flex flex-col"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
@@ -86,7 +86,7 @@ export default function BannerFormModal({ banner, onClose }) {
             <h3 className="text-base font-semibold text-foreground">
               {isEdit ? 'Cập nhật banner' : 'Thêm banner mới'}
             </h3>
-            <button type="button" onClick={onClose} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground transition-colors">
+            <button type="button" onClick={onClose} className="p-1.5 rounded-[6px] hover:bg-muted text-muted-foreground transition-colors">
               <X className="size-4" />
             </button>
           </div>
@@ -98,14 +98,14 @@ export default function BannerFormModal({ banner, onClose }) {
               <div>
                 <label className={labelCls}>Ảnh banner <span className="text-destructive">*</span></label>
                 {media ? (
-                  <div className="relative rounded-lg overflow-hidden border border-border">
+                  <div className="relative rounded-[6px] overflow-hidden border border-border">
                     <MediaThumbnailHover media={media}>
                       <img src={media.url} alt="preview" className="w-full h-40 object-cover" />
                     </MediaThumbnailHover>
                     <button
                       type="button"
                       onClick={() => setShowPicker(true)}
-                      className="absolute bottom-2 right-2 px-3 py-1.5 bg-black/60 hover:bg-black/80 text-white text-xs font-medium rounded-md backdrop-blur-sm transition-colors"
+                      className="absolute bottom-2 right-2 px-3 py-1.5 bg-black/80 hover:bg-black text-white text-xs font-medium rounded-[6px] transition-colors"
                     >
                       Thay đổi ảnh
                     </button>
@@ -114,7 +114,7 @@ export default function BannerFormModal({ banner, onClose }) {
                   <button
                     type="button"
                     onClick={() => setShowPicker(true)}
-                    className="w-full h-28 rounded-lg border-2 border-dashed border-border hover:border-primary/50 bg-muted/30 hover:bg-muted/50 flex flex-col items-center justify-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+                    className="w-full h-28 rounded-[6px] border-2 border-dashed border-border hover:border-primary/50 bg-muted/30 hover:bg-muted/50 flex flex-col items-center justify-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
                   >
                     <Image className="size-6" />
                     <span className="text-sm">Chọn từ thư viện ảnh</span>
@@ -151,7 +151,7 @@ export default function BannerFormModal({ banner, onClose }) {
               {/* Link */}
               <div>
                 <label className={labelCls}>Đường dẫn (link)</label>
-                <input className={inputCls} value={link} onChange={e => setLink(e.target.value)} placeholder="https://... hoặc /danh-muc/..." />
+                <input className={inputCls} value={link} onChange={e => setLink(e.target.value)} placeholder="https://... hoặc /collections/..." />
               </div>
 
               {/* Schedule: startAt + endAt */}
@@ -181,7 +181,7 @@ export default function BannerFormModal({ banner, onClose }) {
                 </div>
                 {startAt && endAt && (
                   <p className="text-[11px] text-muted-foreground mt-1.5">
-                    Hien thi {new Date(startAt).toLocaleString('vi-VN')} → {new Date(endAt).toLocaleString('vi-VN')}
+                    Hiển thị {new Date(startAt).toLocaleString('vi-VN')} → {new Date(endAt).toLocaleString('vi-VN')}
                   </p>
                 )}
               </div>
@@ -189,9 +189,11 @@ export default function BannerFormModal({ banner, onClose }) {
               {/* Visible toggle */}
               <div className="flex items-center justify-between py-1">
                 <div>
-                  <p className="text-sm font-medium text-foreground">Hiển thị ngay</p>
+                  <p className="text-sm font-medium text-foreground">Kích hoạt banner</p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {startAt ? 'Sẽ tự bật theo lịch đã đặt' : 'Banner hiển thị trên trang chủ storefront'}
+                    {startAt || endAt
+                      ? 'Banner chỉ hiển thị storefront trong khoảng thời gian đã hẹn lịch'
+                      : 'Bật để banner hiển thị ngay trên storefront'}
                   </p>
                 </div>
                 <button
@@ -201,7 +203,7 @@ export default function BannerFormModal({ banner, onClose }) {
                   onClick={() => setIsVisible(!isVisible)}
                   className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors ${isVisible ? 'bg-primary' : 'bg-muted'}`}
                 >
-                  <span className={`pointer-events-none inline-block size-5 rounded-full bg-white shadow-sm ring-0 transition-transform duration-200 ${isVisible ? 'translate-x-5' : 'translate-x-0'}`} />
+                  <span className={`pointer-events-none inline-block size-5 rounded-full bg-white shadow-xs ring-0 transition-transform duration-200 ${isVisible ? 'translate-x-5' : 'translate-x-0'}`} />
                 </button>
               </div>
             </div>
@@ -212,14 +214,14 @@ export default function BannerFormModal({ banner, onClose }) {
                 type="button"
                 onClick={onClose}
                 disabled={isPending}
-                className="px-4 py-2 rounded-lg border border-border text-sm font-medium hover:bg-muted transition-colors disabled:opacity-50"
+                className="px-4 py-2 rounded-[6px] border border-border text-sm font-medium hover:bg-muted transition-colors disabled:opacity-50"
               >
                 Hủy
               </button>
               <button
                 type="submit"
                 disabled={isPending}
-                className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+                className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-[6px] text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
               >
                 {isPending && <Loader2 className="size-4 animate-spin" />}
                 {isEdit ? 'Cập nhật' : 'Tạo banner'}

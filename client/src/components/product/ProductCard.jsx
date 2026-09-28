@@ -157,6 +157,7 @@ export default function ProductCard({ product }) {
               {/* Quick View Button */}
               <button
                 type="button"
+                data-no-progress="true"
                 onClick={handleQuickViewClick}
                 className="w-8 h-8 rounded-full bg-white hover:bg-[#e30019] text-gray-700 hover:text-white shadow-md flex items-center justify-center transition cursor-pointer"
                 title="Xem nhanh sản phẩm"
@@ -167,6 +168,7 @@ export default function ProductCard({ product }) {
               {/* Compare Button */}
               <button
                 type="button"
+                data-no-progress="true"
                 onClick={handleCompareClick}
                 className={`w-8 h-8 rounded-full shadow-md flex items-center justify-center transition cursor-pointer ${compared
                     ? 'bg-emerald-600 text-white'

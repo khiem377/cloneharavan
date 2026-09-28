@@ -30,6 +30,7 @@ const updateBannerSchema = z.object({
   isVisible: z.boolean().optional(),
   startAt:   z.string().nullable().optional(),
   endAt:     z.string().nullable().optional(),
+  mediaId:   z.string().optional(),
 }).refine(
   (d) => !d.startAt || !d.endAt || new Date(d.startAt) < new Date(d.endAt),
   { message: 'startAt phải nhỏ hơn endAt', path: ['endAt'] }

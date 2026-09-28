@@ -259,20 +259,35 @@ export const QuickViewModal = () => {
 
                 <div className="flex items-center justify-between gap-3 mt-1.5 pt-1.5 border-t border-gray-100 text-xs text-gray-500">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span>
-                      Thương hiệu:{' '}
-                      {brandSlug ? (
-                        <Link
-                          href={`/collections/${brandSlug}`}
-                          onClick={handleClose}
-                          className="font-bold text-gray-900 hover:text-[#e30019] transition-colors cursor-pointer"
-                        >
-                          {brandName}
-                        </Link>
-                      ) : (
-                        <strong className="text-gray-800">{brandName}</strong>
-                      )}
-                    </span>
+                    {product.brand?.logo?.url ? (
+                      <Link
+                        href={`/search?brand=${encodeURIComponent(brandSlug || product.brand?._id || brandName)}`}
+                        onClick={handleClose}
+                        title={`Thương hiệu: ${brandName}`}
+                        className="inline-flex items-center hover:opacity-85 transition-opacity"
+                      >
+                        <img
+                          src={product.brand.logo.url}
+                          alt={brandName}
+                          className="h-5 max-w-[64px] object-contain inline-block border border-slate-200 rounded-[4px] px-1 bg-white hover:border-slate-300"
+                        />
+                      </Link>
+                    ) : (
+                      <span>
+                        Thương hiệu:{' '}
+                        {brandSlug ? (
+                          <Link
+                            href={`/search?brand=${encodeURIComponent(brandSlug || brandName)}`}
+                            onClick={handleClose}
+                            className="font-bold text-gray-900 hover:text-[#e30019] transition-colors cursor-pointer"
+                          >
+                            {brandName}
+                          </Link>
+                        ) : (
+                          <strong className="text-gray-800">{brandName}</strong>
+                        )}
+                      </span>
+                    )}
                     <span>|</span>
                     <span>
                       Mã: <strong className="text-gray-800">{sku}</strong>
