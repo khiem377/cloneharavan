@@ -61,6 +61,24 @@ const createProductSchema = z.object({
   }).optional(),
 
   isActive: z.boolean().optional(),
+
+  variants: z.array(
+    z.object({
+      sku: z.string().optional(),
+      displayName: z.string().optional(),
+      attributes: z.array(
+        z.object({
+          name: z.string(),
+          value: z.string(),
+        })
+      ).optional(),
+      price: z.number().min(0, 'Giá niêm yết không được nhỏ hơn 0'),
+      salePrice: z.number().min(0).optional(),
+      costPrice: z.number().min(0).optional(),
+      stock: z.number().min(0).default(0),
+      unit: z.string().optional(),
+    })
+  ).optional(),
 });
 
 const updateProductSchema = createProductSchema.partial();

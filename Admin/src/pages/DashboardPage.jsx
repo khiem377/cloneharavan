@@ -33,7 +33,7 @@ import {
   GiftIcon,
   EyeIcon,
 } from '@/components/ui/Icons';
-import { useDashboardOverview } from '@/hooks/useDashboard';
+import { useDashboardOverview, useDashboardInventoryStats } from '@/hooks/useDashboard';
 import { dashboardService } from '@/services/dashboard.service';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from '@/providers/ToastProvider';
@@ -71,7 +71,13 @@ const trendData = [
 
 export default function DashboardPage() {
   const navigate = useNavigate();
-  const { data, isLoading: loading, isFetching: refreshing, refetch } = useDashboardOverview();
+
+  // ── Period & Range state ──
+  const [period, setPeriod]   = useState('30days');
+  const [invRange, setInvRange] = useState('6months');
+
+  const { data, isLoading: loading, isFetching: refreshing, refetch } = useDashboardOverview(period);
+  const { data: invData } = useDashboardInventoryStats(invRange);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState(null);
@@ -176,7 +182,30 @@ export default function DashboardPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3 w-full sm:w-auto">
+        {/* Period Selector + Actions */}
+        <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap justify-end">
+          {/* Period filter buttons */}
+          <div className="flex items-center rounded-lg border border-border bg-muted/40 p-0.5 gap-0.5">
+            {[
+              { value: '7days',   label: '7N' },
+              { value: '30days',  label: '30N' },
+              { value: '90days',  label: '90N' },
+              { value: '6months', label: '6T' },
+            ].map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => setPeriod(opt.value)}
+                className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${
+                  period === opt.value
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+
           {/* Global Search Bar */}
           <div ref={searchContainerRef} className="relative flex-1 sm:w-72">
             <div className="relative">
@@ -333,7 +362,7 @@ export default function DashboardPage() {
 
       {/* Top Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Card 1 */}
+        {/* Card 1 — Products */}
         <Link to="/products" className="group rounded-2xl border border-border bg-card p-5 shadow-2xs transition-all hover:border-primary/50 hover:shadow-md relative overflow-hidden">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Sản phẩm & Biến thể</span>
@@ -343,9 +372,11 @@ export default function DashboardPage() {
           </div>
           <div className="mt-3 flex items-baseline justify-between">
             <span className="text-3xl font-extrabold text-foreground tracking-tight">{stats.totalProducts || 0}</span>
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-              <ArrowUpRightIcon className="size-3" /> +12%
-            </span>
+            {stats.newProducts > 0 && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                <ArrowUpRightIcon className="size-3" /> +{stats.newProducts} trong {stats.periodLabel}
+              </span>
+            )}
           </div>
           <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
             <span>{stats.publishedProducts || 0} xuất bản</span>
@@ -373,7 +404,7 @@ export default function DashboardPage() {
           </div>
         </Link>
 
-        {/* Card 3 */}
+        {/* Card 3 — Blog */}
         <Link to="/blog/posts" className="group rounded-2xl border border-border bg-card p-5 shadow-2xs transition-all hover:border-indigo-500/50 hover:shadow-md relative overflow-hidden">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Bài viết Blog</span>
@@ -383,9 +414,11 @@ export default function DashboardPage() {
           </div>
           <div className="mt-3 flex items-baseline justify-between">
             <span className="text-3xl font-extrabold text-foreground tracking-tight">{stats.totalBlogPosts || 0}</span>
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-              {stats.publishedBlogPosts || 0} đã đăng
-            </span>
+            {stats.newBlogPosts > 0 && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                <ArrowUpRightIcon className="size-3" /> +{stats.newBlogPosts} mới
+              </span>
+            )}
           </div>
           <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
             <span>{stats.draftBlogPosts || 0} nháp</span>
@@ -647,6 +680,86 @@ export default function DashboardPage() {
               })
             ) : (
               <p className="text-xs text-muted-foreground text-center py-6">Chưa có bài viết</p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Kho hàng ── */}
+      <div className="space-y-4">
+        <h2 className="text-base font-semibold text-foreground border-b border-border pb-2">Thống kê Kho hàng</h2>
+
+        {/* Summary cards kho */}
+        {invData?.inventorySummary && (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {[
+              { label: 'Tổng Đơn Nhập', value: invData.inventorySummary.totalPO, to: '/inventory/purchase-orders', color: 'text-violet-600 dark:text-violet-400', bg: 'bg-violet-500/10' },
+              { label: 'Đơn Đang Xử Lý', value: invData.inventorySummary.pendingPO, to: '/inventory/purchase-orders', color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10' },
+              { label: 'Phiếu Nhập Kho', value: invData.inventorySummary.totalReceiving, to: '/inventory/stock-receiving', color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10' },
+              { label: 'Phiếu Xuất Kho', value: invData.inventorySummary.totalExport, to: '/inventory/stock-export', color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-500/10' },
+            ].map((card) => (
+              <Link key={card.label} to={card.to} className="group rounded-xl border border-border bg-card p-4 flex flex-col gap-1 hover:border-primary/40 transition-colors">
+                <span className="text-xs text-muted-foreground">{card.label}</span>
+                <span className={`text-2xl font-bold ${card.color}`}>{card.value ?? 0}</span>
+              </Link>
+            ))}
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Biểu đồ nhập/xuất 6 tháng */}
+          <div className="rounded-xl border border-border bg-card p-4">
+            <p className="text-sm font-semibold text-foreground mb-4">Biến động kho 6 tháng gần nhất</p>
+            {invData?.monthlyStockChart?.length > 0 ? (
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={invData.monthlyStockChart} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="month" tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} />
+                  <YAxis tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11 }} />
+                  <Bar dataKey="nhap" name="Nhập kho" fill="#10b981" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="xuat" name="Xuất kho" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-[220px] text-sm text-muted-foreground">Chưa có dữ liệu biến động kho</div>
+            )}
+          </div>
+
+          {/* Top variant tồn kho thấp */}
+          <div className="rounded-xl border border-border bg-card p-4">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm font-semibold text-foreground">Sắp hết hàng (variant)</p>
+              <Link to="/inventory/stock-alert" className="text-xs text-primary hover:underline flex items-center gap-0.5">
+                Xem tất cả <ChevronRightIcon className="size-3" />
+              </Link>
+            </div>
+            {invData?.lowStockVariants?.length > 0 ? (
+              <div className="divide-y divide-border/60 overflow-hidden">
+                {invData.lowStockVariants.slice(0, 6).map((v) => (
+                  <Link
+                    key={v._id}
+                    to={v.productId ? `/products/${v.productId}/variants` : '#'}
+                    className="group py-2.5 flex items-center gap-3 hover:bg-muted/40 px-1 rounded-lg transition-colors"
+                  >
+                    {v.thumbnail ? (
+                      <img src={v.thumbnail} alt={v.name} className="size-9 rounded-md object-cover border border-border shrink-0" />
+                    ) : (
+                      <div className="size-9 rounded-md bg-muted border border-border shrink-0" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-foreground truncate group-hover:text-primary transition-colors">{v.name}</p>
+                      <p className="text-[11px] text-muted-foreground truncate">{v.variant || v.sku}</p>
+                    </div>
+                    <span className={`shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold border ${v.stock <= 3 ? 'bg-destructive/10 text-destructive border-destructive/20' : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'}`}>
+                      {v.stock}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-[180px] text-sm text-muted-foreground">Tất cả sản phẩm có tồn kho ổn định</div>
             )}
           </div>
         </div>

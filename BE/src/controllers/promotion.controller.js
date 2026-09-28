@@ -1,4 +1,5 @@
 const promotionService = require('../services/promotion.service');
+const checkoutService = require('../services/checkout.service');
 const { createPromotionSchema, updatePromotionSchema } = require('../validators/promotion.validator');
 const { AppError } = require('../utils/AppError');
 
@@ -59,10 +60,10 @@ const removeBulk = async (req, res, next) => {
 
 const apply = async (req, res, next) => {
   try {
-    const { cartItems } = req.body;
+    const { cartItems, couponCode } = req.body;
     if (!Array.isArray(cartItems) || !cartItems.length)
       return next(new AppError('Giỏ hàng không hợp lệ', 400));
-    const result = await promotionService.applyPromotions(cartItems);
+    const result = await checkoutService.calculateCheckout({ cartItems, couponCode });
     res.json({ status: 'success', data: result });
   } catch (err) { next(err); }
 };

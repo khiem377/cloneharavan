@@ -8,9 +8,11 @@ import {
 import { useBrands, useAllBrands } from '@/hooks/useBrands';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import MediaPickerModal from '@/components/ui/MediaPickerModal';
+import { MediaThumbnailHover } from '@/components/ui/MediaFolderBadge';
 import DataTablePagination from '@/components/ui/DataTablePagination';
 import { useSearchParams } from 'react-router-dom';
 import Can from '@/components/auth/Can';
+import SearchableSelect from '@/components/ui/SearchableSelect';
 
 const CLIENT_STORE_URL = import.meta.env.VITE_STORE_FRONTEND_URL || import.meta.env.VITE_CLIENT_URL || 'http://localhost:3000';
 
@@ -150,7 +152,10 @@ function CategoryRow({ cat, level = 0, selected, onSelect, onEdit, onDelete, onT
 }
 
 export default function CategoryPage() {
-  const [keyword, setKeyword] = useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialSearch = searchParams.get('search') || '';
+
+  const [keyword, setKeyword] = useState(initialSearch);
   const [selected, setSelected] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
@@ -158,7 +163,6 @@ export default function CategoryPage() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [mediaPickerFor, setMediaPickerFor] = useState(null);
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
-  const [searchParams, setSearchParams] = useSearchParams();
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -273,11 +277,15 @@ export default function CategoryPage() {
   const handleMediaPick = (media) => {
     if (mediaPickerFor === 'image') {
       setForm((f) => ({ ...f, imageMediaId: media._id, imageUrl: media.url }));
+      setPickedMediaMap((m) => ({ ...m, image: media }));
     } else if (mediaPickerFor === 'icon') {
       setForm((f) => ({ ...f, iconMediaId: media._id, iconUrl: media.url }));
+      setPickedMediaMap((m) => ({ ...m, icon: media }));
     }
     setMediaPickerFor(null);
   };
+
+  const [pickedMediaMap, setPickedMediaMap] = useState({ image: null, icon: null });
 
   const isMutating = createMut.isPending || updateMut.isPending;
 
@@ -401,31 +409,31 @@ export default function CategoryPage() {
 
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-medium text-foreground">Danh mục cha</label>
-                <select
-                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 transition-colors"
+                <SearchableSelect
+                  options={[
+                    { label: '-- Không có (danh mục gốc) --', value: '' },
+                    ...flatCats.filter((c) => c._id !== editTarget?._id).map((c) => ({ label: c.name, value: c._id })),
+                  ]}
                   value={form.parentId}
-                  onChange={(e) => setForm((f) => ({ ...f, parentId: e.target.value }))}
-                >
-                  <option value="">-- Không có (danh mục gốc) --</option>
-                  {flatCats.filter((c) => c._id !== editTarget?._id).map((c) => (
-                    <option key={c._id} value={c._id}>{c.name}</option>
-                  ))}
-                </select>
+                  onChange={(val) => setForm((f) => ({ ...f, parentId: val }))}
+                  creatable={false}
+                  placeholder="-- Không có (danh mục gốc) --"
+                />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-medium text-foreground">Liên kết Brand</label>
-                  <select
-                    className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 transition-colors"
+                  <SearchableSelect
+                    options={[
+                      { label: '-- Không liên kết --', value: '' },
+                      ...brands.map((b) => ({ label: b.name, value: b._id })),
+                    ]}
                     value={form.brandId}
-                    onChange={(e) => setForm((f) => ({ ...f, brandId: e.target.value }))}
-                  >
-                    <option value="">-- Không liên kết --</option>
-                    {brands.map((b) => (
-                      <option key={b._id} value={b._id}>{b.name}</option>
-                    ))}
-                  </select>
+                    onChange={(val) => setForm((f) => ({ ...f, brandId: val }))}
+                    creatable={false}
+                    placeholder="-- Không liên kết --"
+                  />
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-medium text-foreground">Link tùy chỉnh</label>
@@ -461,25 +469,29 @@ export default function CategoryPage() {
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-medium text-foreground">Trạng thái</label>
-                  <select
-                    className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 transition-colors"
+                  <SearchableSelect
+                    options={[
+                      { label: 'Hoạt động', value: 'true' },
+                      { label: 'Ẩn', value: 'false' },
+                    ]}
                     value={form.isActive ? 'true' : 'false'}
-                    onChange={(e) => setForm((f) => ({ ...f, isActive: e.target.value === 'true' }))}
-                  >
-                    <option value="true">Hoạt động</option>
-                    <option value="false">Ẩn</option>
-                  </select>
+                    onChange={(val) => setForm((f) => ({ ...f, isActive: val === 'true' }))}
+                    creatable={false}
+                    placeholder="Chọn trạng thái..."
+                  />
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-medium text-foreground">Hiện trên menu</label>
-                  <select
-                    className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 transition-colors"
+                  <SearchableSelect
+                    options={[
+                      { label: 'Hiện', value: 'true' },
+                      { label: 'Ẩn', value: 'false' },
+                    ]}
                     value={form.showOnMenu ? 'true' : 'false'}
-                    onChange={(e) => setForm((f) => ({ ...f, showOnMenu: e.target.value === 'true' }))}
-                  >
-                    <option value="true">Hiện</option>
-                    <option value="false">Ẩn</option>
-                  </select>
+                    onChange={(val) => setForm((f) => ({ ...f, showOnMenu: val === 'true' }))}
+                    creatable={false}
+                    placeholder="Chọn..."
+                  />
                 </div>
               </div>
 
@@ -487,7 +499,9 @@ export default function CategoryPage() {
                 <label className="text-xs font-medium text-foreground">Hình ảnh danh mục</label>
                 <div className="flex items-center gap-3 mt-1">
                   {form.imageUrl && (
-                    <img src={form.imageUrl} alt="preview" className="size-12 rounded-md object-cover border border-border bg-muted shrink-0" />
+                    <MediaThumbnailHover media={pickedMediaMap.image} className="shrink-0">
+                      <img src={form.imageUrl} alt="preview" className="size-12 rounded-md object-cover border border-border bg-muted shrink-0" />
+                    </MediaThumbnailHover>
                   )}
                   <button type="button" className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-input bg-background px-3.5 text-sm font-medium text-foreground hover:bg-accent cursor-pointer" onClick={() => setMediaPickerFor('image')}>
                     Chọn ảnh từ thư viện
@@ -504,7 +518,9 @@ export default function CategoryPage() {
                 <label className="text-xs font-medium text-foreground">Icon danh mục (hiện sidebar)</label>
                 <div className="flex items-center gap-3 mt-1">
                   {form.iconUrl && (
-                    <img src={form.iconUrl} alt="icon" className="size-12 rounded-md object-cover border border-border bg-muted shrink-0" />
+                    <MediaThumbnailHover media={pickedMediaMap.icon} className="shrink-0">
+                      <img src={form.iconUrl} alt="icon" className="size-12 rounded-md object-cover border border-border bg-muted shrink-0" />
+                    </MediaThumbnailHover>
                   )}
                   <button type="button" className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-input bg-background px-3.5 text-sm font-medium text-foreground hover:bg-accent cursor-pointer" onClick={() => setMediaPickerFor('icon')}>
                     Chọn icon từ thư viện

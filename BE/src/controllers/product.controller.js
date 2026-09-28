@@ -128,6 +128,29 @@ const deleteBulkProducts = async (req, res, next) => {
   }
 };
 
+const bulkUpdateProductStatus = async (req, res, next) => {
+  try {
+    const { ids, status } = req.body;
+    const result = await productService.bulkUpdateProductStatus(ids, status);
+    res.status(200).json({
+      status: 'success',
+      message: `Đã cập nhật trạng thái ${result.updated} sản phẩm`,
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const searchInventoryProducts = async (req, res, next) => {
+  try {
+    const data = await productService.searchInventoryProducts(req.query.keyword);
+    res.json({ status: 'success', data });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createProduct,
   getProducts,
@@ -139,4 +162,6 @@ module.exports = {
   toggleProductStatus,
   deleteProduct,
   deleteBulkProducts,
+  bulkUpdateProductStatus,
+  searchInventoryProducts,
 };

@@ -57,6 +57,20 @@ const getActive = async (req, res, next) => {
   }
 };
 
+const getAvailable = async (req, res, next) => {
+  try {
+    const flashSales = await flashSaleService.getAvailableFlashSales();
+    res.json({
+      status: 'success',
+      statusCode: 200,
+      message: 'Lấy danh sách Flash Sale còn hạn thành công',
+      data: flashSales,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const update = async (req, res, next) => {
   try {
     const flashSale = await flashSaleService.updateFlashSale(req.params.id, req.body);
@@ -104,6 +118,7 @@ module.exports = {
   getAll,
   getById,
   getActive,
+  getAvailable,
   update,
   remove,
   toggleStatus,

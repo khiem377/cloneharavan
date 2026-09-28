@@ -1,8 +1,56 @@
+const mongoose = require('mongoose');
 const FlashSale = require('../models/flashSale.model');
 const Media = require('../models/media.model');
 const Product = require('../models/product.model');
 const ProductVariant = require('../models/productVariant.model');
+const Menu = require('../models/menu.model');
+require('../models/brand.model');
+require('../models/category.model');
 const { AppError } = require('../utils/AppError');
+
+const syncFlashSalesToMenu = async () => {
+  try {
+    const menu = await Menu.findOne({ handle: 'main-menu' });
+    if (!menu) return;
+
+    const fsItemIndex = menu.items.findIndex(
+      (i) => i.label && i.label.toLowerCase().includes('flash')
+    );
+    if (fsItemIndex === -1) return;
+
+    const now = new Date();
+    const activeSales = await FlashSale.find({
+      isActive: true,
+      endDate: { $gt: now },
+    })
+      .sort({ startDate: 1 })
+      .lean();
+
+    const children = activeSales.map((sale, idx) => {
+      const isOngoing = new Date(sale.startDate) <= now && new Date(sale.endDate) > now;
+      return {
+        _id: new mongoose.Types.ObjectId(),
+        label: sale.name,
+        linkType: 'url',
+        linkRef: null,
+        customUrl: `/flash-sale/${sale.slug}`,
+        openInNewTab: false,
+        badge: isOngoing ? 'Hot' : 'Sắp diễn ra',
+        badgeColor: isOngoing ? '#ef4444' : '#3b82f6',
+        megaMenu: false,
+        order: idx,
+        isActive: true,
+        children: [],
+      };
+    });
+
+    menu.items[fsItemIndex].children = children;
+    menu.markModified('items');
+    await menu.save();
+  } catch (err) {
+    console.error('Error syncing flash sales to menu:', err.message);
+  }
+};
 
 const resolveBanner = async (bannerMediaId) => {
   if (bannerMediaId === null) return { mediaId: null, url: '' };
@@ -56,6 +104,8 @@ const createFlashSale = async (data) => {
     banner: banner || { mediaId: null, url: '' },
   });
 
+  await syncFlashSalesToMenu();
+
   return flashSale;
 };
 
@@ -97,11 +147,11 @@ const getAllFlashSales = async (query = {}) => {
     FlashSale.find(filter)
       .populate({
         path: 'items.productId',
-        select: 'name slug thumbnail price salePrice stock images',
+        select: 'name slug thumbnail price salePrice stock sold images',
       })
       .populate({
         path: 'items.variantId',
-        select: 'nameOverride sku thumbnail price salePrice stock attributes',
+        select: 'nameOverride sku thumbnail price salePrice stock sold attributes',
       })
       .sort(sort)
       .skip(skip)
@@ -120,15 +170,23 @@ const getAllFlashSales = async (query = {}) => {
   };
 };
 
-const getFlashSaleById = async (id) => {
-  const flashSale = await FlashSale.findById(id)
+const getFlashSaleById = async (idOrSlug) => {
+  const query = mongoose.Types.ObjectId.isValid(idOrSlug)
+    ? { $or: [{ _id: idOrSlug }, { slug: idOrSlug }] }
+    : { slug: idOrSlug };
+
+  const flashSale = await FlashSale.findOne(query)
     .populate({
       path: 'items.productId',
-      select: 'name slug thumbnail price salePrice stock images',
+      select: 'name slug thumbnail price salePrice stock sold images brand categories',
+      populate: [
+        { path: 'brand', select: 'name logo' },
+        { path: 'categories', select: 'name slug' },
+      ],
     })
     .populate({
       path: 'items.variantId',
-      select: 'nameOverride sku thumbnail price salePrice stock attributes',
+      select: 'nameOverride sku thumbnail price salePrice stock sold attributes',
     });
 
   if (!flashSale) throw new AppError('Không tìm thấy chương trình Flash Sale', 404);
@@ -144,19 +202,42 @@ const getActiveFlashSale = async () => {
   })
     .populate({
       path: 'items.productId',
-      select: 'name slug thumbnail price salePrice stock images brand category',
+      select: 'name slug thumbnail price salePrice stock sold images brand categories',
       populate: [
         { path: 'brand', select: 'name logo' },
-        { path: 'category', select: 'name slug' },
+        { path: 'categories', select: 'name slug' },
       ],
     })
     .populate({
       path: 'items.variantId',
-      select: 'nameOverride sku thumbnail price salePrice stock attributes',
+      select: 'nameOverride sku thumbnail price salePrice stock sold attributes',
     })
     .sort({ startDate: 1 });
 
   return activeSale;
+};
+
+const getAvailableFlashSales = async () => {
+  const now = new Date();
+  const sales = await FlashSale.find({
+    isActive: true,
+    endDate: { $gt: now },
+  })
+    .select('name slug description banner startDate endDate isActive items')
+    .sort({ startDate: 1 })
+    .lean();
+
+  // Lọc bỏ chiến dịch nếu toàn bộ sản phẩm đã bán hết quota
+  const validSales = sales.filter((sale) => {
+    if (!sale.items || sale.items.length === 0) return true;
+    const hasRemainingStock = sale.items.some((item) => {
+      const remaining = (item.stockLimit || 0) - (item.soldCount || 0);
+      return remaining > 0;
+    });
+    return hasRemainingStock;
+  });
+
+  return validSales.map(({ items, ...rest }) => rest);
 };
 
 const updateFlashSale = async (id, data) => {
@@ -181,6 +262,7 @@ const updateFlashSale = async (id, data) => {
 
   Object.assign(flashSale, rest);
   await flashSale.save();
+  await syncFlashSalesToMenu();
 
   return flashSale;
 };
@@ -189,6 +271,7 @@ const deleteFlashSale = async (id) => {
   const flashSale = await FlashSale.findById(id);
   if (!flashSale) throw new AppError('Không tìm thấy chương trình Flash Sale', 404);
   await flashSale.deleteOne();
+  await syncFlashSalesToMenu();
   return true;
 };
 
@@ -202,7 +285,16 @@ const toggleFlashSaleStatus = async (id, isActive) => {
 
   flashSale.isActive = isActive;
   await flashSale.save();
+  await syncFlashSalesToMenu();
   return flashSale;
+};
+
+const locateFlashSale = async (id, limit = 10) => {
+  const sale = await FlashSale.findById(id).select('_id createdAt');
+  if (!sale) throw new AppError('Không tìm thấy flash sale', 404);
+  const positionBefore = await FlashSale.countDocuments({ createdAt: { $gt: sale.createdAt } });
+  const page = Math.ceil((positionBefore + 1) / limit);
+  return { page: Math.max(1, page), flashSaleId: id };
 };
 
 module.exports = {
@@ -210,7 +302,9 @@ module.exports = {
   getAllFlashSales,
   getFlashSaleById,
   getActiveFlashSale,
+  getAvailableFlashSales,
   updateFlashSale,
   deleteFlashSale,
   toggleFlashSaleStatus,
+  locateFlashSale,
 };

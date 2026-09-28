@@ -2,7 +2,10 @@ const mongoose = require('mongoose');
 
 const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(process.env.MONGO_URI);
+    const conn = await mongoose.connect(process.env.MONGO_URI, {
+      maxPoolSize: 50,
+      minPoolSize: 10,
+    });
     console.log(`✅ MongoDB connected: ${conn.connection.host} | DB: ${conn.connection.name}`);
   } catch (error) {
     console.error(`❌ MongoDB connection error: ${error.message}`);

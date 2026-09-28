@@ -2,13 +2,28 @@ const ProductVariant = require('../models/productVariant.model');
 const Product = require('../models/product.model');
 const Media = require('../models/media.model');
 const { AppError } = require('../utils/AppError');
-const { generateVariantSku } = require('./product.service');
+const { generateVariantSku, syncCachedPrice } = require('./product.service');
 
 const resolveMedia = async (mediaId) => {
   if (!mediaId) return null;
   const media = await Media.findById(mediaId);
   if (!media) throw new AppError('Không tìm thấy ảnh trong Media Library', 404);
   return { mediaId: media._id, url: media.url, publicId: media.publicId };
+};
+
+/**
+ * Bulk-resolve media IDs — 1 query thay vì N queries sequential.
+ */
+const resolveMediaBulk = async (ids = []) => {
+  if (!ids || ids.length === 0) return [];
+  const list = await Media.find({ _id: { $in: ids } }).select('_id url publicId').lean();
+  const map = {};
+  list.forEach((m) => { map[m._id.toString()] = m; });
+  return ids.map((id) => {
+    const m = map[id.toString()];
+    if (!m) throw new AppError(`Không tìm thấy ảnh ${id} trong Media Library`, 404);
+    return { mediaId: m._id, url: m.url, publicId: m.publicId };
+  });
 };
 
 const getVariantsByProduct = async (productId) => {
@@ -46,15 +61,14 @@ const createVariant = async (productId, data) => {
     // (Policy: Default Variant vẫn giữ để backward compat)
   }
 
-  const thumbnail = await resolveMedia(data.thumbnailMediaId);
+  // Resolve media — bulk
+  const thumbnail = data.thumbnailMediaId
+    ? (await resolveMediaBulk([data.thumbnailMediaId]))[0]
+    : undefined;
 
-  const images = [];
-  if (data.imageMediaIds && data.imageMediaIds.length > 0) {
-    for (const mediaId of data.imageMediaIds) {
-      const img = await resolveMedia(mediaId);
-      if (img) images.push(img);
-    }
-  }
+  const images = data.imageMediaIds && data.imageMediaIds.length > 0
+    ? await resolveMediaBulk(data.imageMediaIds)
+    : [];
 
   const variant = await ProductVariant.create({
     productId,
@@ -72,6 +86,9 @@ const createVariant = async (productId, data) => {
     descriptionOverride: data.descriptionOverride ?? null,
     specifications: data.specifications ?? [],
   });
+
+  // Sync cachedPrice lên Product sau khi tạo variant
+  await syncCachedPrice(productId);
 
   return variant;
 };
@@ -132,22 +149,24 @@ const updateVariant = async (id, data) => {
   }
 
   if (data.thumbnailMediaId !== undefined) {
-    const thumbnail = await resolveMedia(data.thumbnailMediaId);
-    variant.thumbnail = thumbnail || { mediaId: null, url: '', publicId: '' };
+    variant.thumbnail = data.thumbnailMediaId
+      ? (await resolveMediaBulk([data.thumbnailMediaId]))[0]
+      : { mediaId: null, url: '', publicId: '' };
   }
 
   if (data.imageMediaIds !== undefined) {
-    const images = [];
-    for (const mediaId of data.imageMediaIds) {
-      const img = await resolveMedia(mediaId);
-      if (img) images.push(img);
-    }
-    variant.images = images;
+    variant.images = data.imageMediaIds.length > 0
+      ? await resolveMediaBulk(data.imageMediaIds)
+      : [];
   }
 
   const { thumbnailMediaId, imageMediaIds, ...rest } = data;
   Object.assign(variant, rest);
   await variant.save();
+
+  // Sync cachedPrice lên Product sau khi update variant
+  await syncCachedPrice(variant.productId);
+
   return variant;
 };
 

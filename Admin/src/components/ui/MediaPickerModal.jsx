@@ -5,7 +5,7 @@ import {
   FolderPlus, Upload, Link, Loader2, Pencil, Trash2,
   Copy,
 } from '@/components/ui/Icons';
-import { useMedia, useMediaSearch } from '@/hooks/useMedia';
+import { useMedia, useMediaSearch, useMediaUsage } from '@/hooks/useMedia';
 import { useFolders, FOLDERS_KEY } from '@/hooks/useFolders';
 import { mediaService } from '@/services/media.service';
 import { folderService } from '@/services/folder.service';
@@ -50,6 +50,31 @@ function getDepth(map, id) {
   let depth = 0, cur = map[id];
   while (cur?.parentId) { depth++; cur = map[cur.parentId]; }
   return depth;
+}
+
+function PreviewUsageSection({ mediaId }) {
+  const { data: usages = [], isLoading } = useMediaUsage(mediaId);
+  if (isLoading) return (
+    <div className="flex flex-col gap-1 animate-pulse">
+      <div className="h-5 rounded bg-muted w-full" />
+      <div className="h-5 rounded bg-muted w-3/4" />
+    </div>
+  );
+  if (!usages.length) return (
+    <span className="inline-flex items-center rounded-md bg-muted px-2 py-1 text-[10px] text-muted-foreground">
+      Chua su dung o dau
+    </span>
+  );
+  return (
+    <div className="flex flex-col gap-1">
+      {usages.map((u, i) => (
+        <a key={i} href={u.adminUrl} target="_blank" rel="noreferrer"
+          className="inline-flex items-center gap-1 rounded-md bg-primary/5 border border-primary/15 px-2 py-1 text-[10px] font-medium text-primary hover:bg-primary/10 transition-colors">
+          <span className="flex-1 truncate">{u.displayName}: {u.entityName}</span>
+        </a>
+      ))}
+    </div>
+  );
 }
 
 function FolderCtxMenu({ x, y, folder, folderMap, onClose, onAddChild, onRename, onDelete }) {
@@ -232,7 +257,7 @@ function UploadPanel({ folderId, onClose }) {
           <input {...getInputProps()} />
           {uploading ? <Loader2 size={24} className="animate-spin text-primary" /> : <Upload size={24} className="text-muted-foreground" />}
           <p className="text-xs font-medium text-foreground mt-2">{uploading ? 'Đang upload...' : isDragActive ? 'Thả ảnh vào đây' : 'Kéo thả hoặc click để chọn ảnh'}</p>
-          {!folderId && <span className="text-[11px] text-destructive font-medium mt-1">⚠ Chọn thư mục trước</span>}
+          {!folderId && <span className="text-[11px] text-destructive font-medium mt-1">Chọn thư mục trước</span>}
         </div>
       ) : (
         <div className="flex gap-2">
@@ -562,22 +587,30 @@ export default function MediaPickerModal({ onSelect, onClose, isMultiple = false
                 <p className="text-[11px] font-semibold text-foreground break-all leading-relaxed">{pickerPreview.filename}</p>
                 <div className="flex flex-col gap-0 rounded-md border border-border overflow-hidden">
                   {[
-                    ['Loại', pickerPreview.mimetype || '—'],
-                    ['Size', pickerPreview.size ? (pickerPreview.size < 1024*1024 ? (pickerPreview.size/1024).toFixed(0)+' KB' : (pickerPreview.size/1024/1024).toFixed(1)+' MB') : '—'],
-                    ['Ngày', pickerPreview.createdAt ? new Date(pickerPreview.createdAt).toLocaleDateString('vi-VN') : '—'],
+                    ['Loai', pickerPreview.mimetype || '—'],
+                    ['Size', pickerPreview.size ? formatSize(pickerPreview.size) : '—'],
+                    ['Ngay', pickerPreview.createdAt ? new Date(pickerPreview.createdAt).toLocaleDateString('vi-VN') : '—'],
+                    ['Folder', pickerPreview.folderId?.name || '—'],
                   ].map(([label, value]) => (
                     <div key={label} className="flex items-start gap-2 px-2.5 py-1.5 border-b border-border last:border-0">
-                      <span className="text-[10px] text-muted-foreground font-medium w-10 shrink-0">{label}</span>
+                      <span className="text-[10px] text-muted-foreground font-medium w-12 shrink-0">{label}</span>
                       <span className="text-[10px] text-foreground break-all flex-1">{value}</span>
                     </div>
                   ))}
                 </div>
+
+                {/* Usage section */}
+                <div className="flex flex-col gap-1.5">
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Dung o</p>
+                  <PreviewUsageSection mediaId={pickerPreview._id} />
+                </div>
+
                 <div className="flex flex-col gap-1.5">
                   <div className="rounded-md bg-muted/60 border border-border px-2 py-1.5">
                     <p className="text-[9px] text-muted-foreground break-all leading-relaxed font-mono">{pickerPreview.url}</p>
                   </div>
                   <button
-                    onClick={() => { navigator.clipboard.writeText(pickerPreview.url); toast.success('Đã copy URL'); }}
+                    onClick={() => { navigator.clipboard.writeText(pickerPreview.url); toast.success('Da copy URL'); }}
                     className="inline-flex h-7 w-full items-center justify-center gap-1 rounded-md border border-border text-[10px] font-medium text-foreground hover:bg-accent transition-colors cursor-pointer"
                   >
                     <Copy size={11} /> Copy URL

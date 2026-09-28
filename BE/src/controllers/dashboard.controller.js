@@ -32,7 +32,23 @@ const searchGlobal = async (req, res, next) => {
   }
 };
 
+const getInventoryStats = async (req, res, next) => {
+  try {
+    const { range = '6months' } = req.query;
+    const data = await dashboardService.getInventoryDashboardStats(range);
+    res.json({
+      status: 'success',
+      statusCode: 200,
+      message: 'Lấy thống kê kho hàng thành công',
+      data,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getOverviewStats,
   searchGlobal,
+  getInventoryStats,
 };

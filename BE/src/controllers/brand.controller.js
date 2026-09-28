@@ -101,6 +101,17 @@ const deleteBulkBrands = async (req, res, next) => {
   }
 };
 
+const locateBrand = async (req, res, next) => {
+  try {
+    const { id, limit } = req.query;
+    if (!id) return res.status(400).json({ message: 'Thieu param id' });
+    const result = await brandService.locateBrand(id, Number(limit) || 10);
+    res.json({ status: 'success', data: result });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createBrand,
   getBrands,
@@ -110,4 +121,5 @@ module.exports = {
   toggleBrandStatus,
   deleteBrand,
   deleteBulkBrands,
+  locateBrand,
 };
