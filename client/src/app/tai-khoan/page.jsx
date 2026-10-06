@@ -1,28 +1,23 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import {
-  Eye,
-  EyeOff,
-  CheckCircle2,
-  AlertCircle,
-  Search,
-  X,
-  User,
-} from 'lucide-react';
+import { User, Loader2 } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import userService from '../../services/user.service';
-import {
-  IconOverview,
-  IconOrders,
-  IconWarranty,
-  IconProfile,
-  IconChangePassword,
-  IconLogout,
-  IconEditPen,
-} from '../../components/account/AccountIcons';
+import shippingService from '../../services/shipping.service';
+import { toast } from '../../components/ui/toast';
+
+// Modular Account Sub-Components
+import AccountSidebar from '../../components/account/AccountSidebar';
+import AccountOverviewTab from '../../components/account/AccountOverviewTab';
+import AccountOrdersTab from '../../components/account/AccountOrdersTab';
+import AccountWarrantyTab from '../../components/account/AccountWarrantyTab';
+import AccountProfileTab from '../../components/account/AccountProfileTab';
+import AccountAddressesTab from '../../components/account/AccountAddressesTab';
+import AccountChangePasswordTab from '../../components/account/AccountChangePasswordTab';
+import AddressModal from '../../components/account/AddressModal';
 
 function AccountContent() {
   const router = useRouter();
@@ -32,7 +27,11 @@ function AccountContent() {
   const { user, isAuthenticated, setUser, clearAuth } = useAuthStore();
   const [activeTab, setActiveTab] = useState(initialTab);
 
-  // Profile Edit Mode state
+  // Avatar Upload State
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const avatarInputRef = useRef(null);
+
+  // Profile Edit State
   const [isEditing, setIsEditing] = useState(false);
 
   // Sync tab with URL search param
@@ -42,6 +41,11 @@ function AccountContent() {
       setActiveTab(tabParam);
     }
   }, [searchParams]);
+
+  const handleTabChange = (newTab) => {
+    setActiveTab(newTab);
+    router.replace(`/tai-khoan?tab=${newTab}`, { scroll: false });
+  };
 
   // Protect page
   useEffect(() => {
@@ -79,7 +83,89 @@ function AccountContent() {
   const [orderFilter, setOrderFilter] = useState('all');
   const [orderSearch, setOrderSearch] = useState('');
 
-  // Load user data into form
+  // Warranty State
+  const [warrantySearch, setWarrantySearch] = useState('');
+
+  // Addresses State
+  const [addresses, setAddresses] = useState([]);
+  const [addressLoading, setAddressLoading] = useState(false);
+  const [addressModalOpen, setAddressModalOpen] = useState(false);
+  const [editingAddressId, setEditingAddressId] = useState(null);
+  const [addressSaving, setAddressSaving] = useState(false);
+
+  // GHN Master Data State
+  const [provinces, setProvinces] = useState([]);
+  const [districts, setDistricts] = useState([]);
+  const [wards, setWards] = useState([]);
+  const [loadingProvinces, setLoadingProvinces] = useState(false);
+  const [loadingDistricts, setLoadingDistricts] = useState(false);
+  const [loadingWards, setLoadingWards] = useState(false);
+
+  const [addressForm, setAddressForm] = useState({
+    fullName: '',
+    phone: '',
+    province: '',
+    provinceId: null,
+    district: '',
+    districtId: null,
+    ward: '',
+    wardCode: '',
+    detailAddress: '',
+    isDefault: false,
+  });
+
+  // GHN v3 Post-Merger Lookup State
+  const [postMergerInfo, setPostMergerInfo] = useState(null);
+  const [mergerLoading, setMergerLoading] = useState(false);
+
+  // Tra cứu tự động từ GHN v3 khi chọn xong Phường / Xã (Debounce 300ms)
+  useEffect(() => {
+    let isMounted = true;
+    if (addressForm.province && addressForm.ward) {
+      setMergerLoading(true);
+      const timer = setTimeout(() => {
+        shippingService
+          .getPostMergerAddress({
+            province: addressForm.province,
+            district: addressForm.district,
+            ward: addressForm.ward,
+            detailAddress: addressForm.detailAddress,
+            provinceCode: addressForm.provinceId,
+            districtCode: addressForm.districtId,
+            wardCode: addressForm.wardCode,
+          })
+          .then((res) => {
+            if (isMounted && res) {
+              setPostMergerInfo(res);
+            }
+          })
+          .catch(() => {})
+          .finally(() => {
+            if (isMounted) {
+              setMergerLoading(false);
+            }
+          });
+      }, 300);
+
+      return () => {
+        isMounted = false;
+        clearTimeout(timer);
+      };
+    } else {
+      setPostMergerInfo(null);
+      setMergerLoading(false);
+    }
+  }, [
+    addressForm.province,
+    addressForm.district,
+    addressForm.ward,
+    addressForm.detailAddress,
+    addressForm.provinceId,
+    addressForm.districtId,
+    addressForm.wardCode,
+  ]);
+
+  // Sync user profile data
   useEffect(() => {
     if (user) {
       setProfileForm({
@@ -94,7 +180,73 @@ function AccountContent() {
     }
   }, [user]);
 
-  // Cancel edit mode and reset form
+  // Fetch Addresses
+  const fetchAddresses = async () => {
+    setAddressLoading(true);
+    try {
+      const data = await userService.getAddresses();
+      setAddresses(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Lỗi lấy danh sách địa chỉ:', err);
+    } finally {
+      setAddressLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isAuthenticated()) {
+      fetchAddresses();
+      ensureProvincesLoaded();
+    }
+  }, [isAuthenticated]);
+
+  // Avatar Upload Handlers
+  const handleAvatarFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Vui lòng chọn tệp hình ảnh hợp lệ (PNG, JPG, WEBP)');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Dung lượng ảnh tối đa là 5MB');
+      return;
+    }
+
+    setAvatarUploading(true);
+    try {
+      const res = await userService.uploadAvatar(file);
+      if (res.data?.avatar || res.avatar) {
+        const newAvatar = res.data?.avatar || res.avatar;
+        setUser({ ...user, avatar: newAvatar });
+        toast.success('Đổi ảnh đại diện thành công!');
+      }
+    } catch (err) {
+      toast.error(
+        err.response?.data?.message || 'Không thể tải ảnh lên. Vui lòng thử lại!'
+      );
+    } finally {
+      setAvatarUploading(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleDeleteAvatar = async () => {
+    if (!window.confirm('Bạn có chắc chắn muốn gỡ ảnh đại diện hiện tại?')) return;
+    setAvatarUploading(true);
+    try {
+      await userService.deleteAvatar();
+      setUser({ ...user, avatar: null });
+      toast.success('Đã gỡ ảnh đại diện thành công');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Không thể gỡ ảnh đại diện');
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
+
   const handleCancelEdit = () => {
     setIsEditing(false);
     setProfileMessage(null);
@@ -111,7 +263,6 @@ function AccountContent() {
     }
   };
 
-  // Update Profile Submit
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
     if (!isEditing) return;
@@ -136,19 +287,21 @@ function AccountContent() {
         type: 'success',
         text: 'Cập nhật thông tin cá nhân thành công!',
       });
+      toast.success('Cập nhật thông tin cá nhân thành công!');
     } catch (err) {
+      const errMsg =
+        err.response?.data?.message ||
+        'Không thể cập nhật thông tin. Vui lòng thử lại!';
       setProfileMessage({
         type: 'error',
-        text:
-          err.response?.data?.message ||
-          'Không thể cập nhật thông tin. Vui lòng thử lại!',
+        text: errMsg,
       });
+      toast.error(errMsg);
     } finally {
       setProfileLoading(false);
     }
   };
 
-  // Change Password Submit
   const handleChangePassword = async (e) => {
     e.preventDefault();
     setPasswordMessage(null);
@@ -181,20 +334,287 @@ function AccountContent() {
         type: 'success',
         text: 'Đổi mật khẩu thành công!',
       });
+      toast.success('Đổi mật khẩu thành công!');
       setPasswordForm({
         currentPassword: '',
         newPassword: '',
         confirmPassword: '',
       });
     } catch (err) {
+      const errMsg =
+        err.response?.data?.message ||
+        'Đổi mật khẩu thất bại. Vui lòng kiểm tra lại mật khẩu hiện tại!';
       setPasswordMessage({
         type: 'error',
-        text:
-          err.response?.data?.message ||
-          'Đổi mật khẩu thất bại. Vui lòng kiểm tra lại mật khẩu hiện tại!',
+        text: errMsg,
       });
+      toast.error(errMsg);
     } finally {
       setPasswordLoading(false);
+    }
+  };
+
+  const ensureProvincesLoaded = async () => {
+    if (provinces.length > 0) return provinces;
+    setLoadingProvinces(true);
+    try {
+      const data = await shippingService.getProvinces();
+      setProvinces(data);
+      return data;
+    } catch (err) {
+      console.error('Lỗi tải danh sách tỉnh/thành:', err);
+      return [];
+    } finally {
+      setLoadingProvinces(false);
+    }
+  };
+
+  const handleOpenAddAddress = async () => {
+    setEditingAddressId(null);
+    setDistricts([]);
+    setWards([]);
+    setAddressForm({
+      fullName: user?.fullName || user?.name || '',
+      phone: user?.phone || '',
+      province: '',
+      provinceId: null,
+      district: '',
+      districtId: null,
+      ward: '',
+      wardCode: '',
+      detailAddress: '',
+      isDefault: addresses.length === 0,
+    });
+    setAddressModalOpen(true);
+    await ensureProvincesLoaded();
+  };
+
+  const handleOpenEditAddress = async (addr) => {
+    setEditingAddressId(addr._id);
+    setAddressForm({
+      fullName: addr.fullName || '',
+      phone: addr.phone || '',
+      province: addr.province || '',
+      provinceId: addr.provinceId || null,
+      district: addr.district || '',
+      districtId: addr.districtId || null,
+      ward: addr.ward || '',
+      wardCode: addr.wardCode || '',
+      detailAddress: addr.detailAddress || '',
+      isDefault: !!addr.isDefault,
+    });
+    setAddressModalOpen(true);
+
+    const loadedProvinces = await ensureProvincesLoaded();
+    let pid = addr.provinceId;
+    if (!pid && addr.province && loadedProvinces.length > 0) {
+      const matchedP = loadedProvinces.find(
+        (p) =>
+          p.ProvinceName.toLowerCase() === addr.province.toLowerCase() ||
+          addr.province.toLowerCase().includes(p.ProvinceName.toLowerCase())
+      );
+      if (matchedP) {
+        pid = matchedP.ProvinceID;
+        setAddressForm((prev) => ({ ...prev, provinceId: pid }));
+      }
+    }
+
+    if (pid) {
+      setLoadingDistricts(true);
+      try {
+        const loadedDistricts = await shippingService.getDistricts(pid);
+        setDistricts(loadedDistricts);
+
+        let did = addr.districtId;
+        if (!did && addr.district && loadedDistricts.length > 0) {
+          const matchedD = loadedDistricts.find(
+            (d) =>
+              d.DistrictName.toLowerCase() === addr.district.toLowerCase() ||
+              addr.district.toLowerCase().includes(d.DistrictName.toLowerCase())
+          );
+          if (matchedD) {
+            did = matchedD.DistrictID;
+            setAddressForm((prev) => ({ ...prev, districtId: did }));
+          }
+        }
+
+        if (did) {
+          setLoadingWards(true);
+          const loadedWards = await shippingService.getWards(did);
+          setWards(loadedWards);
+
+          if (!addr.wardCode && addr.ward && loadedWards.length > 0) {
+            const matchedW = loadedWards.find(
+              (w) =>
+                w.WardName.toLowerCase() === addr.ward.toLowerCase() ||
+                addr.ward.toLowerCase().includes(w.WardName.toLowerCase())
+            );
+            if (matchedW) {
+              setAddressForm((prev) => ({ ...prev, wardCode: String(matchedW.WardCode) }));
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Lỗi tải danh mục địa chỉ GHN:', err);
+      } finally {
+        setLoadingDistricts(false);
+        setLoadingWards(false);
+      }
+    }
+  };
+
+  const handleProvinceSelect = async (selectedPid, matchedProvince) => {
+    if (!selectedPid) {
+      setAddressForm((prev) => ({
+        ...prev,
+        province: '',
+        provinceId: null,
+        district: '',
+        districtId: null,
+        ward: '',
+        wardCode: '',
+      }));
+      setDistricts([]);
+      setWards([]);
+      return;
+    }
+
+    setAddressForm((prev) => ({
+      ...prev,
+      province: matchedProvince ? matchedProvince.ProvinceName || matchedProvince.label : '',
+      provinceId: Number(selectedPid),
+      district: '',
+      districtId: null,
+      ward: '',
+      wardCode: '',
+    }));
+    setDistricts([]);
+    setWards([]);
+
+    setLoadingDistricts(true);
+    try {
+      const data = await shippingService.getDistricts(selectedPid);
+      setDistricts(data);
+    } catch (err) {
+      toast.error('Không thể tải danh sách quận/huyện');
+    } finally {
+      setLoadingDistricts(false);
+    }
+  };
+
+  const handleDistrictSelect = async (selectedDid, matchedDistrict) => {
+    if (!selectedDid) {
+      setAddressForm((prev) => ({
+        ...prev,
+        district: '',
+        districtId: null,
+        ward: '',
+        wardCode: '',
+      }));
+      setWards([]);
+      return;
+    }
+
+    setAddressForm((prev) => ({
+      ...prev,
+      district: matchedDistrict ? matchedDistrict.DistrictName || matchedDistrict.label : '',
+      districtId: Number(selectedDid),
+      ward: '',
+      wardCode: '',
+    }));
+    setWards([]);
+
+    setLoadingWards(true);
+    try {
+      const data = await shippingService.getWards(selectedDid);
+      setWards(data);
+    } catch (err) {
+      toast.error('Không thể tải danh sách phường/xã');
+    } finally {
+      setLoadingWards(false);
+    }
+  };
+
+  const handleWardSelect = (selectedWardCode, matchedWard) => {
+    setAddressForm((prev) => ({
+      ...prev,
+      ward: matchedWard ? matchedWard.WardName || matchedWard.label : '',
+      wardCode: selectedWardCode ? String(selectedWardCode) : '',
+    }));
+  };
+
+  const handleSaveAddress = async (e) => {
+    e.preventDefault();
+    if (
+      !addressForm.fullName.trim() ||
+      !addressForm.phone.trim() ||
+      !addressForm.province.trim() ||
+      !addressForm.district.trim() ||
+      !addressForm.ward.trim() ||
+      !addressForm.detailAddress.trim()
+    ) {
+      toast.error('Vui lòng điền đầy đủ Tỉnh/Thành, Quận/Huyện, Phường/Xã và Số nhà');
+      return;
+    }
+
+    if (!/^0\d{9}$/.test(addressForm.phone.trim())) {
+      toast.error('Số điện thoại phải có 10 chữ số và bắt đầu bằng số 0');
+      return;
+    }
+
+    setAddressSaving(true);
+    try {
+      const payload = {
+        fullName: addressForm.fullName.trim(),
+        phone: addressForm.phone.trim(),
+        province: addressForm.province.trim(),
+        provinceId: addressForm.provinceId ? Number(addressForm.provinceId) : undefined,
+        district: addressForm.district.trim(),
+        districtId: addressForm.districtId ? Number(addressForm.districtId) : undefined,
+        ward: addressForm.ward.trim(),
+        wardCode: addressForm.wardCode ? String(addressForm.wardCode) : undefined,
+        detailAddress: addressForm.detailAddress.trim(),
+        isDefault: !!addressForm.isDefault,
+      };
+
+      if (editingAddressId) {
+        await userService.updateAddress(editingAddressId, payload);
+        toast.success('Cập nhật địa chỉ thành công!');
+      } else {
+        await userService.addAddress(payload);
+        toast.success('Thêm địa chỉ nhận hàng thành công!');
+      }
+      setAddressModalOpen(false);
+      fetchAddresses();
+    } catch (err) {
+      toast.error(
+        err.response?.data?.message || 'Có lỗi xảy ra khi lưu địa chỉ'
+      );
+    } finally {
+      setAddressSaving(false);
+    }
+  };
+
+  const handleDeleteAddress = async (addressId) => {
+    if (!window.confirm('Bạn có chắc chắn muốn xóa địa chỉ này?')) return;
+    try {
+      await userService.deleteAddress(addressId);
+      toast.success('Đã xóa địa chỉ thành công!');
+      fetchAddresses();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Không thể xóa địa chỉ');
+    }
+  };
+
+  const handleSetDefaultAddress = async (addressId) => {
+    try {
+      await userService.setDefaultAddress(addressId);
+      toast.success('Đã đặt làm địa chỉ mặc định!');
+      fetchAddresses();
+    } catch (err) {
+      toast.error(
+        err.response?.data?.message || 'Không thể đặt làm địa chỉ mặc định'
+      );
     }
   };
 
@@ -205,17 +625,19 @@ function AccountContent() {
 
   if (!user && !isAuthenticated()) {
     return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center p-6 text-center">
-        <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 mb-3">
-          <User size={24} />
+      <div className="min-h-[70vh] flex flex-col items-center justify-center p-6 text-center bg-slate-50">
+        <div className="w-12 h-12 rounded-[6px] bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-500 mb-3">
+          <User size={22} />
         </div>
-        <h2 className="text-base font-bold text-gray-800 mb-1">Đang chuyển hướng...</h2>
-        <p className="text-xs text-gray-500 mb-4">
-          Vui lòng đăng nhập để xem thông tin tài khoản.
+        <h2 className="text-sm font-bold text-slate-900 mb-1">
+          Đang chuyển hướng...
+        </h2>
+        <p className="text-xs text-slate-500 mb-4">
+          Vui lòng đăng nhập để xem và quản lý thông tin tài khoản của bạn.
         </p>
         <Link
           href="/login"
-          className="px-5 py-2 bg-[#e30019] hover:bg-[#c40015] text-white font-medium text-xs rounded-md transition"
+          className="px-4 py-2 bg-[#e30019] hover:bg-[#c40015] text-white font-semibold text-xs rounded-[6px] shadow-xs active:scale-[0.98] transition"
         >
           Đăng nhập ngay
         </Link>
@@ -223,538 +645,155 @@ function AccountContent() {
     );
   }
 
-  const displayName = user?.fullName || user?.name || user?.email?.split('@')[0] || 'Khách hàng';
+  const displayName =
+    user?.fullName || user?.name || user?.email?.split('@')[0] || 'Khách hàng';
   const initial = displayName.charAt(0).toUpperCase();
+  const defaultAddress = addresses.find((a) => a.isDefault) || addresses[0];
 
   const tabTitles = {
     overview: 'Tổng quan',
     orders: 'Đơn hàng của tôi',
-    warranty: 'Bảo hành',
+    warranty: 'Bảo hành & Thiết bị',
     profile: 'Thông tin cá nhân',
+    addresses: 'Địa chỉ nhận hàng',
     'change-password': 'Đổi mật khẩu',
   };
 
   return (
-    <div className="bg-[#f5f5f5] min-h-[85vh] py-4 sm:py-6 text-gray-800">
-      <div className="max-w-[1200px] mx-auto px-4">
-        {/* Breadcrumb */}
-        <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-4">
+    <div className="bg-slate-50/70 min-h-[90vh] py-6 text-slate-800">
+      {/* Hidden File Input for Avatar Upload */}
+      <input
+        type="file"
+        ref={avatarInputRef}
+        onChange={handleAvatarFileChange}
+        accept="image/*"
+        className="hidden"
+      />
+
+      <div className="max-w-[1200px] mx-auto px-4 sm:px-6">
+        {/* Breadcrumb Header */}
+        <div className="flex items-center gap-2 text-xs text-slate-500 mb-5">
           <Link href="/" className="hover:text-[#e30019] transition">
             Trang chủ
           </Link>
           <span>/</span>
-          <span className="text-gray-700 font-medium">
+          <span className="text-slate-800 font-medium">
             {tabTitles[activeTab] || 'Tài khoản'}
           </span>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-5">
-          {/* ================= LEFT SIDEBAR ================= */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* 1. Sidebar Component */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg border border-gray-200/80 p-4 shadow-2xs space-y-4">
-              {/* User Profile Mini Block */}
-              <div className="flex items-center gap-3 pb-3 border-b border-gray-100">
-                <div className="w-12 h-12 rounded-full bg-[#e30019] text-white font-bold text-lg flex items-center justify-center uppercase shrink-0">
-                  {initial}
-                </div>
-                <div className="min-w-0">
-                  <h3 className="font-bold text-gray-900 text-sm truncate">
-                    {displayName}
-                  </h3>
-                  <div className="flex items-center gap-1 text-[11px] text-gray-400 truncate mt-0.5">
-                    <span>
-                      {user?.phone
-                        ? `${user.phone.slice(0, 3)}****${user.phone.slice(-3)}`
-                        : user?.email || 'Tài khoản'}
-                    </span>
-                    <Eye size={12} className="text-gray-400 shrink-0" />
-                  </div>
-                </div>
-              </div>
-
-              {/* Nav Menu with Creative Custom Icons */}
-              <div className="space-y-0.5">
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('overview')}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-xs font-medium transition cursor-pointer text-left ${
-                    activeTab === 'overview'
-                      ? 'bg-[#fff1f2] text-[#e30019] font-semibold'
-                      : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
-                  }`}
-                >
-                  <IconOverview size={17} active={activeTab === 'overview'} />
-                  <span>Tổng quan</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('orders')}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-xs font-medium transition cursor-pointer text-left ${
-                    activeTab === 'orders'
-                      ? 'bg-[#fff1f2] text-[#e30019] font-semibold'
-                      : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
-                  }`}
-                >
-                  <IconOrders size={17} active={activeTab === 'orders'} />
-                  <span>Đơn hàng của tôi</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('warranty')}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-xs font-medium transition cursor-pointer text-left ${
-                    activeTab === 'warranty'
-                      ? 'bg-[#fff1f2] text-[#e30019] font-semibold'
-                      : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
-                  }`}
-                >
-                  <IconWarranty size={17} active={activeTab === 'warranty'} />
-                  <span>Bảo hành</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('profile')}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-xs font-medium transition cursor-pointer text-left ${
-                    activeTab === 'profile'
-                      ? 'bg-[#fff1f2] text-[#e30019] font-semibold'
-                      : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
-                  }`}
-                >
-                  <IconProfile size={17} active={activeTab === 'profile'} />
-                  <span>Thông tin cá nhân</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('change-password')}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-xs font-medium transition cursor-pointer text-left ${
-                    activeTab === 'change-password'
-                      ? 'bg-[#fff1f2] text-[#e30019] font-semibold'
-                      : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
-                  }`}
-                >
-                  <IconChangePassword size={17} active={activeTab === 'change-password'} />
-                  <span>Đổi mật khẩu</span>
-                </button>
-
-                <div className="border-t border-gray-100 my-1.5" />
-
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-xs font-medium text-gray-700 hover:text-[#e30019] hover:bg-red-50/70 transition cursor-pointer text-left"
-                >
-                  <IconLogout size={17} className="text-gray-400" />
-                  <span>Đăng xuất</span>
-                </button>
-              </div>
-            </div>
+            <AccountSidebar
+              user={user}
+              displayName={displayName}
+              initial={initial}
+              activeTab={activeTab}
+              handleTabChange={handleTabChange}
+              avatarUploading={avatarUploading}
+              avatarInputRef={avatarInputRef}
+              addressesCount={addresses.length}
+              handleLogout={handleLogout}
+            />
           </div>
 
-          {/* ================= RIGHT MAIN CONTENT ================= */}
-          <div className="lg:col-span-3">
-            {/* TAB 1: TỔNG QUAN */}
+          {/* 2. Main Content Tab Views */}
+          <div className="lg:col-span-3 space-y-5">
             {activeTab === 'overview' && (
-              <div className="space-y-4 animate-fadeIn">
-                {/* Đơn hàng gần đây Card */}
-                <div className="bg-white rounded-lg border border-gray-200/80 p-5 shadow-2xs">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-bold text-gray-900 text-sm">Đơn hàng gần đây</h3>
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab('orders')}
-                      className="text-xs font-medium text-[#e30019] hover:underline cursor-pointer"
-                    >
-                      Xem tất cả &gt;
-                    </button>
-                  </div>
-
-                  <div className="py-10 text-center border border-dashed border-gray-200 rounded-md bg-gray-50/50">
-                    <div className="w-12 h-12 rounded-full bg-white border border-gray-200 flex items-center justify-center mx-auto mb-2.5 shadow-2xs">
-                      <IconOrders size={22} active={false} />
-                    </div>
-                    <div className="text-xs text-gray-500 mb-3">
-                      Bạn chưa có đơn hàng nào phát sinh gần đây
-                    </div>
-                    <Link
-                      href="/"
-                      className="inline-block px-4 py-2 bg-[#e30019] hover:bg-[#c40015] text-white text-xs font-semibold rounded-md shadow-xs transition"
-                    >
-                      Tiếp tục mua sắm
-                    </Link>
-                  </div>
-                </div>
-              </div>
+              <AccountOverviewTab
+                user={user}
+                displayName={displayName}
+                initial={initial}
+                handleTabChange={handleTabChange}
+                addresses={addresses}
+                defaultAddress={defaultAddress}
+                handleOpenAddAddress={handleOpenAddAddress}
+              />
             )}
 
-            {/* TAB 2: ĐƠN HÀNG CỦA TÔI */}
             {activeTab === 'orders' && (
-              <div className="bg-white rounded-lg border border-gray-200/80 p-5 sm:p-6 shadow-2xs space-y-4 animate-fadeIn">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div>
-                    <h3 className="text-base font-bold text-gray-900">Đơn hàng của tôi</h3>
-                    <span className="text-xs text-gray-400">0 đơn hàng</span>
-                  </div>
-
-                  {/* Search box */}
-                  <div className="relative w-full sm:w-72">
-                    <input
-                      type="text"
-                      value={orderSearch}
-                      onChange={(e) => setOrderSearch(e.target.value)}
-                      placeholder="Tìm theo tên đơn, mã đơn hoặc tên sản phẩm"
-                      className="w-full text-xs pl-3 pr-8 py-2 rounded-md border border-gray-200 focus:outline-none focus:border-[#e30019] transition"
-                    />
-                    <Search size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
-                  </div>
-                </div>
-
-                {/* Filter Tabs */}
-                <div className="flex items-center gap-6 overflow-x-auto no-scrollbar border-b border-gray-200 pt-2 text-xs">
-                  {[
-                    { id: 'all', label: 'Tất cả' },
-                    { id: 'processing', label: 'Đang xử lý' },
-                    { id: 'shipping', label: 'Đang giao' },
-                    { id: 'completed', label: 'Hoàn tất' },
-                    { id: 'cancelled', label: 'Đã hủy' },
-                    { id: 'returned', label: 'Trả hàng' },
-                  ].map((tab) => (
-                    <button
-                      key={tab.id}
-                      type="button"
-                      onClick={() => setOrderFilter(tab.id)}
-                      className={`pb-2.5 whitespace-nowrap transition cursor-pointer border-b-2 font-medium ${
-                        orderFilter === tab.id
-                          ? 'border-[#e30019] text-[#e30019]'
-                          : 'border-transparent text-gray-500 hover:text-gray-900'
-                      }`}
-                    >
-                      {tab.label}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Empty State */}
-                <div className="py-14 text-center">
-                  <div className="w-14 h-14 rounded-full bg-white border border-gray-200 flex items-center justify-center mx-auto mb-2.5 shadow-2xs">
-                    <IconOrders size={26} active={false} />
-                  </div>
-                  <div className="font-semibold text-gray-800 text-sm mb-1">
-                    Chưa có đơn hàng nào
-                  </div>
-                  <p className="text-xs text-gray-400 max-w-sm mx-auto">
-                    Tính năng tra cứu đơn hàng trực tuyến đang được hoàn thiện. Vui lòng liên hệ hotline khi cần hỗ trợ gấp.
-                  </p>
-                </div>
-              </div>
+              <AccountOrdersTab
+                orderSearch={orderSearch}
+                setOrderSearch={setOrderSearch}
+                orderFilter={orderFilter}
+                setOrderFilter={setOrderFilter}
+              />
             )}
 
-            {/* TAB 3: BẢO HÀNH */}
             {activeTab === 'warranty' && (
-              <div className="bg-white rounded-lg border border-gray-200/80 p-6 sm:p-8 shadow-2xs min-h-[380px] animate-fadeIn">
-                <h3 className="text-base font-bold text-gray-900 mb-8">Yêu cầu bảo hành</h3>
-
-                <div className="py-10 text-center max-w-md mx-auto">
-                  <div className="w-14 h-14 rounded-full bg-white border border-gray-200 flex items-center justify-center mx-auto mb-3 shadow-2xs">
-                    <IconWarranty size={28} active={false} />
-                  </div>
-                  <div className="font-bold text-gray-800 text-sm mb-1">
-                    Bạn chưa có yêu cầu bảo hành nào
-                  </div>
-                  <p className="text-xs text-gray-400 leading-relaxed">
-                    Khi bạn gửi yêu cầu bảo hành tại hệ thống, thông tin xử lý sẽ hiển thị tại đây.
-                  </p>
-                </div>
-              </div>
+              <AccountWarrantyTab
+                warrantySearch={warrantySearch}
+                setWarrantySearch={setWarrantySearch}
+              />
             )}
 
-            {/* TAB 4: THÔNG TIN CÁ NHÂN */}
             {activeTab === 'profile' && (
-              <div className="bg-white rounded-lg border border-gray-200/80 p-6 sm:p-8 shadow-2xs space-y-6 animate-fadeIn">
-                <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-                  <h3 className="text-base font-bold text-gray-900">Thông tin cá nhân</h3>
-                  {isEditing ? (
-                    <button
-                      type="button"
-                      onClick={handleCancelEdit}
-                      className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-700 cursor-pointer transition font-normal"
-                    >
-                      <X size={14} /> Hủy
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setIsEditing(true)}
-                      className="flex items-center gap-1.5 text-xs text-[#e30019] hover:underline cursor-pointer transition font-semibold"
-                    >
-                      <IconEditPen size={13} className="text-[#e30019]" /> Chỉnh sửa
-                    </button>
-                  )}
-                </div>
-
-                {profileMessage && (
-                  <div
-                    className={`p-3 rounded-md flex items-center gap-2 text-xs font-medium ${
-                      profileMessage.type === 'success'
-                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                        : 'bg-rose-50 text-rose-700 border border-rose-200'
-                    }`}
-                  >
-                    {profileMessage.type === 'success' ? (
-                      <CheckCircle2 size={15} className="shrink-0" />
-                    ) : (
-                      <AlertCircle size={15} className="shrink-0" />
-                    )}
-                    <span>{profileMessage.text}</span>
-                  </div>
-                )}
-
-                <form onSubmit={handleUpdateProfile} className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {/* Full Name */}
-                    <div>
-                      <label className="block text-xs text-gray-600 mb-1.5 font-medium">
-                        Họ và tên
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        disabled={!isEditing}
-                        value={profileForm.fullName}
-                        onChange={(e) =>
-                          setProfileForm({ ...profileForm, fullName: e.target.value })
-                        }
-                        placeholder="Nhập họ và tên"
-                        className={`w-full text-xs px-3.5 py-2.5 rounded-md border transition ${
-                          isEditing
-                            ? 'bg-white text-gray-800 border-gray-300 focus:outline-none focus:border-[#e30019]'
-                            : 'bg-[#f5f5f5] text-gray-500 border-gray-200 cursor-not-allowed'
-                        }`}
-                      />
-                    </div>
-
-                    {/* Phone */}
-                    <div>
-                      <label className="block text-xs text-gray-600 mb-1.5 font-medium">
-                        Số điện thoại
-                      </label>
-                      <input
-                        type="tel"
-                        disabled={!isEditing}
-                        value={profileForm.phone}
-                        onChange={(e) =>
-                          setProfileForm({ ...profileForm, phone: e.target.value })
-                        }
-                        placeholder="0919615474"
-                        className={`w-full text-xs px-3.5 py-2.5 rounded-md border transition ${
-                          isEditing
-                            ? 'bg-white text-gray-800 border-gray-300 focus:outline-none focus:border-[#e30019]'
-                            : 'bg-[#f5f5f5] text-gray-500 border-gray-200 cursor-not-allowed'
-                        }`}
-                      />
-                    </div>
-
-                    {/* Email (Always disabled/locked) */}
-                    <div>
-                      <label className="block text-xs text-gray-600 mb-1.5 font-medium">
-                        Email
-                      </label>
-                      <input
-                        type="email"
-                        disabled
-                        value={profileForm.email}
-                        className="w-full text-xs px-3.5 py-2.5 rounded-md border border-gray-200 bg-[#f5f5f5] text-gray-500 cursor-not-allowed"
-                      />
-                    </div>
-
-                    {/* Date of Birth */}
-                    <div>
-                      <label className="block text-xs text-gray-600 mb-1.5 font-medium">
-                        Ngày sinh
-                      </label>
-                      <input
-                        type="date"
-                        disabled={!isEditing}
-                        value={profileForm.dateOfBirth}
-                        onChange={(e) =>
-                          setProfileForm({ ...profileForm, dateOfBirth: e.target.value })
-                        }
-                        className={`w-full text-xs px-3.5 py-2.5 rounded-md border transition ${
-                          isEditing
-                            ? 'bg-white text-gray-800 border-gray-300 focus:outline-none focus:border-[#e30019]'
-                            : 'bg-[#f5f5f5] text-gray-500 border-gray-200 cursor-not-allowed'
-                        }`}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="pt-4">
-                    <button
-                      type="submit"
-                      disabled={!isEditing || profileLoading}
-                      className={`w-full sm:w-auto px-12 py-2.5 font-semibold text-xs rounded-md shadow-xs transition ${
-                        isEditing
-                          ? 'bg-[#e30019] hover:bg-[#c40015] text-white cursor-pointer'
-                          : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                      }`}
-                    >
-                      {profileLoading ? 'Đang cập nhật...' : 'Cập nhật'}
-                    </button>
-                  </div>
-                </form>
-              </div>
+              <AccountProfileTab
+                user={user}
+                displayName={displayName}
+                initial={initial}
+                isEditing={isEditing}
+                setIsEditing={setIsEditing}
+                handleCancelEdit={handleCancelEdit}
+                profileForm={profileForm}
+                setProfileForm={setProfileForm}
+                profileLoading={profileLoading}
+                profileMessage={profileMessage}
+                handleUpdateProfile={handleUpdateProfile}
+                avatarUploading={avatarUploading}
+                avatarInputRef={avatarInputRef}
+                handleDeleteAvatar={handleDeleteAvatar}
+              />
             )}
 
-            {/* TAB 5: ĐỔI MẬT KHẨU */}
+            {activeTab === 'addresses' && (
+              <AccountAddressesTab
+                addresses={addresses}
+                addressLoading={addressLoading}
+                handleOpenAddAddress={handleOpenAddAddress}
+                handleOpenEditAddress={handleOpenEditAddress}
+                handleDeleteAddress={handleDeleteAddress}
+                handleSetDefaultAddress={handleSetDefaultAddress}
+              />
+            )}
+
             {activeTab === 'change-password' && (
-              <div className="bg-white rounded-lg border border-gray-200/80 p-6 sm:p-8 shadow-2xs space-y-6 animate-fadeIn">
-                <div className="border-b border-gray-100 pb-3">
-                  <h3 className="text-base font-bold text-gray-900">Đổi mật khẩu</h3>
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    Để bảo mật tài khoản, vui lòng không chia sẻ mật khẩu cho người khác
-                  </p>
-                </div>
-
-                {passwordMessage && (
-                  <div
-                    className={`p-3 rounded-md flex items-center gap-2 text-xs font-medium ${
-                      passwordMessage.type === 'success'
-                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                        : 'bg-rose-50 text-rose-700 border border-rose-200'
-                    }`}
-                  >
-                    {passwordMessage.type === 'success' ? (
-                      <CheckCircle2 size={15} className="shrink-0" />
-                    ) : (
-                      <AlertCircle size={15} className="shrink-0" />
-                    )}
-                    <span>{passwordMessage.text}</span>
-                  </div>
-                )}
-
-                <form onSubmit={handleChangePassword} className="space-y-4 max-w-md">
-                  {/* Current Password */}
-                  <div>
-                    <label className="block text-xs text-gray-600 mb-1.5 font-medium">
-                      Mật khẩu hiện tại <span className="text-[#e30019]">*</span>
-                    </label>
-                    <div className="relative">
-                      <input
-                        type={showPassword.current ? 'text' : 'password'}
-                        required
-                        value={passwordForm.currentPassword}
-                        onChange={(e) =>
-                          setPasswordForm({
-                            ...passwordForm,
-                            currentPassword: e.target.value,
-                          })
-                        }
-                        placeholder="Nhập mật khẩu hiện tại"
-                        className="w-full text-xs px-3.5 py-2.5 pr-10 rounded-md border border-gray-200 focus:outline-none focus:border-[#e30019] transition bg-white"
-                      />
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setShowPassword({
-                            ...showPassword,
-                            current: !showPassword.current,
-                          })
-                        }
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                      >
-                        {showPassword.current ? <EyeOff size={14} /> : <Eye size={14} />}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* New Password */}
-                  <div>
-                    <label className="block text-xs text-gray-600 mb-1.5 font-medium">
-                      Mật khẩu mới <span className="text-[#e30019]">*</span>
-                    </label>
-                    <div className="relative">
-                      <input
-                        type={showPassword.new ? 'text' : 'password'}
-                        required
-                        value={passwordForm.newPassword}
-                        onChange={(e) =>
-                          setPasswordForm({
-                            ...passwordForm,
-                            newPassword: e.target.value,
-                          })
-                        }
-                        placeholder="Nhập mật khẩu mới"
-                        className="w-full text-xs px-3.5 py-2.5 pr-10 rounded-md border border-gray-200 focus:outline-none focus:border-[#e30019] transition bg-white"
-                      />
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setShowPassword({
-                            ...showPassword,
-                            new: !showPassword.new,
-                          })
-                        }
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                      >
-                        {showPassword.new ? <EyeOff size={14} /> : <Eye size={14} />}
-                      </button>
-                    </div>
-                    <span className="block text-[11px] text-gray-400 mt-1">
-                      Mật khẩu tối thiểu 8 ký tự, ít nhất 1 chữ in hoa và 1 chữ số.
-                    </span>
-                  </div>
-
-                  {/* Confirm New Password */}
-                  <div>
-                    <label className="block text-xs text-gray-600 mb-1.5 font-medium">
-                      Xác nhận mật khẩu mới <span className="text-[#e30019]">*</span>
-                    </label>
-                    <div className="relative">
-                      <input
-                        type={showPassword.confirm ? 'text' : 'password'}
-                        required
-                        value={passwordForm.confirmPassword}
-                        onChange={(e) =>
-                          setPasswordForm({
-                            ...passwordForm,
-                            confirmPassword: e.target.value,
-                          })
-                        }
-                        placeholder="Nhập lại mật khẩu mới"
-                        className="w-full text-xs px-3.5 py-2.5 pr-10 rounded-md border border-gray-200 focus:outline-none focus:border-[#e30019] transition bg-white"
-                      />
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setShowPassword({
-                            ...showPassword,
-                            confirm: !showPassword.confirm,
-                          })
-                        }
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                      >
-                        {showPassword.confirm ? <EyeOff size={14} /> : <Eye size={14} />}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="pt-2">
-                    <button
-                      type="submit"
-                      disabled={passwordLoading}
-                      className="px-10 py-2.5 bg-[#e30019] hover:bg-[#c40015] disabled:opacity-50 text-white font-semibold text-xs rounded-md shadow-xs transition cursor-pointer"
-                    >
-                      {passwordLoading ? 'Đang cập nhật...' : 'Cập nhật mật khẩu'}
-                    </button>
-                  </div>
-                </form>
-              </div>
+              <AccountChangePasswordTab
+                passwordForm={passwordForm}
+                setPasswordForm={setPasswordForm}
+                showPassword={showPassword}
+                setShowPassword={setShowPassword}
+                passwordLoading={passwordLoading}
+                passwordMessage={passwordMessage}
+                handleChangePassword={handleChangePassword}
+              />
             )}
           </div>
         </div>
       </div>
+
+      {/* 3. Address Add / Edit Modal */}
+      <AddressModal
+        isOpen={addressModalOpen}
+        onClose={() => setAddressModalOpen(false)}
+        editingAddressId={editingAddressId}
+        addressForm={addressForm}
+        setAddressForm={setAddressForm}
+        provinces={provinces}
+        districts={districts}
+        wards={wards}
+        loadingProvinces={loadingProvinces}
+        loadingDistricts={loadingDistricts}
+        loadingWards={loadingWards}
+        handleProvinceSelect={handleProvinceSelect}
+        handleDistrictSelect={handleDistrictSelect}
+        handleWardSelect={handleWardSelect}
+        handleSaveAddress={handleSaveAddress}
+        addressSaving={addressSaving}
+        postMergerInfo={postMergerInfo}
+        mergerLoading={mergerLoading}
+      />
     </div>
   );
 }
@@ -763,8 +802,8 @@ export default function AccountPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-[70vh] flex items-center justify-center">
-          <div className="w-8 h-8 border-2 border-[#e30019] border-t-transparent rounded-full animate-spin" />
+        <div className="min-h-[70vh] flex items-center justify-center bg-slate-50">
+          <Loader2 size={24} className="animate-spin text-[#e30019]" />
         </div>
       }
     >
