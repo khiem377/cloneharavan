@@ -34,7 +34,7 @@ export default function SearchSortSelector({ currentSort = 'relevance' }) {
       <select
         value={currentSort || 'relevance'}
         onChange={handleSortChange}
-        className="appearance-none bg-white border border-gray-200 text-gray-800 text-xs font-medium rounded-md py-1.5 pl-3 pr-8 focus:outline-hidden focus:border-[#e30019] focus:ring-1 focus:ring-[#e30019] transition cursor-pointer shadow-2xs"
+        className="appearance-none bg-white border border-gray-200 text-gray-800 text-xs font-medium rounded-[6px] py-1.5 pl-3 pr-8 focus:outline-hidden focus:border-[#e30019] focus:ring-1 focus:ring-[#e30019] transition cursor-pointer shadow-2xs"
         aria-label="Sắp xếp sản phẩm"
       >
         {SORT_OPTIONS.map((opt) => (

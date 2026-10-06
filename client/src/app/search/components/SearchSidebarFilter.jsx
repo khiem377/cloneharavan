@@ -2,21 +2,39 @@
 
 import React, { useState, useMemo } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import Icon from '@/components/common/Icon';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import {
+  SlidersHorizontal,
+  RotateCcw,
+  X,
+  Star,
+  CheckCircle2,
+  Sparkles,
+  Zap,
+  Percent,
+  Check,
+} from 'lucide-react';
+import { Card, CardHeader, CardTitle, CardContent } from '../../../components/ui/card';
+import { Checkbox } from '../../../components/ui/checkbox';
+import { Button } from '../../../components/ui/button';
+import { Badge } from '../../../components/ui/badge';
+import { Separator } from '../../../components/ui/separator';
+import {
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+} from '../../../components/ui/accordion';
 import PriceRangeSlider from './PriceRangeSlider';
 import BrandFilterSection from './BrandFilterSection';
 import DynamicAttributeFilters from './DynamicAttributeFilters';
 
 const PRICE_PRESETS = [
-  { label: 'Tất cả', minPrice: '', maxPrice: '' },
-  { label: 'Từ 0đ - 2.000.000đ', minPrice: '0', maxPrice: '2000000' },
-  { label: 'Từ 2.000.000đ - 5.000.000đ', minPrice: '2000000', maxPrice: '5000000' },
-  { label: 'Từ 5.000.000đ - 10.000.000đ', minPrice: '5000000', maxPrice: '10000000' },
-  { label: 'Từ 10.000.000đ - 20.000.000đ', minPrice: '10000000', maxPrice: '20000000' },
-  { label: 'Trên 20.000.000đ', minPrice: '20000000', maxPrice: '' },
+  { label: 'Tất cả mức giá', minPrice: '', maxPrice: '' },
+  { label: 'Dưới 2 triệu', minPrice: '0', maxPrice: '2000000' },
+  { label: 'Từ 2 - 5 triệu', minPrice: '2000000', maxPrice: '5000000' },
+  { label: 'Từ 5 - 10 triệu', minPrice: '5000000', maxPrice: '10000000' },
+  { label: 'Từ 10 - 20 triệu', minPrice: '10000000', maxPrice: '20000000' },
+  { label: 'Trên 20 triệu', minPrice: '20000000', maxPrice: '' },
 ];
 
 export default function SearchSidebarFilter({
@@ -34,6 +52,9 @@ export default function SearchSidebarFilter({
     category: true,
     brand: true,
     stock: true,
+    promotion: true,
+    rating: false,
+    attributes: true,
   });
 
   const categories = facets.categories || [];
@@ -95,14 +116,15 @@ export default function SearchSidebarFilter({
     if (onCloseMobile) onCloseMobile();
   };
 
-  const hasActiveFilters = Boolean(
-    currentFilters.category ||
-    currentFilters.brand ||
-    currentFilters.minPrice ||
-    currentFilters.maxPrice ||
-    currentFilters.inStock ||
-    Object.keys(selectedAttrs).length > 0
-  );
+  const activeFiltersCount =
+    [
+      currentFilters.category,
+      currentFilters.brand,
+      currentFilters.minPrice || currentFilters.maxPrice,
+      currentFilters.inStock,
+      currentFilters.onSale,
+      currentFilters.rating,
+    ].filter(Boolean).length + Object.keys(selectedAttrs).length;
 
   const isPresetActive = (preset) => {
     if (!preset.minPrice && !preset.maxPrice) {
@@ -115,216 +137,201 @@ export default function SearchSidebarFilter({
   };
 
   return (
-    <Card className="w-full shadow-xs flex flex-col max-h-[calc(100vh-140px)] overflow-hidden p-0">
-      <div className="shrink-0 flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-white">
+    <Card className="w-full shadow-xs flex flex-col max-h-[calc(100vh-140px)] overflow-hidden p-0 border-slate-200">
+      {/* Header */}
+      <div className="shrink-0 flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-white">
         <div className="flex items-center gap-2">
-          <Icon name="filter" size={16} className="text-gray-700" />
-          <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wide">
+          <SlidersHorizontal size={15} className="text-[#e30019]" />
+          <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
             Bộ lọc tìm kiếm
           </h2>
+          {activeFiltersCount > 0 && (
+            <Badge
+              variant="default"
+              className="bg-[#e30019] text-white text-[10px] font-bold px-1.5 py-0 rounded-full h-4 min-w-[16px] flex items-center justify-center"
+            >
+              {activeFiltersCount}
+            </Badge>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
-          {hasActiveFilters && (
+          {activeFiltersCount > 0 && (
             <Button
               type="button"
-              variant="link"
+              variant="ghost"
               size="sm"
               onClick={handleReset}
-              className="h-auto p-0 text-xs font-medium text-red-600 hover:underline"
+              className="h-7 px-2 text-xs font-medium text-[#e30019] hover:bg-red-50 hover:text-[#c40015] rounded-[4px] active:scale-[0.98]"
             >
-              Xóa tất cả
+              <RotateCcw size={11} className="mr-1" />
+              <span>Xóa tất cả</span>
             </Button>
           )}
 
           {onCloseMobile && (
-            <button
+            <Button
+              variant="ghost"
+              size="icon-sm"
               onClick={onCloseMobile}
-              className="lg:hidden p-1 rounded text-gray-400 hover:bg-gray-100 cursor-pointer"
+              className="lg:hidden h-7 w-7 text-slate-400 hover:bg-slate-100 rounded-[4px]"
             >
-              <Icon name="close" size={16} />
-            </button>
+              <X size={15} />
+            </Button>
           )}
         </div>
       </div>
 
-      <div className="overflow-y-auto flex-1 divide-y divide-gray-200 scrollbar-thin pr-0.5">
-        <div>
-          <button
-            type="button"
-            onClick={() => toggleSection('price')}
-            className="flex items-center justify-between w-full px-4 py-3 text-left hover:bg-gray-50 transition cursor-pointer"
-          >
-            <span className="text-xs font-bold text-gray-900 uppercase">Khoảng giá</span>
-            <Icon
-              name="chevron-down"
-              size={14}
-              className={`text-gray-500 transition-transform duration-200 ${
-                openSections.price ? 'rotate-180' : ''
-              }`}
-            />
-          </button>
-
-          {openSections.price && (
-            <div className="px-4 pb-4 space-y-3.5">
-              <PriceRangeSlider
-                minPrice={currentFilters.minPrice}
-                maxPrice={currentFilters.maxPrice}
-                onApply={updateFilters}
-              />
-
-              <div className="pt-2 border-t border-gray-100 space-y-1.5">
-                <span className="text-[11px] font-semibold text-gray-500 block mb-1">
-                  Mốc giá phổ biến
-                </span>
-                {PRICE_PRESETS.map((preset, idx) => {
-                  const active = isPresetActive(preset);
-                  return (
-                    <label
-                      key={idx}
-                      className="flex items-center gap-2.5 py-1 px-1 rounded hover:bg-gray-50 text-xs text-gray-700 cursor-pointer select-none"
-                    >
-                      <Checkbox
-                        checked={active}
-                        onChange={() =>
-                          updateFilters({
-                            minPrice: active ? '' : preset.minPrice,
-                            maxPrice: active ? '' : preset.maxPrice,
-                          })
-                        }
-                      />
-                      <span className={active ? 'font-bold text-red-600' : 'font-normal'}>
-                        {preset.label}
-                      </span>
-                    </label>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {categories.length > 0 && (
-          <div>
-            <button
-              type="button"
-              onClick={() => toggleSection('category')}
-              className="flex items-center justify-between w-full px-4 py-3 text-left hover:bg-gray-50 transition cursor-pointer"
+      {/* Accordion Filter Sections */}
+      <div className="overflow-y-auto flex-1 scrollbar-thin divide-y divide-slate-100">
+        <Accordion>
+          {/* SECTION 1: KHOẢNG GIÁ */}
+          <AccordionItem value="price">
+            <AccordionTrigger
+              isOpen={openSections.price}
+              onToggle={() => toggleSection('price')}
             >
-              <span className="text-xs font-bold text-gray-900 uppercase">Danh mục</span>
-              <Icon
-                name="chevron-down"
-                size={14}
-                className={`text-gray-500 transition-transform duration-200 ${
-                  openSections.category ? 'rotate-180' : ''
-                }`}
-              />
-            </button>
+              <span>Khoảng giá</span>
+            </AccordionTrigger>
 
-            {openSections.category && (
-              <div className="px-4 pb-4 space-y-1.5">
-                {categories.map((cat) => {
-                  const isSelected =
-                    currentFilters.category === cat._id ||
-                    currentFilters.category === cat.slug;
-                  return (
-                    <label
-                      key={cat._id}
-                      className="flex items-center justify-between py-1 px-1 rounded hover:bg-gray-50 text-xs text-gray-700 cursor-pointer select-none"
-                    >
-                      <div className="flex items-center gap-2">
+            <AccordionContent isOpen={openSections.price}>
+              <div className="space-y-3 pt-1">
+                <PriceRangeSlider
+                  minPrice={currentFilters.minPrice}
+                  maxPrice={currentFilters.maxPrice}
+                  onApply={updateFilters}
+                />
+
+                <div className="pt-2 border-t border-slate-100 space-y-1">
+                  <span className="text-[11px] font-semibold text-slate-500 block mb-1">
+                    Mức giá phổ biến:
+                  </span>
+                  {PRICE_PRESETS.map((preset, idx) => {
+                    const active = isPresetActive(preset);
+                    return (
+                      <label
+                        key={idx}
+                        className={`flex items-center gap-2.5 py-1 px-1.5 rounded-[4px] text-xs transition cursor-pointer select-none ${
+                          active
+                            ? 'bg-red-50/70 text-[#e30019] font-semibold'
+                            : 'text-slate-700 hover:bg-slate-50'
+                        }`}
+                      >
                         <Checkbox
-                          checked={isSelected}
+                          checked={active}
                           onChange={() =>
                             updateFilters({
-                              category: isSelected ? '' : cat.slug || cat._id,
+                              minPrice: active ? '' : preset.minPrice,
+                              maxPrice: active ? '' : preset.maxPrice,
                             })
                           }
                         />
-                        <span className={isSelected ? 'font-bold text-red-600' : 'font-normal'}>
-                          {cat.name}
-                        </span>
-                      </div>
-                      {typeof cat.count === 'number' && (
-                        <span className="text-[11px] text-gray-400">({cat.count})</span>
-                      )}
-                    </label>
-                  );
-                })}
+                        <span className="flex-1">{preset.label}</span>
+                      </label>
+                    );
+                  })}
+                </div>
               </div>
-            )}
-          </div>
-        )}
+            </AccordionContent>
+          </AccordionItem>
 
-        <DynamicAttributeFilters
-          attributes={attributes}
-          selectedAttrs={selectedAttrs}
-          onSelectAttr={handleSelectAttr}
-        />
+          {/* SECTION 2: DANH MỤC */}
+          {categories.length > 0 && (
+            <AccordionItem value="category">
+              <AccordionTrigger
+                isOpen={openSections.category}
+                onToggle={() => toggleSection('category')}
+              >
+                <span>Danh mục sản phẩm</span>
+              </AccordionTrigger>
 
-        {brands.length > 0 && (
-          <div>
-            <button
-              type="button"
-              onClick={() => toggleSection('brand')}
-              className="flex items-center justify-between w-full px-4 py-3 text-left hover:bg-gray-50 transition cursor-pointer"
-            >
-              <span className="text-xs font-bold text-gray-900 uppercase">Thương hiệu</span>
-              <Icon
-                name="chevron-down"
-                size={14}
-                className={`text-gray-500 transition-transform duration-200 ${
-                  openSections.brand ? 'rotate-180' : ''
-                }`}
-              />
-            </button>
-
-            {openSections.brand && (
-              <div className="px-4 pb-4">
-                <BrandFilterSection
-                  brands={brands}
-                  selectedBrand={currentFilters.brand}
-                  onSelectBrand={(val) => updateFilters({ brand: val })}
-                />
-              </div>
-            )}
-          </div>
-        )}
-
-        <div>
-          <button
-            type="button"
-            onClick={() => toggleSection('stock')}
-            className="flex items-center justify-between w-full px-4 py-3 text-left hover:bg-gray-50 transition cursor-pointer"
-          >
-            <span className="text-xs font-bold text-gray-900 uppercase">Tình trạng</span>
-            <Icon
-              name="chevron-down"
-              size={14}
-              className={`text-gray-500 transition-transform duration-200 ${
-                openSections.stock ? 'rotate-180' : ''
-              }`}
-            />
-          </button>
-
-          {openSections.stock && (
-            <div className="px-4 pb-4">
-              <label className="flex items-center gap-2 py-1 px-1 rounded hover:bg-gray-50 text-xs text-gray-700 cursor-pointer select-none">
-                <Checkbox
-                  checked={
-                    currentFilters.inStock === 'true' ||
-                    currentFilters.inStock === true ||
-                    currentFilters.inStock === '1'
-                  }
-                  onChange={(e) =>
-                    updateFilters({ inStock: e.target.checked ? 'true' : '' })
-                  }
-                />
-                <span>Chỉ hiện sản phẩm còn hàng</span>
-              </label>
-            </div>
+              <AccordionContent isOpen={openSections.category}>
+                <div className="space-y-1 pt-1 max-h-52 overflow-y-auto pr-0.5 scrollbar-thin">
+                  {categories.map((cat) => {
+                    const isSelected =
+                      currentFilters.category === cat._id ||
+                      currentFilters.category === cat.slug;
+                    return (
+                      <label
+                        key={cat._id}
+                        className={`flex items-center justify-between py-1 px-1.5 rounded-[4px] text-xs transition cursor-pointer select-none ${
+                          isSelected
+                            ? 'bg-red-50/70 text-[#e30019] font-semibold'
+                            : 'text-slate-700 hover:bg-slate-50'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <Checkbox
+                            checked={isSelected}
+                            onChange={() =>
+                              updateFilters({
+                                category: isSelected ? '' : cat.slug || cat._id,
+                              })
+                            }
+                          />
+                          <span className="truncate">{cat.name}</span>
+                        </div>
+                        {typeof cat.count === 'number' && (
+                          <span className="text-[11px] text-slate-400 font-mono tabular-nums shrink-0 ml-1">
+                            ({cat.count})
+                          </span>
+                        )}
+                      </label>
+                    );
+                  })}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
           )}
-        </div>
+
+          {/* SECTION 3: THƯƠNG HIỆU */}
+          {brands.length > 0 && (
+            <AccordionItem value="brand">
+              <AccordionTrigger
+                isOpen={openSections.brand}
+                onToggle={() => toggleSection('brand')}
+              >
+                <span>Thương hiệu</span>
+              </AccordionTrigger>
+
+              <AccordionContent isOpen={openSections.brand}>
+                <div className="pt-1">
+                  <BrandFilterSection
+                    brands={brands}
+                    selectedBrand={currentFilters.brand}
+                    onSelectBrand={(brandSlug) =>
+                      updateFilters({ brand: brandSlug })
+                    }
+                  />
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          )}
+
+
+
+          {/* SECTION 6: THUỘC TÍNH ĐỘNG */}
+          {attributes.length > 0 && (
+            <AccordionItem value="attributes">
+              <AccordionTrigger
+                isOpen={openSections.attributes}
+                onToggle={() => toggleSection('attributes')}
+              >
+                <span>Thông số & Tính năng</span>
+              </AccordionTrigger>
+
+              <AccordionContent isOpen={openSections.attributes}>
+                <div className="pt-1">
+                  <DynamicAttributeFilters
+                    attributes={attributes}
+                    selectedAttrs={selectedAttrs}
+                    onSelectAttr={handleSelectAttr}
+                  />
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          )}
+        </Accordion>
       </div>
     </Card>
   );

@@ -8,6 +8,7 @@ import useAuthStore from '../../store/authStore';
 import {
   IconProfile,
   IconOrders,
+  IconAddress,
   IconChangePassword,
   IconLogout,
 } from '../account/AccountIcons';
@@ -45,12 +46,21 @@ export const AccountMenu = () => {
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          className="flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-white hover:bg-slate-50 text-slate-800 border border-slate-200/90 hover:border-slate-300 transition cursor-pointer text-left shadow-2xs h-9"
+          className="flex items-center gap-2 px-2.5 py-1.5 rounded-[6px] bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 hover:border-slate-300 transition cursor-pointer text-left shadow-xs h-9 active:scale-[0.98]"
           title={displayName}
         >
-          <div className="w-5 h-5 rounded-full bg-[#e30019] text-white flex items-center justify-center font-bold text-[10px] uppercase shrink-0 shadow-2xs">
-            {initial}
-          </div>
+          {user?.avatar?.url ? (
+            <img
+              src={user.avatar.url}
+              alt={displayName}
+              referrerPolicy="no-referrer"
+              className="w-5 h-5 rounded-full object-cover shrink-0 border border-slate-200 shadow-2xs"
+            />
+          ) : (
+            <div className="w-5 h-5 rounded-full bg-[#e30019] text-white flex items-center justify-center font-bold text-[10px] uppercase shrink-0 shadow-2xs">
+              {initial}
+            </div>
+          )}
           <span className="text-xs font-semibold text-slate-800 max-w-[100px] lg:max-w-[130px] truncate hidden sm:inline-block">
             {displayName}
           </span>
@@ -61,13 +71,13 @@ export const AccountMenu = () => {
         </button>
 
         {isOpen && (
-          <div className="absolute right-0 top-full mt-1.5 w-64 bg-white rounded-lg shadow-xl border border-gray-200/80 py-2 z-50 animate-fadeIn text-xs">
+          <div className="absolute right-0 top-full mt-1.5 w-64 bg-white rounded-[6px] shadow-sm border border-slate-200 py-1.5 z-[200] animate-fadeIn text-xs">
             {/* Header info */}
-            <div className="px-4 py-2 border-b border-gray-100">
-              <div className="font-bold text-gray-900 truncate text-sm">
+            <div className="px-3.5 py-2 border-b border-slate-100">
+              <div className="font-bold text-slate-900 truncate text-xs">
                 {user?.fullName || user?.name || 'Khách hàng'}
               </div>
-              <div className="text-xs text-gray-400 truncate mt-0.5 font-normal">
+              <div className="text-[11px] text-slate-400 truncate mt-0.5 font-normal">
                 {user?.email || 'Chưa liên kết email'}
               </div>
             </div>
@@ -77,40 +87,49 @@ export const AccountMenu = () => {
               <Link
                 href="/tai-khoan?tab=profile"
                 onClick={() => setIsOpen(false)}
-                className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-50 hover:text-[#e30019] transition font-medium group"
+                className="flex items-center gap-2.5 px-3.5 py-2 text-slate-700 hover:bg-slate-50 hover:text-[#e30019] transition font-medium group text-xs"
               >
-                <IconProfile size={16} />
+                <IconProfile size={15} />
                 <span>Tài khoản của tôi</span>
               </Link>
 
               <Link
                 href="/tai-khoan?tab=orders"
                 onClick={() => setIsOpen(false)}
-                className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-50 hover:text-[#e30019] transition font-medium group"
+                className="flex items-center gap-2.5 px-3.5 py-2 text-slate-700 hover:bg-slate-50 hover:text-[#e30019] transition font-medium group text-xs"
               >
-                <IconOrders size={16} />
+                <IconOrders size={15} />
                 <span>Đơn hàng của tôi</span>
+              </Link>
+
+              <Link
+                href="/tai-khoan?tab=addresses"
+                onClick={() => setIsOpen(false)}
+                className="flex items-center gap-2.5 px-3.5 py-2 text-slate-700 hover:bg-slate-50 hover:text-[#e30019] transition font-medium group text-xs"
+              >
+                <IconAddress size={15} />
+                <span>Sổ địa chỉ</span>
               </Link>
 
               <Link
                 href="/tai-khoan?tab=change-password"
                 onClick={() => setIsOpen(false)}
-                className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-50 hover:text-[#e30019] transition font-medium group"
+                className="flex items-center gap-2.5 px-3.5 py-2 text-slate-700 hover:bg-slate-50 hover:text-[#e30019] transition font-medium group text-xs"
               >
-                <IconChangePassword size={16} />
+                <IconChangePassword size={15} />
                 <span>Đổi mật khẩu</span>
               </Link>
             </div>
 
-            <div className="border-t border-gray-100 my-1" />
+            <div className="border-t border-slate-100 my-1" />
 
             {/* Logout button */}
             <button
               type="button"
               onClick={handleLogout}
-              className="w-full flex items-center gap-3 px-4 py-2 text-gray-700 hover:text-[#e30019] hover:bg-red-50/70 transition font-medium cursor-pointer"
+              className="w-full flex items-center gap-2.5 px-3.5 py-2 text-rose-600 hover:bg-rose-50/70 transition font-medium cursor-pointer text-xs active:scale-[0.98]"
             >
-              <IconLogout size={16} className="text-gray-400" />
+              <IconLogout size={15} className="text-rose-500" />
               <span>Đăng xuất</span>
             </button>
           </div>
@@ -124,8 +143,8 @@ export const AccountMenu = () => {
       href="/login"
       className="flex items-center gap-2 p-1 text-left hover:opacity-80 transition"
     >
-      <div className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-700">
-        <User size={18} className="text-slate-600" />
+      <div className="w-8 h-8 rounded-[6px] border border-slate-200 flex items-center justify-center text-slate-700">
+        <User size={16} className="text-slate-600" />
       </div>
       <div className="text-xs leading-tight hidden sm:block">
         <span className="block text-slate-400 text-[11px]">Tài khoản</span>

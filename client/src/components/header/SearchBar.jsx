@@ -20,6 +20,7 @@ const SEARCH_SCOPES = [
 export const SearchBar = () => {
   const router = useRouter();
   const { trendingKeywords = [] } = useStoreData();
+  const [liveTrending, setLiveTrending] = useState(trendingKeywords);
   const [query, setQuery] = useState('');
   const [selectedScope, setSelectedScope] = useState('products');
   const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
@@ -31,6 +32,24 @@ export const SearchBar = () => {
   const containerRef = useRef(null);
   const categoryRef = useRef(null);
   const debounceRef = useRef(null);
+
+  useEffect(() => {
+    if (trendingKeywords && trendingKeywords.length > 0) {
+      setLiveTrending(trendingKeywords);
+    }
+  }, [trendingKeywords]);
+
+  const handleFocus = async () => {
+    setIsOpen(true);
+    try {
+      const fresh = await searchService.getTrending(10, 'all');
+      if (Array.isArray(fresh) && fresh.length > 0) {
+        setLiveTrending(fresh);
+      }
+    } catch {
+      // Keep existing trending
+    }
+  };
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -75,11 +94,26 @@ export const SearchBar = () => {
     }, 250);
   };
 
+  const saveRecentSearch = (kw) => {
+    if (!kw || typeof window === 'undefined') return;
+    try {
+      const clean = kw.trim();
+      if (!clean) return;
+      const stored = localStorage.getItem('shop_recent_searches');
+      const list = stored ? JSON.parse(stored) : [];
+      const filtered = [clean, ...list.filter((item) => item.toLowerCase() !== clean.toLowerCase())].slice(0, 8);
+      localStorage.setItem('shop_recent_searches', JSON.stringify(filtered));
+    } catch {
+      // Ignore
+    }
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!query.trim()) return;
-    setIsOpen(false);
     const trimmed = query.trim();
+    saveRecentSearch(trimmed);
+    setIsOpen(false);
 
     if (selectedScope === 'blogs') {
       router.push(`/blogs?keyword=${encodeURIComponent(trimmed)}`);
@@ -91,6 +125,7 @@ export const SearchBar = () => {
   };
 
   const handleKeywordClick = (kw) => {
+    saveRecentSearch(kw);
     setQuery(kw);
     setIsOpen(false);
     if (selectedScope === 'blogs') {
@@ -135,7 +170,7 @@ export const SearchBar = () => {
           type="text"
           value={query}
           onChange={handleChange}
-          onFocus={() => setIsOpen(true)}
+          onFocus={handleFocus}
           placeholder={getPlaceholder()}
           className="flex-1 px-3 py-2 text-xs sm:text-sm text-slate-800 placeholder-slate-400 bg-transparent focus:outline-none min-w-0"
         />
@@ -163,10 +198,10 @@ export const SearchBar = () => {
       </form>
 
       {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden z-50 max-h-[75vh] overflow-y-auto animate-fadeIn">
+        <div className="absolute top-full left-0 right-0 mt-1.5 bg-white rounded-[6px] shadow-lg border border-slate-200 overflow-hidden z-50 max-h-[75vh] overflow-y-auto animate-fadeIn">
           {!query.trim() && (
             <SearchTrendingPills
-              trendingKeywords={trendingKeywords}
+              trendingKeywords={liveTrending}
               onKeywordClick={handleKeywordClick}
             />
           )}

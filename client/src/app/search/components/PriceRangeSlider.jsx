@@ -1,6 +1,9 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
 import { Input } from '../../../components/ui/input';
 import { Button } from '../../../components/ui/button';
+import { Label } from '../../../components/ui/label';
 
 const MAX_LIMIT = 50000000;
 const STEP = 500000;
@@ -54,15 +57,15 @@ export default function PriceRangeSlider({
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between text-xs text-gray-600 font-medium">
-        <span>Từ: <strong className="text-gray-900">{formatPrice(minVal)}</strong></span>
-        <span>Đến: <strong className="text-gray-900">{maxVal >= MAX_LIMIT ? '50+ tr' : formatPrice(maxVal)}</strong></span>
+      <div className="flex items-center justify-between text-xs text-slate-600 font-medium">
+        <span>Từ: <strong className="text-slate-900 font-mono tabular-nums">{formatPrice(minVal)}</strong></span>
+        <span>Đến: <strong className="text-slate-900 font-mono tabular-nums">{maxVal >= MAX_LIMIT ? '50+ tr' : formatPrice(maxVal)}</strong></span>
       </div>
 
       <div className="relative w-full h-6 flex items-center select-none py-2">
-        <div className="absolute w-full h-1.5 bg-gray-200 rounded-full" />
+        <div className="absolute w-full h-1.5 bg-slate-200 rounded-full" />
         <div
-          className="absolute h-1.5 bg-red-600 rounded-full"
+          className="absolute h-1.5 bg-[#e30019] rounded-full"
           style={{
             left: `${minPercent}%`,
             width: `${Math.max(0, maxPercent - minPercent)}%`,
@@ -91,10 +94,10 @@ export default function PriceRangeSlider({
       </div>
 
       <div className="grid grid-cols-2 gap-2 pt-1">
-        <div>
-          <label className="text-[10px] text-gray-500 font-medium block mb-1">
+        <div className="space-y-1">
+          <Label className="text-[10px] text-slate-500 font-medium">
             Từ (đ)
-          </label>
+          </Label>
           <Input
             type="number"
             min={0}
@@ -102,12 +105,13 @@ export default function PriceRangeSlider({
             step={STEP}
             value={minVal}
             onChange={(e) => setMinVal(Math.min(Number(e.target.value) || 0, maxVal - STEP))}
+            className="h-7 text-xs font-mono rounded-[6px]"
           />
         </div>
-        <div>
-          <label className="text-[10px] text-gray-500 font-medium block mb-1">
+        <div className="space-y-1">
+          <Label className="text-[10px] text-slate-500 font-medium">
             Đến (đ)
-          </label>
+          </Label>
           <Input
             type="number"
             min={0}
@@ -115,46 +119,46 @@ export default function PriceRangeSlider({
             step={STEP}
             value={maxVal}
             onChange={(e) => setMaxVal(Math.max(Number(e.target.value) || 0, minVal + STEP))}
+            className="h-7 text-xs font-mono rounded-[6px]"
           />
         </div>
       </div>
 
       <Button
         type="button"
+        size="sm"
         onClick={handleApply}
-        className="w-full text-xs font-semibold"
+        className="w-full text-xs font-semibold bg-[#e30019] hover:bg-[#c40015] text-white rounded-[6px] h-8 shadow-xs active:scale-[0.98]"
       >
         Áp dụng khoảng giá
       </Button>
 
-
       <style jsx>{`
         .dual-slider::-webkit-slider-thumb {
           appearance: none;
-          width: 18px;
-          height: 18px;
+          width: 16px;
+          height: 16px;
           border-radius: 50%;
           background: #ffffff;
-          border: 3px solid #dc2626;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+          border: 2.5px solid #e30019;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
           pointer-events: auto;
           cursor: pointer;
           transition: transform 0.1s ease;
         }
         .dual-slider::-webkit-slider-thumb:hover {
-          transform: scale(1.15);
+          transform: scale(1.2);
         }
         .dual-slider::-moz-range-thumb {
-          width: 18px;
-          height: 18px;
+          width: 16px;
+          height: 16px;
           border-radius: 50%;
           background: #ffffff;
-          border: 3px solid #dc2626;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+          border: 2.5px solid #e30019;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
           pointer-events: auto;
           cursor: pointer;
         }
-
       `}</style>
     </div>
   );

@@ -1,10 +1,11 @@
 import React from 'react';
 import Link from 'next/link';
 import Icon from '../../../components/common/Icon';
+import { Button } from '@/components/ui/button';
 
 export default function SearchEmptyState({ query = '', hasFilters = false, onResetFilters }) {
   return (
-    <div className="text-center py-12 px-4 bg-white rounded-lg border border-gray-200 shadow-xs space-y-4">
+    <div className="text-center py-12 px-4 bg-white rounded-[6px] border border-gray-200 shadow-xs space-y-4">
       <div className="w-14 h-14 rounded-full bg-red-50 text-red-600 flex items-center justify-center mx-auto">
         <Icon name="search" size={24} />
       </div>
@@ -24,20 +25,25 @@ export default function SearchEmptyState({ query = '', hasFilters = false, onRes
 
       <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
         {hasFilters && (
-          <button
+          <Button
+            variant="default"
+            size="sm"
             onClick={onResetFilters}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold text-white bg-red-600 hover:bg-red-700 transition"
+            className="bg-red-600 hover:bg-red-700 text-white font-semibold text-xs gap-1.5 h-8"
           >
             <Icon name="rotate-ccw" size={13} />
             <span>Xóa bộ lọc</span>
-          </button>
+          </Button>
         )}
 
-        <Link
-          href="/"
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 transition"
-        >
-          <span>Về trang chủ</span>
+        <Link href="/">
+          <Button
+            variant="secondary"
+            size="sm"
+            className="text-xs font-semibold h-8"
+          >
+            Về trang chủ
+          </Button>
         </Link>
       </div>
 
@@ -50,7 +56,7 @@ export default function SearchEmptyState({ query = '', hasFilters = false, onRes
             <Link
               key={kw}
               href={`/search?q=${encodeURIComponent(kw)}`}
-              className="px-2.5 py-1 bg-gray-50 hover:bg-red-50 hover:text-red-600 hover:border-red-200 border border-gray-200 rounded text-xs text-gray-600 transition"
+              className="px-2.5 py-1 bg-gray-50 hover:bg-red-50 hover:text-red-600 hover:border-red-200 border border-gray-200 rounded-[4px] text-xs text-gray-600 transition"
             >
               {kw}
             </Link>

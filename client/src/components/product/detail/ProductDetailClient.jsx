@@ -11,6 +11,7 @@ import ProductDescription from './ProductDescription';
 import ProductRecommendationsSection from './ProductRecommendationsSection';
 import ProductReviewsAndComments from './ProductReviewsAndComments';
 import StickyPurchaseBar from './StickyPurchaseBar';
+import ProductViewTracker from '@/components/common/ProductViewTracker';
 
 export default function ProductDetailClient({
   product,
@@ -35,17 +36,17 @@ export default function ProductDetailClient({
 
   const [selectedVariant, setSelectedVariant] = useState(initialVariant);
 
-  const isFlashSale = Boolean(
-    product.isFlashSale && (product.flashSale?.flashSalePrice || product.flashSalePrice)
-  );
+  const flashSaleDeal = deals?.flashSale || null;
+  const isFlashSale = Boolean(deals?.isFlashSale && flashSaleDeal?.price > 0);
+
   const activeSalePrice = isFlashSale
-    ? (product.flashSale?.flashSalePrice || product.flashSalePrice)
+    ? flashSaleDeal.price
     : selectedVariant?.salePrice !== undefined && selectedVariant?.salePrice !== null && selectedVariant.salePrice > 0
     ? selectedVariant.salePrice
     : product.salePrice || product.cachedSalePrice || 0;
 
-  const activeRegularPrice = isFlashSale && (product.flashSale?.originalPrice || product.flashSaleOriginalPrice)
-    ? (product.flashSale?.originalPrice || product.flashSaleOriginalPrice)
+  const activeRegularPrice = isFlashSale && flashSaleDeal?.originalPrice
+    ? flashSaleDeal.originalPrice
     : selectedVariant?.price !== undefined && selectedVariant?.price !== null && selectedVariant.price > 0
     ? selectedVariant.price
     : product.price || product.cachedPrice || 0;
@@ -57,8 +58,10 @@ export default function ProductDetailClient({
 
   const currentDisplayPrice = activeSalePrice > 0 ? activeSalePrice : activeRegularPrice;
 
+
   return (
     <div className="min-h-[100dvh] bg-slate-50/60 pb-16">
+      <ProductViewTracker product={product} />
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6">
         {/* BREADCRUMB */}
         <ProductBreadcrumbs product={product} />
@@ -69,7 +72,9 @@ export default function ProductDetailClient({
           <div className="lg:col-span-6 flex flex-col gap-5">
             <ProductGallery
               product={product}
+              variants={variants}
               selectedVariant={selectedVariant}
+              onSelectVariant={setSelectedVariant}
               discountPercent={discountPercent}
               isFlashSale={isFlashSale}
             />
@@ -90,6 +95,7 @@ export default function ProductDetailClient({
             {/* KHUYẾN MÃI THẬT & COUPONS THỰC TẾ CHO SẢN PHẨM NÀY */}
             <ProductPromotions
               deals={deals}
+              product={product}
               currentPrice={currentDisplayPrice}
             />
           </div>

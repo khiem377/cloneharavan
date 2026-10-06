@@ -32,7 +32,7 @@ export const HeaderTop = ({ onOpenCategoryDrawer }) => {
         <div className="flex md:hidden items-center gap-2 sm:gap-3">
           <Link
             href="/live"
-            className="flex items-center gap-1 px-2 py-0.5 border border-red-500 text-red-600 rounded-md text-[11px] font-semibold hover:bg-red-50 transition"
+            className="flex items-center gap-1 px-2 py-0.5 border border-red-500 text-red-600 rounded-[4px] text-[11px] font-semibold hover:bg-red-50 active:scale-[0.98] transition"
           >
             <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse" />
             <span>LIVE</span>
@@ -61,7 +61,7 @@ export const HeaderTop = ({ onOpenCategoryDrawer }) => {
       <div className="hidden md:flex items-center gap-3 sm:gap-5 shrink-0">
         <Link
           href="/live"
-          className="flex items-center gap-1.5 px-2.5 py-1 border border-red-500 text-red-600 rounded-md text-xs font-semibold hover:bg-red-50 transition"
+          className="flex items-center gap-1.5 px-2.5 py-1 border border-red-500 text-red-600 rounded-[4px] text-xs font-semibold hover:bg-red-50 active:scale-[0.98] transition"
         >
           <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse" />
           <span>LIVE</span>

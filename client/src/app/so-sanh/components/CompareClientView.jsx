@@ -214,7 +214,7 @@ export default function CompareClientView({ initialProducts = [], productIdsPara
     return (
       <div className="bg-[#f8f9fa] min-h-[80vh] py-12">
         <div className="max-w-4xl mx-auto px-4 text-center">
-          <div className="bg-white rounded-xl border border-gray-200/80 p-10 sm:p-14 shadow-2xs">
+          <div className="bg-white rounded-[6px] border border-gray-200/80 p-10 sm:p-14 shadow-2xs">
             <div className="w-16 h-16 rounded-full bg-red-50 text-[#e30019] flex items-center justify-center mx-auto mb-4">
               <ArrowLeftRight size={30} />
             </div>
@@ -226,7 +226,7 @@ export default function CompareClientView({ initialProducts = [], productIdsPara
             </p>
             <Link
               href="/"
-              className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#e30019] hover:bg-[#c40015] text-white text-xs font-bold rounded-md shadow-xs transition"
+              className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#e30019] hover:bg-[#c40015] text-white text-xs font-bold rounded-[6px] shadow-xs active:scale-[0.98] transition"
             >
               <ArrowLeft size={14} /> Khám phá sản phẩm
             </Link>
@@ -298,33 +298,36 @@ export default function CompareClientView({ initialProducts = [], productIdsPara
         </div>
 
         {/* Top Control Bar */}
-        <div className="bg-white rounded-lg border border-gray-200/80 p-4 sm:p-5 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="bg-white rounded-[6px] border border-slate-200 p-4 sm:p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight flex items-center gap-2">
-              <ArrowLeftRight size={22} className="text-[#e30019]" />
-              <span>So sánh chi tiết sản phẩm ({products.length})</span>
+            <h1 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+              <ArrowLeftRight size={20} className="text-[#e30019]" />
+              <span>So sánh chi tiết sản phẩm</span>
+              <span className="font-mono tabular-nums text-xs bg-slate-100 text-slate-700 px-2 py-0.5 rounded-[4px] border border-slate-200 font-bold">
+                {products.length}
+              </span>
             </h1>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-slate-500 mt-1">
               Đối chiếu trực quan bảng thông số kỹ thuật, giá thành và đặc điểm công nghệ nổi bật
             </p>
           </div>
 
-          <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
+          <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap">
             <button
               type="button"
               onClick={handleCopyShareLink}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-gray-200 hover:border-gray-300 text-xs font-semibold text-gray-700 hover:text-gray-900 bg-gray-50/80 transition cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[6px] border border-slate-200 hover:border-slate-300 text-xs font-semibold text-slate-700 hover:text-slate-900 bg-slate-50 transition cursor-pointer active:scale-[0.98]"
             >
               <Share2 size={13} />
               <span>{copiedLink ? 'Đã sao chép link!' : 'Chia sẻ liên kết'}</span>
             </button>
 
-            <label className="flex items-center gap-2 text-xs text-gray-700 cursor-pointer select-none">
+            <label className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer select-none">
               <input
                 type="checkbox"
                 checked={highlightDiff}
                 onChange={(e) => setHighlightDiff(e.target.checked)}
-                className="accent-[#e30019] rounded"
+                className="accent-[#e30019] rounded-[4px] cursor-pointer"
               />
               <span className="font-medium">Chỉ xem điểm khác nhau</span>
             </label>
@@ -332,7 +335,7 @@ export default function CompareClientView({ initialProducts = [], productIdsPara
             <button
               type="button"
               onClick={clearAll}
-              className="text-xs text-gray-400 hover:text-red-600 transition cursor-pointer font-medium"
+              className="text-xs text-slate-400 hover:text-rose-600 transition cursor-pointer font-medium active:scale-[0.98]"
             >
               Xóa tất cả
             </button>
@@ -340,7 +343,7 @@ export default function CompareClientView({ initialProducts = [], productIdsPara
         </div>
 
         {/* Comparison Table Container */}
-        <div className="bg-white rounded-lg border border-gray-200/80 shadow-2xs overflow-hidden">
+        <div className="bg-white rounded-[6px] border border-slate-200 shadow-xs overflow-hidden">
           <div className="overflow-x-auto no-scrollbar">
             <div className="min-w-[760px]">
               {/* Product Header Row (Sticky Header Grid) */}
@@ -387,14 +390,14 @@ export default function CompareClientView({ initialProducts = [], productIdsPara
 
                             <div className="space-y-3">
                               {/* Thumbnail with badge */}
-                              <div className="w-full aspect-square bg-white rounded-md border border-gray-100 p-2 flex items-center justify-center relative overflow-hidden group">
+                              <div className="w-full aspect-square bg-white rounded-[6px] border border-gray-100 p-2 flex items-center justify-center relative overflow-hidden group">
                                 {price >= 12000000 && (
-                                  <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded bg-[#1e2b69] text-amber-300 text-[9px] font-bold z-10">
+                                  <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-[4px] bg-[#1e2b69] text-amber-300 text-[9px] font-bold z-10">
                                     CAO CẤP
                                   </span>
                                 )}
                                 {hasDiscount && (
-                                  <span className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded bg-[#e30019] text-white text-[10px] font-bold z-10">
+                                  <span className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded-[4px] bg-[#e30019] text-white text-[10px] font-mono font-bold z-10">
                                     -{discountPct}%
                                   </span>
                                 )}
@@ -415,11 +418,11 @@ export default function CompareClientView({ initialProducts = [], productIdsPara
 
                               {/* Pricing */}
                               <div className="space-y-0.5">
-                                <div className="text-base font-black text-[#e30019]">
+                                <div className="text-base font-black text-[#e30019] font-mono tabular-nums">
                                   {price > 0 ? `${price.toLocaleString('vi-VN')}₫` : 'Liên hệ'}
                                 </div>
                                 {hasDiscount && (
-                                  <div className="text-xs text-gray-400 line-through">
+                                  <div className="text-xs text-gray-400 line-through font-mono tabular-nums">
                                     {origPrice.toLocaleString('vi-VN')}₫
                                   </div>
                                 )}
@@ -428,7 +431,7 @@ export default function CompareClientView({ initialProducts = [], productIdsPara
                               {/* Add to Cart button */}
                               <button
                                 type="button"
-                                className="w-full py-2.5 bg-[#e30019] hover:bg-[#c40015] text-white font-bold text-xs rounded-md shadow-xs transition active:scale-[0.99] cursor-pointer"
+                                className="w-full py-2.5 bg-[#e30019] hover:bg-[#c40015] text-white font-bold text-xs rounded-[6px] shadow-xs transition active:scale-[0.98] cursor-pointer"
                               >
                                 Thêm vào giỏ
                               </button>
@@ -463,7 +466,7 @@ export default function CompareClientView({ initialProducts = [], productIdsPara
         </div>
 
         {/* SECTION: SIDE-BY-SIDE RICH DESCRIPTION & FEATURE SHOWCASE (Như EGA Điện Máy) */}
-        <div className="bg-white rounded-lg border border-gray-200/80 p-5 sm:p-7 shadow-2xs space-y-6">
+        <div className="bg-white rounded-[6px] border border-gray-200/80 p-5 sm:p-7 shadow-2xs space-y-6">
           <div className="border-b border-gray-100 pb-4">
             <h2 className="text-lg sm:text-xl font-black text-gray-900 flex items-center gap-2">
               <Sparkles size={20} className="text-[#e30019]" />
@@ -483,18 +486,18 @@ export default function CompareClientView({ initialProducts = [], productIdsPara
                 : [(typeof p.thumbnail === 'string' ? p.thumbnail : p.thumbnail?.url) || '/logo-shop.jpg'];
 
               return (
-                <div key={p._id || idx} className="space-y-6 bg-gray-50/50 p-4 sm:p-5 rounded-xl border border-gray-100">
+                <div key={p._id || idx} className="space-y-6 bg-gray-50/50 p-4 sm:p-5 rounded-[6px] border border-gray-100">
                   {/* Product Tag Header */}
                   <div className="flex items-center justify-between border-b border-gray-200/70 pb-3">
                     <div>
-                      <span className="text-[10px] font-bold text-[#e30019] uppercase tracking-wider bg-red-50 px-2 py-0.5 rounded">
+                      <span className="text-[10px] font-bold text-[#e30019] uppercase tracking-wider bg-red-50 px-2 py-0.5 rounded-[4px]">
                         Lựa chọn #{idx + 1}
                       </span>
                       <h3 className="font-bold text-gray-900 text-sm mt-1 line-clamp-1">
                         {p.name}
                       </h3>
                     </div>
-                    <span className="text-sm font-extrabold text-[#e30019]">
+                    <span className="text-sm font-extrabold text-[#e30019] font-mono tabular-nums">
                       {(p.salePrice || p.price || 0) > 0 ? `${(p.salePrice || p.price).toLocaleString('vi-VN')}₫` : ''}
                     </span>
                   </div>
@@ -513,7 +516,7 @@ export default function CompareClientView({ initialProducts = [], productIdsPara
 
                           {/* Inline Feature Showcase Image */}
                           {featImg && (
-                            <div className="w-full aspect-16/9 bg-white rounded-lg border border-gray-200 overflow-hidden shadow-2xs">
+                            <div className="w-full aspect-16/9 bg-white rounded-[6px] border border-gray-200 overflow-hidden shadow-2xs">
                               <img
                                 src={featImg}
                                 alt={feat.title}
@@ -544,7 +547,7 @@ export default function CompareClientView({ initialProducts = [], productIdsPara
                   )}
 
                   {/* Commitments & Warranty card */}
-                  <div className="bg-amber-50/80 border border-amber-200/80 rounded-lg p-3 text-xs text-amber-900 space-y-1">
+                  <div className="bg-amber-50/80 border border-amber-200/80 rounded-[6px] p-3 text-xs text-amber-900 space-y-1">
                     <div className="flex items-center gap-1.5 font-bold text-amber-950">
                       <ShieldCheck size={14} className="text-amber-600" />
                       <span>Cam kết tại SHOP:</span>
@@ -559,7 +562,7 @@ export default function CompareClientView({ initialProducts = [], productIdsPara
                   {/* Buy Button */}
                   <Link
                     href={`/products/${p.slug || p._id}`}
-                    className="block w-full py-2.5 bg-[#e30019] hover:bg-[#c40015] text-white font-bold text-center text-xs rounded-md shadow-xs transition"
+                    className="block w-full py-2.5 bg-[#e30019] hover:bg-[#c40015] text-white font-bold text-center text-xs rounded-[6px] shadow-xs active:scale-[0.98] transition"
                   >
                     Xem chi tiết sản phẩm
                   </Link>

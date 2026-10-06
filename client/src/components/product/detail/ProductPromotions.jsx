@@ -1,13 +1,15 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
+import { Gift, ChevronDown, ChevronUp } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
 
-export default function ProductPromotions({ deals, currentPrice = 0 }) {
+export default function ProductPromotions({ deals, product, currentPrice = 0 }) {
   const [copiedCode, setCopiedCode] = useState(null);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const rawCoupons = deals?.coupons || [];
   const giftPrograms = deals?.giftPrograms || [];
@@ -23,12 +25,67 @@ export default function ProductPromotions({ deals, currentPrice = 0 }) {
     }, 2000);
   };
 
-  const hasGifts = !isFlashSale && (giftPrograms.length > 0 || promotions.length > 0);
+  // Gom toàn bộ danh sách ưu đãi quà tặng & khuyến mãi thành danh sách phẳng
+  const allGiftItems = [];
+
+  giftPrograms.forEach((gift) => {
+    if (gift.giftType === 'same_product') {
+      allGiftItems.push({
+        type: 'gift',
+        qty: gift.giftQty || 1,
+        name: product?.name || 'Sản phẩm cùng loại',
+        slug: product?.slug || '',
+        price: product?.price || currentPrice || 0,
+        triggerQty: gift.triggerQty || 1,
+        programName: gift.name,
+        description: gift.description,
+      });
+    } else if (gift.giftProducts && gift.giftProducts.length > 0) {
+      gift.giftProducts.forEach((p) => {
+        const prod = p.productId;
+        allGiftItems.push({
+          type: 'gift',
+          qty: p.qty || gift.giftQty || 1,
+          name: prod?.name || 'Quà tặng kèm',
+          slug: prod?.slug || '',
+          price: prod?.price || 0,
+          triggerQty: gift.triggerQty || 1,
+          programName: gift.name,
+          description: gift.description,
+        });
+      });
+    } else {
+      allGiftItems.push({
+        type: 'gift',
+        qty: gift.giftQty || 1,
+        name: 'Quà tặng kèm đặc biệt',
+        slug: '',
+        price: 0,
+        triggerQty: gift.triggerQty || 1,
+        programName: gift.name,
+        description: gift.description,
+      });
+    }
+  });
+
+  // Bổ sung các chương trình khuyến mãi nếu có
+  promotions.forEach((promo) => {
+    allGiftItems.push({
+      type: 'promo',
+      name: promo.name,
+      description: promo.description || 'Ưu đãi áp dụng trực tiếp khi thanh toán.',
+    });
+  });
+
+  const hasGifts = !isFlashSale && allGiftItems.length > 0;
   const hasCoupons = rawCoupons.length > 0;
 
   if (!hasGifts && !hasCoupons && !isFlashSale) {
     return null;
   }
+
+  const visibleGiftItems = isExpanded ? allGiftItems : allGiftItems.slice(0, 2);
+  const remainingCount = allGiftItems.length - 2;
 
   return (
     <div className="flex flex-col gap-3">
@@ -39,60 +96,86 @@ export default function ProductPromotions({ deals, currentPrice = 0 }) {
         </Card>
       )}
 
-      {/* 1. KHỐI QUÀ TẶNG & CHƯƠNG TRÌNH KHUYẾN MÃI THỰC TẾ TỪ BACKEND (SHADCN CARD) */}
+      {/* 1. KHỐI ƯU ĐÃI ĐI KÈM (QUÀ TẶNG & KHUYẾN MÃI THỰC TẾ) */}
       {hasGifts && (
-        <Card className="rounded-[6px] border border-red-200 bg-red-50/30 shadow-none overflow-hidden">
-          <CardHeader className="p-3 sm:p-4 pb-2 border-b border-red-200">
-            <CardTitle className="font-bold text-xs uppercase tracking-wide text-red-700 flex items-center justify-between">
-              <span>CHƯƠNG TRÌNH TẶNG KÈM & KHUYẾN MÃI</span>
-              <Badge className="bg-red-600 hover:bg-red-600 text-[10px] h-4 rounded-[3px]">
-                ƯU ĐÃI THẬT
-              </Badge>
-            </CardTitle>
-          </CardHeader>
+        <div className="rounded-[6px] border border-red-200/90 bg-[#FFF5F5] p-3 sm:p-3.5 shadow-none">
+          {/* Header */}
+          <div className="flex items-center gap-2 mb-2.5">
+            <span className="w-5 h-5 rounded-[4px] border border-red-500 text-red-600 flex items-center justify-center text-[11px] font-bold shrink-0">
+              %
+            </span>
+            <h3 className="font-bold text-sm sm:text-[15px] text-slate-900 tracking-tight">
+              Ưu đãi đi kèm
+            </h3>
+          </div>
 
-          <CardContent className="p-3 sm:p-4 pt-3">
-            <ul className="flex flex-col gap-2 text-xs sm:text-sm text-slate-800">
-              {/* Gift Programs: Mua X Tặng Y */}
-              {giftPrograms.map((gift, idx) => {
-                const giftNames =
-                  gift.giftType === 'same_product'
-                    ? 'Sản phẩm cùng loại'
-                    : gift.giftProducts?.map((p) => p.productId?.name || 'Quà tặng kèm').join(', ') || 'Quà tặng kèm';
+          {/* Hộp nội dung quà tặng màu trắng */}
+          <div className="bg-white rounded-[6px] p-3 border border-red-100 divide-y divide-red-100">
+            {visibleGiftItems.map((item, idx) => (
+              <div
+                key={`gift-item-${idx}`}
+                className="flex items-start gap-2.5 py-2.5 first:pt-0 last:pb-0"
+              >
+                {/* Icon hộp quà màu đỏ */}
+                <Gift className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
 
-                return (
-                  <li key={`gift-${idx}`} className="flex items-start gap-2">
-                    <Badge variant="outline" className="border-red-300 text-red-700 text-[10px] font-bold h-4 px-1 shrink-0 rounded-[2px]">
-                      {idx + 1}
-                    </Badge>
-                    <span>
-                      <strong className="font-semibold text-red-700">{gift.name}: </strong>
-                      Mua {gift.triggerQty} tặng {gift.giftQty || 1} ({giftNames}).
-                      {gift.description && (
-                        <span className="text-slate-600 block text-xs mt-0.5">
-                          {gift.description}
+                <div className="text-xs sm:text-[13px] text-slate-800 leading-snug">
+                  {item.type === 'gift' ? (
+                    <>
+                      <span>Tặng ngay {item.qty} x </span>
+                      {item.slug ? (
+                        <Link
+                          href={`/products/${item.slug}`}
+                          className="font-bold text-red-600 hover:text-red-700 hover:underline transition-colors"
+                          title={`Xem chi tiết ${item.name}`}
+                        >
+                          {item.name}
+                        </Link>
+                      ) : (
+                        <strong className="font-bold text-red-600">{item.name}</strong>
+                      )}
+                      {item.price > 0 && (
+                        <span className="text-slate-800 font-normal">
+                          {' '}(trị giá {item.price.toLocaleString('vi-VN')}đ)
                         </span>
                       )}
-                    </span>
-                  </li>
-                );
-              })}
+                      {item.triggerQty > 1 && (
+                        <span className="text-slate-500 text-[11px] block mt-0.5">
+                          Áp dụng khi mua từ {item.triggerQty} sản phẩm
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <strong className="font-bold text-red-600">{item.name}: </strong>
+                      <span>{item.description}</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
 
-              {/* Promotions */}
-              {promotions.map((promo, idx) => (
-                <li key={`promo-${idx}`} className="flex items-start gap-2">
-                  <Badge variant="outline" className="border-slate-300 text-slate-700 text-[10px] font-bold h-4 px-1 shrink-0 rounded-[2px]">
-                    +
-                  </Badge>
-                  <span>
-                    <strong className="font-semibold text-slate-900">{promo.name}: </strong>
-                    {promo.description || 'Ưu đãi áp dụng trực tiếp khi thanh toán.'}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
+          {/* Nút Xem thêm / Thu gọn khi có hơn 2 ưu đãi */}
+          {remainingCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="w-full flex items-center justify-center gap-1 mt-2.5 pt-0.5 text-xs font-medium text-red-600 hover:text-red-700 transition-colors cursor-pointer active:scale-[0.98]"
+            >
+              <span>
+                {isExpanded
+                  ? 'Thu gọn ưu đãi'
+                  : `Xem thêm ${remainingCount} ưu đãi`}
+              </span>
+              {isExpanded ? (
+                <ChevronUp className="w-3.5 h-3.5" />
+              ) : (
+                <ChevronDown className="w-3.5 h-3.5" />
+              )}
+            </button>
+          )}
+        </div>
       )}
 
       {/* 2. KHỐI COUPONS / MÃ GIẢM GIÁ (SHADCN CARD) */}

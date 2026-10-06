@@ -7,8 +7,7 @@ export const SearchTrendingPills = ({ trendingKeywords = [], onKeywordClick }) =
     .filter((item) => {
       const rawKw = typeof item === 'string' ? item : item.keyword || item.text || '';
       return rawKw && rawKw.trim().length >= 3;
-    })
-    .slice(0, 5);
+    });
 
   if (displayTrending.length === 0) return null;
 

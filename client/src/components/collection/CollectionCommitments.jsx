@@ -286,14 +286,14 @@ const COMMITMENTS = [
 
 export default function CollectionCommitments() {
   return (
-    <div className="bg-white rounded-2xl border border-slate-200/90 p-4 sm:p-6 shadow-xs mt-8">
+    <div className="bg-white rounded-[6px] border border-slate-200/90 p-4 sm:p-6 shadow-xs mt-8">
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
         {COMMITMENTS.map((item, idx) => {
           const SvgIcon = item.IconComponent;
           return (
             <div
               key={idx}
-              className="flex items-center gap-3 p-2.5 sm:p-3 rounded-xl bg-slate-50/70 hover:bg-white hover:shadow-md border border-slate-100 hover:border-red-100 transition-all duration-200 group cursor-default"
+              className="flex items-center gap-3 p-2.5 sm:p-3 rounded-[6px] bg-slate-50/70 hover:bg-white hover:shadow-xs border border-slate-100 hover:border-red-100 transition-all duration-200 group cursor-default"
             >
               <div className="transition-transform duration-200 group-hover:scale-110 group-hover:-translate-y-0.5">
                 <SvgIcon />

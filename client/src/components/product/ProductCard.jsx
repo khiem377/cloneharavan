@@ -3,16 +3,17 @@
 import React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Eye, ArrowLeftRight, Check, Flame, Star } from 'lucide-react';
+import { Eye, ArrowLeftRight, Check } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import useQuickViewStore from '@/store/quickViewStore';
 import useCompareStore from '@/store/compareStore';
+import trackingService from '@/services/tracking.service';
 
 const FALLBACK_IMAGE =
-  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120' fill='none'%3E%3Crect width='120' height='120' rx='8' fill='%23f8fafc'/%3E%3Crect x='30' y='35' width='60' height='45' rx='4' stroke='%23cbd5e1' stroke-width='2' fill='none'/%3E%3Cpolyline points='48 80 40 90 80 90 72 80' stroke='%23cbd5e1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E";
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120' fill='none'%3E%3Crect width='120' height='120' rx='6' fill='%23f8fafc'/%3E%3Crect x='30' y='35' width='60' height='45' rx='4' stroke='%23cbd5e1' stroke-width='2' fill='none'/%3E%3Cpolyline points='48 80 40 90 80 90 72 80' stroke='%23cbd5e1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E";
 
-export default function ProductCard({ product }) {
+export default function ProductCard({ product, onProductClick }) {
   const router = useRouter();
   const { openQuickView } = useQuickViewStore();
   const { addProduct, isCompared } = useCompareStore();
@@ -29,14 +30,15 @@ export default function ProductCard({ product }) {
   if (Array.isArray(product.images) && product.images.length > 0) {
     const candidate = product.images.find((img) => {
       const u = img?.url || (typeof img === 'string' ? img : '');
-      return u && u !== thumb1;
+      return u && u !== thumb1 && (u.startsWith('http://') || u.startsWith('https://'));
     });
     if (candidate) {
       thumb2 = candidate.url || (typeof candidate === 'string' ? candidate : '');
     } else if (product.images[1]) {
-      thumb2 =
-        product.images[1].url ||
-        (typeof product.images[1] === 'string' ? product.images[1] : '');
+      const u = product.images[1].url || (typeof product.images[1] === 'string' ? product.images[1] : '');
+      if (u && (u.startsWith('http://') || u.startsWith('https://'))) {
+        thumb2 = u;
+      }
     }
   }
 
@@ -93,15 +95,35 @@ export default function ProductCard({ product }) {
     else if (nameLower.includes('nanocell')) tags.push('NanoCell');
 
     if (nameLower.includes('inverter')) tags.push('Inverter');
-    return tags.slice(0, 3);
+    return tags.slice(0, 2);
   };
 
   const tags = extractTags();
   const compared = isCompared(product._id || product.id);
 
+  const handleCardClick = () => {
+    onProductClick?.(product);
+    const pId = product._id || product.id;
+    if (pId) {
+      trackingService.recordInteraction({
+        productId: pId,
+        interactionType: 'view',
+        context: { source: 'product_card_click' },
+      });
+    }
+  };
+
   const handleQuickViewClick = (e) => {
     e.preventDefault();
     e.stopPropagation();
+    const pId = product._id || product.id;
+    if (pId) {
+      trackingService.recordInteraction({
+        productId: pId,
+        interactionType: 'product_detail',
+        context: { source: 'quick_view' },
+      });
+    }
     openQuickView({
       ...product,
       isFlashSale,
@@ -113,6 +135,14 @@ export default function ProductCard({ product }) {
   const handleCompareClick = (e) => {
     e.preventDefault();
     e.stopPropagation();
+    const pId = product._id || product.id;
+    if (pId) {
+      trackingService.recordInteraction({
+        productId: pId,
+        interactionType: 'compare_add',
+        context: { source: 'compare_btn' },
+      });
+    }
     addProduct(product);
   };
 
@@ -121,66 +151,62 @@ export default function ProductCard({ product }) {
       <Link
         href={`/products/${product.slug || product._id}`}
         className="flex flex-col flex-1 h-full"
+        onClick={handleCardClick}
       >
-        <Card className="flex-1 flex flex-col hover:border-gray-300 hover:shadow-md transition-all duration-200 p-2.5 sm:p-3 relative overflow-hidden bg-white rounded-lg">
-          {/* Top Badge: HOT, NỔI BẬT or Giảm giá */}
-          <div className="w-full aspect-square bg-white rounded-md overflow-hidden flex items-center justify-center p-2 mb-2 relative">
+        <Card className="flex-1 flex flex-col hover:border-slate-400 transition-colors duration-150 p-2.5 sm:p-3 relative overflow-hidden bg-white rounded-[6px] border border-slate-200">
+          {/* Top Badge: Pure text flat badges */}
+          <div className="w-full aspect-square bg-white rounded-[4px] overflow-hidden flex items-center justify-center p-2 mb-2 relative">
             <div className="absolute top-1.5 left-1.5 z-10 flex flex-col gap-1 items-start">
               {isFlashSale && (
-                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-black bg-gradient-to-r from-red-600 to-amber-500 text-white shadow-xs uppercase tracking-wider animate-pulse">
-                  <Flame size={10} className="fill-current text-yellow-300" />
+                <span className="px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold bg-red-600 text-white uppercase tracking-wider">
                   FLASH SALE
                 </span>
               )}
               {product.isHot && !isFlashSale && (
-                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#e30019] text-white shadow-xs">
-                  <Flame size={10} className="fill-current" />
+                <span className="px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold bg-amber-600 text-white uppercase">
                   HOT
                 </span>
               )}
               {product.isFeatured && !product.isHot && !isFlashSale && (
-                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500 text-white shadow-xs">
-                  <Star size={10} className="fill-current" />
+                <span className="px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold bg-slate-800 text-white uppercase">
                   NỔI BẬT
                 </span>
               )}
               {hasDiscount && (
-                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#e30019] text-white shadow-xs">
+                <span className="px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold bg-red-600 text-white">
                   -{discountPercent}%
                 </span>
               )}
             </div>
 
-
             {/* Floating Action Icons on Hover */}
-            <div className="absolute right-2 top-2 z-20 flex flex-col gap-1.5 opacity-0 translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200">
-              {/* Quick View Button */}
+            <div className="absolute right-1.5 top-1.5 z-20 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
               <button
                 type="button"
                 data-no-progress="true"
                 onClick={handleQuickViewClick}
-                className="w-8 h-8 rounded-full bg-white hover:bg-[#e30019] text-gray-700 hover:text-white shadow-md flex items-center justify-center transition cursor-pointer"
-                title="Xem nhanh sản phẩm"
+                className="size-7 rounded-[4px] bg-white border border-slate-200 hover:bg-slate-900 hover:text-white text-slate-700 flex items-center justify-center transition-colors cursor-pointer"
+                title="Xem nhanh"
               >
-                <Eye size={15} />
+                <Eye size={13} />
               </button>
 
-              {/* Compare Button */}
               <button
                 type="button"
                 data-no-progress="true"
                 onClick={handleCompareClick}
-                className={`w-8 h-8 rounded-full shadow-md flex items-center justify-center transition cursor-pointer ${compared
-                    ? 'bg-emerald-600 text-white'
-                    : 'bg-white hover:bg-[#e30019] text-gray-700 hover:text-white'
-                  }`}
-                title={compared ? 'Đã thêm so sánh' : 'So sánh sản phẩm'}
+                className={`size-7 rounded-[4px] border flex items-center justify-center transition-colors cursor-pointer ${
+                  compared
+                    ? 'bg-slate-900 border-slate-900 text-white'
+                    : 'bg-white border-slate-200 hover:bg-slate-900 hover:text-white text-slate-700'
+                }`}
+                title={compared ? 'Đã thêm so sánh' : 'So sánh'}
               >
-                {compared ? <Check size={14} /> : <ArrowLeftRight size={14} />}
+                {compared ? <Check size={13} /> : <ArrowLeftRight size={13} />}
               </button>
             </div>
 
-            {/* Images with Swap Effect */}
+            {/* Images */}
             {thumb2 ? (
               <>
                 <img
@@ -189,7 +215,7 @@ export default function ProductCard({ product }) {
                   onError={(e) => {
                     e.currentTarget.src = FALLBACK_IMAGE;
                   }}
-                  className="absolute inset-0 w-full h-full object-contain p-2 transition-opacity duration-300 group-hover:opacity-0"
+                  className="absolute inset-0 w-full h-full object-contain p-2 transition-opacity duration-200 group-hover:opacity-0"
                   loading="lazy"
                 />
                 <img
@@ -198,7 +224,7 @@ export default function ProductCard({ product }) {
                   onError={(e) => {
                     e.currentTarget.src = FALLBACK_IMAGE;
                   }}
-                  className="absolute inset-0 w-full h-full object-contain p-2 opacity-0 transition-all duration-300 group-hover:opacity-100 group-hover:scale-105"
+                  className="absolute inset-0 w-full h-full object-contain p-2 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
                   loading="lazy"
                 />
               </>
@@ -209,19 +235,16 @@ export default function ProductCard({ product }) {
                 onError={(e) => {
                   e.currentTarget.src = FALLBACK_IMAGE;
                 }}
-                className="w-full h-full object-contain p-2 transition-transform duration-300 group-hover:scale-105"
+                className="w-full h-full object-contain p-2"
                 loading="lazy"
               />
             )}
 
             {product.stock <= 0 && (
-              <div className="absolute inset-0 bg-gray-900/40 backdrop-blur-[1px] flex items-center justify-center z-10">
-                <Badge
-                  variant="secondary"
-                  className="bg-gray-900 text-white text-[10px] font-semibold rounded"
-                >
+              <div className="absolute inset-0 bg-slate-900/60 flex items-center justify-center z-10">
+                <span className="bg-slate-900 text-white text-[10px] font-bold px-2 py-0.5 rounded-[4px] border border-slate-700">
                   Tạm hết hàng
-                </Badge>
+                </span>
               </div>
             )}
           </div>
@@ -238,56 +261,50 @@ export default function ProductCard({ product }) {
                     router.push(`/collections/${product.brand.slug || product.brand.name.toLowerCase()}`);
                   }
                 }}
-                className={`text-[11px] font-semibold uppercase tracking-wide block mb-0.5 transition-colors h-4 line-clamp-1 ${
+                className={`text-[10px] font-bold uppercase tracking-wider block mb-0.5 transition-colors truncate ${
                   product.brand?.name
-                    ? 'text-gray-400 hover:text-[#e30019] cursor-pointer w-fit'
+                    ? 'text-slate-400 hover:text-slate-900 cursor-pointer w-fit'
                     : 'text-transparent select-none'
                 }`}
               >
                 {product.brand?.name || '—'}
               </span>
 
-              <h3 className="text-xs sm:text-sm font-medium text-gray-900 line-clamp-2 group-hover:text-[#e30019] transition-colors leading-snug h-8 sm:h-9">
+              <h3 className="text-xs font-semibold text-slate-900 line-clamp-2 group-hover:text-blue-700 transition-colors leading-snug h-8">
                 {product.name}
               </h3>
 
-              <div className="min-h-[22px] flex flex-wrap gap-1 mt-1.5">
-                {tags.map((t, idx) => (
-                  <Badge
-                    key={idx}
-                    variant="secondary"
-                    className="px-1.5 py-0.5 text-gray-600 rounded text-[10px] font-medium"
-                  >
-                    {t}
-                  </Badge>
-                ))}
-              </div>
+              {tags.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {tags.map((t, idx) => (
+                    <span
+                      key={idx}
+                      className="px-1.5 py-0.5 rounded-[4px] bg-slate-100 text-slate-600 text-[10px] font-medium"
+                    >
+                      {t}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
 
-            <div className="mt-auto pt-2 border-t border-gray-100">
-              <div className="flex items-center gap-1.5 flex-wrap">
-                {originalPrice > 0 && (
-                  <span className="text-xs text-gray-400 line-through">
-                    {originalPrice.toLocaleString('vi-VN')}₫
-                  </span>
-                )}
-              </div>
+            <div className="mt-auto pt-2 border-t border-slate-100">
+              {originalPrice > 0 && (
+                <span className="text-[11px] text-slate-400 line-through font-mono tabular-nums block">
+                  {originalPrice.toLocaleString('vi-VN')}₫
+                </span>
+              )}
 
               <div className="flex items-baseline justify-between gap-1 mt-0.5">
                 {displayPrice > 0 ? (
-                  <span className="text-sm sm:text-base font-bold text-[#e30019]">
+                  <span className="text-sm font-bold text-red-600 font-mono tabular-nums">
                     {displayPrice.toLocaleString('vi-VN')}₫
                   </span>
                 ) : (
-                  <span className="text-xs font-semibold text-gray-500">
+                  <span className="text-xs font-semibold text-slate-500">
                     Liên hệ
                   </span>
                 )}
-              </div>
-
-              <div className="mt-2 pt-2 border-t border-dashed border-gray-100 flex items-center gap-1.5 text-[11px] text-gray-500">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
-                {/* <span className="truncate">Tặng gói Clip TV 12 tháng & BH tận nhà</span> */}
               </div>
             </div>
           </div>

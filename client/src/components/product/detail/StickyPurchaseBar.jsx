@@ -80,11 +80,14 @@ export default function StickyPurchaseBar({
                 <span className="font-extrabold text-red-600">
                   {displayPrice > 0 ? `${displayPrice.toLocaleString('vi-VN')}₫` : 'Liên hệ'}
                 </span>
-                {selectedVariant?.displayName && (
-                  <span className="text-slate-500 text-[11px] truncate hidden sm:inline">
-                    • {selectedVariant.displayName}
-                  </span>
-                )}
+                {selectedVariant?.displayName &&
+                  !['mặc định', 'mac dinh', 'default', 'default title'].includes(
+                    selectedVariant.displayName.toLowerCase().trim()
+                  ) && (
+                    <span className="text-slate-500 text-[11px] truncate hidden sm:inline">
+                      • {selectedVariant.displayName}
+                    </span>
+                  )}
               </div>
             </div>
           </div>

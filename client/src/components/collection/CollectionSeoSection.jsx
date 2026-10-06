@@ -7,7 +7,7 @@ export default function CollectionSeoSection({ title = 'sản phẩm' }) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200/90 p-5 sm:p-7 shadow-2xs mt-8 relative overflow-hidden">
+    <div className="bg-white rounded-[6px] border border-gray-200/90 p-5 sm:p-7 shadow-2xs mt-8 relative overflow-hidden">
       {/* Title */}
       <div className="flex items-center gap-2 mb-3">
         <div className="w-8 h-8 rounded-full bg-red-50 text-[#e30019] flex items-center justify-center shrink-0">

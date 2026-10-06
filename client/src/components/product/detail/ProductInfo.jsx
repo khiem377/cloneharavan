@@ -1,7 +1,198 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+
+// Inline trust strip — compact, ngang, ngay trước CTA
+function TrustStrip() {
+  const items = [
+    { label: '100% Chính hãng' },
+    { label: 'Bảo hành 12 tháng' },
+    { label: 'Đổi trả 30 ngày' },
+  ];
+  return (
+    <div className="flex items-center divide-x divide-slate-200 rounded-[6px] border border-slate-200 bg-slate-50 overflow-hidden">
+      {items.map((item, i) => (
+        <div key={i} className="flex items-center gap-1.5 px-3 py-2 flex-1 justify-center">
+          <span className="w-3.5 h-3.5 rounded-full bg-emerald-600 flex items-center justify-center shrink-0">
+            <svg width="7" height="7" viewBox="0 0 10 10" fill="none">
+              <path d="M2 5.5L4 7.5L8 3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </span>
+          <span className="text-[11px] font-medium text-slate-700 leading-tight whitespace-nowrap">{item.label}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Star rating visual component
+function StarRating({ rating = 0, count = 0 }) {
+  const fullStars = Math.floor(rating);
+  const hasHalf = rating - fullStars >= 0.5;
+  return (
+    <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-0.5">
+        {Array.from({ length: 5 }).map((_, i) => {
+          const filled = i < fullStars;
+          const half = !filled && i === fullStars && hasHalf;
+          return (
+            <svg key={i} width="13" height="13" viewBox="0 0 16 16" fill="none">
+              {half ? (
+                <>
+                  <defs>
+                    <linearGradient id={`half-${i}`}>
+                      <stop offset="50%" stopColor="#f59e0b" />
+                      <stop offset="50%" stopColor="#e2e8f0" />
+                    </linearGradient>
+                  </defs>
+                  <path d="M8 1.5l1.8 3.6 4 .58-2.9 2.83.68 4-3.58-1.88-3.58 1.88.68-4L2.2 5.68l4-.58z" fill={`url(#half-${i})`} />
+                </>
+              ) : (
+                <path d="M8 1.5l1.8 3.6 4 .58-2.9 2.83.68 4-3.58-1.88-3.58 1.88.68-4L2.2 5.68l4-.58z" fill={filled ? '#f59e0b' : '#e2e8f0'} />
+              )}
+            </svg>
+          );
+        })}
+      </div>
+      <span className="text-xs font-semibold text-slate-800">{rating.toFixed(1)}</span>
+      {count > 0 && (
+        <a href="#product-reviews" className="text-xs text-slate-500 hover:text-red-600 hover:underline transition-colors">
+          ({count.toLocaleString('vi-VN')} đánh giá)
+        </a>
+      )}
+    </div>
+  );
+}
+
+// Flash Sale Countdown digit block — slide animation
+function FlipCard({ value }) {
+  const display = String(Math.max(0, value)).padStart(2, '0');
+  const prevRef = useRef(display);
+  const [cur, setCur] = useState(display);
+  const [animKey, setAnimKey] = useState(0);
+
+  useEffect(() => {
+    if (display !== prevRef.current) {
+      prevRef.current = display;
+      setCur(display);
+      setAnimKey(k => k + 1);
+    }
+  }, [display]);
+
+  return (
+    <span
+      style={{
+        display: 'inline-flex',
+        flexDirection: 'column',
+        width: 36,
+        overflow: 'hidden',
+        borderRadius: 5,
+        boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+        userSelect: 'none',
+      }}
+    >
+      <style>{`
+        @keyframes fsSlideA {
+          from { transform: translateY(30%) translateY(-8px); opacity: 0.2; }
+          to   { transform: translateY(30%); opacity: 1; }
+        }
+        @keyframes fsSlideB {
+          from { transform: translateY(30%) translateY(-8px); opacity: 0.2; }
+          to   { transform: translateY(30%); opacity: 1; }
+        }
+        @keyframes fsSlideAb {
+          from { transform: translateY(-30%) translateY(-8px); opacity: 0.2; }
+          to   { transform: translateY(-30%); opacity: 1; }
+        }
+        @keyframes fsSlideBb {
+          from { transform: translateY(-30%) translateY(-8px); opacity: 0.2; }
+          to   { transform: translateY(-30%); opacity: 1; }
+        }
+      `}</style>
+      {/* Top half — slightly darker tint */}
+      <span style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        height: 22, background: '#f0f0f0', overflow: 'hidden',
+        borderBottom: '1px solid rgba(0,0,0,0.08)',
+      }}>
+        <span
+          style={{
+            fontSize: 22, fontWeight: 800, lineHeight: 1, color: '#c00',
+            fontFamily: '"Roboto Mono","Courier New",monospace',
+            display: 'block', transform: 'translateY(30%)',
+            animationName: animKey % 2 === 0 ? 'fsSlideA' : 'fsSlideB',
+            animationDuration: '0.32s',
+            animationTimingFunction: 'cubic-bezier(0.22,1,0.36,1)',
+            animationFillMode: 'both',
+          }}
+        >
+          {cur}
+        </span>
+      </span>
+      {/* Bottom half */}
+      <span style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        height: 22, background: '#fff', overflow: 'hidden',
+      }}>
+        <span
+          style={{
+            fontSize: 22, fontWeight: 800, lineHeight: 1, color: '#c00',
+            fontFamily: '"Roboto Mono","Courier New",monospace',
+            display: 'block', transform: 'translateY(-30%)',
+            animationName: animKey % 2 === 0 ? 'fsSlideAb' : 'fsSlideBb',
+            animationDuration: '0.32s',
+            animationTimingFunction: 'cubic-bezier(0.22,1,0.36,1)',
+            animationFillMode: 'both',
+          }}
+        >
+          {cur}
+        </span>
+      </span>
+    </span>
+
+  );
+}
+
+function FlashSaleCountdown({ endDate }) {
+  const calcRemaining = () => {
+    const diff = new Date(endDate) - Date.now();
+    if (diff <= 0) return null;
+    return {
+      h: Math.min(Math.floor(diff / 3600000), 99),
+      m: Math.floor((diff % 3600000) / 60000),
+      s: Math.floor((diff % 60000) / 1000),
+    };
+  };
+
+  const [time, setTime] = useState(calcRemaining);
+  useEffect(() => {
+    if (!endDate) return;
+    const t = setInterval(() => setTime(calcRemaining()), 1000);
+    return () => clearInterval(t);
+  }, [endDate]);
+
+  if (!time) return (
+    <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', fontWeight: 500 }}>Đã kết thúc</span>
+  );
+
+  const sep = (
+    <span style={{ color: '#fff', fontWeight: 900, fontSize: 18, lineHeight: 1, opacity: 0.95 }}>:</span>
+  );
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+      <FlipCard value={time.h} />
+      {sep}
+      <FlipCard value={time.m} />
+      {sep}
+      <FlipCard value={time.s} />
+    </div>
+  );
+}
+
 
 export default function ProductInfo({
   product,
@@ -13,32 +204,85 @@ export default function ProductInfo({
   const [quantity, setQuantity] = useState(1);
   const [actionNotice, setActionNotice] = useState(null);
 
+  const isDefaultVariantName = (name) => {
+    if (!name) return true;
+    const lower = String(name).trim().toLowerCase();
+    return (
+      lower === 'mặc định' ||
+      lower === 'mac dinh' ||
+      lower === 'default' ||
+      lower === 'default title' ||
+      lower === 'tiêu chuẩn' ||
+      lower === 'tieu chuan'
+    );
+  };
+
   // Helper trích xuất nhãn thuộc tính chính xác
   const getVariantLabel = (v) => {
     if (!v) return '';
     if (Array.isArray(v.attributes) && v.attributes.length > 0) {
-      return v.attributes.map((a) => a.value).join(' - ');
+      const validAttrs = v.attributes.filter((a) => !isDefaultVariantName(a.value));
+      if (validAttrs.length > 0) {
+        return validAttrs.map((a) => a.value).join(' - ');
+      }
     }
-    if (v.displayName && v.displayName !== 'Mặc định') {
+    if (v.displayName && !isDefaultVariantName(v.displayName)) {
       return v.displayName;
     }
-    return v.title || v.name || v.sku || '';
+    if (v.title && !isDefaultVariantName(v.title)) {
+      return v.title;
+    }
+    if (v.name && !isDefaultVariantName(v.name)) {
+      return v.name;
+    }
+    return '';
   };
 
-  // Tính toán giá động theo variant và Flash Sale (Thứ tự ưu tiên 1: Flash Sale)
-  const isFlashSale = Boolean(
-    product.isFlashSale && (product.flashSale?.flashSalePrice || product.flashSalePrice)
-  );
+  // Lọc biến thể thực
+  const realVariants = useMemo(() => {
+    if (!Array.isArray(variants) || variants.length <= 1) return [];
+    return variants.filter((v) => {
+      const label = getVariantLabel(v);
+      return Boolean(label);
+    });
+  }, [variants]);
 
-  const activeSalePrice = isFlashSale
-    ? (product.flashSale?.flashSalePrice || product.flashSalePrice)
-    : selectedVariant?.salePrice !== undefined && selectedVariant?.salePrice !== null && selectedVariant.salePrice > 0
+  // Chỉ hiển thị khối chọn biến thể khi có >= 2 biến thể thực
+  const displayVariants = realVariants.length > 1 ? realVariants : [];
+
+  const groupName =
+    displayVariants[0]?.attributes?.[0]?.name || product.options?.[0]?.name || 'Phiên bản';
+
+  const selectedVariantLabel =
+    getVariantLabel(selectedVariant) || (displayVariants[0] ? getVariantLabel(displayVariants[0]) : '');
+
+  // Thứ tự ưu tiên 1: Flash Sale từ deals API (deals.isFlashSale + deals.flashSale)
+  const flashSaleDeal = deals?.flashSale || null;
+  const flashSaleItems = deals?.flashSaleItems || [];
+  const isFlashSale = Boolean(deals?.isFlashSale && flashSaleDeal?.price > 0);
+
+  // Tìm flash sale item khớp với variant đang chọn
+  const matchedFsItem = useMemo(() => {
+    if (!isFlashSale || !flashSaleItems.length) return flashSaleDeal;
+    if (!selectedVariant) return flashSaleDeal;
+    const vId = selectedVariant._id?.toString();
+    const byVariant = flashSaleItems.find((i) => i.variantId && i.variantId === vId);
+    if (byVariant) return byVariant;
+    const noVariant = flashSaleItems.find((i) => !i.variantId);
+    return noVariant || flashSaleDeal;
+  }, [isFlashSale, flashSaleItems, selectedVariant, flashSaleDeal]);
+
+  const activeSalePrice =
+    isFlashSale && matchedFsItem?.price > 0
+      ? matchedFsItem.price
+      : selectedVariant?.salePrice !== undefined && selectedVariant?.salePrice !== null && selectedVariant.salePrice > 0
       ? selectedVariant.salePrice
       : product.salePrice || product.cachedSalePrice || 0;
 
-  const activeRegularPrice = isFlashSale && (product.flashSale?.originalPrice || product.flashSaleOriginalPrice)
-    ? (product.flashSale?.originalPrice || product.flashSaleOriginalPrice)
-    : selectedVariant?.price !== undefined && selectedVariant?.price !== null && selectedVariant.price > 0
+  const activeRegularPrice =
+    isFlashSale && matchedFsItem?.originalPrice
+      ? matchedFsItem.originalPrice
+      : selectedVariant?.price !== undefined && selectedVariant?.price !== null && selectedVariant.price > 0
       ? selectedVariant.price
       : product.price || product.cachedPrice || 0;
 
@@ -48,6 +292,7 @@ export default function ProductInfo({
   const discountPercent = hasDiscount
     ? Math.round(((activeRegularPrice - activeSalePrice) / activeRegularPrice) * 100)
     : 0;
+  const savingsAmount = hasDiscount ? activeRegularPrice - activeSalePrice : 0;
 
   const brand = product.brand;
   const currentSku =
@@ -55,21 +300,7 @@ export default function ProductInfo({
 
   const currentStock = selectedVariant?.stock !== undefined ? selectedVariant.stock : (product.stock ?? 10);
   const isOutOfStock = currentStock <= 0;
-
-  // Lọc biến thể thực
-  const realVariants = useMemo(() => {
-    return variants.filter(
-      (v) => (Array.isArray(v.attributes) && v.attributes.length > 0) || (v.displayName && v.displayName !== 'Mặc định')
-    );
-  }, [variants]);
-
-  const displayVariants = realVariants.length > 0 ? realVariants : variants.length > 1 ? variants : [];
-
-  const groupName =
-    displayVariants[0]?.attributes?.[0]?.name || product.options?.[0]?.name || 'Phiên bản';
-
-  const selectedVariantLabel =
-    getVariantLabel(selectedVariant) || (displayVariants[0] ? getVariantLabel(displayVariants[0]) : 'Tiêu chuẩn');
+  const isLowStock = !isOutOfStock && currentStock <= 5;
 
   const finalTotalPrice = currentBasePrice * quantity;
 
@@ -99,61 +330,30 @@ export default function ProductInfo({
 
   return (
     <div className="flex flex-col gap-4">
-      {/* 1. BRAND & SKU & RATING BAR (KHÔNG ICONS, KHÔNG EMOJI) */}
-      <div className="flex flex-wrap items-center justify-between gap-2 pb-1 border-b border-slate-100 text-xs">
-        <div className="flex items-center gap-2">
-          {brand?.name && (
-            <div className="flex items-center gap-1.5">
-              <Link
-                href={`/search?brand=${encodeURIComponent(brand.slug || brand._id || brand.name)}`}
-                className="inline-flex items-center hover:opacity-85 transition-opacity"
-                title={`Thương hiệu: ${brand.name}`}
-              >
-                {brand.logo?.url ? (
-                  <img
-                    src={brand.logo.url}
-                    alt={brand.name}
-                    className="h-5 max-w-[64px] object-contain inline-block border border-slate-200 rounded-[4px] px-1 bg-white hover:border-slate-300"
-                  />
-                ) : (
-                  <>
-                    <span className="font-semibold text-slate-700 mr-1">Thương hiệu:</span>
-                    <span className="font-bold text-red-600 hover:text-red-700 hover:underline">{brand.name}</span>
-                  </>
-                )}
-              </Link>
-            </div>
-          )}
-          <span className="text-slate-300">|</span>
-          <span className="text-slate-500">
-            Mã SP: <span className="text-slate-800 font-mono font-medium">{currentSku}</span>
-          </span>
-        </div>
 
-        <div className="flex items-center gap-2">
-          {product.ratingsQuantity > 0 ? (
-            <>
-              <span className="font-semibold text-slate-800 text-xs">
-                Đánh giá: {(product.ratingsAverage || 5).toFixed(1)}/5
-              </span>
-              <span className="text-slate-400">•</span>
-              <span className="text-slate-500 text-xs">
-                {product.ratingsQuantity} nhận xét
-              </span>
-            </>
-          ) : (
-            <span className="text-slate-500 text-xs">
-              Chưa có đánh giá
-            </span>
-          )}
-          <span className="text-slate-300">|</span>
-          <span
-            className={`font-semibold ${isOutOfStock ? 'text-rose-600' : 'text-emerald-700'
-              }`}
+      {/* 1. BRAND + SKU META BAR */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+        {brand?.name && (
+          <Link
+            href={`/search?brand=${encodeURIComponent(brand.slug || brand._id || brand.name)}`}
+            className="inline-flex items-center hover:opacity-85 transition-opacity"
+            title={`Thương hiệu: ${brand.name}`}
           >
-            {isOutOfStock ? 'Hết hàng' : 'Còn hàng'}
-          </span>
-        </div>
+            {brand.logo?.url ? (
+              <img
+                src={brand.logo.url}
+                alt={brand.name}
+                className="h-5 max-w-[64px] object-contain inline-block border border-slate-200 rounded-[4px] px-1 bg-white hover:border-slate-300"
+              />
+            ) : (
+              <span className="font-bold text-red-600 hover:text-red-700 hover:underline">{brand.name}</span>
+            )}
+          </Link>
+        )}
+        <span className="text-slate-300">|</span>
+        <span className="text-slate-500">
+          SKU: <span className="text-slate-700 font-mono font-medium">{currentSku}</span>
+        </span>
       </div>
 
       {/* 2. PRODUCT TITLE (H1) */}
@@ -161,20 +361,47 @@ export default function ProductInfo({
         {product.name}
       </h1>
 
-      {/* 3. KHỐI GIÁ CẢ & FLASH SALE (ƯU TIÊN 1: FLASH SALE) */}
+      {/* 3. STAR RATING + STOCK STATUS */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 pb-3 border-b border-slate-100">
+        <StarRating
+          rating={product.ratingsAverage ?? 0}
+          count={product.ratingsQuantity || 0}
+        />
+        <span className="text-slate-200">|</span>
+        {isOutOfStock ? (
+          <span className="text-xs font-semibold text-rose-600 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-[4px]">
+            Hết hàng
+          </span>
+        ) : isLowStock ? (
+          <span className="text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-[4px]">
+            Chỉ còn {currentStock} sản phẩm
+          </span>
+        ) : (
+          <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-[4px]">
+            Còn hàng
+          </span>
+        )}
+      </div>
+
+
+      {/* 4. KHỐI GIÁ CẢ & FLASH SALE */}
       <div className="rounded-[6px] border border-slate-200 bg-slate-50/70 p-3.5 flex flex-col gap-2">
         {isFlashSale && (
-          <div className="flex items-center justify-between pb-2 border-b border-red-200 text-xs">
-            <span className="font-bold text-red-600 uppercase tracking-wide">
-              FLASH SALE ĐANG DIỄN RA
-            </span>
-            <span className="text-slate-600 text-[11px] font-medium">
-              Số lượng ưu đãi có hạn
-            </span>
+          <div className="flex items-center justify-between pb-2 border-b border-red-200">
+            <div className="flex items-center gap-1.5">
+              <span className="inline-flex items-center px-2 py-0.5 rounded-[4px] bg-red-600 text-white text-[11px] font-bold uppercase tracking-wide">
+                Flash Sale
+              </span>
+              <span className="text-[11px] text-slate-500">Số lượng có hạn</span>
+            </div>
+            {deals?.flashSale?.endDate && (
+              <FlashSaleCountdown endDate={deals.flashSale.endDate} />
+            )}
           </div>
         )}
 
-        <div className="flex flex-wrap items-baseline gap-3">
+
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
           <span className="text-2xl sm:text-3xl font-extrabold text-red-600 tracking-tight">
             {currentBasePrice > 0 ? `${currentBasePrice.toLocaleString('vi-VN')}₫` : 'Liên hệ'}
           </span>
@@ -184,19 +411,26 @@ export default function ProductInfo({
               <span className="text-sm sm:text-base text-slate-400 line-through">
                 {originalPrice.toLocaleString('vi-VN')}₫
               </span>
-              <span className="inline-flex items-center px-2 py-0.5 rounded-[6px] bg-red-600 text-white text-xs font-bold">
-                Tiết kiệm {discountPercent}%
-              </span>
+              <Badge variant="destructive" className="bg-red-600 text-white text-xs font-bold px-2 py-0.5">
+                -{discountPercent}%
+              </Badge>
             </>
           )}
         </div>
 
-        {/* <span className="text-[11px] text-slate-500">c
-          (Đã bao gồm thuế VAT & Bảo hành chính hãng)
-        </span> */}
+        {/* Tiết kiệm tuyệt đối */}
+        {hasDiscount && savingsAmount > 0 && (
+          <div className="flex items-center gap-1.5 text-xs text-emerald-700 font-semibold">
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+              <path d="M8 1v14M1 8h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeOpacity="0" />
+              <path d="M13 5l-5 5-5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <span>Tiết kiệm: <strong>{savingsAmount.toLocaleString('vi-VN')}₫</strong> so với giá niêm yết</span>
+          </div>
+        )}
       </div>
 
-      {/* 4. CHỌN BIẾN THỂ (INLINE UPSELL CHUẨN APPLE & ĐIỆN MÁY XANH) */}
+      {/* 5. CHỌN BIẾN THỂ */}
       {displayVariants.length > 0 && (
         <div className="flex flex-col gap-2 pt-1">
           <div className="flex items-center justify-between">
@@ -253,9 +487,9 @@ export default function ProductInfo({
                       <span className="text-[11px] text-red-700 font-bold ml-1">
                         • {varPrice.toLocaleString('vi-VN')}₫
                       </span>
-                      <span className="text-[10px] text-red-600 font-bold ml-0.5">
-                        ✓
-                      </span>
+                      <svg width="10" height="10" viewBox="0 0 12 12" fill="none" className="ml-0.5 shrink-0">
+                        <path d="M2 6.5L4.5 9L10 3" stroke="#dc2626" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
                     </>
                   ) : (
                     diffLabel && (
@@ -271,7 +505,7 @@ export default function ProductInfo({
         </div>
       )}
 
-      {/* 5. BỘ ĐIỀU CHỈNH SỐ LƯỢNG (KÈM KIỂM TRA ĐIỀU KIỆN MUA MẤY TẶNG GÌ) */}
+      {/* 6. SỐ LƯỢNG */}
       <div className="flex flex-col gap-2 pt-1">
         <div className="flex items-center gap-3">
           <span className="text-xs font-bold text-slate-800 uppercase tracking-wide">Số lượng:</span>
@@ -299,12 +533,20 @@ export default function ProductInfo({
             </button>
           </div>
 
-          <span className="text-xs text-slate-500">
-            {currentStock > 0 ? `(Có sẵn ${currentStock} sản phẩm)` : '(Tạm thời hết hàng)'}
-          </span>
+          {/* Stock urgency inline */}
+          {isLowStock && (
+            <span className="text-xs text-amber-700 font-semibold animate-pulse">
+              Chỉ còn {currentStock} — đặt ngay!
+            </span>
+          )}
+          {!isLowStock && !isOutOfStock && (
+            <span className="text-xs text-slate-500">
+              Có sẵn {currentStock} sản phẩm
+            </span>
+          )}
         </div>
 
-        {/* THÔNG BÁO TẶNG KÈM DỰA TRÊN SỐ LƯỢNG (LOGIC MUA X TẶNG Y) */}
+        {/* THÔNG BÁO TẶNG KÈM DỰA TRÊN SỐ LƯỢNG */}
         {primaryGift && (
           <div
             className={`p-2.5 rounded-[6px] border text-xs transition-colors ${isGiftUnlocked
@@ -325,45 +567,50 @@ export default function ProductInfo({
         )}
       </div>
 
-      {/* 6. CÁC NÚT HÀNH ĐỘNG */}
-      <div id="product-action-buttons" className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
-        <button
+      {/* 7. TRUST STRIP — INLINE TRƯỚC CTA */}
+      <TrustStrip />
+
+      {/* 8. CÁC NÚT HÀNH ĐỘNG */}
+      <div id="product-action-buttons" className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+        <Button
           type="button"
+          variant="outline"
           onClick={() => handlePlaceholderAction('Thêm vào giỏ hàng')}
           disabled={isOutOfStock}
-          className="flex items-center justify-center py-3 px-4 rounded-[6px] border-2 border-red-600 bg-white text-red-600 hover:bg-red-50 font-bold text-xs sm:text-sm tracking-wide transition-all cursor-pointer active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+          className="border-2 border-red-600 bg-white text-red-600 hover:bg-red-50 hover:text-red-700 font-bold text-xs sm:text-sm tracking-wide h-12"
         >
           THÊM VÀO GIỎ HÀNG
-        </button>
+        </Button>
 
-        <button
+        <Button
           type="button"
+          variant="default"
           onClick={() => handlePlaceholderAction('Mua ngay')}
           disabled={isOutOfStock}
-          className="flex flex-col items-center justify-center py-2.5 px-4 rounded-[6px] bg-red-600 hover:bg-red-700 text-white font-bold text-xs sm:text-sm tracking-wide transition-all cursor-pointer active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex flex-col items-center justify-center bg-red-600 hover:bg-red-700 text-white font-bold text-xs sm:text-sm tracking-wide h-12 py-1 leading-tight"
         >
           <span>MUA NGAY VỚI GIÁ NÀY</span>
-          <span className="text-[11px] font-normal opacity-90">
+          <span className="text-[11px] font-normal opacity-90 font-mono">
             {finalTotalPrice > 0 ? `Tổng: ${finalTotalPrice.toLocaleString('vi-VN')}₫` : ''}
           </span>
-        </button>
+        </Button>
       </div>
 
-      {/* Thông báo tương tác placeholder */}
+      {/* Action notice */}
       {actionNotice && (
-        <div className="p-2.5 rounded-[6px] border border-amber-200 bg-amber-50 text-amber-900 text-xs animate-fadeIn flex items-center justify-between">
+        <div className="p-2.5 rounded-[6px] border border-amber-200 bg-amber-50 text-amber-900 text-xs flex items-center justify-between">
           <span>{actionNotice}</span>
           <button
             type="button"
             onClick={() => setActionNotice(null)}
             className="text-amber-800 hover:text-amber-950 font-bold ml-2 text-xs"
           >
-            [Đóng]
+            ✕
           </button>
         </div>
       )}
 
-      {/* 8. DÒNG TƯ VẤN HOTLINE */}
+      {/* 9. HOTLINE TƯ VẤN */}
       <div className="flex items-center justify-between p-2.5 rounded-[6px] border border-slate-200 bg-slate-50 text-xs text-slate-600">
         <span>Hỗ trợ tư vấn đặt hàng:</span>
         <a

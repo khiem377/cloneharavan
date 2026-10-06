@@ -63,9 +63,16 @@ export default function Footer({ initialMenu = null }) {
 
   if (isAuthRoute) return null;
 
-  const menuItems = footerMenu?.items && footerMenu.items.length > 0
+  const rawItems = footerMenu?.items && footerMenu.items.length > 0
     ? footerMenu.items
     : DEFAULT_FOOTER_ITEMS;
+
+  const menuItems = rawItems
+    .filter((col) => col.isActive !== false)
+    .map((col) => ({
+      ...col,
+      children: (col.children || []).filter((child) => child.isActive !== false),
+    }));
 
   const colCustomerSupport = menuItems[0] || DEFAULT_FOOTER_ITEMS[0];
   const colPolicies = menuItems[1] || DEFAULT_FOOTER_ITEMS[1];

@@ -54,12 +54,12 @@ export const SearchSuggestionsDropdown = ({
                       key={blog._id || blog.slug}
                       href={`/blogs/${blog.slug}`}
                       onClick={onClose}
-                      className="flex items-center gap-3 p-2 rounded-xl hover:bg-blue-50/40 transition group"
+                      className="flex items-center gap-3 p-2 rounded-[6px] hover:bg-slate-50 transition group"
                     >
                       <img
                         src={thumb}
                         alt={blog.title}
-                        className="w-14 h-10 object-cover rounded-lg bg-slate-100 shrink-0"
+                        className="w-14 h-10 object-cover rounded-[4px] bg-slate-100 shrink-0"
                       />
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-semibold text-slate-800 line-clamp-1 group-hover:text-[#284ea1] transition">
@@ -98,7 +98,7 @@ export const SearchSuggestionsDropdown = ({
                     key={cat._id}
                     href={`/collections/${cat.slug || cat._id}`}
                     onClick={onClose}
-                    className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-slate-50 text-xs text-slate-700 transition"
+                    className="flex items-center gap-2.5 px-2 py-1.5 rounded-[4px] hover:bg-slate-50 text-xs text-slate-700 transition"
                   >
                     <Icon name="search" size={13} color="#94a3b8" />
                     <span className="font-medium text-slate-800">{cat.name}</span>
@@ -136,17 +136,17 @@ export const SearchSuggestionsDropdown = ({
                         searchService.recordClick(query, prod._id);
                         onClose();
                       }}
-                      className="flex items-center gap-3 p-2 rounded-xl hover:bg-blue-50/50 transition group"
+                      className="flex items-center gap-3 p-2 rounded-[6px] hover:bg-slate-50 transition group"
                     >
                       <img
                         src={thumb}
                         alt={prod.name}
-                        className="w-12 h-12 object-contain rounded-lg border border-slate-100 bg-white shrink-0"
+                        className="w-12 h-12 object-contain rounded-[4px] border border-slate-100 bg-white shrink-0"
                       />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5">
                           {isFs && (
-                            <span className="shrink-0 text-[9px] font-black text-white bg-red-600 px-1 py-0.2 rounded uppercase">
+                            <span className="shrink-0 text-[9px] font-black text-white bg-red-600 px-1 py-0.2 rounded-[3px] uppercase">
                               Flash Sale
                             </span>
                           )}
@@ -156,19 +156,19 @@ export const SearchSuggestionsDropdown = ({
                         </div>
                         <div className="flex items-center gap-2 mt-0.5">
                           {price > 0 ? (
-                            <span className="text-xs font-bold text-red-600">
+                            <span className="text-xs font-bold text-red-600 font-mono tabular-nums">
                               {price.toLocaleString('vi-VN')} đ
                             </span>
                           ) : (
                             <span className="text-xs text-slate-500">Liên hệ</span>
                           )}
                           {originalPrice > price && (
-                            <span className="text-[11px] text-slate-400 line-through">
+                            <span className="text-[11px] text-slate-400 line-through font-mono tabular-nums">
                               {originalPrice.toLocaleString('vi-VN')} đ
                             </span>
                           )}
                           {discountPercent > 0 && (
-                            <span className="text-[10px] font-bold text-red-600 bg-red-50 px-1 py-0.2 rounded">
+                            <span className="text-[10px] font-bold text-red-600 bg-red-50 px-1 py-0.2 rounded-[3px]">
                               -{discountPercent}%
                             </span>
                           )}

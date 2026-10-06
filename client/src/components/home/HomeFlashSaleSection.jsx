@@ -2,9 +2,11 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
-import { Zap, ChevronLeft, ChevronRight, Sparkles, Clock, Flame, ArrowRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import FlashSaleProductCard from '../product/FlashSaleProductCard';
 import flashSaleService from '../../services/flashSale.service';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 
 export default function HomeFlashSaleSection({ initialData = null }) {
   const [flashSale, setFlashSale] = useState(initialData);
@@ -77,7 +79,7 @@ export default function HomeFlashSaleSection({ initialData = null }) {
     });
   }, [flashSale?.items, selectedCategory]);
 
-  // Group items by productId so multiple variants of the same product collapse into 1 card with interactive switcher
+  // Group items by productId
   const groupedItems = useMemo(() => {
     if (!filteredItems) return [];
     const map = new Map();
@@ -144,176 +146,173 @@ export default function HomeFlashSaleSection({ initialData = null }) {
 
   if (loading) {
     return (
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="h-96 rounded-2xl bg-gradient-to-r from-red-600/10 via-amber-500/10 to-red-600/10 animate-pulse flex items-center justify-center">
-          <div className="flex items-center gap-2 text-red-600 font-bold">
-            <Zap className="size-5 animate-bounce" /> Đang tải Flash Sale...
-          </div>
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-6">
+        <div className="h-80 rounded-[6px] bg-slate-100 animate-pulse flex items-center justify-center border border-slate-200">
+          <span className="text-xs font-semibold text-slate-500">Đang tải sản phẩm Flash Sale...</span>
         </div>
       </div>
     );
   }
 
-  // If no active flash sale
   if (!flashSale || !flashSale.items?.length) {
     return null;
   }
 
   return (
-    <section className="max-w-7xl mx-auto px-2 sm:px-4 py-6">
+    <section className="max-w-7xl mx-auto px-3 sm:px-4 my-5" aria-label="Khuyến mãi Flash Sale">
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-gray-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 text-sm border border-gray-700 animate-slide-up">
-          <Sparkles className="size-4 text-yellow-400" />
+        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-4 py-2.5 rounded-[6px] shadow-sm text-xs border border-slate-700">
           <span>{toastMessage}</span>
         </div>
       )}
 
-      {/* Main Container - Phong Vũ Style Red/Amber Theme */}
-      <div className="rounded-2xl bg-gradient-to-br from-[#d70018] via-[#e61e2b] to-[#b30012] p-3 sm:p-5 shadow-xl relative overflow-hidden border border-red-500/30">
+      {/* Main Container - Flat Solid Style with 1px Border */}
+      <div className="rounded-[6px] bg-[#d70018] p-3.5 sm:p-5 border border-red-700">
         
-        {/* Ambient Decorative Glows */}
-        <div className="absolute -top-24 -left-24 size-64 bg-yellow-400/20 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-24 -right-24 size-64 bg-orange-500/20 rounded-full blur-3xl pointer-events-none" />
-
         {/* Header Bar */}
-        <div className="relative z-10 flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-white/15">
+        <div className="flex flex-wrap items-center justify-between gap-3 pb-3.5 border-b border-white/20">
           
           {/* Title & Countdown */}
-          <div className="flex flex-wrap items-center gap-3 sm:gap-6">
+          <div className="flex flex-wrap items-center gap-3 sm:gap-5">
             <div className="flex items-center gap-2">
-              <span className="p-2 rounded-xl bg-yellow-400 text-red-700 shadow-md animate-pulse">
-                <Zap className="size-6 fill-red-700" />
+              <span className="px-2 py-1 rounded-[4px] bg-white text-[#d70018] font-black text-xs uppercase tracking-wider">
+                FLASH SALE
               </span>
-              <div>
-                <h2 className="text-xl sm:text-2xl font-black italic tracking-wide text-white uppercase flex items-center gap-1.5 drop-shadow-md">
-                  FLASH SALE ONLINE
-                </h2>
-                <p className="text-[11px] sm:text-xs font-medium text-yellow-200/90 hidden sm:block">
-                  {flashSale.name || 'Giá sốc có hạn — Số lượng có hạn'}
-                </p>
-              </div>
+              <h2 className="text-sm sm:text-base font-extrabold tracking-tight text-white uppercase">
+                {flashSale.name || 'Giá sốc có hạn'}
+              </h2>
             </div>
 
             {/* Countdown Boxes */}
-            <div className="flex items-center gap-1.5 bg-black/35 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/20">
-              <Clock className="size-4 text-yellow-300 mr-1 shrink-0 animate-spin-slow" />
-              <span className="text-[11px] text-white/80 font-medium hidden md:inline">Kết thúc trong:</span>
+            <div className="flex items-center gap-1 bg-black/40 px-2.5 py-1 rounded-[4px] border border-white/10">
+              <span className="text-[11px] text-white/80 font-medium mr-1 hidden sm:inline">Kết thúc trong:</span>
               
               {timeLeft.days > 0 && (
                 <>
-                  <span className="bg-white text-gray-900 font-black text-xs sm:text-sm px-1.5 py-0.5 rounded shadow-sm">
+                  <span className="bg-white text-slate-900 font-bold font-mono text-xs px-1.5 py-0.5 rounded-[3px] tabular-nums">
                     {String(timeLeft.days).padStart(2, '0')}
                   </span>
                   <span className="text-white font-bold text-xs">:</span>
                 </>
               )}
 
-              <span className="bg-white text-gray-900 font-black text-xs sm:text-sm px-1.5 py-0.5 rounded shadow-sm">
+              <span className="bg-white text-slate-900 font-bold font-mono text-xs px-1.5 py-0.5 rounded-[3px] tabular-nums">
                 {String(timeLeft.hours).padStart(2, '0')}
               </span>
               <span className="text-white font-bold text-xs">:</span>
 
-              <span className="bg-white text-gray-900 font-black text-xs sm:text-sm px-1.5 py-0.5 rounded shadow-sm">
+              <span className="bg-white text-slate-900 font-bold font-mono text-xs px-1.5 py-0.5 rounded-[3px] tabular-nums">
                 {String(timeLeft.minutes).padStart(2, '0')}
               </span>
               <span className="text-white font-bold text-xs">:</span>
 
-              <span className="bg-yellow-400 text-red-900 font-black text-xs sm:text-sm px-1.5 py-0.5 rounded shadow-sm">
+              <span className="bg-amber-300 text-slate-950 font-bold font-mono text-xs px-1.5 py-0.5 rounded-[3px] tabular-nums">
                 {String(timeLeft.seconds).padStart(2, '0')}
               </span>
             </div>
           </div>
 
-          {/* View All */}
+          {/* View All Button */}
           <div className="flex items-center gap-2">
-            <Link
-              href={`/flash-sale/${flashSale.slug || flashSale._id}`}
-              className="inline-flex items-center gap-1 text-xs sm:text-sm font-bold text-yellow-300 hover:text-white transition-colors group cursor-pointer bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg border border-white/20"
-            >
-              <span>Xem tất cả ({flashSale.items.length})</span>
-              <ChevronRight className="size-4 group-hover:translate-x-0.5 transition-transform" />
+            <Link href={`/flash-sale/${flashSale.slug || flashSale._id}`}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="bg-white/10 hover:bg-white/20 text-white border-white/20 text-xs font-bold gap-1 h-7.5"
+              >
+                <span>Xem tất cả ({flashSale.items.length})</span>
+                <span aria-hidden="true">&rarr;</span>
+              </Button>
             </Link>
           </div>
         </div>
 
-        {/* Category Pills (Phong Vũ / Hải Linh style tabs) */}
+        {/* Category Pills */}
         {categories.length > 0 && (
-          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-3 scroll-smooth">
-            <button
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-3">
+            <Button
               type="button"
+              variant={selectedCategory === 'all' ? 'default' : 'outline'}
+              size="sm"
               onClick={() => setSelectedCategory('all')}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 cursor-pointer ${
+              className={`text-xs font-bold shrink-0 h-7 px-3 ${
                 selectedCategory === 'all'
-                  ? 'bg-yellow-400 text-red-950 shadow-md shadow-yellow-500/30'
-                  : 'bg-white/15 text-white hover:bg-white/25 border border-white/20'
+                  ? 'bg-white text-[#d70018] hover:bg-white/95 border-transparent shadow-xs'
+                  : 'bg-white/15 text-white hover:bg-white/25 border-white/20'
               }`}
             >
               Tất cả ({flashSale.items.length})
-            </button>
+            </Button>
 
             {categories.map((cat) => (
-              <button
+              <Button
                 key={cat.slug}
                 type="button"
+                variant={selectedCategory === cat.slug ? 'default' : 'outline'}
+                size="sm"
                 onClick={() => setSelectedCategory(cat.slug)}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                className={`text-xs font-bold shrink-0 h-7 px-3 ${
                   selectedCategory === cat.slug
-                    ? 'bg-yellow-400 text-red-950 shadow-md shadow-yellow-500/30'
-                    : 'bg-white/15 text-white hover:bg-white/25 border border-white/20'
+                    ? 'bg-white text-[#d70018] hover:bg-white/95 border-transparent shadow-xs'
+                    : 'bg-white/15 text-white hover:bg-white/25 border-white/20'
                 }`}
               >
                 {cat.name}
-              </button>
+              </Button>
             ))}
           </div>
         )}
 
-        {/* Carousel Container with Floating Side Arrows */}
+        {/* Carousel Container */}
         <div className="relative group/slider mt-1">
           {/* Floating Left Button */}
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="icon"
             onClick={() => handleScroll('left')}
-            className="hidden sm:flex absolute -left-2 sm:-left-3 top-1/2 -translate-y-1/2 size-10 rounded-full bg-white text-gray-900 shadow-2xl border border-gray-200 hover:bg-yellow-400 hover:text-red-950 transition-all items-center justify-center z-20 cursor-pointer active:scale-95"
+            className="hidden sm:flex absolute -left-2 sm:-left-3 top-1/2 -translate-y-1/2 size-9 rounded-[6px] bg-white text-slate-800 border-slate-300 hover:bg-slate-100 z-20 shadow-xs"
             title="Trước"
           >
-            <ChevronLeft size={22} className="stroke-[2.5]" />
-          </button>
+            <ChevronLeft size={20} />
+          </Button>
 
           {/* Floating Right Button */}
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="icon"
             onClick={() => handleScroll('right')}
-            className="hidden sm:flex absolute -right-2 sm:-right-3 top-1/2 -translate-y-1/2 size-10 rounded-full bg-white text-gray-900 shadow-2xl border border-gray-200 hover:bg-yellow-400 hover:text-red-950 transition-all items-center justify-center z-20 cursor-pointer active:scale-95"
+            className="hidden sm:flex absolute -right-2 sm:-right-3 top-1/2 -translate-y-1/2 size-9 rounded-[6px] bg-white text-slate-800 border-slate-300 hover:bg-slate-100 z-20 shadow-xs"
             title="Sau"
           >
-            <ChevronRight size={22} className="stroke-[2.5]" />
-          </button>
+            <ChevronRight size={20} />
+          </Button>
 
-          {/* Product Carousel / Horizontal List with Drag & Swipe */}
+          {/* Product Carousel */}
           <div
             ref={sliderRef}
             onMouseDown={handleMouseDown}
             onMouseLeave={handleMouseLeave}
             onMouseUp={handleMouseUp}
             onMouseMove={handleMouseMove}
-            className={`flex gap-3 sm:gap-4 overflow-x-auto no-scrollbar py-2 -mx-1 px-1 select-none ${
+            className={`flex gap-2.5 sm:gap-3 overflow-x-auto no-scrollbar py-1 -mx-1 px-1 select-none ${
               isDown ? 'cursor-grabbing' : 'cursor-grab scroll-smooth snap-x snap-mandatory'
             }`}
           >
             {groupedItems.map((item, idx) => (
               <div
                 key={item._id || idx}
-                className="w-[210px] sm:w-[240px] md:w-[260px] shrink-0 snap-start"
+                className="w-[200px] sm:w-[230px] md:w-[250px] shrink-0 snap-start"
               >
                 <FlashSaleProductCard
                   item={item}
                   onAddToCartMock={() => {
-                    if (!isDragging) showToast('Đã thêm vào giỏ hàng (Chế độ xem trước)');
+                    if (!isDragging) showToast('Đã thêm vào giỏ hàng');
                   }}
                   onBuyNowMock={() => {
-                    if (!isDragging) showToast('Chuyển tới thanh toán nhanh (Chế độ xem trước)');
+                    if (!isDragging) showToast('Chuyển tới thanh toán');
                   }}
                 />
               </div>

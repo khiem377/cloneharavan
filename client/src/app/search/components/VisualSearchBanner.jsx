@@ -49,10 +49,10 @@ export default function VisualSearchBanner({ visualInfo = null, onClear }) {
           <img
             src={imageUrl}
             alt="Ảnh tìm kiếm"
-            className="w-12 h-12 object-cover rounded-md border border-gray-200 shrink-0"
+            className="w-12 h-12 object-cover rounded-[6px] border border-gray-200 shrink-0"
           />
         ) : (
-          <div className="w-12 h-12 rounded-md bg-gray-100 flex items-center justify-center text-gray-500 shrink-0">
+          <div className="w-12 h-12 rounded-[6px] bg-gray-100 flex items-center justify-center text-gray-500 shrink-0">
             <Icon name="camera" size={20} />
           </div>
         )}
