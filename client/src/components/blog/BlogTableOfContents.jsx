@@ -26,7 +26,7 @@ export const BlogTableOfContents = ({ items = [] }) => {
   };
 
   return (
-    <Card className="my-6 border border-[#284ea1]/20 bg-[#edf2fa]/30 rounded-2xl overflow-hidden shadow-2xs">
+    <Card className="my-6 border border-[#284ea1]/20 bg-[#edf2fa]/30 rounded-[6px] overflow-hidden shadow-2xs">
       <CardHeader
         onClick={() => setIsOpen(!isOpen)}
         className="p-3.5 sm:p-4 flex flex-row items-center justify-between cursor-pointer select-none bg-[#edf2fa]/70 hover:bg-[#edf2fa] transition-colors"
@@ -39,7 +39,7 @@ export const BlogTableOfContents = ({ items = [] }) => {
         </div>
         <button
           type="button"
-          className="text-[#284ea1] p-1 hover:bg-white/60 rounded-md transition-colors"
+          className="text-[#284ea1] p-1 hover:bg-white/60 rounded-[4px] transition-colors"
           aria-label={isOpen ? 'Thu gọn mục lục' : 'Mở rộng mục lục'}
         >
           {isOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
