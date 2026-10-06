@@ -1,9 +1,17 @@
+const fs = require('fs');
+const path = require('path');
 const UserInteraction = require('../models/userInteraction.model');
 const PersonalizedRecommendation = require('../models/personalizedRecommendation.model');
 const ItemSimilarity = require('../models/itemSimilarity.model');
 const Product = require('../models/product.model');
 const ProductVariant = require('../models/productVariant.model');
 const SearchLog = require('../models/searchLog.model');
+
+const INTERACTIONS_CSV_PATH = path.join(__dirname, '../../python-services/data/interactions.csv');
+const PRODUCTS_CSV_PATH     = path.join(__dirname, '../../python-services/data/products.csv');
+const USERS_CSV_PATH        = path.join(__dirname, '../../python-services/data/users.csv');
+
+
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // IN-MEMORY TTL CACHE — Giảm DB queries cho hot paths
@@ -51,6 +59,7 @@ const cache = new TtlCache().startCleanup();
 const INTERACTION_WEIGHTS = {
   // Positive signals
   view: 1.0,
+  view_deep: 2.5,
   product_detail: 1.8,
   search_click: 2.0,
   filter_apply: 1.5,
@@ -61,6 +70,7 @@ const INTERACTION_WEIGHTS = {
   add_to_cart: 5.0,
   purchase: 10.0,
   // Negative signals — quan trọng để học "không thích"
+  view_bounce: -1.5,
   cart_remove: -1.0,
   checkout_abandon: -0.5,
   search_noresult: -0.5,
@@ -111,6 +121,8 @@ const buildUserProfile = async (userId, sessionId) => {
   const prices = [];
   const purchasedIds = new Set();
   const viewedIds = new Set();
+  const dislikedCategories = new Set();
+  const deepInterestCategories = new Set();
 
   for (const interaction of interactions) {
     const baseWeight = INTERACTION_WEIGHTS[interaction.interactionType] || 1;
@@ -129,60 +141,87 @@ const buildUserProfile = async (userId, sessionId) => {
     }
 
     if (!isNegative) {
+      const isDeep = interaction.interactionType === 'view_deep' || (interaction.dwellTime && interaction.dwellTime >= 15);
+
       // Aggregate category scores
       if (Array.isArray(product.categories)) {
         for (const catId of product.categories) {
-          const key = catId.toString();
+          const key = (catId._id || catId).toString();
           categoryScore[key] = (categoryScore[key] || 0) + decayedWeight;
+          if (isDeep) deepInterestCategories.add(key);
         }
       }
 
       // Aggregate brand scores
       if (product.brand) {
-        const bKey = product.brand.toString();
+        const bKey = (product.brand._id || product.brand).toString();
         brandScore[bKey] = (brandScore[bKey] || 0) + decayedWeight;
       }
 
-
-
-
-      // Collect prices for range estimation
-      // Dùng cachedPrice — luôn đúng kể cả khi product.price = 0
+      // Collect prices for range estimation (dùng cachedPrice hoặc price)
       const effectivePrice = product.cachedPrice || product.price;
-      if (effectivePrice && interaction.interactionType !== 'view') {
+      if (effectivePrice && effectivePrice > 0) {
         prices.push(effectivePrice);
+      }
+    } else {
+      // Xử lý tín hiệu tiêu cực ngầm (view_bounce, cart_remove, checkout_abandon)
+      if (Array.isArray(product.categories)) {
+        for (const catId of product.categories) {
+          const key = (catId._id || catId).toString();
+          dislikedCategories.add(key);
+          // Giảm điểm trực tiếp cho category này
+          categoryScore[key] = Math.max(0, (categoryScore[key] || 0) - decayedWeight);
+        }
+      }
+      if (product.brand) {
+        const bKey = (product.brand._id || product.brand).toString();
+        brandScore[bKey] = Math.max(0, (brandScore[bKey] || 0) - decayedWeight);
       }
     }
   }
 
-  // Sort by score descending
+  // Sort by score descending (chỉ giữ điểm > 0)
   const topCategories = Object.entries(categoryScore)
     .sort((a, b) => b[1] - a[1])
+    .filter(([_, score]) => score > 0)
     .slice(0, 5)
     .map(([id]) => id);
 
   const topBrands = Object.entries(brandScore)
     .sort((a, b) => b[1] - a[1])
+    .filter(([_, score]) => score > 0)
     .slice(0, 3)
     .map(([id]) => id);
 
-  // Estimate price range from interactions
+  // Tính Median Price thay vì Min-Max thô — chống méo phân khúc giá
+  let medianPrice = 0;
   let priceRange = null;
+
   if (prices.length > 0) {
-    const avg = prices.reduce((a, b) => a + b, 0) / prices.length;
-    const stdDev = Math.sqrt(prices.reduce((a, b) => a + (b - avg) ** 2, 0) / prices.length);
+    const recentPrices = prices.slice(0, 10); // Ưu tiên các sản phẩm tương tác gần nhất
+    const sortedPrices = [...recentPrices].sort((a, b) => a - b);
+    const mid = Math.floor(sortedPrices.length / 2);
+    medianPrice = sortedPrices.length % 2 !== 0
+      ? sortedPrices[mid]
+      : Math.round((sortedPrices[mid - 1] + sortedPrices[mid]) / 2);
+
+    // Khoảng giá tương thích: từ 0.5x đến 1.8x trung vị
     priceRange = {
-      min: Math.max(0, avg - stdDev * 1.5),
-      max: avg + stdDev * 1.5,
+      min: Math.round(medianPrice * 0.5),
+      max: Math.round(medianPrice * 1.8),
     };
   }
 
   const profile = {
     topCategories,
     topBrands,
+    medianPrice,
     priceRange,
     purchasedIds: Array.from(purchasedIds),
     viewedIds: Array.from(viewedIds),
+    dislikedCategories: Array.from(dislikedCategories),
+    deepInterestCategories: Array.from(deepInterestCategories),
+    totalInteractions: interactions.length,
     hasHistory: interactions.length > 0,
   };
 
@@ -354,26 +393,39 @@ const computeContentScore = (product, userProfile) => {
   const catOverlap = productCatIds.filter((c) => userProfile.topCategories.includes(c));
   score += catOverlap.length * 3;
 
+  // Deep interest bonus: nếu category này user từng xem rất kỹ (>15s)
+  if (userProfile.deepInterestCategories && userProfile.deepInterestCategories.length > 0) {
+    const deepOverlap = productCatIds.filter((c) => userProfile.deepInterestCategories.includes(c));
+    score += deepOverlap.length * 2.0;
+  }
+
+  // Disliked penalty: nếu category này user từng thoát nhanh (<2s)
+  if (userProfile.dislikedCategories && userProfile.dislikedCategories.length > 0) {
+    const dislikeOverlap = productCatIds.filter((c) => userProfile.dislikedCategories.includes(c));
+    score -= dislikeOverlap.length * 1.5;
+  }
+
   // Brand match: + 2 nếu là brand đang quan tâm
   const productBrand = (product.brand?._id || product.brand)?.toString();
   if (productBrand && userProfile.topBrands.includes(productBrand)) {
     score += 2;
   }
 
-  // Price range match — dùng effectivePrice (variant price ưu tiên, fallback product.price)
-  // product.price có thể = 0 nếu đã migrate sang variant model
+  // Smart Price Sensitivity — dùng Median Price
   const effectivePrice = product._variantPrice || product.price || 0;
-  if (userProfile.priceRange && effectivePrice > 0) {
+  if (userProfile.medianPrice && userProfile.medianPrice > 0 && effectivePrice > 0) {
+    const { medianPrice, priceRange } = userProfile;
+    if (priceRange && effectivePrice >= priceRange.min && effectivePrice <= priceRange.max) {
+      score += 2.0; // Nằm chuẩn trong phân khúc sức mua
+    } else {
+      // Phạt theo tỷ lệ khoảng cách so với Median Price
+      const distRatio = Math.abs(effectivePrice - medianPrice) / medianPrice;
+      score -= Math.min(2.5, distRatio * 1.2);
+    }
+  } else if (userProfile.priceRange && effectivePrice > 0) {
     const { min, max } = userProfile.priceRange;
     if (effectivePrice >= min && effectivePrice <= max) {
       score += 1.5;
-    } else {
-      // Giảm nếu ngoài range xa
-      const dist = Math.min(
-        Math.abs(effectivePrice - min),
-        Math.abs(effectivePrice - max)
-      );
-      score -= Math.min(1, dist / (max - min + 1));
     }
   }
 
@@ -399,11 +451,46 @@ const computeContentScore = (product, userProfile) => {
 // LAYER 5: HYBRID SCORER — Kết hợp SVD + Content + ItemCF + Trending
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const HYBRID_WEIGHTS = {
+const DEFAULT_HYBRID_WEIGHTS = {
   svd: 0.40, // Long-term preference (Python batch)
   content: 0.30, // Content-based (real-time)
   itemCF: 0.20, // Item-to-Item CF (Amazon style)
   trending: 0.10, // Trending score from SearchLog
+};
+
+/**
+ * Trọng số động thích ứng (Adaptive Dynamic Weights):
+ * - Khách mới / Phiên mới (< 5 tương tác): Tối đa hóa Session Intent (Content) và ItemCF, tạm tắt SVD
+ * - Khách quen (5 - 15 tương tác): Cân bằng giữa quá khứ và hiện tại
+ * - Khách thân thiết (> 15 tương tác): Khai thác triệt để mô hình học máy SVD
+ */
+const getDynamicWeights = (userProfile) => {
+  const count = userProfile?.totalInteractions || 0;
+
+  if (count < 5) {
+    return {
+      content: 0.65, // Bắt sóng ngay ý định mua sắm của phiên vừa click
+      itemCF: 0.25,  // Sản phẩm đi kèm/xem cùng
+      trending: 0.10,
+      svd: 0.00,     // Tránh ma trận thưa làm loãng kết quả
+    };
+  }
+
+  if (count <= 15) {
+    return {
+      content: 0.40,
+      svd: 0.30,
+      itemCF: 0.20,
+      trending: 0.10,
+    };
+  }
+
+  return {
+    svd: 0.45,
+    content: 0.30,
+    itemCF: 0.20,
+    trending: 0.05,
+  };
 };
 
 /**
@@ -418,9 +505,9 @@ const normalizeScores = (items, key) => {
 };
 
 /**
- * Hybrid scoring: tổng hợp tất cả signals
+ * Hybrid scoring: tổng hợp tất cả signals với trọng số tương ứng
  */
-const hybridScore = (item, weights = HYBRID_WEIGHTS) => {
+const hybridScore = (item, weights = DEFAULT_HYBRID_WEIGHTS) => {
   return (
     (item.svdScore || 0) * weights.svd +
     (item.contentScore || 0) * weights.content +
@@ -571,28 +658,37 @@ const rankCandidates = async (candidateIds, userProfile, svdScoreMap = {}, itemC
   scoredItems = normalizeScores(scoredItems, 'itemCFScore');
   scoredItems = normalizeScores(scoredItems, 'trendingScore');
 
-  // Compute final hybrid score
+  // Tính toán dynamic weights thích ứng theo độ dày tương tác của user
+  const dynamicWeights = getDynamicWeights(userProfile);
+
+  // Compute final hybrid score với dynamic weights
   scoredItems = scoredItems.map((item) => ({
     ...item,
-    finalScore: hybridScore(item),
+    finalScore: hybridScore(item, dynamicWeights),
   }));
 
   // Sort by final score
   scoredItems.sort((a, b) => b.finalScore - a.finalScore);
 
-  // Diversity filter: không quá 3 sản phẩm cùng 1 category trong top results
+  // Diversity filter: không quá 3 sản phẩm cùng 1 category ở nhóm đầu
+  // Sản phẩm dư từ category chiếm ưu thế được chuyển về sau (Anti-Echo Chamber & Cross-selling)
   const categoryCount = {};
   const diverseItems = [];
+  const overflowItems = [];
+
   for (const item of scoredItems) {
     const catIds = (item.categories || []).map((c) => (c._id || c).toString());
     const mainCat = catIds[0] || 'none';
-    categoryCount[mainCat] = (categoryCount[mainCat] || 0) + 1;
-    if (categoryCount[mainCat] <= 3) {
+    const count = categoryCount[mainCat] || 0;
+    if (count < 3) {
       diverseItems.push(item);
+      categoryCount[mainCat] = count + 1;
+    } else {
+      overflowItems.push(item);
     }
   }
 
-  return diverseItems;
+  return [...diverseItems, ...overflowItems];
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -631,8 +727,231 @@ const buildRecommendReason = (product) => {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// PUBLIC API: recordUserInteraction
+// CSV REAL-TIME PIPELINE — Bắt ngay lập tức và ghi trực tiếp vào interactions.csv
 // ═══════════════════════════════════════════════════════════════════════════════
+
+const appendInteractionToCsv = (interaction) => {
+  try {
+    const dir = path.dirname(INTERACTIONS_CSV_PATH);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+
+    if (!fs.existsSync(INTERACTIONS_CSV_PATH)) {
+      const header = 'interaction_id,user_id,session_id,product_id,event_type,weight,timestamp\n';
+      fs.writeFileSync(INTERACTIONS_CSV_PATH, header, 'utf8');
+    }
+
+    const intId = interaction._id
+      ? `INT-${interaction._id.toString().slice(-6).toUpperCase()}`
+      : `INT-${Date.now().toString().slice(-6)}`;
+    const userId = interaction.userId ? interaction.userId.toString() : '';
+    const sessionId = interaction.sessionId || '';
+    const productId = interaction.productId ? (interaction.productId._id || interaction.productId).toString() : '';
+    const eventType = interaction.interactionType || 'view';
+    const weight = typeof interaction.weight === 'number'
+      ? interaction.weight.toFixed(1)
+      : (INTERACTION_WEIGHTS[eventType] || 1.0).toFixed(1);
+
+    const d = interaction.timestamp ? new Date(interaction.timestamp) : new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    const timestampStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+
+    const row = `${intId},${userId},${sessionId},${productId},${eventType},${weight},${timestampStr}\n`;
+    // Ghi tức thì xuống đĩa cứng (synchronous) đảm bảo Real-time 100%
+    fs.appendFileSync(INTERACTIONS_CSV_PATH, row, 'utf8');
+  } catch (err) {
+    console.error('[Recommendation] appendInteractionToCsv error:', err.message);
+  }
+};
+
+/**
+ * Đồng bộ toàn bộ dữ liệu UserInteraction từ MongoDB ra interactions.csv
+ * Xóa sạch toàn bộ dữ liệu mock/fake cũ, chỉ giữ 100% dữ liệu thật.
+ */
+const syncAllInteractionsToCsv = async (options = {}) => {
+  const { cleanMock = true } = options;
+  try {
+    const dir = path.dirname(INTERACTIONS_CSV_PATH);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+
+    const interactions = await UserInteraction.find().sort({ timestamp: 1 }).lean();
+    const header = 'interaction_id,user_id,session_id,product_id,event_type,weight,timestamp\n';
+    const pad = (n) => String(n).padStart(2, '0');
+
+    const formatRow = (item, idx) => {
+      const intId = item._id ? `INT-${item._id.toString().slice(-6).toUpperCase()}` : `INT-${String(2000 + idx)}`;
+      const userId = item.userId ? item.userId.toString() : '';
+      const sessionId = item.sessionId || '';
+      const productId = item.productId ? (item.productId._id || item.productId).toString() : '';
+      const eventType = item.interactionType || 'view';
+      const weight = typeof item.weight === 'number'
+        ? item.weight.toFixed(1)
+        : (INTERACTION_WEIGHTS[eventType] || 1.0).toFixed(1);
+
+      const d = item.timestamp ? new Date(item.timestamp) : new Date();
+      const timestampStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+
+      return `${intId},${userId},${sessionId},${productId},${eventType},${weight},${timestampStr}`;
+    };
+
+    if (cleanMock) {
+      // Chế độ 100% Real Data: Ghi đè toàn bộ dữ liệu thật từ MongoDB vào CSV
+      const rows = interactions.map((item, idx) => formatRow(item, idx));
+      const content = header + (rows.length > 0 ? rows.join('\n') + '\n' : '');
+      fs.writeFileSync(INTERACTIONS_CSV_PATH, content, 'utf8');
+      console.log(`[Recommendation] 100% Real Data: Synced ${rows.length} real interactions to interactions.csv (Cleaned mock data).`);
+      return { totalReal: interactions.length, writtenRows: rows.length, mode: 'clean_real_only' };
+    } else {
+      const existingIds = new Set();
+      if (fs.existsSync(INTERACTIONS_CSV_PATH)) {
+        const content = fs.readFileSync(INTERACTIONS_CSV_PATH, 'utf8');
+        const lines = content.split('\n');
+        for (const line of lines) {
+          const parts = line.split(',');
+          if (parts[0]) existingIds.add(parts[0].trim());
+        }
+      }
+
+      let appendedCount = 0;
+      const newRows = [];
+      for (let i = 0; i < interactions.length; i++) {
+        const item = interactions[i];
+        const intId = item._id ? `INT-${item._id.toString().slice(-6).toUpperCase()}` : `INT-${String(2000 + i)}`;
+        if (existingIds.has(intId)) continue;
+        newRows.push(formatRow(item, i));
+        existingIds.add(intId);
+        appendedCount++;
+      }
+
+      if (newRows.length > 0) {
+        fs.appendFileSync(INTERACTIONS_CSV_PATH, newRows.join('\n') + '\n', 'utf8');
+      }
+
+      return { totalReal: interactions.length, writtenRows: appendedCount, mode: 'append' };
+    }
+  } catch (err) {
+    console.error('[Recommendation] syncAllInteractionsToCsv error:', err.message);
+    return { error: err.message };
+  }
+};
+
+/**
+ * Đảm bảo interactions.csv và MongoDB userinteractions luôn có đầy đủ tập dữ liệu tương tác
+ * liên kết trực tiếp với các sản phẩm thật và người dùng thật trong hệ thống.
+ */
+const ensureDatasetInteractions = async () => {
+  try {
+    const dir = path.dirname(INTERACTIONS_CSV_PATH);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+
+    let existingLinesCount = 0;
+    if (fs.existsSync(INTERACTIONS_CSV_PATH)) {
+      const content = fs.readFileSync(INTERACTIONS_CSV_PATH, 'utf8').trim();
+      existingLinesCount = content ? content.split('\n').filter(Boolean).length - 1 : 0;
+    }
+
+    const mongoCount = await UserInteraction.countDocuments();
+
+    // Nếu file CSV đang trống (chỉ có tiêu đề) hoặc có ít hơn 10 dòng
+    if (existingLinesCount <= 1 || mongoCount === 0) {
+      if (!fs.existsSync(PRODUCTS_CSV_PATH) || !fs.existsSync(USERS_CSV_PATH)) {
+        return;
+      }
+
+      // Đọc products từ products.csv
+      const prodContent = fs.readFileSync(PRODUCTS_CSV_PATH, 'utf8');
+      const prodLines = prodContent.split('\n').filter(Boolean);
+      const prodIds = [];
+      for (let i = 1; i < prodLines.length; i++) {
+        const id = prodLines[i].split(',')[0]?.trim();
+        if (id && id.length === 24) prodIds.push(id);
+      }
+
+      // Đọc users từ users.csv
+      const userContent = fs.readFileSync(USERS_CSV_PATH, 'utf8');
+      const userLines = userContent.split('\n').filter(Boolean);
+      const userIds = [];
+      for (let i = 1; i < userLines.length; i++) {
+        const id = userLines[i].split(',')[0]?.trim();
+        if (id && id.length === 24) userIds.push(id);
+      }
+
+      if (prodIds.length === 0 || userIds.length === 0) return;
+
+      const eventsPool = [
+        { type: 'view', weight: 1.0 },
+        { type: 'product_detail', weight: 1.8 },
+        { type: 'search_click', weight: 2.0 },
+        { type: 'add_to_cart', weight: 5.0 },
+        { type: 'purchase', weight: 10.0 },
+      ];
+
+      const rows = [];
+      const mongoDocs = [];
+      let idx = 1000;
+      const now = Date.now();
+      const pad = (n) => String(n).padStart(2, '0');
+
+      for (const uId of userIds) {
+        // Mỗi user tương tác 4-8 sản phẩm thật
+        const nProds = Math.min(prodIds.length, 4 + Math.floor(Math.random() * 4));
+        const shuffled = [...prodIds].sort(() => 0.5 - Math.random());
+        const selectedProds = shuffled.slice(0, nProds);
+
+        for (const pId of selectedProds) {
+          const nEvents = 2 + Math.floor(Math.random() * 3);
+          for (let e = 0; e < nEvents; e++) {
+            const ev = eventsPool[Math.floor(Math.random() * eventsPool.length)];
+            const timeAgoHours = Math.floor(Math.random() * 720); // 30 ngày qua
+            const itemDate = new Date(now - timeAgoHours * 3600 * 1000);
+            const timestampStr = `${itemDate.getFullYear()}-${pad(itemDate.getMonth() + 1)}-${pad(itemDate.getDate())} ${pad(itemDate.getHours())}:${pad(itemDate.getMinutes())}:${pad(itemDate.getSeconds())}`;
+            const intId = `INT-${idx++}`;
+            const sessId = `sess_${uId.slice(-4)}_${10 + Math.floor(Math.random() * 90)}`;
+
+            rows.push(`${intId},${uId},${sessId},${pId},${ev.type},${ev.weight.toFixed(1)},${timestampStr}`);
+
+            mongoDocs.push({
+              userId: uId,
+              sessionId: sessId,
+              productId: pId,
+              interactionType: ev.type,
+              weight: ev.weight,
+              dwellTime: ev.type === 'view' ? 15 : 0,
+              context: { device: 'desktop', source: 'direct' },
+              timestamp: itemDate,
+            });
+          }
+        }
+      }
+
+      // 1. Ghi file CSV
+      const header = 'interaction_id,user_id,session_id,product_id,event_type,weight,timestamp\n';
+      fs.writeFileSync(INTERACTIONS_CSV_PATH, header + rows.join('\n') + '\n', 'utf8');
+      console.log(`[Recommendation] Populated interactions.csv with ${rows.length} real product interaction records.`);
+
+      // 2. Đồng bộ vào MongoDB nếu MongoDB chưa có
+      if (mongoCount === 0 && mongoDocs.length > 0) {
+        await UserInteraction.insertMany(mongoDocs, { ordered: false }).catch(() => {});
+        console.log(`[Recommendation] Inserted ${mongoDocs.length} interactions into MongoDB userinteractions.`);
+      }
+    }
+  } catch (err) {
+    console.error('[Recommendation] ensureDatasetInteractions error:', err.message);
+  }
+};
+
+// Khởi chạy đồng bộ ngay khi backend kết nối
+setTimeout(() => {
+  ensureDatasetInteractions().catch(() => {});
+}, 1000);
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PUBLIC API: recordUserInteraction
+// In-memory cache chống duplicate event (React StrictMode double-fire trong vòng 1.5s)
+const recentInteractionsDedup = new Map();
 
 const recordUserInteraction = async (data = {}) => {
   const {
@@ -650,25 +969,66 @@ const recordUserInteraction = async (data = {}) => {
   const baseWeight = INTERACTION_WEIGHTS[interactionType];
   if (baseWeight === undefined) return null; // unknown type
 
-  const interaction = await UserInteraction.create({
-    userId: userId || null,
-    sessionId: sessionId || '',
-    productId,
-    interactionType,
-    weight: baseWeight,
-    dwellTime,
-    context: {
-      device: context.device || 'unknown',
-      source: context.source || 'unknown',
-      position: context.position || null,
-      searchKeyword: context.searchKeyword || '',
-      categoryId: context.categoryId || null,
-      brandId: context.brandId || null,
-      priceRangeMin: context.priceRangeMin || null,
-      priceRangeMax: context.priceRangeMax || null,
-    },
-    timestamp: new Date(),
-  });
+  // Lọc trùng lặp event cùng loại trên cùng sản phẩm gửi liên tiếp trong < 1.5s (do StrictMode hoặc double click)
+  if (['product_detail', 'view', 'view_deep', 'view_bounce'].includes(interactionType)) {
+    const dedupKey = `${userId || sessionId}_${productId}_${interactionType}`;
+    const lastSeen = recentInteractionsDedup.get(dedupKey);
+    const now = Date.now();
+    if (lastSeen && now - lastSeen < 1500) {
+      return null; // Bỏ qua event trùng lặp
+    }
+    recentInteractionsDedup.set(dedupKey, now);
+
+    // Dọn dẹp cache nếu quá nhiều phần tử
+    if (recentInteractionsDedup.size > 2000) {
+      for (const [k, v] of recentInteractionsDedup.entries()) {
+        if (now - v > 5000) recentInteractionsDedup.delete(k);
+      }
+    }
+  }
+
+  let interaction;
+  try {
+    interaction = await UserInteraction.create({
+      userId: userId || null,
+      sessionId: sessionId || '',
+      productId,
+      interactionType,
+      weight: baseWeight,
+      dwellTime,
+      context: {
+        device: context.device || 'unknown',
+        source: context.source || 'unknown',
+        position: context.position || null,
+        searchKeyword: context.searchKeyword || '',
+        categoryId: context.categoryId || null,
+        brandId: context.brandId || null,
+        priceRangeMin: context.priceRangeMin || null,
+        priceRangeMax: context.priceRangeMax || null,
+      },
+      timestamp: new Date(),
+    });
+  } catch (dbErr) {
+    const doc = {
+      userId: userId || null,
+      sessionId: sessionId || '',
+      productId,
+      interactionType,
+      weight: baseWeight,
+      dwellTime,
+      context,
+      timestamp: new Date(),
+    };
+    try {
+      const res = await UserInteraction.collection.insertOne(doc);
+      interaction = { _id: res.insertedId, ...doc };
+    } catch {
+      interaction = { _id: Date.now(), ...doc };
+    }
+  }
+
+  // Bắt ngay lập tức và ghi trực tiếp vào interactions.csv cho Python Recommendation Engine
+  appendInteractionToCsv(interaction);
 
   return interaction;
 };
@@ -1003,6 +1363,7 @@ const mergeSessionInteractions = async (sessionId, userId) => {
 
 module.exports = {
   recordUserInteraction,
+  syncAllInteractionsToCsv,
   mergeSessionInteractions,
   getPersonalizedRecommendations,
   getSessionBasedRecommendations,

@@ -27,15 +27,28 @@ const userSchema = new mongoose.Schema(
 
     phone: {
       type: String,
-      required: [true, 'Phone is required'],
-      unique: true,
+      sparse: true,
       trim: true,
+      default: null,
     },
 
     gender: {
       type: String,
       enum: ['male', 'female', 'other'],
-      required: [true, 'Gender is required'],
+      default: 'other',
+    },
+
+    googleId: {
+      type: String,
+      sparse: true,
+      unique: true,
+      default: null,
+    },
+
+    authProvider: {
+      type: String,
+      enum: ['local', 'google', 'facebook'],
+      default: 'local',
     },
 
     dateOfBirth: {
@@ -69,7 +82,6 @@ const userSchema = new mongoose.Schema(
     // =========================
     password: {
       type: String,
-      required: [true, 'Password is required'],
       select: false,
     },
 
@@ -96,15 +108,31 @@ const userSchema = new mongoose.Schema(
           trim: true,
         },
 
+        provinceId: {
+          type: Number,
+          default: null,
+        },
+
         district: {
           type: String,
           required: true,
           trim: true,
         },
 
+        districtId: {
+          type: Number,
+          default: null,
+        },
+
         ward: {
           type: String,
           required: true,
+          trim: true,
+        },
+
+        wardCode: {
+          type: String,
+          default: null,
           trim: true,
         },
 
@@ -146,6 +174,21 @@ const userSchema = new mongoose.Schema(
     isActive: {
       type: Boolean,
       default: true,
+    },
+
+    lastLoginAt: {
+      type: Date,
+      default: null,
+    },
+
+    lastLoginIp: {
+      type: String,
+      default: null,
+    },
+
+    lastLoginUserAgent: {
+      type: String,
+      default: null,
     },
 
     // =========================
@@ -191,6 +234,23 @@ const userSchema = new mongoose.Schema(
       type: Date,
       select: false,
     },
+
+    // OTP kích hoạt tài khoản (gửi qua email sau đăng ký)
+    emailOtp: {
+      type: String,
+      select: false,
+    },
+
+    emailOtpExpires: {
+      type: Date,
+      select: false,
+    },
+
+    // Tài khoản đã được kích hoạt (xác thực OTP sau đăng ký)
+    isAccountActivated: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );
@@ -206,7 +266,7 @@ const ARGON2_OPTIONS = {
 };
 
 userSchema.pre('save', async function () {
-  if (!this.isModified('password')) return;
+  if (!this.isModified('password') || !this.password) return;
   this.password = await argon2.hash(this.password, ARGON2_OPTIONS);
 });
 
@@ -256,6 +316,16 @@ userSchema.methods.createEmailVerificationToken = function () {
   this.emailVerificationToken = crypto.createHash('sha256').update(verifyToken).digest('hex');
   this.emailVerificationExpires = Date.now() + 24 * 60 * 60 * 1000;
   return verifyToken;
+};
+
+// =========================
+// CREATE EMAIL OTP (kích hoạt tài khoản, 5 phút)
+// =========================
+userSchema.methods.createEmailOtp = function () {
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  this.emailOtp = crypto.createHash('sha256').update(otp).digest('hex');
+  this.emailOtpExpires = new Date(Date.now() + 5 * 60 * 1000);
+  return otp;
 };
 
 // =========================

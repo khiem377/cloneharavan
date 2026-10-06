@@ -21,6 +21,9 @@ const {
   updateUserRole,
   deleteUser,
   createAdmin,
+  getUserStats,
+  bulkToggleStatus,
+  resetPassword,
 } = require('../controllers/user.controller');
 
 const { protect } = require('../middleware/auth.middleware');
@@ -59,12 +62,15 @@ router.post('/addresses/sync-order', protect, validate(addressSchema), syncOrder
 // ==========================================
 // 3. ADMIN MANAGEMENT (RBAC Protected)
 // ==========================================
+router.get('/stats', protect, requirePermission('user.view'), getUserStats);
+router.patch('/bulk-status', protect, requirePermission('user.edit'), bulkToggleStatus);
 router.post('/admin', protect, requirePermission('user.create'), validate(createAdminSchema), createAdmin);
 router.post('/', protect, requirePermission('user.create'), validate(createAdminSchema), createAdmin);
 router.get('/', protect, requirePermission('user.view'), getAllUsers);
 router.get('/:id', protect, requirePermission('user.view'), getUserById);
 router.patch('/:id/status', protect, requirePermission('user.edit'), validate(updateStatusSchema), toggleUserStatus);
 router.patch('/:id/role', protect, requirePermission('role.assign'), validate(updateRoleSchema), updateUserRole);
+router.patch('/:id/reset-password', protect, requirePermission('user.edit'), resetPassword);
 router.delete('/:id', protect, requirePermission('user.delete'), deleteUser);
 
 module.exports = router;

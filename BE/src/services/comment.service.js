@@ -4,7 +4,7 @@ const readline = require('readline');
 const Comment = require('../models/comment.model');
 const Product = require('../models/product.model');
 const { AppError } = require('../utils/AppError');
-const { checkProfanity } = require('../utils/profanityFilter');
+const { validateCommentContent } = require('../utils/profanityFilter');
 
 // Đường dẫn file orders.csv để check lịch sử mua hàng mà KHÔNG đụng vào model Order/Cart/Checkout
 const ORDERS_CSV_PATH = path.join(__dirname, '../../python-services/data/orders.csv');
@@ -70,12 +70,28 @@ const createComment = async ({
     throw new AppError('Nội dung bình luận không được để trống.', 400);
   }
 
-  // 1. SMART KEYWORD FILTER: Quét từ ngữ tục tĩu / nói bậy
-  const { isProfane, matchedWord } = checkProfanity(content);
-  if (isProfane) {
+  // 1. SMART CONTENT FILTER: Profanity + Anti-spam
+  const { blocked, reason } = validateCommentContent(content, {
+    isReply: !!parentId,
+  });
+  if (blocked) {
+    throw new AppError(reason, 400);
+  }
+
+  // 2. RATE LIMIT: Chặn spam gửi liên tiếp (tối đa 1 comment / 20 giây / user)
+  const RATE_LIMIT_SECONDS = 20;
+  const recentCutoff = new Date(Date.now() - RATE_LIMIT_SECONDS * 1000);
+  const recentComment = await Comment.findOne({
+    authorId: user._id,
+    createdAt: { $gte: recentCutoff },
+  }).sort({ createdAt: -1 }).lean();
+
+  if (recentComment) {
+    const secondsAgo = Math.ceil((Date.now() - new Date(recentComment.createdAt).getTime()) / 1000);
+    const remaining = RATE_LIMIT_SECONDS - secondsAgo;
     throw new AppError(
-      `Bình luận chứa từ ngữ không phù hợp với chuẩn mực cộng đồng ("${matchedWord}"). Vui lòng chỉnh sửa lại.`,
-      400
+      `Vui lòng chờ ${remaining} giây trước khi gửi bình luận tiếp theo.`,
+      429
     );
   }
 
@@ -161,6 +177,19 @@ const createComment = async ({
     await Comment.findByIdAndUpdate(parentComment._id, { $inc: { replyCount: 1 } });
   }
 
+  // Trigger TikTok/Facebook MSI Discussion Signal for Trending Engine
+  try {
+    if (targetType === 'product' && productId) {
+      const Product = require('../models/product.model');
+      const { recordDiscussionKeyword } = require('./search.service');
+      Product.findById(productId).select('name').lean().then((prod) => {
+        if (prod?.name) {
+          recordDiscussionKeyword(prod.name);
+        }
+      }).catch(() => {});
+    }
+  } catch {}
+
   return newComment;
 };
 
@@ -178,7 +207,10 @@ const getComments = async ({
   const query = {
     targetType,
     status: 'approved',
-    isDeleted: false,
+    $or: [
+      { isDeleted: false },
+      { isDeleted: true, replyCount: { $gt: 0 } },
+    ],
   };
 
   if (targetType === 'product') {
@@ -193,6 +225,16 @@ const getComments = async ({
   const allComments = await Comment.find(query)
     .sort({ createdAt: -1 })
     .lean();
+
+  // Khử nội dung nhạy cảm của các bình luận đã xóa
+  allComments.forEach((c) => {
+    if (c.isDeleted) {
+      c.content = 'Bình luận đã bị xoá';
+      c.authorInfo = { name: 'Người dùng', avatar: '', role: 'customer' };
+      c.reactions = [];
+      c.reactionCounts = { like: 0, love: 0, haha: 0, wow: 0, sad: 0, angry: 0, total: 0 };
+    }
+  });
 
   // 1. Tính toán thống kê Rating (chỉ tính root review depth === 0 của product)
   const rootReviews = allComments.filter((c) => !c.parentId && c.rating > 0);
@@ -312,9 +354,51 @@ const toggleReaction = async (commentId, userId, reactionType = 'like') => {
   return { reactionCounts: comment.reactionCounts, reactions: comment.reactions };
 };
 
+/**
+ * Xóa bình luận (giữ chỗ nếu có câu trả lời con)
+ */
+const deleteComment = async (commentId, user) => {
+  if (!commentId || !user) {
+    throw new AppError('Thiếu thông tin xóa bình luận.', 400);
+  }
+
+  const comment = await Comment.findById(commentId);
+  if (!comment) throw new AppError('Bình luận không tồn tại.', 404);
+
+  const role = user.role?.name || user.role || 'customer';
+  const isAdminOrStaff = ['admin', 'superadmin', 'manager', 'staff'].includes(String(role).toLowerCase());
+  const isAuthor = String(comment.authorId) === String(user._id);
+
+  if (!isAuthor && !isAdminOrStaff) {
+    throw new AppError('Bạn không có quyền xóa bình luận này.', 403);
+  }
+
+  if (comment.replyCount > 0) {
+    // Có câu trả lời con: giữ chỗ cho replies bên dưới (Soft delete)
+    comment.isDeleted = true;
+    comment.deletedAt = new Date();
+    comment.content = 'Bình luận đã bị xoá';
+    await comment.save();
+  } else {
+    // Không có câu trả lời con: đánh dấu xóa
+    comment.isDeleted = true;
+    comment.deletedAt = new Date();
+    await comment.save();
+
+    if (comment.parentId) {
+      await Comment.findByIdAndUpdate(comment.parentId, {
+        $inc: { replyCount: -1 },
+      });
+    }
+  }
+
+  return { success: true, message: 'Đã xóa bình luận thành công.' };
+};
+
 module.exports = {
   createComment,
   getComments,
   toggleReaction,
   checkUserPurchased,
+  deleteComment,
 };

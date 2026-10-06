@@ -15,6 +15,16 @@ const getAll = async () => {
   return Menu.find().sort({ createdAt: -1 }).lean();
 };
 
+function filterActiveItems(items = []) {
+  if (!Array.isArray(items)) return [];
+  return items
+    .filter((item) => item.isActive !== false)
+    .map((item) => ({
+      ...item,
+      children: Array.isArray(item.children) ? filterActiveItems(item.children) : [],
+    }));
+}
+
 /**
  * Lấy menu theo handle (public – cho Client dùng)
  */
@@ -25,6 +35,7 @@ const getByHandle = async (handle) => {
     err.statusCode = 404;
     throw err;
   }
+  menu.items = filterActiveItems(menu.items);
   return menu;
 };
 

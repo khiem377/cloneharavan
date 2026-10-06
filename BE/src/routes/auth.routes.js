@@ -5,6 +5,7 @@ const {
   register,
   registerAdmin,
   login,
+  googleLogin,
   refreshToken,
   getProfile,
   changePassword,
@@ -15,6 +16,7 @@ const {
   verifyEmail,
   sendVerifyPhone,
   verifyPhone,
+  sessionStream,
 } = require('../controllers/auth.controller');
 
 const { protect } = require('../middleware/auth.middleware');
@@ -34,9 +36,13 @@ const {
 router.post('/register', validate(registerSchema), register);
 router.post('/register-admin', validate(registerAdminSchema), registerAdmin);
 router.post('/login', validate(loginSchema), login);
+router.post('/google', googleLogin);
 router.post('/refresh-token', refreshToken);
 router.get('/me', protect, getProfile);
 router.post('/logout', protect, logout);
+
+// SSE Realtime Session Stream (Force Logout, Session Check)
+router.get('/session-stream', sessionStream);
 
 
 // Đổi & Khôi phục mật khẩu

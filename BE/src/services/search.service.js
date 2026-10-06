@@ -47,6 +47,7 @@ async function getActiveFlashSaleMap() {
 const {
   removeVietnameseTones,
   extractAcronyms,
+  isGenericToken,
   parseSearchQuery,
   calculateRelevanceScore,
 } = require('../utils/searchEngine');
@@ -58,6 +59,8 @@ const {
   MAX_SESSION_IDS,
   BREAKOUT_RATIO,
 } = require('../utils/trendingAlgorithm');
+
+const escapeRegExp = (str) => String(str || '').replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
 
 /**
  * Log or increment search keyword — với 24h window rotation + count7d rolling
@@ -78,12 +81,10 @@ const recordSearchKeyword = async (rawKeyword, resultsCount = 1, clientIp = '', 
   if (clientIp && isSpamSearchRequest(clientIp, keyword)) return;
 
   try {
-    // Lấy log hiện tại kèm sessionIds24h (select: false nên cần explicit)
     const log = await SearchLog.findOne({ keyword }).select('+sessionIds24h');
     const now = new Date();
 
     // ── 24h Window Rotation ─────────────────────────────────────────────────
-    // nếu đã qua 24h → chuyển count24h → countPrev24h, reset sessionIds24h
     const shouldRotate24h = needsWindowRotation(log);
     const prevCount24h    = shouldRotate24h ? (log?.count24h || 0) : (log?.countPrev24h || 0);
     const new24h          = shouldRotate24h ? 1 : (log?.count24h || 0) + 1;
@@ -93,49 +94,52 @@ const recordSearchKeyword = async (rawKeyword, resultsCount = 1, clientIp = '', 
     const new6h          = shouldRotate6h ? 1 : (log?.count6h || 0) + 1;
 
     // ── Unique Session Tracking (TikTok diversity) ───────────────────────────
-    // Đếm unique sessionIds trong 24h — reset cùng 24h window
     let currentSessionIds = shouldRotate24h ? [] : (log?.sessionIds24h || []);
     let uniqueSessionCount = log?.uniqueSessionCount || 0;
     if (sessionId && !currentSessionIds.includes(sessionId)) {
       currentSessionIds.push(sessionId);
-      // Giới hạn max size để tránh document quá lớn
       if (currentSessionIds.length > MAX_SESSION_IDS) {
         currentSessionIds = currentSessionIds.slice(-MAX_SESSION_IDS);
       }
       uniqueSessionCount = currentSessionIds.length;
+    } else if (uniqueSessionCount === 0) {
+      uniqueSessionCount = 1;
     }
 
-    const newCount       = (log?.count || 0) + 1;
-    const new7d          = (log?.count7d || 0) + 1;
-    const clickCount     = log?.clickCount || 0;
-    const purchaseCount  = log?.purchaseCount || 0;
-    const isPinned       = log?.isTrending || false;
+    const newCount        = (log?.count || 0) + 1;
+    const new7d           = (log?.count7d || 0) + 1;
+    const clickCount      = log?.clickCount || 0;
+    const cartCount       = log?.cartCount || 0;
+    const purchaseCount   = log?.purchaseCount || 0;
+    const discussionCount = log?.discussionCount || 0;
+    const isPinned        = log?.isTrending || false;
 
-    const trendingScore = calculateTrendingScore({
+    const trendCalc = calculateTrendingScore({
       count:              newCount,
       count24h:           new24h,
       countPrev24h:       prevCount24h,
       count7d:            new7d,
       count6h:            new6h,
       clickCount,
+      cartCount,
       purchaseCount,
+      discussionCount,
       uniqueSessionCount,
       resultsCount,
       lastSearchedAt:     now,
       isPinned,
     });
 
-    // Build update operation — tách 2 case: rotate 24h hay không
     const baseSet = {
       resultsCount,
-      lastSearchedAt:  now,
-      trendingScore,
+      lastSearchedAt:     now,
+      trendingScore:      trendCalc.score || 0,
+      zScore:             trendCalc.zScore || 0,
       uniqueSessionCount,
-      sessionIds24h: currentSessionIds,
+      sessionIds24h:      currentSessionIds,
     };
 
     if (shouldRotate24h) {
-      // Reset cả 24h window lẫn 6h nếu cần
       await SearchLog.findOneAndUpdate(
         { keyword },
         {
@@ -153,7 +157,6 @@ const recordSearchKeyword = async (rawKeyword, resultsCount = 1, clientIp = '', 
         { upsert: true, new: true }
       );
     } else if (shouldRotate6h) {
-      // Chỉ reset 6h window
       await SearchLog.findOneAndUpdate(
         { keyword },
         {
@@ -163,7 +166,6 @@ const recordSearchKeyword = async (rawKeyword, resultsCount = 1, clientIp = '', 
         { upsert: true, new: true }
       );
     } else {
-      // Tăng bình thường
       await SearchLog.findOneAndUpdate(
         { keyword },
         {
@@ -174,16 +176,12 @@ const recordSearchKeyword = async (rawKeyword, resultsCount = 1, clientIp = '', 
       );
     }
   } catch (err) {
-    // Ignore error — không để search fail vì log
+    // Ignore error
   }
 };
 
 /**
- * recordPurchaseKeyword — Shopee/Lazada style purchase signal
- * Gọi từ checkout service khi user mua thành công.
- * Tăng purchaseCount cho tất cả keywords mà user đã search trong session.
- *
- * @param {string[]} keywords — mảng keywords đã search trong session (lưu ở client)
+ * recordPurchaseKeyword — Shopee/Lazada style purchase conversion signal
  */
 const recordPurchaseKeyword = async (keywords = []) => {
   if (!keywords || keywords.length === 0) return;
@@ -191,23 +189,52 @@ const recordPurchaseKeyword = async (keywords = []) => {
     const cleanKeywords = keywords
       .filter((k) => k && k.trim().length >= 2)
       .map((k) => k.trim().toLowerCase())
-      .slice(0, 20); // giới hạn 20 keywords tối đa
+      .slice(0, 20);
 
     if (cleanKeywords.length === 0) return;
 
-    // Bulk tăng purchaseCount cho tất cả keywords
     await SearchLog.updateMany(
       { keyword: { $in: cleanKeywords } },
-      { $inc: { purchaseCount: 1 } }
+      { $inc: { purchaseCount: 1, trendingScore: 5 } }
     );
   } catch (err) {
-    // Ignore — không để checkout fail vì log
+  }
+};
+
+/**
+ * recordCartKeyword — Shopee/Amazon style Add-to-cart signal
+ */
+const recordCartKeyword = async (rawKeyword) => {
+  if (!rawKeyword || rawKeyword.trim().length < 2) return;
+  const keyword = rawKeyword.trim().toLowerCase();
+  try {
+    await SearchLog.findOneAndUpdate(
+      { keyword },
+      { $inc: { cartCount: 1, trendingScore: 2.5 } },
+      { upsert: false }
+    );
+  } catch (err) {
+  }
+};
+
+/**
+ * recordDiscussionKeyword — TikTok/Facebook MSI Discussion signal
+ */
+const recordDiscussionKeyword = async (rawKeyword) => {
+  if (!rawKeyword || rawKeyword.trim().length < 2) return;
+  const keyword = rawKeyword.trim().toLowerCase();
+  try {
+    await SearchLog.findOneAndUpdate(
+      { keyword },
+      { $inc: { discussionCount: 1, trendingScore: 3 } },
+      { upsert: false }
+    );
+  } catch (err) {
   }
 };
 
 /**
  * Record search click — tăng clickCount khi user click vào kết quả
- * Gọi từ client khi user click vào sản phẩm từ search results
  */
 const recordSearchClick = async (rawKeyword) => {
   if (!rawKeyword || rawKeyword.trim().length < 2) return;
@@ -215,11 +242,10 @@ const recordSearchClick = async (rawKeyword) => {
   try {
     await SearchLog.findOneAndUpdate(
       { keyword },
-      { $inc: { clickCount: 1 } },
-      { upsert: false } // chỉ update nếu đã có, không tạo mới
+      { $inc: { clickCount: 1, trendingScore: 1 } },
+      { upsert: false }
     );
   } catch (err) {
-    // Ignore
   }
 };
 
@@ -472,7 +498,15 @@ const globalSearch = async (query = {}, req = null) => {
     'gia-dung-sac-mau': ['gia-dung-sac-mau', 'gia-dung', 'cot-thiet-bi-gia-dung'],
     'gia-dung-suc-khoe': ['gia-dung-suc-khoe', 'gia-dung', 'cot-thiet-bi-gia-dung'],
     'san-pham-hot': [],
-    'dien-thoai': ['dien-thoai-tablet', 'dien-thoai-phu-kien', 'dien-thoai-android'],
+    'dien-thoai': ['dien-thoai-thong-minh', 'dien-thoai', 'smartphone', 'dien-thoai-di-dong'],
+    'dong-ho': ['dong-ho-thong-minh', 'smartwatch', 'dong-ho'],
+    'dong-ho-thong-minh': ['dong-ho-thong-minh', 'smartwatch', 'dong-ho'],
+    'laptop': ['macbook-laptop', 'laptop', 'macbook', 'may-tinh-xach-tay'],
+    'macbook-laptop': ['macbook-laptop', 'laptop', 'macbook'],
+    'tablet': ['ipad-tablet', 'tablet', 'ipad', 'may-tinh-bang'],
+    'ipad-tablet': ['ipad-tablet', 'tablet', 'ipad'],
+    'robot-hut-bui': ['robot-hut-bui', 'may-hut-bui'],
+    'may-choi-game': ['may-choi-game-console', 'playstation', 'ps5', 'xbox'],
     'am-thanh': ['thiet-bi-am-thanh-loa', 'loa-am-thanh', 'nhom-loa-am-thanh', 'loa-bluetooth', 'loa-keo', 'dan-karaoke'],
     'loa-keo-karaoke': ['thiet-bi-am-thanh-loa', 'loa-keo-karaoke', 'loa-keo', 'dan-karaoke', 'nhom-thiet-bi-am-thanh', 'loa-karaoke-xach-tay'],
     'loa-keo': ['thiet-bi-am-thanh-loa', 'loa-keo-karaoke', 'loa-keo', 'dan-karaoke', 'nhom-thiet-bi-am-thanh'],
@@ -650,34 +684,36 @@ const globalSearch = async (query = {}, req = null) => {
         }
       : null;
 
-    // Build per-token conditions for multi-term AND matching
-    const tokenConditions = parsed.tokens
-      .filter((t) => t.length > 1)
-      .map((t) => {
-        const isShort = t.length <= 2;
-        const reg = isShort
-          ? new RegExp(`(?:^|[^a-zA-Z0-9])${escapeRegExp(t)}(?:$|[^a-zA-Z0-9])`, 'i')
-          : new RegExp(escapeRegExp(t), 'i');
-        const tokenSyns = (parsed.synonyms || []).filter(
-          (s) => s.includes(t) || t.includes(s)
-        );
-        const synRegs = tokenSyns.map((s) =>
-          s.length <= 2
-            ? new RegExp(`(?:^|[^a-zA-Z0-9])${escapeRegExp(s)}(?:$|[^a-zA-Z0-9])`, 'i')
-            : new RegExp(escapeRegExp(s), 'i')
-        );
-        const allTokenRegs = [reg, ...synRegs];
+    const coreTokens = parsed.coreTokens || [];
+    const nonTrivialTokens = parsed.tokens.filter((t) => t.length >= 2);
+    const activeTokens = coreTokens.length > 0 ? coreTokens : nonTrivialTokens;
 
-        return {
-          $or: [
-            ...allTokenRegs.map((r) => ({ name: r })),
-            ...allTokenRegs.map((r) => ({ slug: r })),
-            ...allTokenRegs.map((r) => ({ sku: r })),
-            ...allTokenRegs.map((r) => ({ productCode: r })),
-            { searchTokens: { $in: [t, ...tokenSyns] } },
-          ],
-        };
-      });
+    // Build per-token conditions for multi-term AND matching
+    const tokenConditions = activeTokens.map((t) => {
+      const isShort = t.length <= 2;
+      const reg = isShort
+        ? new RegExp(`(?:^|[^a-zA-Z0-9])${escapeRegExp(t)}(?:$|[^a-zA-Z0-9])`, 'i')
+        : new RegExp(escapeRegExp(t), 'i');
+      const tokenSyns = (parsed.synonyms || []).filter(
+        (s) => s.includes(t) || t.includes(s)
+      );
+      const synRegs = tokenSyns.map((s) =>
+        s.length <= 2
+          ? new RegExp(`(?:^|[^a-zA-Z0-9])${escapeRegExp(s)}(?:$|[^a-zA-Z0-9])`, 'i')
+          : new RegExp(escapeRegExp(s), 'i')
+      );
+      const allTokenRegs = [reg, ...synRegs];
+
+      return {
+        $or: [
+          ...allTokenRegs.map((r) => ({ name: r })),
+          ...allTokenRegs.map((r) => ({ slug: r })),
+          ...allTokenRegs.map((r) => ({ sku: r })),
+          ...allTokenRegs.map((r) => ({ productCode: r })),
+          { searchTokens: { $in: [t, ...tokenSyns] } },
+        ],
+      };
+    });
 
     let regexResults = [];
     if (!hasKeyword) {
@@ -690,7 +726,7 @@ const globalSearch = async (query = {}, req = null) => {
         .limit(200)
         .lean();
     } else {
-      if (tokenConditions.length > 1) {
+      if (tokenConditions.length > 0) {
         regexResults = await Product.find({
           $and: [...baseExclusions, ...tokenConditions],
         })
@@ -701,13 +737,20 @@ const globalSearch = async (query = {}, req = null) => {
       }
 
       if (regexResults.length === 0) {
+        const orConditions = nonTrivialTokens.map((t) => ({
+          $or: [
+            { name: new RegExp(escapeRegExp(t), 'i') },
+            { searchTokens: new RegExp(escapeRegExp(t), 'i') },
+          ],
+        }));
+
         const orQuery = {
           $and: [
             ...baseExclusions,
             {
               $or: [
                 { name: new RegExp(escapeRegExp(parsed.normalized), 'i') },
-                ...nameOrCodeConditions.flatMap((c) => c.$or),
+                ...orConditions.flatMap((c) => c.$or),
                 { searchTokens: { $in: parsed.tokens.filter((t) => t.length >= 2) } },
               ],
             },
@@ -1147,32 +1190,68 @@ const getInstantSuggestions = async (q = '') => {
     };
   }
 
-  const regex  = new RegExp(parsed.normalized, 'i');
-  const tokens = parsed.tokens;
+  const regex = new RegExp(escapeRegExp(parsed.normalized), 'i');
+  const coreTokens = parsed.coreTokens || [];
+  const nonTrivialTokens = parsed.tokens.filter((t) => t.length >= 2);
+  const activeTokens = coreTokens.length > 0 ? coreTokens : nonTrivialTokens;
 
-  // Build token-based query — dùng searchTokens index thay vì full scan
-  // searchTokens đã được index trên Product model (xem product.model.js L152)
-  const tokenOrConditions = tokens.length > 0
-    ? tokens.map((t) => ({ searchTokens: new RegExp(t, 'i') }))
-    : [{ searchTokens: { $regex: parsed.normalized, $options: 'i' } }];
+  // Build Tier 1 AND query for core tokens
+  const andTokenConditions = activeTokens.map((t) => {
+    const isShort = t.length <= 2;
+    const reg = isShort
+      ? new RegExp(`(?:^|[^a-zA-Z0-9])${escapeRegExp(t)}(?:$|[^a-zA-Z0-9])`, 'i')
+      : new RegExp(escapeRegExp(t), 'i');
+    const tokenSyns = (parsed.synonyms || []).filter((s) => s.includes(t) || t.includes(s));
+    return {
+      $or: [
+        { name: reg },
+        { slug: reg },
+        { sku: reg },
+        { productCode: reg },
+        { searchTokens: { $in: [t, ...tokenSyns] } },
+      ],
+    };
+  });
 
-  const [matchedProducts, blogs, brands, categories, trendingKeywords] = await Promise.all([
-    Product.find({
+  let matchedProducts = [];
+  if (andTokenConditions.length > 0) {
+    matchedProducts = await Product.find({
+      isActive: true,
+      status: 'published',
+      $and: andTokenConditions,
+    })
+      .select('name slug price salePrice thumbnail productCode sku cachedPrice cachedSalePrice brand categories')
+      .populate('categories', 'name slug')
+      .populate('brand', 'name slug logo')
+      .limit(50)
+      .lean();
+  }
+
+  // Fallback if AND query returned 0 products
+  if (matchedProducts.length === 0) {
+    const orConditions = nonTrivialTokens.map((t) => ({
+      $or: [
+        { name: new RegExp(escapeRegExp(t), 'i') },
+        { searchTokens: new RegExp(escapeRegExp(t), 'i') },
+      ],
+    }));
+
+    matchedProducts = await Product.find({
       isActive: true,
       status: 'published',
       $or: [
-        // Ưu tiên searchTokens index (nhanh nhất)
-        ...tokenOrConditions,
-        // Fallback: text match trực tiếp
         { name: regex },
-        { productCode: regex },
-        { sku: regex },
+        ...orConditions.flatMap((c) => c.$or),
       ],
     })
-      .select('name slug price salePrice thumbnail productCode sku cachedPrice cachedSalePrice')
-      .limit(20) // giảm từ 100 → 20 vì đã lọc phía DB
-      .lean(),
+      .select('name slug price salePrice thumbnail productCode sku cachedPrice cachedSalePrice brand categories')
+      .populate('categories', 'name slug')
+      .populate('brand', 'name slug logo')
+      .limit(100)
+      .lean();
+  }
 
+  const [blogs, brands, categories, trendingKeywords] = await Promise.all([
     BlogPost.find({
       status: 'published',
       $or: [{ title: regex }, { slug: regex }],
@@ -1196,7 +1275,6 @@ const getInstantSuggestions = async (q = '') => {
 
   const activeFsMap = await getActiveFlashSaleMap();
 
-  // Score đơn giản hơn — không cần lọc thỗ vì DB đã filter
   const scoredProducts = matchedProducts
     .map((p) => {
       const fsInfo = activeFsMap.get(p._id.toString());
@@ -1222,6 +1300,7 @@ const getInstantSuggestions = async (q = '') => {
         score: calculateRelevanceScore(p, parsed),
       };
     })
+    .filter((p) => p.score > 0)
     .sort((a, b) => b.score - a.score);
 
   return {
@@ -1246,90 +1325,132 @@ const getInstantSuggestions = async (q = '') => {
  *   - 'hot':      thuần theo volume 24h tuyệt đối (sort count24h)
  */
 const SEED_TRENDING_KEYWORDS = [
-  { keyword: 'tivi samsung', count: 185, count24h: 42, countPrev24h: 18, count7d: 185, count6h: 12, resultsCount: 1, isTrending: true, trendingScore: 98, uniqueSessionCount: 28 },
-  { keyword: 'tủ lạnh', count: 142, count24h: 31, countPrev24h: 15, count7d: 142, count6h: 9, resultsCount: 6, isTrending: true, trendingScore: 89, uniqueSessionCount: 22 },
-  { keyword: 'smart tivi 4k', count: 128, count24h: 27, countPrev24h: 12, count7d: 128, count6h: 8, resultsCount: 8, isTrending: true, trendingScore: 84, uniqueSessionCount: 19 },
-  { keyword: 'máy giặt toshiba', count: 96, count24h: 21, countPrev24h: 9, count7d: 96, count6h: 6, resultsCount: 4, isTrending: true, trendingScore: 78, uniqueSessionCount: 15 },
-  { keyword: 'loa soundbar', count: 75, count24h: 16, countPrev24h: 7, count7d: 75, count6h: 5, resultsCount: 3, isTrending: true, trendingScore: 72, uniqueSessionCount: 12 },
+  { keyword: 'iphone 15 pro max', count: 210, count24h: 48, countPrev24h: 22, count7d: 210, count6h: 15, resultsCount: 6, isTrending: true, trendingScore: 99, zScore: 3.2, uniqueSessionCount: 35, cartCount: 18, purchaseCount: 8, discussionCount: 14 },
+  { keyword: 'macbook air m3', count: 175, count24h: 38, countPrev24h: 19, count7d: 175, count6h: 11, resultsCount: 4, isTrending: true, trendingScore: 92, zScore: 2.8, uniqueSessionCount: 28, cartCount: 14, purchaseCount: 6, discussionCount: 11 },
+  { keyword: 'tivi sony bravia 4k', count: 160, count24h: 35, countPrev24h: 18, count7d: 160, count6h: 10, resultsCount: 5, isTrending: true, trendingScore: 88, zScore: 2.5, uniqueSessionCount: 26, cartCount: 12, purchaseCount: 5, discussionCount: 9 },
+  { keyword: 'loa bluetooth marshall', count: 145, count24h: 32, countPrev24h: 16, count7d: 145, count6h: 9, resultsCount: 4, isTrending: true, trendingScore: 85, zScore: 2.3, uniqueSessionCount: 24, cartCount: 11, purchaseCount: 5, discussionCount: 8 },
+  { keyword: 'robot hút bụi ecovacs', count: 130, count24h: 28, countPrev24h: 14, count7d: 130, count6h: 8, resultsCount: 3, isTrending: true, trendingScore: 82, zScore: 2.1, uniqueSessionCount: 21, cartCount: 10, purchaseCount: 4, discussionCount: 7 },
+  { keyword: 'tủ lạnh samsung bespoke', count: 118, count24h: 25, countPrev24h: 12, count7d: 118, count6h: 7, resultsCount: 5, isTrending: true, trendingScore: 79, zScore: 1.9, uniqueSessionCount: 19, cartCount: 8, purchaseCount: 3, discussionCount: 6 },
+  { keyword: 'máy giặt lg inverter', count: 105, count24h: 22, countPrev24h: 11, count7d: 105, count6h: 6, resultsCount: 4, isTrending: true, trendingScore: 76, zScore: 1.8, uniqueSessionCount: 17, cartCount: 7, purchaseCount: 3, discussionCount: 5 },
+  { keyword: 'nồi chiên không dầu', count: 95, count24h: 20, countPrev24h: 10, count7d: 95, count6h: 5, resultsCount: 4, isTrending: true, trendingScore: 73, zScore: 1.6, uniqueSessionCount: 15, cartCount: 6, purchaseCount: 2, discussionCount: 5 },
+  { keyword: 'bàn phím cơ asus rog', count: 88, count24h: 18, countPrev24h: 9, count7d: 88, count6h: 4, resultsCount: 3, isTrending: true, trendingScore: 70, zScore: 1.5, uniqueSessionCount: 14, cartCount: 5, purchaseCount: 2, discussionCount: 4 },
+  { keyword: 'loa jbl partybox', count: 80, count24h: 16, countPrev24h: 8, count7d: 80, count6h: 4, resultsCount: 3, isTrending: true, trendingScore: 68, zScore: 1.4, uniqueSessionCount: 12, cartCount: 5, purchaseCount: 2, discussionCount: 3 },
+  { keyword: 'ipad pro m4', count: 75, count24h: 15, countPrev24h: 7, count7d: 75, count6h: 3, resultsCount: 3, isTrending: true, trendingScore: 65, zScore: 1.3, uniqueSessionCount: 11, cartCount: 4, purchaseCount: 1, discussionCount: 3 },
+  { keyword: 'máy rửa chén bosch', count: 70, count24h: 14, countPrev24h: 7, count7d: 70, count6h: 3, resultsCount: 3, isTrending: true, trendingScore: 62, zScore: 1.2, uniqueSessionCount: 10, cartCount: 4, purchaseCount: 1, discussionCount: 2 },
 ];
 
 const ensureSeedKeywordsInDb = async () => {
   try {
     for (const item of SEED_TRENDING_KEYWORDS) {
-      await SearchLog.findOneAndUpdate(
-        { keyword: item.keyword },
+      await SearchLog.updateOne(
+        { keyword: item.keyword.toLowerCase().trim() },
         {
-          $set: {
-            isTrending: true,
-            resultsCount: item.resultsCount || 1,
-          },
           $setOnInsert: {
+            keyword: item.keyword.toLowerCase().trim(),
             count: item.count,
             count24h: item.count24h,
             countPrev24h: item.countPrev24h,
             count7d: item.count7d,
             count6h: item.count6h,
             trendingScore: item.trendingScore,
+            zScore: item.zScore || 1.5,
             uniqueSessionCount: item.uniqueSessionCount,
+            cartCount: item.cartCount || 0,
+            purchaseCount: item.purchaseCount || 0,
+            discussionCount: item.discussionCount || 0,
+            resultsCount: item.resultsCount || 1,
+            isTrending: true,
+            lastSearchedAt: new Date(),
           },
         },
-        { upsert: true, new: true }
+        { upsert: true }
       );
     }
   } catch (err) {
+    console.error('[SearchService] ensureSeedKeywordsInDb error:', err.message);
   }
 };
 
-const getTrendingKeywords = async (limit = 5, type = 'all') => {
+const JUNK_KEYWORDS_REGEX = /^(meo|mẹo|top\s*\d+|test|abc|xyz|demo|asdf|qwerty|123|\d+|[a-z]{1,2})$/i;
+
+const getTrendingKeywords = async (limit = 10, type = 'all') => {
   await ensureSeedKeywordsInDb();
+
+  // Background clean junk logs
+  SearchLog.deleteMany({
+    $or: [
+      { keyword: { $regex: JUNK_KEYWORDS_REGEX } },
+      { keyword: { $in: ['meo', 'top 5', 'top 10', 'test', 'aqt', 'p635'] } },
+    ],
+  }).catch(() => {});
 
   let query = {
     count: { $gt: 0 },
-    keyword: { $regex: /^[a-zA-Z0-9À-ỹ\s]{3,}$/i },
+    resultsCount: { $ne: 0 },
+    keyword: {
+      $regex: /^[a-zA-Z0-9À-ỹ\s]{3,}$/i,
+      $nin: ['meo', 'top 5', 'top 10', 'test', 'aqt', 'p635', 'abc', 'xyz'],
+    },
   };
-  let sortOpt = { isTrending: -1, count24h: -1, count: -1, trendingScore: -1 };
+  let sortOpt = { trendingScore: -1, zScore: -1, count24h: -1, count: -1 };
 
   if (type === 'rising') {
     query = {
       ...query,
-      $expr: { $gt: ['$count24h', { $multiply: ['$countPrev24h', 1.3] }] },
+      $or: [
+        { zScore: { $gte: 1.2 } },
+        { $expr: { $gt: ['$count24h', { $multiply: ['$countPrev24h', 1.3] }] } },
+      ],
     };
   } else if (type === 'breakout') {
     query = {
       ...query,
-      countPrev24h: { $gt: 0 },
-      $expr: {
-        $gte: [
-          '$count24h',
-          { $multiply: ['$countPrev24h', BREAKOUT_RATIO] },
-        ],
-      },
+      $or: [
+        { zScore: { $gte: 2.5 } },
+        {
+          countPrev24h: { $gt: 0 },
+          $expr: {
+            $gte: [
+              '$count24h',
+              { $multiply: ['$countPrev24h', BREAKOUT_RATIO] },
+            ],
+          },
+        },
+      ],
     };
-    sortOpt = { count24h: -1 };
+    sortOpt = { zScore: -1, count24h: -1, trendingScore: -1 };
   } else if (type === 'hot') {
-    sortOpt = { isTrending: -1, count24h: -1, count7d: -1 };
+    sortOpt = { count24h: -1, count7d: -1, trendingScore: -1 };
   }
 
   const logs = await SearchLog.find(query)
     .sort(sortOpt)
-    .limit(parseInt(limit, 10))
+    .limit(parseInt(limit, 10) || 10)
     .lean();
 
-  return logs.map((l) => {
-    const breakoutRatio = l.countPrev24h > 0 ? (l.count24h || 0) / l.countPrev24h : 0;
-    return {
-      keyword:         l.keyword,
-      count:           l.count,
-      count24h:        l.count24h || 0,
-      count6h:         l.count6h || 0,
-      purchaseCount:   l.purchaseCount || 0,
-      isTrending:      l.isTrending,
-      isRising:        (l.count24h || 0) > (l.countPrev24h || 0) * 1.3,
-      isBreakout:      breakoutRatio >= BREAKOUT_RATIO,
-      breakoutRatio:   parseFloat(breakoutRatio.toFixed(1)),
-      score:           l.trendingScore || 0,
-    };
-  });
+  return logs
+    .filter((l) => !JUNK_KEYWORDS_REGEX.test(l.keyword))
+    .map((l) => {
+      const breakoutRatio = l.countPrev24h > 0 ? (l.count24h || 0) / l.countPrev24h : 0;
+      const isBreakout = (l.zScore >= 2.5) || (breakoutRatio >= BREAKOUT_RATIO);
+      const isRising = (l.zScore >= 1.2) || ((l.count24h || 0) > (l.countPrev24h || 0) * 1.3);
+
+      return {
+        keyword:         l.keyword,
+        count:           l.count,
+        count24h:        l.count24h || 0,
+        count6h:         l.count6h || 0,
+        purchaseCount:   l.purchaseCount || 0,
+        cartCount:       l.cartCount || 0,
+        discussionCount: l.discussionCount || 0,
+        zScore:          l.zScore || 0,
+        isTrending:      l.isTrending || (l.trendingScore > 70) || (l.zScore >= 1.5),
+        isRising,
+        isBreakout,
+        breakoutRatio:   parseFloat(breakoutRatio.toFixed(1)),
+        score:           l.trendingScore || 0,
+      };
+    });
 };
 
 /**
@@ -1338,7 +1459,7 @@ const getTrendingKeywords = async (limit = 5, type = 'all') => {
 const setKeywordTrending = async (keyword, isTrending = true) => {
   const log = await SearchLog.findOneAndUpdate(
     { keyword: keyword.trim().toLowerCase() },
-    { isTrending },
+    { isTrending, trendingScore: isTrending ? 999999 : 0 },
     { upsert: true, new: true }
   );
   return log;
@@ -1362,8 +1483,11 @@ const exportSearchDataToCSV = async () => {
     'count7d',
     'resultsCount',
     'clickCount',
+    'cartCount',
     'purchaseCount',
+    'discussionCount',
     'uniqueSessionCount',
+    'zScore',
     'trendingScore',
     'isTrending',
     'lastSearchedAt',
@@ -1381,8 +1505,11 @@ const exportSearchDataToCSV = async () => {
       log.count7d || 0,
       log.resultsCount || 0,
       log.clickCount || 0,
+      log.cartCount || 0,
       log.purchaseCount || 0,
+      log.discussionCount || 0,
       log.uniqueSessionCount || 0,
+      log.zScore || 0,
       log.trendingScore || 0,
       log.isTrending ? 1 : 0,
       `"${log.lastSearchedAt ? new Date(log.lastSearchedAt).toISOString() : ''}"`,
@@ -1400,6 +1527,8 @@ module.exports = {
   setKeywordTrending,
   recordSearchKeyword,
   recordSearchClick,
+  recordCartKeyword,
+  recordDiscussionKeyword,
   recordPurchaseKeyword,
   exportSearchDataToCSV,
 };

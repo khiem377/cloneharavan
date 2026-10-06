@@ -20,5 +20,7 @@ router.get('/similar/:productId', controller.getSimilarProducts);
 
 
 router.post('/compute-item-cf', protect, controller.computeItemCF);
+router.get('/sync-csv', controller.syncInteractionsCsv);
+router.post('/sync-csv', controller.syncInteractionsCsv);
 
 module.exports = router;

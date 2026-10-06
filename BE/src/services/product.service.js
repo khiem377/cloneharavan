@@ -771,14 +771,30 @@ const getProductDeals = async (idOrSlug) => {
   const fsData = await getActiveFlashSaleMap();
   let matchedFsItem = null;
   if (fsData && fsData.itemMap) {
-    const keyWithVariant = dv ? `${product._id}_${dv._id}` : `${product._id}_default`;
-    const keyDefault = `${product._id}_default`;
+    const pIdStr = product._id.toString();
+    const keyWithVariant = dv ? `${pIdStr}_${dv._id}` : `${pIdStr}_default`;
+    const keyDefault = `${pIdStr}_default`;
     matchedFsItem = fsData.itemMap.get(keyWithVariant) || fsData.itemMap.get(keyDefault);
+
+    // Fallback: scan map tìm item theo productId (flash sale gắn với variant cụ thể)
+    if (!matchedFsItem) {
+      let bestItem = null;
+      let bestPrice = Infinity;
+      for (const [, item] of fsData.itemMap) {
+        const itemPId = item.productId?.toString() || '';
+        if (itemPId === pIdStr) {
+          const p = item.flashSalePrice ?? item.flashPrice ?? Infinity;
+          if (p < bestPrice) { bestPrice = p; bestItem = item; }
+        }
+      }
+      matchedFsItem = bestItem;
+    }
   }
 
   const fsPrice = matchedFsItem ? (matchedFsItem.flashSalePrice ?? matchedFsItem.flashPrice) : null;
   const fsRemaining = matchedFsItem ? Math.max(0, (matchedFsItem.stockLimit || 0) - (matchedFsItem.soldCount || 0)) : 0;
   const isFlashSaleActive = matchedFsItem && fsPrice !== null && fsPrice < productPrice && fsRemaining > 0;
+
 
   const activeFilter = {
     isActive: true,
@@ -844,11 +860,30 @@ const getProductDeals = async (idOrSlug) => {
     effectivePrice,
     bestPromotion,
     flashSale: flashSaleDeal,
+    flashSaleItems: fsData?.activeSale ? (() => {
+      // Trả về tất cả flash sale items của product này, key by variantId (hoặc 'default')
+      const items = [];
+      for (const [, item] of (fsData.itemMap || new Map())) {
+        const itemPId = item.productId?.toString() || '';
+        if (itemPId === product._id.toString()) {
+          items.push({
+            variantId: item.variantId ? item.variantId.toString() : null,
+            price: item.flashSalePrice ?? item.flashPrice,
+            originalPrice: item.originalPrice,
+            remaining: Math.max(0, (item.stockLimit || 0) - (item.soldCount || 0)),
+            stockLimit: item.stockLimit,
+            soldCount: item.soldCount,
+          });
+        }
+      }
+      return items;
+    })() : [],
     isFlashSale: isFlashSaleActive,
     dealNotice: isFlashSaleActive
       ? 'Sản phẩm đang trong Flash Sale — Giá sốc độc quyền, không áp dụng cộng dồn với khuyến mãi hoặc quà tặng kèm.'
       : null,
   };
+
 };
 
 const searchInventoryProducts = async (keyword) => {

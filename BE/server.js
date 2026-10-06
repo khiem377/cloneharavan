@@ -128,6 +128,19 @@ const assignCategoriesToProducts = async () => {
           addBySlug('gia-dung-nha-bep');
           addBySlug('cot-thiet-bi-bep');
           addBySlug('thiet-bi-bep');
+        } else if (nameLower.includes('đồng hồ') || nameLower.includes('apple watch') || nameLower.includes('galaxy watch') || nameLower.includes('garmin') || nameLower.includes('fenix')) {
+          addBySlug('dong-ho-thong-minh');
+          addBySlug('smartwatch');
+        } else if (nameLower.includes('điện thoại') || nameLower.includes('iphone') || nameLower.includes('s24 ultra') || nameLower.includes('z fold') || nameLower.includes('z flip') || nameLower.includes('redmi')) {
+          addBySlug('dien-thoai-thong-minh');
+          addBySlug('dien-thoai');
+        } else if (nameLower.includes('macbook') || nameLower.includes('laptop') || nameLower.includes('zenbook') || nameLower.includes('thinkpad') || nameLower.includes('legion') || nameLower.includes('dell xps')) {
+          addBySlug('macbook-laptop');
+          addBySlug('laptop');
+        } else if (nameLower.includes('ipad') || nameLower.includes('tablet') || nameLower.includes('tab s9') || nameLower.includes('pad 6')) {
+          addBySlug('ipad-tablet');
+        } else if (nameLower.includes('robot') || nameLower.includes('hút bụi') || nameLower.includes('roborock') || nameLower.includes('dreame') || nameLower.includes('ecovacs') || nameLower.includes('deebot')) {
+          addBySlug('robot-hut-bui');
         }
 
         if (matchedCatIds.size > 0) {
@@ -201,13 +214,73 @@ const ensureSamsungVariants = async () => {
   }
 };
 
+const ensureAdminRolesAndPermissions = async () => {
+  try {
+    const User = require('./src/models/user.model');
+    const Role = require('./src/models/role.model');
+    const seedFullPermissions = require('./scripts/seed-full-permissions');
+
+    // 1. Sinh đầy đủ danh sách Permissions và các Preset Roles (Administrator, Manager, Staff,...)
+    await seedFullPermissions(false);
+
+    let adminRole = await Role.findOne({ code: 'administrator' });
+    if (!adminRole) {
+      adminRole = await Role.findOne({ name: /administrator/i });
+    }
+
+    const adminUsers = await User.find({
+      $or: [
+        { email: { $regex: /^admin/i } },
+        { role: 'administrator' },
+        { role: 'admin' },
+      ],
+    });
+
+    for (const u of adminUsers) {
+      let needsSave = false;
+      if (u.role !== 'administrator') {
+        u.role = 'administrator';
+        needsSave = true;
+      }
+      if (adminRole && (!u.roleId || u.roleId.toString() !== adminRole._id.toString())) {
+        u.roleId = adminRole._id;
+        needsSave = true;
+      }
+      if (needsSave) {
+        await u.save({ validateBeforeSave: false });
+        console.log(`[AdminSync] Đã đồng bộ Administrator cho: ${u.email}`);
+      }
+    }
+
+    // 2. Gán Role "Quản lý cửa hàng (Manager)" cho Hà Gia Khiêm (khiemhgps39587@gmail.com)
+    const managerRole = await Role.findOne({ code: 'manager' });
+    if (managerRole) {
+      const khiemUser = await User.findOne({ email: 'khiemhgps39587@gmail.com' });
+      if (khiemUser) {
+        khiemUser.role = 'manager';
+        khiemUser.roleId = managerRole._id;
+        khiemUser.isActive = true;
+        await khiemUser.save({ validateBeforeSave: false });
+        console.log(`[RoleAssign] Đã gán quyền "Quản lý cửa hàng (Manager)" cho Hà Gia Khiêm (${khiemUser.email})`);
+      }
+    }
+  } catch (err) {
+    console.warn('[AdminSync] Warning:', err.message);
+  }
+};
+
+const { fixAllProductCategoriesAndImages } = require('./src/services/productCatalogFix.service');
+
 connectDB().then(async () => {
   await initElasticsearch();
   await assignCategoriesToProducts();
+  // await fixAllProductCategoriesAndImages();
   await ensureSamsungVariants();
+  await ensureAdminRolesAndPermissions();
 
   app.listen(PORT, () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);
     console.log(`📦 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`⚡ Real-time Interaction Pipeline Active`);
   });
 });

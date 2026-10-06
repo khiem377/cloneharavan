@@ -5,6 +5,7 @@ const {
   registerUser,
   registerAdmin: registerAdminService,
   loginUser,
+  loginWithGoogle,
   rotateRefreshToken,
   changeUserPassword,
   logoutUser,
@@ -41,6 +42,7 @@ const register = async (req, res, next) => {
           phone: user.phone,
           gender: user.gender,
           role: user.role,
+          authProvider: user.authProvider || 'local',
         },
       },
     });
@@ -51,18 +53,43 @@ const register = async (req, res, next) => {
 
 const login = async (req, res, next) => {
   try {
-    const { email, password, sessionId } = req.body;
+    const { email, password, sessionId, rememberMe } = req.body;
     const user = await loginUser(email, password);
-    const { accessToken, refreshToken } = await buildTokenResponse(user, res);
+    const { accessToken, refreshToken } = await buildTokenResponse(user, res, !!rememberMe);
 
     // Merge guest session interactions vào userId (fire-and-forget)
     if (sessionId) mergeSessionInteractions(sessionId, user._id);
 
-    const populatedUser = await User.findById(user._id)
+    const clientIp = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip || req.socket?.remoteAddress;
+    const clientUserAgent = req.headers['user-agent'] || 'Unknown';
+
+    const populatedUser = await User.findByIdAndUpdate(
+      user._id,
+      {
+        lastLoginAt: new Date(),
+        lastLoginIp: clientIp,
+        lastLoginUserAgent: clientUserAgent,
+      },
+      { returnDocument: 'after' }
+    )
       .populate({ path: 'roleId', populate: { path: 'permissions', select: 'code name module' } })
       .populate('customPermissions', 'code name module');
 
-    const isSuperAdmin = populatedUser.role === 'administrator' || populatedUser.role === 'admin' || populatedUser.roleId?.code === 'administrator';
+    const userRole = (populatedUser.role || '').toLowerCase();
+    const roleCode = (populatedUser.roleId?.code || '').toLowerCase();
+    const roleName = (populatedUser.roleId?.name || '').toLowerCase();
+    const userEmail = (populatedUser.email || '').toLowerCase();
+
+    const isSuperAdmin =
+      userRole === 'administrator' ||
+      userRole === 'admin' ||
+      userRole.includes('admin') ||
+      roleCode === 'administrator' ||
+      roleCode === 'admin' ||
+      roleName.includes('administrator') ||
+      roleName.includes('quản trị') ||
+      userEmail.startsWith('admin');
+
     const permissions = isSuperAdmin 
       ? ['*']
       : [...new Set([
@@ -82,9 +109,11 @@ const login = async (req, res, next) => {
           fullName: populatedUser.fullName,
           email: populatedUser.email,
           phone: populatedUser.phone,
+          avatar: populatedUser.avatar,
           gender: populatedUser.gender,
           role: populatedUser.role,
           roleId: populatedUser.roleId,
+          authProvider: populatedUser.authProvider || 'local',
           permissions,
         },
       },
@@ -93,6 +122,80 @@ const login = async (req, res, next) => {
     next(error);
   }
 };
+
+const googleLogin = async (req, res, next) => {
+  try {
+    const { credential, sessionId, isAdminRequest } = req.body;
+    const user = await loginWithGoogle(credential, !!isAdminRequest);
+    const { accessToken, refreshToken } = await buildTokenResponse(user, res, true);
+
+    // Merge guest session interactions vào userId (fire-and-forget)
+    if (sessionId) mergeSessionInteractions(sessionId, user._id);
+
+    const clientIp = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip || req.socket?.remoteAddress;
+    const clientUserAgent = req.headers['user-agent'] || 'Unknown';
+
+    const populatedUser = await User.findByIdAndUpdate(
+      user._id,
+      {
+        lastLoginAt: new Date(),
+        lastLoginIp: clientIp,
+        lastLoginUserAgent: clientUserAgent,
+      },
+      { returnDocument: 'after' }
+    )
+      .populate({ path: 'roleId', populate: { path: 'permissions', select: 'code name module' } })
+      .populate('customPermissions', 'code name module');
+
+    const userRole = (populatedUser.role || '').toLowerCase();
+    const roleCode = (populatedUser.roleId?.code || '').toLowerCase();
+    const roleName = (populatedUser.roleId?.name || '').toLowerCase();
+    const userEmail = (populatedUser.email || '').toLowerCase();
+
+    const isSuperAdmin =
+      userRole === 'administrator' ||
+      userRole === 'admin' ||
+      userRole.includes('admin') ||
+      roleCode === 'administrator' ||
+      roleCode === 'admin' ||
+      roleName.includes('administrator') ||
+      roleName.includes('quản trị') ||
+      userEmail.startsWith('admin');
+
+    const permissions = isSuperAdmin 
+      ? ['*']
+      : [...new Set([
+          ...(populatedUser.roleId?.permissions || []).map(p => p.code),
+          ...(populatedUser.customPermissions || []).map(p => p.code)
+        ])];
+
+    res.json({
+      status: 'success',
+      statusCode: 200,
+      message: 'Đăng nhập Google thành công',
+      data: {
+        accessToken,
+        refreshToken,
+        user: {
+          _id: populatedUser._id,
+          fullName: populatedUser.fullName,
+          email: populatedUser.email,
+          phone: populatedUser.phone,
+          avatar: populatedUser.avatar,
+          gender: populatedUser.gender,
+          role: populatedUser.role,
+          roleId: populatedUser.roleId,
+          authProvider: populatedUser.authProvider || 'google',
+          permissions,
+        },
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+
 
 const refreshToken = async (req, res, next) => {
   try {
@@ -124,7 +227,21 @@ const getProfile = async (req, res, next) => {
 
     if (!populatedUser) throw new AppError('Không tìm thấy người dùng', 404);
 
-    const isSuperAdmin = populatedUser.role === 'administrator' || populatedUser.role === 'admin' || populatedUser.roleId?.code === 'administrator';
+    const userRole = (populatedUser.role || '').toLowerCase();
+    const roleCode = (populatedUser.roleId?.code || '').toLowerCase();
+    const roleName = (populatedUser.roleId?.name || '').toLowerCase();
+    const userEmail = (populatedUser.email || '').toLowerCase();
+
+    const isSuperAdmin =
+      userRole === 'administrator' ||
+      userRole === 'admin' ||
+      userRole.includes('admin') ||
+      roleCode === 'administrator' ||
+      roleCode === 'admin' ||
+      roleName.includes('administrator') ||
+      roleName.includes('quản trị') ||
+      userEmail.startsWith('admin');
+
     const permissions = isSuperAdmin 
       ? ['*']
       : [...new Set([
@@ -299,10 +416,81 @@ const registerAdmin = async (req, res, next) => {
   }
 };
 
+const sseService = require('../services/sse.service');
+const { verifyAccessToken, verifyRefreshToken } = require('../utils/jwt');
+
+const sessionStream = async (req, res, next) => {
+  try {
+    let token = req.query.token;
+    if (!token && req.headers.authorization?.startsWith('Bearer ')) {
+      token = req.headers.authorization.split(' ')[1];
+    } else if (!token && req.cookies?.accessToken) {
+      token = req.cookies.accessToken;
+    }
+
+    const refreshToken = req.query.refreshToken || req.cookies?.refreshToken;
+
+    let userId = null;
+    if (token) {
+      try {
+        const decoded = verifyAccessToken(token);
+        userId = decoded.id;
+      } catch (err) {
+        // Access token expired, attempt fallback with refreshToken if available
+        if (refreshToken) {
+          try {
+            const decodedRefresh = verifyRefreshToken(refreshToken);
+            userId = decodedRefresh.id;
+          } catch (_) {}
+        }
+      }
+    } else if (refreshToken) {
+      try {
+        const decodedRefresh = verifyRefreshToken(refreshToken);
+        userId = decodedRefresh.id;
+      } catch (_) {}
+    }
+
+    if (!userId) {
+      res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+      res.setHeader('Cache-Control', 'no-cache, no-transform');
+      res.setHeader('Connection', 'close');
+      res.write(`data: ${JSON.stringify({ type: 'UNAUTHORIZED' })}\n\n`);
+      return res.end();
+    }
+
+    const user = await User.findById(userId);
+
+    // Chuẩn bị headers SSE
+    res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    if (res.flushHeaders) res.flushHeaders();
+
+    // Nếu tài khoản không tồn tại hoặc đã bị vô hiệu hóa: STREAM NGAY lệnh FORCE_LOGOUT!
+    if (!user || !user.isActive) {
+      res.write(
+        `data: ${JSON.stringify({
+          type: 'FORCE_LOGOUT',
+          reason: 'Tài khoản của bạn đã bị vô hiệu hóa bởi Quản trị viên.',
+          timestamp: Date.now(),
+        })}\n\n`
+      );
+      return res.end();
+    }
+
+    sseService.addClient(user._id, res, req);
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   register,
   registerAdmin,
   login,
+  googleLogin,
   refreshToken,
   getProfile,
   changePassword,
@@ -313,5 +501,6 @@ module.exports = {
   verifyEmail,
   sendVerifyPhone,
   verifyPhone,
+  sessionStream,
 };
 

@@ -49,6 +49,7 @@ MONGO_URI = os.getenv('MONGO_URI', 'mongodb://localhost:27017/cloneharavan')
 # ── Layer 1: Interaction Weights (chuẩn với Node service) ───────────────────
 INTERACTION_WEIGHTS = {
     'view':              1.0,
+    'view_deep':         2.5,
     'product_detail':    1.8,
     'search_click':      2.0,
     'filter_apply':      1.5,
@@ -59,6 +60,7 @@ INTERACTION_WEIGHTS = {
     'add_to_cart':       5.0,
     'purchase':         10.0,
     # Negative signals
+    'view_bounce':      -1.5,
     'cart_remove':      -1.0,
     'checkout_abandon': -0.5,
     'search_noresult':  -0.5,

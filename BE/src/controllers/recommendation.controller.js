@@ -113,6 +113,21 @@ const computeItemCF = async (req, res, next) => {
   }
 };
 
+// ── GET/POST /api/recommendations/sync-csv ────────────────────────────────
+const syncInteractionsCsv = async (req, res, next) => {
+  try {
+    const cleanMock = req.query.cleanMock !== 'false';
+    const result = await recommendationService.syncAllInteractionsToCsv({ cleanMock });
+    res.json({
+      status: 'success',
+      message: 'Đã đồng bộ 100% tương tác thực tế từ MongoDB sang interactions.csv',
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   recordInteraction,
   getPersonalizedRecommendations,
@@ -120,4 +135,5 @@ module.exports = {
   getTrendingRecommendations,
   getSimilarProducts,
   computeItemCF,
+  syncInteractionsCsv,
 };

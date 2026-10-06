@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const axios = require('axios');
 const User = require('../models/user.model');
 const { AppError } = require('../utils/AppError');
 const {
@@ -11,19 +12,31 @@ const {
   sendVerificationEmail,
 } = require('./email.service');
 
-const COOKIE_OPTIONS = {
+const COOKIE_OPTIONS_PERSISTENT = {
   httpOnly: true,
   secure: process.env.NODE_ENV === 'production',
   sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
-  maxAge: 30 * 24 * 60 * 60 * 1000, // 30 ngày gia hạn cuộn (Sliding Refresh)
+  maxAge: 30 * 24 * 60 * 60 * 1000, // 30 ngày - persistent
 };
 
-const buildTokenResponse = async (user, res) => {
+// Không có maxAge = session cookie (xóa khi đóng browser)
+const COOKIE_OPTIONS_SESSION = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+};
+
+// Legacy alias giữ cho các chỗ khác import
+const COOKIE_OPTIONS = COOKIE_OPTIONS_PERSISTENT;
+
+const buildTokenResponse = async (user, res, rememberMe = false) => {
   const accessToken = generateAccessToken(user._id);
   const refreshToken = generateRefreshToken(user._id);
 
   await User.findByIdAndUpdate(user._id, { refreshToken });
-  res.cookie('refreshToken', refreshToken, COOKIE_OPTIONS);
+
+  const cookieOpts = rememberMe ? COOKIE_OPTIONS_PERSISTENT : COOKIE_OPTIONS_SESSION;
+  res.cookie('refreshToken', refreshToken, cookieOpts);
 
   return { accessToken, refreshToken };
 };
@@ -254,12 +267,104 @@ const registerAdmin = async (data) => {
   return newAdmin;
 };
 
+/**
+ * Xác thực và Đăng nhập / Đăng ký bằng Google OAuth ID Token (Credential)
+ */
+const loginWithGoogle = async (credential, isAdminRequest = false) => {
+  if (!credential) {
+    throw new AppError('Google credential (id_token) là bắt buộc', 400);
+  }
+
+  let googlePayload;
+  try {
+    const googleRes = await axios.get(
+      `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`,
+      { timeout: 8000 }
+    );
+    googlePayload = googleRes.data;
+  } catch (err) {
+    throw new AppError(
+      'Mã xác thực Google không hợp lệ hoặc đã hết hạn. Vui lòng thử lại!',
+      401
+    );
+  }
+
+  const { sub: googleId, email, name, picture, email_verified } = googlePayload;
+  if (!email) {
+    throw new AppError('Không thể lấy thông tin email từ tài khoản Google', 400);
+  }
+
+  const normalizedEmail = email.toLowerCase().trim();
+
+  // Tìm user theo googleId hoặc email
+  let user = await User.findOne({
+    $or: [{ googleId }, { email: normalizedEmail }],
+  });
+
+  if (user) {
+    if (!user.isActive) {
+      throw new AppError('Tài khoản đã bị vô hiệu hóa bởi Quản trị viên', 403);
+    }
+
+    // Cập nhật googleId & avatar nếu có picture từ Google
+    let hasChanges = false;
+    if (!user.googleId) {
+      user.googleId = googleId;
+      user.authProvider = 'google';
+      hasChanges = true;
+    }
+    if (picture && (!user.avatar?.url || user.avatar?.url !== picture)) {
+      user.avatar = { url: picture };
+      hasChanges = true;
+    }
+    if (!user.isEmailVerified && (email_verified === 'true' || email_verified === true)) {
+      user.isEmailVerified = true;
+      user.isAccountActivated = true;
+      hasChanges = true;
+    }
+
+    if (hasChanges) {
+      await user.save({ validateBeforeSave: false });
+    }
+  } else {
+    // Nếu là Admin request mà tài khoản chưa từng được tạo trước đó thì chặn
+    if (isAdminRequest) {
+      throw new AppError(
+        'Tài khoản Google này chưa được cấp quyền quản trị trên hệ thống. Vui lòng liên hệ Super Admin!',
+        403
+      );
+    }
+
+    // Tạo tài khoản mới cho Khách hàng Client
+    user = await User.create({
+      fullName: name || normalizedEmail.split('@')[0],
+      email: normalizedEmail,
+      googleId,
+      authProvider: 'google',
+      avatar: picture ? { url: picture } : undefined,
+      isEmailVerified: email_verified === 'true' || email_verified === true,
+      isAccountActivated: true,
+      gender: 'other',
+      role: 'user',
+      isActive: true,
+    });
+  }
+
+  // Kiểm tra quyền nếu là Admin request
+  if (isAdminRequest && user.role === 'user') {
+    throw new AppError('Tài khoản của bạn không có quyền truy cập trang quản trị', 403);
+  }
+
+  return user;
+};
+
 module.exports = {
   COOKIE_OPTIONS,
   buildTokenResponse,
   registerUser,
   registerAdmin,
   loginUser,
+  loginWithGoogle,
   rotateRefreshToken,
   changeUserPassword,
   logoutUser,
@@ -270,4 +375,5 @@ module.exports = {
   sendPhoneOtp,
   verifyPhoneOtp,
 };
+
 
