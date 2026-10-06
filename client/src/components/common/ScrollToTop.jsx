@@ -87,10 +87,10 @@ export default function ScrollToTop() {
           title="Cuộn lên đầu trang"
           aria-label="Cuộn lên đầu trang"
           data-no-progress="true"
-          className={`fixed z-[60] w-10 h-10 rounded-[6px] bg-white border border-slate-300 text-slate-700 shadow-md flex items-center justify-center hover:bg-slate-50 hover:text-[#284ea1] hover:border-[#284ea1] transition-all cursor-pointer active:scale-[0.98] animate-fadeIn ${
+          className={`fixed z-40 w-9 h-9 sm:w-10 sm:h-10 rounded-[6px] bg-white border border-slate-300 text-slate-700 shadow-md flex items-center justify-center hover:bg-slate-50 hover:text-red-600 hover:border-red-500 transition-all cursor-pointer active:scale-[0.98] animate-fadeIn ${
             isProductPage
-              ? 'bottom-20 right-4 sm:bottom-22 sm:right-6'
-              : 'bottom-6 right-5 sm:bottom-6 sm:right-6'
+              ? 'bottom-[176px] right-4 sm:bottom-[184px] sm:right-6'
+              : 'bottom-[108px] right-4 sm:bottom-[116px] sm:right-6'
           }`}
         >
           <ChevronUp className="w-5 h-5 stroke-[2.5]" />

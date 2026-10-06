@@ -1,23 +1,20 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { CheckCircle2, AlertCircle, AlertTriangle, Info, X } from 'lucide-react';
 
-// Lightweight subscriber pattern for toast triggers
+// ─── Subscriber Pattern ────────────────────────────────────────────────────────
 let listeners = [];
 let toasts = [];
 
 const notifyListeners = () => {
-  listeners.forEach((listener) => listener([...toasts]));
+  listeners.forEach((fn) => fn([...toasts]));
 };
 
 /**
  * Toast Trigger Utility
- * @example
- * toast.success('Gửi đánh giá thành công!');
- * toast.error('Có lỗi xảy ra.');
- * toast.warning('Chỉ khách hàng đã mua mới được nhận xét.');
- * toast.info('Thông báo hệ thống.');
+ * toast.success('Thành công!');
+ * toast.error('Có lỗi.');
+ * toast.warning('Lưu ý.');
  */
 export const toast = (message, options = {}) => {
   const id = options.id || Math.random().toString(36).substring(2, 9);
@@ -25,91 +22,80 @@ export const toast = (message, options = {}) => {
     id,
     message,
     title: options.title || null,
-    type: options.type || 'info', // 'success' | 'error' | 'warning' | 'info'
+    type: options.type || 'success',
     duration: options.duration !== undefined ? options.duration : 3000,
     ...options,
   };
-
-  // Limit max concurrent toasts to prevent clutter
   toasts = [newToast, ...toasts.slice(0, 4)];
   notifyListeners();
   return id;
 };
 
-toast.success = (message, options = {}) => toast(message, { ...options, type: 'success' });
-toast.error = (message, options = {}) => toast(message, { ...options, type: 'error' });
-toast.warning = (message, options = {}) => toast(message, { ...options, type: 'warning' });
-toast.info = (message, options = {}) => toast(message, { ...options, type: 'info' });
+toast.success = (msg, opts = {}) => toast(msg, { ...opts, type: 'success' });
+toast.error   = (msg, opts = {}) => toast(msg, { ...opts, type: 'error' });
+toast.warning = (msg, opts = {}) => toast(msg, { ...opts, type: 'warning' });
 
 toast.dismiss = (id) => {
-  if (id) {
-    toasts = toasts.filter((t) => t.id !== id);
-  } else {
-    toasts = [];
-  }
+  toasts = id ? toasts.filter((t) => t.id !== id) : [];
   notifyListeners();
 };
 
 export const useToast = () => {
   const [activeToasts, setActiveToasts] = useState(toasts);
-
   useEffect(() => {
-    const handleUpdate = (updatedToasts) => {
-      setActiveToasts(updatedToasts);
-    };
-    listeners.push(handleUpdate);
-    return () => {
-      listeners = listeners.filter((l) => l !== handleUpdate);
-    };
+    const handler = (updated) => setActiveToasts(updated);
+    listeners.push(handler);
+    return () => { listeners = listeners.filter((l) => l !== handler); };
   }, []);
-
-  return {
-    toasts: activeToasts,
-    toast,
-    dismiss: toast.dismiss,
-  };
+  return { toasts: activeToasts, toast, dismiss: toast.dismiss };
 };
 
-const TOAST_THEMES = {
+// ─── Per-type config ──────────────────────────────────────────────────────────
+const TYPE_CONFIG = {
   success: {
-    icon: CheckCircle2,
-    iconWrapperClass: 'bg-emerald-50 text-emerald-600 border border-emerald-200/60',
-    barClass: 'bg-emerald-600',
-    title: 'Thành công',
+    label: 'Thành công',
+    accent: '#10b981',      // emerald-500
+    iconBg: '#10b981',
+    icon: (
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="20 6 9 17 4 12" />
+      </svg>
+    ),
   },
   error: {
-    icon: AlertCircle,
-    iconWrapperClass: 'bg-red-50 text-red-600 border border-red-200/60',
-    barClass: 'bg-red-600',
-    title: 'Thông báo',
+    label: 'Thông báo',
+    accent: '#ef4444',      // red-500
+    iconBg: '#ef4444',
+    icon: (
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+      </svg>
+    ),
   },
   warning: {
-    icon: AlertTriangle,
-    iconWrapperClass: 'bg-amber-50 text-amber-600 border border-amber-200/60',
-    barClass: 'bg-amber-500',
-    title: 'Lưu ý',
-  },
-  info: {
-    icon: Info,
-    iconWrapperClass: 'bg-blue-50 text-blue-600 border border-blue-200/60',
-    barClass: 'bg-blue-600',
-    title: 'Thông tin',
+    label: 'Lưu ý',
+    accent: '#f59e0b',      // amber-500
+    iconBg: '#f59e0b',
+    icon: (
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+        <line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
+      </svg>
+    ),
   },
 };
 
+// ─── Single Toast Item ─────────────────────────────────────────────────────────
 function ToastItem({ toastItem, onDismiss }) {
-  const { id, message, title, type = 'info', duration = 3000 } = toastItem;
+  const { id, message, title, type = 'success', duration = 3000 } = toastItem;
   const [isHovered, setIsHovered] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
 
-  const theme = TOAST_THEMES[type] || TOAST_THEMES.info;
-  const IconComponent = theme.icon;
+  const cfg = TYPE_CONFIG[type] || TYPE_CONFIG.success;
 
   const handleClose = useCallback(() => {
     setIsExiting(true);
-    setTimeout(() => {
-      onDismiss(id);
-    }, 180);
+    setTimeout(() => onDismiss(id), 200);
   }, [id, onDismiss]);
 
   return (
@@ -117,45 +103,59 @@ function ToastItem({ toastItem, onDismiss }) {
       role="alert"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      style={{
+        borderLeft: `3px solid ${cfg.accent}`,
+        opacity: isExiting ? 0 : 1,
+        transform: isExiting ? 'translateX(12px) scale(0.97)' : undefined,
+      }}
       className={`
         relative overflow-hidden pointer-events-auto w-full
-        bg-white border border-slate-200 rounded-[6px] shadow-sm
-        p-3 sm:p-3.5 flex items-start gap-3
+        bg-white border border-slate-200 rounded-[6px]
+        flex items-start gap-3 p-3.5
         transition-all duration-200 ease-out
-        ${isExiting ? 'opacity-0 translate-x-4 scale-95' : 'animate-toast-slide-in'}
+        ${!isExiting ? 'animate-toast-slide-in' : ''}
       `}
     >
-      {/* Icon Badge */}
-      <div className={`w-8 h-8 rounded-[6px] flex items-center justify-center shrink-0 ${theme.iconWrapperClass}`}>
-        <IconComponent className="w-4 h-4 shrink-0" strokeWidth={2.2} />
+      {/* Solid icon square – NOT pale bg, uses full color */}
+      <div
+        className="w-[26px] h-[26px] rounded-[4px] flex items-center justify-center shrink-0 mt-0.5"
+        style={{ backgroundColor: cfg.iconBg }}
+      >
+        {cfg.icon}
       </div>
 
-      {/* Text Content */}
-      <div className="flex-1 min-w-0 pr-1 py-0.5">
-        <h4 className="text-xs font-bold text-slate-900 leading-tight mb-0.5">
-          {title || theme.title}
-        </h4>
-        <p className="text-xs text-slate-600 leading-relaxed font-medium break-words">
+      {/* Text */}
+      <div className="flex-1 min-w-0 pr-1">
+        <p
+          className="text-[10px] font-bold uppercase tracking-widest mb-0.5"
+          style={{ color: cfg.accent, fontFamily: 'monospace' }}
+        >
+          {title || cfg.label}
+        </p>
+        <p className="text-xs text-slate-800 leading-relaxed font-medium break-words">
           {message}
         </p>
       </div>
 
-      {/* Close Button */}
+      {/* Close button */}
       <button
         type="button"
         onClick={handleClose}
-        className="p-1 rounded-[6px] text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer active:scale-[0.98] shrink-0 -mr-1 -mt-0.5"
-        aria-label="Đóng thông báo"
+        className="p-1 rounded-[4px] text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer active:scale-[0.98] shrink-0 -mr-0.5 -mt-0.5"
+        aria-label="Đóng"
       >
-        <X className="w-4 h-4" />
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
       </button>
 
-      {/* Progress Bar (Countdown ~3s, pauses on hover) */}
+      {/* Progress bar at bottom */}
       {duration > 0 && (
-        <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-slate-100 overflow-hidden rounded-b-[6px]">
+        <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-slate-100">
           <div
-            className={`h-full ${theme.barClass}`}
             style={{
+              height: '100%',
+              backgroundColor: cfg.accent,
               animation: `toastProgress ${duration}ms linear forwards`,
               animationPlayState: isHovered ? 'paused' : 'running',
             }}
@@ -167,17 +167,14 @@ function ToastItem({ toastItem, onDismiss }) {
   );
 }
 
-/**
- * Toast Container mounted at the top-right of the viewport
- */
+// ─── Container — fixed top-right ──────────────────────────────────────────────
 export function ToastContainer() {
   const { toasts, dismiss } = useToast();
-
   if (!toasts || toasts.length === 0) return null;
 
   return (
     <div
-      className="fixed top-4 right-4 z-[99999] pointer-events-none flex flex-col gap-2.5 max-w-[380px] w-[calc(100vw-32px)]"
+      className="fixed top-4 right-4 z-[99999] pointer-events-none flex flex-col gap-2 max-w-[360px] w-[calc(100vw-32px)]"
       aria-live="polite"
     >
       {toasts.map((item) => (

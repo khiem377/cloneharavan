@@ -6,7 +6,7 @@ const BASE_URL =
     ? '/api/v1'
     : process.env.API_SERVER_URL || 'http://localhost:5000/api/v1';
 
-const AUTH_ROUTES = ['/auth/login', '/auth/refresh-token', '/auth/register', '/auth/forgot-password'];
+const AUTH_ROUTES = ['/auth/login', '/auth/google', '/auth/refresh-token', '/auth/register', '/auth/forgot-password'];
 const isAuthRoute = (url = '') => AUTH_ROUTES.some((r) => url.includes(r));
 
 export const api = axios.create({
@@ -55,6 +55,30 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
     const status = error.response?.status;
+
+    // Nếu tài khoản bị khóa (403 deactivate)
+    if (status === 403) {
+      const message = error.response?.data?.message || '';
+      if (
+        message.toLowerCase().includes('deactivated') ||
+        message.toLowerCase().includes('khóa') ||
+        message.toLowerCase().includes('bị khóa')
+      ) {
+        useAuthStore.getState().clearAuth();
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(
+            new CustomEvent('session:force_logout', {
+              detail: {
+                reason:
+                  message ||
+                  'Tài khoản của bạn đã bị vô hiệu hóa bởi Quản trị viên.',
+              },
+            })
+          );
+        }
+      }
+      return Promise.reject(error);
+    }
 
     if (
       status !== 401 ||
