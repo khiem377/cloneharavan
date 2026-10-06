@@ -2,12 +2,15 @@ import { useCallback, useState, useRef, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { useQueryClient } from '@tanstack/react-query';
 import {
-  Upload, X, CheckCircle, AlertCircle, Loader2, Image, Link,
+  Upload, CheckCircle, AlertCircle, Loader2, Image, Link,
   FolderOpen, Folder, ChevronDown, Check
 } from '@/components/ui/Icons';
 import { mediaService } from '@/services/media.service';
 import { useFolders, FOLDERS_KEY } from '@/hooks/useFolders';
 import { toast } from '@/providers/ToastProvider';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 function formatSize(bytes) {
   if (bytes < 1024) return bytes + ' B';
@@ -45,7 +48,7 @@ function FolderSelectPopover({ selectedFolderId, onChange, flatFolders }) {
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="flex items-center justify-between gap-2 h-9 w-full rounded-md border border-input bg-background px-3 text-sm font-semibold text-foreground cursor-pointer text-left transition-colors"
+        className="flex items-center justify-between gap-2 h-9 w-full rounded-[6px] border border-input bg-background px-3 text-xs font-semibold text-foreground cursor-pointer text-left transition-colors"
       >
         <FolderOpen size={16} className="text-foreground shrink-0" />
         <span className="truncate flex-1">
@@ -55,10 +58,10 @@ function FolderSelectPopover({ selectedFolderId, onChange, flatFolders }) {
       </button>
 
       {open && (
-        <div className="absolute top-[calc(100%+4px)] left-0 right-0 z-50 max-h-56 overflow-y-auto rounded-lg border border-border bg-popover p-1 shadow-xl text-popover-foreground text-xs flex flex-col gap-0.5">
+        <div className="absolute top-[calc(100%+4px)] left-0 right-0 z-50 max-h-56 overflow-y-auto rounded-[6px] border border-border bg-popover p-1 shadow-sm text-popover-foreground text-xs flex flex-col gap-0.5">
           <button
             type="button"
-            className={`flex items-center gap-2 w-full rounded-md px-2.5 py-2 text-left cursor-pointer transition-colors ${!selectedFolderId ? 'bg-accent font-bold text-foreground' : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`}
+            className={`flex items-center gap-2 w-full rounded-[4px] px-2.5 py-2 text-left cursor-pointer transition-colors ${!selectedFolderId ? 'bg-accent font-bold text-foreground' : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`}
             onClick={() => { onChange(''); setOpen(false); }}
           >
             <FolderOpen size={15} className="shrink-0 text-muted-foreground" />
@@ -74,7 +77,7 @@ function FolderSelectPopover({ selectedFolderId, onChange, flatFolders }) {
               <button
                 key={f._id}
                 type="button"
-                className={`flex items-center gap-2 w-full rounded-md px-2.5 py-1.5 text-left cursor-pointer transition-colors ${isSelected ? 'bg-accent font-bold text-foreground' : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`}
+                className={`flex items-center gap-2 w-full rounded-[4px] px-2.5 py-1.5 text-left cursor-pointer transition-colors ${isSelected ? 'bg-accent font-bold text-foreground' : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`}
                 onClick={() => { onChange(f._id); setOpen(false); }}
                 style={{ paddingLeft: 10 + f.depth * 14 }}
               >
@@ -108,7 +111,7 @@ function FileItem({ file, status, error, progress = 0, duplicateUrl = null }) {
     : <Image size={15} className="text-muted-foreground shrink-0" />;
 
   return (
-    <div className={`flex flex-col gap-1.5 p-2.5 rounded-lg border text-xs transition-colors ${borderCls}`}>
+    <div className={`flex flex-col gap-1.5 p-2.5 rounded-[6px] border text-xs transition-colors ${borderCls}`}>
       <div className="flex items-center gap-2.5">
         {icon}
         <div className="flex flex-col min-w-0 flex-1">
@@ -124,12 +127,10 @@ function FileItem({ file, status, error, progress = 0, duplicateUrl = null }) {
             ) : error || formatSize(file.size)}
           </span>
         </div>
-        {/* Progress % */}
         {isUploading && (
-          <span className="text-[10px] text-primary font-mono shrink-0">{progress}%</span>
+          <span className="text-[10px] text-primary font-mono shrink-0 tabular-nums">{progress}%</span>
         )}
       </div>
-      {/* Progress bar */}
       {(isUploading || isDone) && (
         <div className="h-1 w-full rounded-full bg-muted overflow-hidden">
           <div
@@ -144,7 +145,6 @@ function FileItem({ file, status, error, progress = 0, duplicateUrl = null }) {
 
 function UploadFileTab({ folderId, onClose }) {
   const qc = useQueryClient();
-  // items: [{ file, status, error, progress, duplicateUrl }]
   const [items, setItems] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
 
@@ -163,7 +163,6 @@ function UploadFileTab({ folderId, onClose }) {
     const doUpload = async () => {
       setIsUploading(true);
 
-      // Upload tuần tự để progress bar rõ ràng hơn
       for (let i = 0; i < newItems.length; i++) {
         updateItem(i, { status: 'uploading', progress: 0 });
         const fd = new FormData();
@@ -176,7 +175,6 @@ function UploadFileTab({ folderId, onClose }) {
         } catch (err) {
           const res = err.response;
           if (res?.status === 409 && res?.data?.data?.existingMedia) {
-            // Duplicate — không phải lỗi thật, hiện cảnh báo + link file cũ
             updateItem(i, {
               status:       'duplicate',
               duplicateUrl: res.data.data.existingMedia.url,
@@ -213,7 +211,7 @@ function UploadFileTab({ folderId, onClose }) {
   return (
     <>
       {items.length === 0 ? (
-        <div {...getRootProps()} className={`flex flex-col items-center justify-center p-8 rounded-xl border-2 border-dashed transition-colors cursor-pointer text-center m-4 ${isDragActive ? 'border-primary bg-primary/10' : 'border-border bg-muted/20 hover:border-primary/50'}`}>
+        <div {...getRootProps()} className={`flex flex-col items-center justify-center p-8 rounded-[6px] border-2 border-dashed transition-colors cursor-pointer text-center m-4 ${isDragActive ? 'border-primary bg-primary/10' : 'border-border bg-muted/20 hover:border-primary/50'}`}>
           <input {...getInputProps()} />
           <Upload size={28} className="text-muted-foreground mb-2" />
           <p className="text-sm font-semibold text-foreground">{isDragActive ? 'Thả ảnh vào đây' : 'Kéo thả ảnh vào đây'}</p>
@@ -238,8 +236,8 @@ function UploadFileTab({ folderId, onClose }) {
           </span>
           {allDone && (
             <div className="flex items-center gap-2">
-              <button className="inline-flex h-8 items-center justify-center rounded-md px-3 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer" onClick={() => setItems([])}>Thêm file</button>
-              <button className="inline-flex h-8 items-center justify-center rounded-md px-3 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer" onClick={onClose}>Đóng</button>
+              <Button variant="outline" size="sm" className="h-8 rounded-[6px] text-xs" onClick={() => setItems([])}>Thêm file</Button>
+              <Button size="sm" className="h-8 rounded-[6px] text-xs" onClick={onClose}>Đóng</Button>
             </div>
           )}
         </div>
@@ -271,25 +269,26 @@ function UploadUrlTab({ folderId, onClose }) {
   };
 
   return (
-    <div className="flex flex-col gap-3 p-5">
+    <div className="flex flex-col gap-3 p-5 text-xs">
       <p className="text-xs font-medium text-foreground">URL ảnh</p>
       <div className="flex gap-2">
-        <input
-          className="h-9 flex-1 rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 transition-colors"
+        <Input
+          className="h-9 flex-1 rounded-[6px] text-xs"
           value={url}
           onChange={(e) => { setUrl(e.target.value); setStatus('idle'); }}
           placeholder="https://example.com/image.jpg"
           onKeyDown={(e) => e.key === 'Enter' && handleUpload()}
           disabled={status === 'uploading'}
         />
-        <button
-          className="inline-flex h-9 items-center justify-center gap-1 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer disabled:opacity-50"
+        <Button
+          size="sm"
+          className="h-9 px-3 rounded-[6px] text-xs active:scale-[0.98] transition-transform"
           onClick={handleUpload}
           disabled={status === 'uploading' || !url.trim()}
         >
-          {status === 'uploading' ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+          {status === 'uploading' ? <Loader2 size={14} className="animate-spin mr-1" /> : <Upload size={14} className="mr-1" />}
           Upload
-        </button>
+        </Button>
       </div>
       {status === 'error' && <p className="text-xs text-destructive">{errMsg}</p>}
       {status === 'done' && <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">✓ Upload thành công!</p>}
@@ -305,12 +304,11 @@ export default function UploadZone({ folderId: initialFolderId, onClose }) {
   const flatFolders = flattenFolders(rawFolders);
 
   return (
-    <div className="fixed inset-0 z-[10050] flex items-center justify-center bg-black/40 backdrop-blur-xs p-4" onClick={onClose}>
-      <div className="flex w-full max-w-lg flex-col overflow-hidden rounded-xl border border-border bg-background shadow-xl text-foreground" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between border-b border-border px-5 py-4 font-semibold text-foreground">
-          <h3 className="text-base font-semibold text-foreground">Thêm ảnh</h3>
-          <button className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer" onClick={onClose}><X size={16} /></button>
-        </div>
+    <Dialog open={true} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="max-w-lg p-0 rounded-[6px] border border-border overflow-hidden">
+        <DialogHeader className="border-b border-border px-5 py-4">
+          <DialogTitle className="text-base font-semibold text-foreground">Thêm ảnh</DialogTitle>
+        </DialogHeader>
 
         <div className="px-5 pt-3">
           <label className="text-xs font-medium text-muted-foreground mb-1.5 flex items-center gap-1.5">
@@ -343,7 +341,7 @@ export default function UploadZone({ folderId: initialFolderId, onClose }) {
             ? <UploadFileTab folderId={selectedFolderId} onClose={onClose} />
             : <UploadUrlTab folderId={selectedFolderId} onClose={onClose} />}
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

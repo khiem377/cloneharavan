@@ -1,11 +1,12 @@
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Layers } from '@/components/ui/Icons';
-import { useProduct } from '@/hooks/useProducts';
+import { ArrowLeft, Layers, Loader2 } from '@/components/ui/Icons';
+import { useProduct, useUpdateProduct } from '@/hooks/useProducts';
 import { useState } from 'react';
 import VariantManager from '@/components/products/VariantManager';
-import { useUpdateProduct } from '@/hooks/useProducts';
 import { toast } from '@/providers/ToastProvider';
-import { Loader2 } from '@/components/ui/Icons';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 
 export default function ProductVariantsPage() {
   const { id } = useParams();
@@ -32,14 +33,14 @@ export default function ProductVariantsPage() {
   if (isLoading) {
     return (
       <div className="flex justify-center items-center py-20 text-muted-foreground gap-2">
-        <Loader2 className="animate-spin" size={28} />
+        <Loader2 className="animate-spin text-primary" size={24} />
       </div>
     );
   }
 
   if (!product) {
     return (
-      <div className="flex justify-center items-center py-20 text-muted-foreground text-sm">
+      <div className="flex justify-center items-center py-20 text-muted-foreground text-xs">
         Không tìm thấy sản phẩm
       </div>
     );
@@ -47,48 +48,57 @@ export default function ProductVariantsPage() {
 
   return (
     <div className="p-6 flex flex-col gap-6 w-full max-w-6xl mx-auto min-h-full bg-background text-foreground">
-      <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-xs py-3 border-b border-border flex items-center gap-4">
-        <button
-          className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg px-3.5 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer"
-          onClick={() => navigate(`/products/${id}/edit`)}
-        >
-          <ArrowLeft size={16} /> Quay lại
-        </button>
-        <div className="flex items-center gap-2 min-w-0">
-          <Layers size={18} className="text-primary shrink-0" />
-          <div className="min-w-0">
-            <h1 className="text-lg font-bold tracking-tight text-foreground leading-tight truncate">
-              Biến thể — {product.name}
-            </h1>
-            <p className="text-xs text-muted-foreground">SKU gốc: {product.sku}</p>
+      <div className="sticky top-0 z-20 bg-background/95 py-3 border-b border-border flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 rounded-[6px] text-xs"
+            onClick={() => navigate(`/products/${id}/edit`)}
+          >
+            <ArrowLeft size={14} className="mr-1.5" /> Quay lại
+          </Button>
+          <div className="flex items-center gap-2 min-w-0">
+            <Layers size={18} className="text-primary shrink-0" />
+            <div className="min-w-0">
+              <h1 className="text-base font-bold tracking-tight text-foreground leading-tight truncate">
+                Biến thể — {product.name}
+              </h1>
+              <p className="text-[11px] text-muted-foreground font-mono tabular-nums">SKU gốc: {product.sku}</p>
+            </div>
           </div>
         </div>
-        <button
-          className="ml-auto inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-border px-3.5 text-sm font-medium text-foreground hover:bg-accent transition-colors cursor-pointer disabled:opacity-50"
+
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 rounded-[6px] text-xs font-semibold active:scale-[0.98] transition-all disabled:opacity-50"
           onClick={handleSaveOptions}
           disabled={updateMut.isPending}
         >
-          {updateMut.isPending ? <Loader2 size={14} className="animate-spin" /> : null}
+          {updateMut.isPending ? <Loader2 size={13} className="animate-spin mr-1.5" /> : null}
           Lưu thuộc tính
-        </button>
+        </Button>
       </div>
 
-      <div className="rounded-xl border border-border/50 bg-muted/20 p-4 flex items-center gap-4">
-        <img
-          src={product.thumbnail?.url || 'https://placehold.co/56x56/1e293b/fff?text=?'}
-          alt={product.name}
-          className="size-14 rounded-lg object-cover border border-border bg-muted shrink-0"
-        />
-        <div className="min-w-0">
-          <p className="font-semibold text-foreground truncate">{product.name}</p>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Giá gốc: <span className="text-foreground font-medium">{product.price?.toLocaleString('vi-VN')}đ</span>
-            {product.salePrice > 0 && (
-              <> &nbsp;·&nbsp; Giá KM: <span className="text-primary font-medium">{product.salePrice?.toLocaleString('vi-VN')}đ</span></>
-            )}
-          </p>
-        </div>
-      </div>
+      <Card className="rounded-[6px] border border-border shadow-none bg-muted/20">
+        <CardContent className="p-4 flex items-center gap-4">
+          <img
+            src={product.thumbnail?.url || 'https://placehold.co/56x56/1e293b/fff?text=?'}
+            alt={product.name}
+            className="size-14 rounded-[6px] object-cover border border-border bg-muted shrink-0"
+          />
+          <div className="min-w-0">
+            <p className="font-semibold text-sm text-foreground truncate">{product.name}</p>
+            <p className="text-xs text-muted-foreground mt-0.5 font-mono tabular-nums">
+              Giá gốc: <span className="text-foreground font-semibold">{product.price?.toLocaleString('vi-VN')}đ</span>
+              {product.salePrice > 0 && (
+                <> &nbsp;·&nbsp; Giá KM: <span className="text-primary font-bold">{product.salePrice?.toLocaleString('vi-VN')}đ</span></>
+              )}
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
       <VariantManager
         productId={id}

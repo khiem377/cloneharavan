@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import {
   AlertTriangle, Package, SearchIcon as Search, ShoppingCart, RefreshCw, Edit2,
-  Check, X, History, Boxes, PieChart as PieChartIcon, Clock, CalendarX,
-  TrendingDown, TrendingUp, FileCheck, FileText,
+  Check, X, History, Boxes, Clock, CalendarX, TrendingDown, FileCheck, FileText,
 } from '@/components/ui/Icons';
 import { useStockAlerts } from '@/hooks/useInventory';
 import { inventoryService } from '@/services/inventory.service';
@@ -10,6 +9,11 @@ import DataTablePagination from '@/components/ui/DataTablePagination';
 import ProductStockHistoryModal from '@/components/inventory/ProductStockHistoryModal';
 import { useNavigate } from 'react-router-dom';
 import { toast } from '@/providers/ToastProvider';
+import { Button } from '@/components/ui/button';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 
 export default function StockAlertPage() {
   const navigate = useNavigate();
@@ -71,11 +75,11 @@ export default function StockAlertPage() {
   };
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6 p-6 antialiased">
       {/* Top Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <div className="flex h-10 w-10 items-center justify-center rounded-[6px] bg-primary/10 text-primary">
             <Boxes className="h-5 w-5" />
           </div>
           <div>
@@ -89,306 +93,359 @@ export default function StockAlertPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => refetch()}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-input bg-background px-3 py-2 text-xs font-semibold text-foreground hover:bg-muted"
+            className="rounded-[6px] text-xs font-semibold"
           >
-            <RefreshCw className="h-4 w-4" /> Làm mới dữ liệu
-          </button>
+            <RefreshCw className="h-4 w-4 mr-1.5" /> Làm mới dữ liệu
+          </Button>
         </div>
       </div>
 
-      {/* 2 REAL-DATA STATUS WIDGETS (Clean MISA AMIS Style) */}
+      {/* 2 REAL-DATA STATUS WIDGETS */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         {/* Card 1: PO Inbound Status */}
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm space-y-4">
-          <div className="flex items-center justify-between border-b border-border pb-3">
-            <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+        <Card className="rounded-[6px] border border-border shadow-xs">
+          <CardHeader className="flex flex-row items-center justify-between border-b border-border pb-3 px-5 pt-4">
+            <CardTitle className="text-sm font-bold text-foreground flex items-center gap-2">
               <FileCheck className="h-4 w-4 text-primary" /> Trạng Thái Đơn Nhập Kho (PO)
-            </h3>
+            </CardTitle>
             <span className="text-xs font-bold text-muted-foreground">
-              Đơn chưa xong: <span className="text-primary font-mono text-sm font-extrabold">{poStats.totalActive}</span>
+              Đơn chưa xong:{' '}
+              <span className="text-primary font-mono text-sm font-extrabold tabular-nums">
+                {poStats.totalActive}
+              </span>
             </span>
-          </div>
+          </CardHeader>
 
-          <div className="grid grid-cols-3 gap-3 text-center pt-1">
-            <div className="rounded-xl border border-border bg-muted/30 p-3">
-              <span className="text-xs text-muted-foreground block mb-1">Bản nháp</span>
-              <span className="text-lg font-bold font-mono text-foreground">{poStats.draft}</span>
+          <CardContent className="p-5 pt-4">
+            <div className="grid grid-cols-3 gap-3 text-center">
+              <div className="rounded-[6px] border border-border bg-muted/30 p-3">
+                <span className="text-xs text-muted-foreground block mb-1">Bản nháp</span>
+                <span className="text-lg font-bold font-mono text-foreground tabular-nums">
+                  {poStats.draft}
+                </span>
+              </div>
+              <div className="rounded-[6px] border border-border bg-muted/30 p-3">
+                <span className="text-xs text-muted-foreground block mb-1">Chờ nhận hàng</span>
+                <span className="text-lg font-bold font-mono text-primary tabular-nums">
+                  {poStats.pending}
+                </span>
+              </div>
+              <div className="rounded-[6px] border border-border bg-muted/30 p-3">
+                <span className="text-xs text-muted-foreground block mb-1">Nhập 1 phần</span>
+                <span className="text-lg font-bold font-mono text-amber-600 tabular-nums">
+                  {poStats.partial}
+                </span>
+              </div>
             </div>
-            <div className="rounded-xl border border-border bg-muted/30 p-3">
-              <span className="text-xs text-muted-foreground block mb-1">Chờ nhận hàng</span>
-              <span className="text-lg font-bold font-mono text-primary">{poStats.pending}</span>
-            </div>
-            <div className="rounded-xl border border-border bg-muted/30 p-3">
-              <span className="text-xs text-muted-foreground block mb-1">Nhập 1 phần</span>
-              <span className="text-lg font-bold font-mono text-amber-600">{poStats.partial}</span>
-            </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
         {/* Card 2: EX Outbound Status */}
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm space-y-4">
-          <div className="flex items-center justify-between border-b border-border pb-3">
-            <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+        <Card className="rounded-[6px] border border-border shadow-xs">
+          <CardHeader className="flex flex-row items-center justify-between border-b border-border pb-3 px-5 pt-4">
+            <CardTitle className="text-sm font-bold text-foreground flex items-center gap-2">
               <FileText className="h-4 w-4 text-primary" /> Lệnh Xuất Kho (EX)
-            </h3>
+            </CardTitle>
             <span className="text-xs font-bold text-muted-foreground">
-              Lệnh đang xử lý: <span className="text-primary font-mono text-sm font-extrabold">{exStats.totalActive}</span>
+              Lệnh đang xử lý:{' '}
+              <span className="text-primary font-mono text-sm font-extrabold tabular-nums">
+                {exStats.totalActive}
+              </span>
             </span>
-          </div>
+          </CardHeader>
 
-          <div className="grid grid-cols-3 gap-3 text-center pt-1">
-            <div className="rounded-xl border border-border bg-muted/30 p-3">
-              <span className="text-xs text-muted-foreground block mb-1">Chờ soạn hàng</span>
-              <span className="text-lg font-bold font-mono text-amber-600">{exStats.pending_pick}</span>
+          <CardContent className="p-5 pt-4">
+            <div className="grid grid-cols-3 gap-3 text-center">
+              <div className="rounded-[6px] border border-border bg-muted/30 p-3">
+                <span className="text-xs text-muted-foreground block mb-1">Chờ soạn hàng</span>
+                <span className="text-lg font-bold font-mono text-amber-600 tabular-nums">
+                  {exStats.pending_pick}
+                </span>
+              </div>
+              <div className="rounded-[6px] border border-border bg-muted/30 p-3">
+                <span className="text-xs text-muted-foreground block mb-1">Đang lấy hàng</span>
+                <span className="text-lg font-bold font-mono text-primary tabular-nums">
+                  {exStats.picking}
+                </span>
+              </div>
+              <div className="rounded-[6px] border border-border bg-muted/30 p-3">
+                <span className="text-xs text-muted-foreground block mb-1">Đã đóng gói</span>
+                <span className="text-lg font-bold font-mono text-emerald-600 tabular-nums">
+                  {exStats.packed}
+                </span>
+              </div>
             </div>
-            <div className="rounded-xl border border-border bg-muted/30 p-3">
-              <span className="text-xs text-muted-foreground block mb-1">Đang lấy hàng</span>
-              <span className="text-lg font-bold font-mono text-primary">{exStats.picking}</span>
-            </div>
-            <div className="rounded-xl border border-border bg-muted/30 p-3">
-              <span className="text-xs text-muted-foreground block mb-1">Đã đóng gói</span>
-              <span className="text-lg font-bold font-mono text-emerald-600">{exStats.packed}</span>
-            </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* 4 MONITORING STAT CARDS (Clean MISA AMIS Enterprise Style) */}
+      {/* 4 MONITORING STAT CARDS */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div
+        <Card
           onClick={() => setViewMode('low_stock')}
-          className={`rounded-2xl border p-4 shadow-xs cursor-pointer transition-all ${
+          className={`rounded-[6px] border p-4 shadow-xs cursor-pointer transition-all active:scale-[0.98] ${
             viewMode === 'low_stock' ? 'border-primary bg-primary/5 ring-1 ring-primary/30' : 'border-border bg-card hover:bg-muted/40'
           }`}
         >
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600">
+            <div className="flex h-10 w-10 items-center justify-center rounded-[6px] bg-amber-500/10 text-amber-600">
               <TrendingDown className="h-5 w-5" />
             </div>
             <div>
               <span className="text-xs font-semibold text-muted-foreground">Tồn dưới mức tối thiểu</span>
-              <p className="text-xl font-extrabold text-amber-600 font-mono tracking-tight mt-0.5">
-                {summary.lowStockCount + summary.outOfStockCount} <span className="text-xs font-normal text-muted-foreground">mặt hàng</span>
+              <p className="text-xl font-bold text-amber-600 font-mono tracking-tight mt-0.5 tabular-nums">
+                {summary.lowStockCount + summary.outOfStockCount}{' '}
+                <span className="text-xs font-normal text-muted-foreground font-sans">mặt hàng</span>
               </p>
             </div>
           </div>
-        </div>
+        </Card>
 
-        <div
+        <Card
           onClick={() => setViewMode('all')}
-          className={`rounded-2xl border p-4 shadow-xs cursor-pointer transition-all ${
+          className={`rounded-[6px] border p-4 shadow-xs cursor-pointer transition-all active:scale-[0.98] ${
             viewMode === 'all' ? 'border-primary bg-primary/5 ring-1 ring-primary/30' : 'border-border bg-card hover:bg-muted/40'
           }`}
         >
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600">
+            <div className="flex h-10 w-10 items-center justify-center rounded-[6px] bg-emerald-500/10 text-emerald-600">
               <Package className="h-5 w-5" />
             </div>
             <div>
               <span className="text-xs font-semibold text-muted-foreground">Tồn kho an toàn</span>
-              <p className="text-xl font-extrabold text-foreground font-mono tracking-tight mt-0.5">
-                {summary.safeStockCount} <span className="text-xs font-normal text-muted-foreground">mặt hàng</span>
+              <p className="text-xl font-bold text-foreground font-mono tracking-tight mt-0.5 tabular-nums">
+                {summary.safeStockCount}{' '}
+                <span className="text-xs font-normal text-muted-foreground font-sans">mặt hàng</span>
               </p>
             </div>
           </div>
-        </div>
+        </Card>
 
-        <div className="rounded-2xl border border-border bg-card p-4 shadow-xs">
+        <Card className="rounded-[6px] border border-border bg-card p-4 shadow-xs">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600">
+            <div className="flex h-10 w-10 items-center justify-center rounded-[6px] bg-indigo-500/10 text-indigo-600">
               <Clock className="h-5 w-5" />
             </div>
             <div>
               <span className="text-xs font-semibold text-muted-foreground">Sắp hết hạn (30 ngày)</span>
-              <p className="text-xl font-extrabold text-indigo-600 font-mono tracking-tight mt-0.5">0 <span className="text-xs font-normal text-muted-foreground">mặt hàng</span></p>
+              <p className="text-xl font-bold text-indigo-600 font-mono tracking-tight mt-0.5 tabular-nums">
+                0 <span className="text-xs font-normal text-muted-foreground font-sans">mặt hàng</span>
+              </p>
             </div>
           </div>
-        </div>
+        </Card>
 
-        <div className="rounded-2xl border border-border bg-card p-4 shadow-xs">
+        <Card className="rounded-[6px] border border-border bg-card p-4 shadow-xs">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-500/10 text-rose-600">
+            <div className="flex h-10 w-10 items-center justify-center rounded-[6px] bg-rose-500/10 text-rose-600">
               <CalendarX className="h-5 w-5" />
             </div>
             <div>
               <span className="text-xs font-semibold text-muted-foreground">Quá hạn sử dụng</span>
-              <p className="text-xl font-extrabold text-rose-600 font-mono tracking-tight mt-0.5">0 <span className="text-xs font-normal text-muted-foreground">mặt hàng</span></p>
+              <p className="text-xl font-bold text-rose-600 font-mono tracking-tight mt-0.5 tabular-nums">
+                0 <span className="text-xs font-normal text-muted-foreground font-sans">mặt hàng</span>
+              </p>
             </div>
           </div>
-        </div>
+        </Card>
       </div>
 
       {/* Filter Toolbar */}
-      <div className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Tìm theo tên sản phẩm hoặc mã SKU..."
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-            className="w-full rounded-xl border border-input bg-background pl-10 pr-4 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20"
-          />
-        </div>
+      <Card className="rounded-[6px] border border-border p-4 shadow-xs">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Tìm theo tên sản phẩm hoặc mã SKU..."
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+              className="pl-9 h-9 text-xs rounded-[6px]"
+            />
+          </div>
 
-        <div className="flex items-center gap-3 flex-wrap">
-          <button
-            onClick={handleCreateBulkPO}
-            className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-foreground shadow-md hover:bg-primary/90 transition-colors"
-          >
-            <ShoppingCart className="h-4 w-4" /> Đặt hàng bù kho (Tạo PO)
-          </button>
+          <div className="flex items-center gap-3 flex-wrap">
+            <Button
+              onClick={handleCreateBulkPO}
+              className="rounded-[6px] h-9 text-xs font-bold shadow-xs active:scale-[0.98]"
+            >
+              <ShoppingCart className="h-4 w-4 mr-1.5" /> Đặt hàng bù kho (Tạo PO)
+            </Button>
+          </div>
         </div>
-      </div>
+      </Card>
 
       {/* Main Table */}
-      <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr className="border-b border-border bg-muted/60 font-bold text-foreground text-[11px]">
-                <th className="px-4 py-3.5 whitespace-nowrap">Sản phẩm</th>
-                <th className="px-4 py-3.5 whitespace-nowrap">Mã SKU</th>
-                <th className="px-4 py-3.5 whitespace-nowrap">Thương hiệu</th>
-                <th className="px-4 py-3.5 whitespace-nowrap">Nhà Cung Cấp</th>
-                <th className="px-4 py-3.5 text-right whitespace-nowrap">Giá bán</th>
-                <th className="px-4 py-3.5 text-right whitespace-nowrap">Giá nhập vốn</th>
-                <th className="px-4 py-3.5 text-center whitespace-nowrap">Tồn kho</th>
-                <th className="px-4 py-3.5 text-center whitespace-nowrap">Tồn tối thiểu</th>
-                <th className="px-4 py-3.5 text-center whitespace-nowrap">Gợi ý nhập</th>
-                <th className="sticky right-0 z-10 bg-muted/95 backdrop-blur-xs px-4 py-3.5 text-right whitespace-nowrap shadow-[-6px_0_10px_-4px_rgba(0,0,0,0.08)]">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {isLoading ? (
-                <tr>
-                  <td colSpan={10} className="px-4 py-12 text-center text-muted-foreground">
-                    Đang đối soát danh sách tồn kho toàn hệ thống...
-                  </td>
-                </tr>
-              ) : items.length === 0 ? (
-                <tr>
-                  <td colSpan={10} className="px-4 py-12 text-center text-muted-foreground">
-                    Không tìm thấy sản phẩm kho phù hợp.
-                  </td>
-                </tr>
-              ) : (
-                items.map((prod) => (
-                  <tr key={prod.id} className="hover:bg-muted/30 transition-colors align-middle group">
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <div className="flex items-center gap-3">
-                        {prod.thumbnail ? (
-                          <img
-                            src={prod.thumbnail}
-                            alt=""
-                            className="h-10 w-10 rounded-lg object-cover border border-border"
-                          />
-                        ) : (
-                          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted text-muted-foreground font-mono text-[10px]">
-                            SP
-                          </div>
-                        )}
-                        <span className="font-semibold text-foreground max-w-xs truncate">
-                          {prod.name}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 font-mono font-bold text-muted-foreground whitespace-nowrap">
-                      {prod.productCode || '---'}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
-                      {prod.brandName}
-                    </td>
-                    <td className="px-4 py-3 font-semibold text-foreground whitespace-nowrap">
-                      {prod.supplierName || '---'}
-                    </td>
-                    <td className="px-4 py-3 text-right font-mono font-semibold whitespace-nowrap">
-                      {(prod.price || 0).toLocaleString('vi-VN')} đ
-                    </td>
-
-                    <td className="px-4 py-3 text-right font-mono font-semibold whitespace-nowrap">
-                      {editingCostId === prod.id ? (
-                        <div className="flex items-center justify-end gap-1">
-                          <input
-                            type="number"
-                            value={editingCostVal}
-                            onChange={(e) => setEditingCostVal(e.target.value)}
-                            className="w-24 rounded border border-input bg-background px-1.5 py-0.5 text-xs text-right"
-                          />
-                          <button
-                            onClick={() => handleSaveCost(prod.id)}
-                            className="text-emerald-600 hover:opacity-80 p-0.5"
-                          >
-                            <Check className="h-3.5 w-3.5" />
-                          </button>
-                          <button
-                            onClick={() => setEditingCostId(null)}
-                            className="text-destructive hover:opacity-80 p-0.5"
-                          >
-                            <X className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
+      <Card className="rounded-[6px] border border-border shadow-xs overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow className="border-b border-border bg-muted/60 text-[11px] font-bold text-foreground">
+              <TableHead className="whitespace-nowrap">Sản phẩm</TableHead>
+              <TableHead className="whitespace-nowrap">Mã SKU</TableHead>
+              <TableHead className="whitespace-nowrap">Thương hiệu</TableHead>
+              <TableHead className="whitespace-nowrap">Nhà Cung Cấp</TableHead>
+              <TableHead className="text-right whitespace-nowrap">Giá bán</TableHead>
+              <TableHead className="text-right whitespace-nowrap">Giá nhập vốn</TableHead>
+              <TableHead className="text-center whitespace-nowrap">Tồn kho</TableHead>
+              <TableHead className="text-center whitespace-nowrap">Tồn tối thiểu</TableHead>
+              <TableHead className="text-center whitespace-nowrap">Gợi ý nhập</TableHead>
+              <TableHead className="text-right whitespace-nowrap">Thao tác</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={10} className="py-12 text-center text-muted-foreground">
+                  Đang đối soát danh sách tồn kho toàn hệ thống...
+                </TableCell>
+              </TableRow>
+            ) : items.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={10} className="py-12 text-center text-muted-foreground">
+                  Không tìm thấy sản phẩm kho phù hợp.
+                </TableCell>
+              </TableRow>
+            ) : (
+              items.map((prod) => (
+                <TableRow key={prod.id} className="hover:bg-muted/30 transition-colors align-middle group">
+                  <TableCell className="whitespace-nowrap">
+                    <div className="flex items-center gap-3">
+                      {prod.thumbnail ? (
+                        <img
+                          src={prod.thumbnail}
+                          alt=""
+                          className="h-9 w-9 rounded-[4px] object-cover border border-border"
+                        />
                       ) : (
-                        <div className="flex items-center justify-end gap-1.5 group/edit cursor-pointer" onClick={() => handleStartEditCost(prod)}>
-                          <span className="text-primary font-bold">
-                            {(prod.costPrice || 0).toLocaleString('vi-VN')} đ
-                          </span>
-                          <Edit2 className="h-3 w-3 text-muted-foreground opacity-0 group-hover/edit:opacity-100 transition-opacity" />
+                        <div className="flex h-9 w-9 items-center justify-center rounded-[4px] bg-muted text-muted-foreground font-mono text-[10px]">
+                          SP
                         </div>
                       )}
-                    </td>
+                      <span className="font-semibold text-foreground max-w-xs truncate text-xs">
+                        {prod.name}
+                      </span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="font-mono font-bold text-muted-foreground whitespace-nowrap text-xs">
+                    {prod.productCode || '---'}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground whitespace-nowrap text-xs">
+                    {prod.brandName}
+                  </TableCell>
+                  <TableCell className="font-semibold text-foreground whitespace-nowrap text-xs">
+                    {prod.supplierName || '---'}
+                  </TableCell>
+                  <TableCell className="text-right font-mono font-semibold whitespace-nowrap text-xs tabular-nums">
+                    {(prod.price || 0).toLocaleString('vi-VN')} đ
+                  </TableCell>
 
-                    <td className="px-4 py-3 text-center whitespace-nowrap">
-                      <span
-                        className={`inline-flex items-center justify-center min-w-[36px] rounded-full px-2.5 py-0.5 font-bold ${
-                          prod.stock === 0
-                            ? 'bg-destructive/10 text-destructive'
-                            : prod.stock <= threshold
-                            ? 'bg-amber-500/10 text-amber-600'
-                            : 'bg-emerald-500/10 text-emerald-600'
-                        }`}
-                      >
-                        {prod.stock}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-center font-semibold text-muted-foreground whitespace-nowrap">
-                      {prod.minThreshold}
-                    </td>
-                    <td className="px-4 py-3 text-center whitespace-nowrap">
-                      <span className="inline-flex items-center gap-1 font-semibold text-primary">
-                        +{prod.suggestedReorderQty} cái
-                      </span>
-                    </td>
-                    <td className="sticky right-0 z-10 bg-card group-hover:bg-muted/90 transition-colors px-4 py-3 text-right whitespace-nowrap shadow-[-6px_0_10px_-4px_rgba(0,0,0,0.12)]">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => {
-                            setSelectedProductForHistory(prod);
-                            setHistoryModalOpen(true);
-                          }}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-input bg-background px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted transition-colors shadow-xs whitespace-nowrap"
+                  <TableCell className="text-right font-mono font-semibold whitespace-nowrap text-xs tabular-nums">
+                    {editingCostId === prod.id ? (
+                      <div className="flex items-center justify-end gap-1">
+                        <Input
+                          type="number"
+                          value={editingCostVal}
+                          onChange={(e) => setEditingCostVal(e.target.value)}
+                          className="w-24 h-7 text-xs text-right font-mono rounded-[4px]"
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon-xs"
+                          onClick={() => handleSaveCost(prod.id)}
+                          className="text-emerald-600 hover:bg-emerald-50 h-7 w-7"
                         >
-                          <History className="h-3.5 w-3.5 text-primary" /> Xem Lịch Sử
-                        </button>
-                        <button
-                          onClick={() => navigate(`/purchase-orders/create?supplierId=${prod.supplierId}&productId=${prod.productId || prod.id}`)}
-                          className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-colors shadow-xs whitespace-nowrap"
+                          <Check className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon-xs"
+                          onClick={() => setEditingCostId(null)}
+                          className="text-destructive hover:bg-destructive/10 h-7 w-7"
                         >
-                          <ShoppingCart className="h-3.5 w-3.5" /> Tạo PO
-                        </button>
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
                       </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                    ) : (
+                      <div
+                        className="flex items-center justify-end gap-1.5 group/edit cursor-pointer"
+                        onClick={() => handleStartEditCost(prod)}
+                      >
+                        <span className="text-primary font-bold">
+                          {(prod.costPrice || 0).toLocaleString('vi-VN')} đ
+                        </span>
+                        <Edit2 className="h-3 w-3 text-muted-foreground opacity-0 group-hover/edit:opacity-100 transition-opacity" />
+                      </div>
+                    )}
+                  </TableCell>
+
+                  <TableCell className="text-center whitespace-nowrap">
+                    <Badge
+                      variant={
+                        prod.stock === 0
+                          ? 'destructive'
+                          : prod.stock <= threshold
+                          ? 'outline'
+                          : 'secondary'
+                      }
+                      className={`font-mono tabular-nums font-bold text-xs ${
+                        prod.stock > 0 && prod.stock <= threshold
+                          ? 'bg-amber-500/10 text-amber-600 border-amber-300'
+                          : prod.stock > threshold
+                          ? 'bg-emerald-500/10 text-emerald-600 border-emerald-200'
+                          : ''
+                      }`}
+                    >
+                      {prod.stock}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-center font-semibold text-muted-foreground whitespace-nowrap font-mono tabular-nums text-xs">
+                    {prod.minThreshold}
+                  </TableCell>
+                  <TableCell className="text-center whitespace-nowrap text-xs">
+                    <span className="inline-flex items-center gap-1 font-semibold text-primary font-mono tabular-nums">
+                      +{prod.suggestedReorderQty} cái
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-right whitespace-nowrap">
+                    <div className="flex items-center justify-end gap-1.5">
+                      <Button
+                        variant="outline"
+                        size="xs"
+                        onClick={() => {
+                          setSelectedProductForHistory(prod);
+                          setHistoryModalOpen(true);
+                        }}
+                        className="rounded-[6px] text-xs font-semibold h-7"
+                      >
+                        <History className="h-3.5 w-3.5 mr-1 text-primary" /> Lịch Sử
+                      </Button>
+                      <Button
+                        size="xs"
+                        onClick={() =>
+                          navigate(
+                            `/purchase-orders/create?supplierId=${prod.supplierId}&productId=${
+                              prod.productId || prod.id
+                            }`
+                          )
+                        }
+                        className="rounded-[6px] text-xs font-semibold h-7"
+                      >
+                        <ShoppingCart className="h-3.5 w-3.5 mr-1" /> Tạo PO
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
 
         {pagination && (
           <DataTablePagination
@@ -404,7 +461,7 @@ export default function StockAlertPage() {
             pageSizeOptions={[10, 20, 50, 100]}
           />
         )}
-      </div>
+      </Card>
 
       <ProductStockHistoryModal
         isOpen={historyModalOpen}

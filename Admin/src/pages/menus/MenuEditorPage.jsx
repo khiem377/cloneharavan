@@ -18,6 +18,7 @@ import { CSS } from '@dnd-kit/utilities';
 import {
   ChevronRight, ChevronDown, Plus, Trash2, Loader2,
   GripVertical, ArrowLeft, Save, ExternalLink, CategoriesIcon,
+  Eye, EyeOff,
 } from '@/components/ui/Icons';
 import { useMenu, useUpdateMenu } from '@/hooks/useMenus';
 import { useCategories, useAllCategoriesSelect } from '@/hooks/useCategories';
@@ -66,7 +67,7 @@ const BADGE_COLORS = [
 // flattenTree, buildTree được import từ @/utils/treeUtils
 
 // ─── Sortable Item Row ─────────────────────────────────────────────────────────
-function SortableItemRow({ item, depth, isSelected, onSelect, onAdd, onDelete, expanded, onToggle, hasChildren }) {
+function SortableItemRow({ item, depth, isSelected, onSelect, onAdd, onDelete, onToggleActive, expanded, onToggle, hasChildren }) {
   const {
     attributes, listeners, setNodeRef, transform, transition, isDragging,
   } = useSortable({ id: item._id });
@@ -83,12 +84,15 @@ function SortableItemRow({ item, depth, isSelected, onSelect, onAdd, onDelete, e
     'text-purple-600 dark:text-purple-400 bg-purple-500/10 border-purple-500/20',
   ];
 
+  const isHidden = item.isActive === false;
+
   return (
     <div
       ref={setNodeRef}
       style={{ ...style, paddingLeft: depth * 24 + 8 }}
       className={`flex items-center gap-2 py-2 pr-3 border-b border-border/60 hover:bg-muted/40 transition-colors cursor-default
-        ${isSelected ? 'bg-primary/8 ring-1 ring-inset ring-primary/30' : ''}`}
+        ${isSelected ? 'bg-primary/8 ring-1 ring-inset ring-primary/30' : ''}
+        ${isHidden ? 'bg-muted/20' : ''}`}
     >
       {/* Drag handle */}
       <button
@@ -102,7 +106,7 @@ function SortableItemRow({ item, depth, isSelected, onSelect, onAdd, onDelete, e
       {/* Expand toggle */}
       {hasChildren ? (
         <button
-          className="shrink-0 inline-flex size-5 items-center justify-center rounded text-muted-foreground hover:bg-accent"
+          className="shrink-0 inline-flex size-5 items-center justify-center rounded-[6px] text-muted-foreground hover:bg-accent active:scale-[0.98] transition-all"
           onClick={() => onToggle(item._id)}
         >
           {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
@@ -116,31 +120,58 @@ function SortableItemRow({ item, depth, isSelected, onSelect, onAdd, onDelete, e
         className="flex-1 min-w-0 flex items-center gap-2 cursor-pointer"
         onClick={() => onSelect(item)}
       >
-        <span className={`text-sm truncate font-medium ${!item.label ? 'text-muted-foreground italic' : 'text-foreground'}`}>
+        <span
+          className={`text-sm truncate font-medium ${
+            !item.label
+              ? 'text-muted-foreground italic'
+              : isHidden
+              ? 'text-muted-foreground line-through opacity-70'
+              : 'text-foreground'
+          }`}
+        >
           {item.label || 'Chưa đặt tên'}
         </span>
         {item.badge && (
           <span
-            className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-bold text-white shrink-0"
+            className="inline-flex items-center rounded-[6px] px-1.5 py-0.5 text-[10px] font-bold text-white shrink-0"
             style={{ backgroundColor: item.badgeColor || '#ef4444' }}
           >
             {item.badge}
           </span>
         )}
-        {!item.isActive && (
-          <span className="text-[10px] text-muted-foreground border border-border rounded-full px-1.5 py-0.5 shrink-0">Ẩn</span>
+        {isHidden && (
+          <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-[6px] px-1.5 py-0.5 shrink-0">
+            Tạm ẩn
+          </span>
         )}
       </div>
 
       {/* Link type badge */}
-      <span className={`shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded border ${depthColors[Math.min(depth, 2)]}`}>
+      <span className={`shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-[6px] border ${depthColors[Math.min(depth, 2)]}`}>
         {LINK_TYPE_LABELS[item.linkType] ?? item.linkType}
       </span>
 
       {/* Actions */}
+      {/* Nút Tạm ẩn / Hiện nhanh */}
+      <button
+        type="button"
+        className={`shrink-0 inline-flex size-6 items-center justify-center rounded-[6px] transition-all active:scale-[0.98] ${
+          !isHidden
+            ? 'text-muted-foreground hover:bg-accent hover:text-foreground'
+            : 'text-amber-600 dark:text-amber-400 bg-amber-500/10 hover:bg-amber-500/20'
+        }`}
+        title={!isHidden ? 'Tạm ẩn mục này (không hiển thị trên web)' : 'Hiện lại mục này'}
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggleActive(item._id);
+        }}
+      >
+        {!isHidden ? <Eye size={13} /> : <EyeOff size={13} />}
+      </button>
+
       {depth < 2 && (
         <button
-          className="shrink-0 inline-flex size-6 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+          className="shrink-0 inline-flex size-6 items-center justify-center rounded-[6px] text-muted-foreground hover:bg-accent hover:text-foreground transition-all active:scale-[0.98]"
           title="Thêm mục con"
           onClick={() => onAdd(item._id)}
         >
@@ -148,7 +179,7 @@ function SortableItemRow({ item, depth, isSelected, onSelect, onAdd, onDelete, e
         </button>
       )}
       <button
-        className="shrink-0 inline-flex size-6 items-center justify-center rounded text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+        className="shrink-0 inline-flex size-6 items-center justify-center rounded-[6px] text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all active:scale-[0.98]"
         title="Xóa"
         onClick={() => onDelete(item._id)}
       >
@@ -162,7 +193,7 @@ function SortableItemRow({ item, depth, isSelected, onSelect, onAdd, onDelete, e
 function ItemFormPanel({ item, onChange, categories, brands, blogCats, flatCategoryOptions = [] }) {
   if (!item) {
     return (
-      <div className="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground p-8">
+      <div className="flex-1 min-h-0 flex flex-col items-center justify-center h-full gap-3 text-muted-foreground p-8">
         <ChevronRight size={36} strokeWidth={1.2} />
         <p className="text-sm text-center">Chọn một mục bên trái để chỉnh sửa</p>
       </div>
@@ -178,14 +209,14 @@ function ItemFormPanel({ item, onChange, categories, brands, blogCats, flatCateg
   };
 
   return (
-    <div className="flex flex-col gap-4 p-5 overflow-y-auto">
+    <div className="flex-1 min-h-0 flex flex-col gap-4 p-5 overflow-y-auto">
       {/* Label */}
       <div className="flex flex-col gap-1.5">
         <label className="text-xs font-medium text-foreground">
           Tên hiển thị <span className="text-destructive ml-0.5">*</span>
         </label>
         <input
-          className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 placeholder:text-muted-foreground transition-colors"
+          className="h-9 w-full rounded-[6px] border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 placeholder:text-muted-foreground transition-colors"
           value={item.label}
           onChange={(e) => set('label', e.target.value)}
           placeholder="Ví dụ: Tivi, Flash Sale..."
@@ -196,7 +227,7 @@ function ItemFormPanel({ item, onChange, categories, brands, blogCats, flatCateg
       <div className="flex flex-col gap-1.5">
         <label className="text-xs font-medium text-foreground">Loại link</label>
         <select
-          className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 transition-colors"
+          className="h-9 w-full rounded-[6px] border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 transition-colors"
           value={item.linkType}
           onChange={(e) => {
             const newType = e.target.value;
@@ -216,13 +247,13 @@ function ItemFormPanel({ item, onChange, categories, brands, blogCats, flatCateg
 
       {/* Ref select: category / brand / blog - Hiển thị chọn từ API */}
       {(item.linkType === 'category' || item.linkType === 'brand' || item.linkType === 'blog') && (
-        <div className="flex flex-col gap-1.5 bg-primary/5 p-3 rounded-lg border border-primary/20">
+        <div className="flex flex-col gap-1.5 bg-muted/40 p-3 rounded-[6px] border border-border">
           <label className="text-xs font-semibold text-primary flex items-center justify-between">
             <span>Chọn {LINK_TYPE_LABELS[item.linkType]} (từ hệ thống)</span>
             <span className="text-[11px] font-normal text-muted-foreground">Tự động điền tên & link</span>
           </label>
           <select
-            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 transition-colors font-medium"
+            className="h-9 w-full rounded-[6px] border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 transition-colors font-medium"
             value={item.linkRef || ''}
             onChange={(e) => {
               const selectedId = e.target.value;
@@ -262,7 +293,7 @@ function ItemFormPanel({ item, onChange, categories, brands, blogCats, flatCateg
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-medium text-foreground">URL</label>
           <input
-            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 placeholder:text-muted-foreground transition-colors font-mono"
+            className="h-9 w-full rounded-[6px] border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 placeholder:text-muted-foreground transition-colors font-mono"
             value={item.customUrl}
             onChange={(e) => set('customUrl', e.target.value)}
             placeholder="/pages/chinh-sach hoặc https://..."
@@ -275,7 +306,7 @@ function ItemFormPanel({ item, onChange, categories, brands, blogCats, flatCateg
         <label className="flex items-center gap-2.5 cursor-pointer">
           <input
             type="checkbox"
-            className="size-4 rounded border-input text-primary focus:ring-ring"
+            className="size-4 rounded-[4px] border-input text-primary focus:ring-ring"
             checked={item.openInNewTab}
             onChange={(e) => set('openInNewTab', e.target.checked)}
           />
@@ -292,13 +323,13 @@ function ItemFormPanel({ item, onChange, categories, brands, blogCats, flatCateg
         <label className="text-xs font-medium text-foreground">Badge (Hot, Mới, Sale...)</label>
         <div className="flex gap-2">
           <input
-            className="h-9 flex-1 rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 placeholder:text-muted-foreground transition-colors"
+            className="h-9 flex-1 rounded-[6px] border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 placeholder:text-muted-foreground transition-colors"
             value={item.badge}
             onChange={(e) => set('badge', e.target.value)}
             placeholder="Để trống nếu không cần"
           />
           <select
-            className="h-9 rounded-md border border-input bg-background px-2 text-sm outline-none focus:border-ring transition-colors"
+            className="h-9 rounded-[6px] border border-input bg-background px-2 text-sm outline-none focus:border-ring transition-colors"
             value={item.badgeColor}
             onChange={(e) => set('badgeColor', e.target.value)}
           >
@@ -313,23 +344,43 @@ function ItemFormPanel({ item, onChange, categories, brands, blogCats, flatCateg
       <label className="flex items-center gap-2.5 cursor-pointer">
         <input
           type="checkbox"
-          className="size-4 rounded border-input text-primary focus:ring-ring"
+          className="size-4 rounded-[4px] border-input text-primary focus:ring-ring"
           checked={item.megaMenu}
           onChange={(e) => set('megaMenu', e.target.checked)}
         />
         <span className="text-sm text-foreground">Hiển thị Mega Menu</span>
       </label>
 
-      {/* Active */}
-      <label className="flex items-center gap-2.5 cursor-pointer">
-        <input
-          type="checkbox"
-          className="size-4 rounded border-input text-primary focus:ring-ring"
-          checked={item.isActive}
-          onChange={(e) => set('isActive', e.target.checked)}
-        />
-        <span className="text-sm text-foreground">Hiển thị mục này</span>
-      </label>
+      {/* Trạng thái hiển thị / Tạm ẩn */}
+      <div className="flex flex-col gap-1.5 pt-3 border-t border-border">
+        <label className="flex items-center justify-between cursor-pointer">
+          <div className="flex items-center gap-2.5">
+            <input
+              type="checkbox"
+              className="size-4 rounded-[4px] border-input text-primary focus:ring-ring"
+              checked={item.isActive !== false}
+              onChange={(e) => set('isActive', e.target.checked)}
+            />
+            <span className="text-sm font-semibold text-foreground">
+              {item.isActive !== false ? 'Hiển thị trên website' : 'Đang tạm ẩn'}
+            </span>
+          </div>
+          <span
+            className={`text-[10px] font-semibold px-2 py-0.5 rounded-[6px] border ${
+              item.isActive !== false
+                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+            }`}
+          >
+            {item.isActive !== false ? 'Hoạt động' : 'Tạm ẩn'}
+          </span>
+        </label>
+        <p className="text-xs text-muted-foreground">
+          {item.isActive !== false
+            ? 'Mục này sẽ xuất hiện trên menu khách hàng. Bỏ chọn để tạm ẩn mà không xóa dữ liệu.'
+            : 'Mục này đang bị ẩn khỏi website. Mọi liên kết và mục con vẫn được giữ nguyên.'}
+        </p>
+      </div>
     </div>
   );
 }
@@ -534,6 +585,24 @@ export default function MenuEditorPage() {
     setDeleteTargetId(null);
   };
 
+  const handleToggleActive = (itemId) => {
+    setFlatItems((prev) =>
+      prev.map((i) => {
+        if (i._id === itemId) {
+          const nextActive = i.isActive === false ? true : false;
+          return { ...i, isActive: nextActive };
+        }
+        return i;
+      })
+    );
+    setSelectedItem((curr) => {
+      if (curr?._id === itemId) {
+        return { ...curr, isActive: curr.isActive === false ? true : false };
+      }
+      return curr;
+    });
+  };
+
   const handleUpdateItem = (updated) => {
     setFlatItems((prev) => prev.map((i) => i._id === updated._id ? { ...i, ...updated } : i));
     setSelectedItem(updated);
@@ -556,18 +625,19 @@ export default function MenuEditorPage() {
   const hasVisibleChildren = (itemId) => visibleItems.some((i) => i.parentId === itemId);
 
   return (
-    <div className="p-3 sm:p-6 flex flex-col gap-4 sm:gap-6 w-full max-w-6xl mx-auto min-h-full bg-background text-foreground">
-      {/* Sticky header */}
-      <div className="sticky -top-3 sm:-top-6 z-30 -mt-3 sm:-mt-6 -mx-3 sm:-mx-6 px-4 sm:px-6 py-3 bg-background/95 backdrop-blur-md border-b border-border flex items-center justify-between gap-3 shadow-xs">
+    <div className="w-full max-w-7xl mx-auto flex flex-col gap-4 h-auto sm:h-[calc(100dvh-112px)] min-h-[550px] text-foreground">
+      {/* Action Header — Cố định trên cùng, màu đặc, bo góc 6px */}
+      <div className="shrink-0 flex items-center justify-between gap-3 px-4 py-2.5 rounded-[6px] border border-border bg-card shadow-xs">
         <div className="flex items-center gap-3 min-w-0">
           <button
-            className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer shrink-0"
+            className="inline-flex size-8 items-center justify-center rounded-[6px] text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer shrink-0 active:scale-[0.98]"
             onClick={() => navigate('/menus')}
+            title="Quay lại danh sách menu"
           >
             <ArrowLeft size={17} />
           </button>
           <input
-            className="h-8 rounded-md border border-transparent bg-transparent px-2 text-sm font-semibold text-foreground outline-none focus:border-input focus:bg-background focus:ring-2 focus:ring-ring/20 transition-colors min-w-0 max-w-48"
+            className="h-8 rounded-[6px] border border-transparent bg-transparent px-2 text-sm font-semibold text-foreground outline-none focus:border-input focus:bg-background focus:ring-2 focus:ring-ring/20 transition-colors min-w-0 max-w-56"
             value={menuName}
             onChange={(e) => setMenuName(e.target.value)}
             placeholder="Tên menu"
@@ -577,7 +647,7 @@ export default function MenuEditorPage() {
           </span>
         </div>
         <button
-          className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground shadow-xs hover:bg-primary/90 transition-colors disabled:pointer-events-none disabled:opacity-50 cursor-pointer shrink-0"
+          className="inline-flex h-9 items-center justify-center gap-1.5 rounded-[6px] bg-primary px-4 text-sm font-medium text-primary-foreground shadow-xs hover:bg-primary/90 transition-colors disabled:pointer-events-none disabled:opacity-50 cursor-pointer shrink-0 active:scale-[0.98]"
           onClick={handleSave}
           disabled={updateMut.isPending}
         >
@@ -586,16 +656,16 @@ export default function MenuEditorPage() {
         </button>
       </div>
 
-      {/* Editor body */}
-      <div className="flex gap-4 min-h-[600px]">
-        {/* Left: Item tree */}
-        <div className="flex flex-col w-full sm:w-1/2 lg:w-2/5 rounded-xl border border-border bg-card shadow-2xs overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30">
+      {/* Editor 2-Column Body: Cột trái scroll nội bộ, Cột phải cố định luôn hiển thị */}
+      <div className="flex-1 min-h-0 flex flex-col sm:flex-row gap-4 items-stretch">
+        {/* Left: Item tree — chiều cao đầy đủ, cuộn danh sách mượt mà */}
+        <div className="flex flex-col w-full sm:w-1/2 lg:w-5/12 h-full rounded-[6px] border border-border bg-card shadow-xs overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30 shrink-0">
             <span className="text-sm font-semibold text-foreground">Cấu trúc menu</span>
             <div className="flex items-center gap-1.5">
               <button
                 type="button"
-                className="inline-flex h-7 items-center justify-center gap-1.5 rounded-md border border-border bg-background hover:bg-accent px-2.5 text-xs font-medium text-foreground transition-colors cursor-pointer shadow-2xs"
+                className="inline-flex h-7 items-center justify-center gap-1.5 rounded-[6px] border border-border bg-background hover:bg-accent px-2.5 text-xs font-medium text-foreground transition-colors cursor-pointer shadow-xs active:scale-[0.98]"
                 onClick={handleSyncCategories}
                 title="Tự động đồng bộ toàn bộ cây danh mục sản phẩm (cha - con) vào menu"
               >
@@ -604,7 +674,7 @@ export default function MenuEditorPage() {
                 <span className="sm:hidden">Đồng bộ</span>
               </button>
               <button
-                className="inline-flex h-7 items-center justify-center gap-1 rounded-md bg-primary px-2.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer shadow-2xs"
+                className="inline-flex h-7 items-center justify-center gap-1 rounded-[6px] bg-primary px-2.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer shadow-xs active:scale-[0.98]"
                 onClick={handleAddRoot}
               >
                 <Plus size={12} /> Thêm mục
@@ -612,7 +682,7 @@ export default function MenuEditorPage() {
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 min-h-0 overflow-y-auto">
             {visibleItems.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 gap-2 text-muted-foreground">
                 <p className="text-sm">Chưa có mục nào</p>
@@ -645,6 +715,7 @@ export default function MenuEditorPage() {
                       onSelect={setSelectedItem}
                       onAdd={handleAddChild}
                       onDelete={handleDelete}
+                      onToggleActive={handleToggleActive}
                       onToggle={(itemId) =>
                         setExpandedIds((s) => {
                           const next = new Set(s);
@@ -658,7 +729,7 @@ export default function MenuEditorPage() {
 
                 <DragOverlay>
                   {activeItem && (
-                    <div className="flex items-center gap-2 py-2 px-3 bg-card border border-border rounded-lg shadow-lg text-sm font-medium text-foreground">
+                    <div className="flex items-center gap-2 py-2 px-3 bg-card border border-border rounded-[6px] shadow-sm text-sm font-medium text-foreground">
                       <GripVertical size={15} className="text-muted-foreground" />
                       {activeItem.label || 'Chưa đặt tên'}
                     </div>
@@ -669,9 +740,9 @@ export default function MenuEditorPage() {
           </div>
         </div>
 
-        {/* Right: Item form */}
-        <div className="hidden sm:flex flex-col flex-1 rounded-xl border border-border bg-card shadow-2xs overflow-hidden">
-          <div className="flex items-center px-4 py-3 border-b border-border bg-muted/30">
+        {/* Right: Item form — CỐ ĐỊNH, không bị trôi khi cuộn danh sách bên trái */}
+        <div className="hidden sm:flex flex-col flex-1 h-full rounded-[6px] border border-border bg-card shadow-xs overflow-hidden">
+          <div className="flex items-center px-4 py-3 border-b border-border bg-muted/30 shrink-0">
             <span className="text-sm font-semibold text-foreground">
               {selectedItem ? `Chỉnh sửa: ${selectedItem.label || 'Chưa đặt tên'}` : 'Thuộc tính mục'}
             </span>
@@ -689,7 +760,7 @@ export default function MenuEditorPage() {
 
       {/* Mobile: show form below if selected */}
       {selectedItem && (
-        <div className="sm:hidden rounded-xl border border-border bg-card shadow-2xs overflow-hidden">
+        <div className="sm:hidden rounded-[6px] border border-border bg-card shadow-xs overflow-hidden">
           <div className="flex items-center px-4 py-3 border-b border-border bg-muted/30">
             <span className="text-sm font-semibold text-foreground">
               Chỉnh sửa: {selectedItem.label || 'Chưa đặt tên'}

@@ -14,6 +14,13 @@ import SearchableSelect from '@/components/ui/SearchableSelect';
 import PriceInput, { formatVND } from '@/components/ui/PriceInput';
 import SortableGalleryItem from '@/components/products/SortableGalleryItem';
 import { buildTree, buildRelationMaps, getAncestors, getDescendants } from '@/utils/treeUtils';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import {
+  Table, TableHeader, TableBody, TableHead, TableRow, TableCell,
+} from '@/components/ui/table';
 import {
   DndContext,
   closestCenter,
@@ -37,7 +44,6 @@ const ITEM_TYPE_OPTIONS = [
   { label: 'Nguyên vật liệu', value: 'raw_material' },
   { label: 'Dịch vụ', value: 'service' },
 ];
-
 
 const DEFAULT_FORM = {
   name: '',
@@ -63,13 +69,6 @@ const DEFAULT_FORM = {
   imageMediaIds: [],
   imageUrls: [],
 };
-
-// formatVND imported from @/components/ui/PriceInput
-
-// PriceInput imported from @/components/ui/PriceInput
-
-
-// buildTree, getAncestors, getDescendants imported from @/utils/treeUtils
 
 // ─── Highlight matched text ────────────────────────────────────────────────
 function HighlightText({ text, query }) {
@@ -171,7 +170,7 @@ function CategoryTreeMultiPicker({ categories, value = [], onChange }) {
       <div key={node._id}>
         <div
           style={{ paddingLeft: `${depth * 16 + 6}px` }}
-          className={`flex items-center gap-2 py-1.5 pr-2 rounded-md transition-colors ${isChecked ? 'bg-primary/5' : 'hover:bg-muted'
+          className={`flex items-center gap-2 py-1.5 pr-2 rounded-[6px] transition-colors ${isChecked ? 'bg-primary/5' : 'hover:bg-muted'
             } ${isSearchMatch ? 'ring-1 ring-inset ring-amber-400/50' : ''}`}
         >
           <button
@@ -185,11 +184,11 @@ function CategoryTreeMultiPicker({ categories, value = [], onChange }) {
           <label className="flex items-center gap-2 flex-1 cursor-pointer select-none min-w-0">
             <input
               type="checkbox"
-              className="size-3.5 rounded border-input cursor-pointer accent-primary shrink-0"
+              className="size-3.5 rounded-[4px] border-input cursor-pointer accent-primary shrink-0"
               checked={isChecked}
               onChange={() => toggleCheck(node._id)}
             />
-            <span className={`text-sm truncate ${isChecked ? 'font-medium text-primary' : 'text-foreground'}`}>
+            <span className={`text-xs truncate ${isChecked ? 'font-medium text-primary' : 'text-foreground'}`}>
               <HighlightText text={node.name} query={searchQ} />
             </span>
           </label>
@@ -208,16 +207,16 @@ function CategoryTreeMultiPicker({ categories, value = [], onChange }) {
       {/* Trigger button */}
       <button
         type="button"
-        className="min-h-9 w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-left text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 transition-colors cursor-pointer flex flex-wrap items-center gap-1.5"
+        className="min-h-9 w-full rounded-[6px] border border-input bg-background px-3 py-1.5 text-xs text-left text-foreground outline-none focus:border-ring focus:ring-1 focus:ring-ring/20 transition-colors cursor-pointer flex flex-wrap items-center gap-1.5"
         onClick={() => setOpen((v) => !v)}
       >
         {selectedCats.length === 0 ? (
-          <span className="text-muted-foreground py-0.5">-- Chon danh muc --</span>
+          <span className="text-muted-foreground py-0.5">-- Chọn danh mục --</span>
         ) : (
           selectedCats.map((c) => (
-            <span key={c._id} className="inline-flex items-center gap-1 rounded-md bg-primary/10 border border-primary/20 text-primary px-2 py-0.5 text-xs font-medium">
+            <span key={c._id} className="inline-flex items-center gap-1 rounded-[4px] bg-primary/10 border border-primary/20 text-primary px-2 py-0.5 text-xs font-medium">
               {c.name}
-              <button type="button" className="hover:text-destructive cursor-pointer leading-none" onClick={(e) => removeCat(c._id, e)}>x</button>
+              <button type="button" className="hover:text-destructive cursor-pointer leading-none ml-0.5" onClick={(e) => removeCat(c._id, e)}>×</button>
             </span>
           ))
         )}
@@ -226,18 +225,18 @@ function CategoryTreeMultiPicker({ categories, value = [], onChange }) {
 
       {/* Dropdown */}
       {open && (
-        <div className="absolute top-full left-0 right-0 z-50 mt-1 rounded-md border border-border bg-background shadow-lg flex flex-col overflow-hidden">
+        <div className="absolute top-full left-0 right-0 z-50 mt-1 rounded-[6px] border border-border bg-background shadow-md flex flex-col overflow-hidden">
           {/* Search */}
           <div className="p-2 border-b border-border">
             <div className="relative flex items-center">
               <Search size={13} className="absolute left-2.5 text-muted-foreground pointer-events-none" />
-              <input
+              <Input
                 ref={searchRef}
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Tim danh muc..."
-                className="h-8 w-full rounded-md border border-input bg-muted/40 pl-8 pr-7 text-xs outline-none focus:border-ring focus:ring-1 focus:ring-ring/20 placeholder:text-muted-foreground"
+                placeholder="Tìm danh mục..."
+                className="h-8 w-full rounded-[6px] pl-8 pr-7 text-xs"
               />
               {search && (
                 <button type="button" onClick={() => setSearch('')} className="absolute right-2 text-muted-foreground hover:text-foreground cursor-pointer">
@@ -249,9 +248,9 @@ function CategoryTreeMultiPicker({ categories, value = [], onChange }) {
           {/* Tree */}
           <div className="max-h-56 overflow-y-auto p-1">
             {!hasResults ? (
-              <p className="px-3 py-3 text-xs text-center text-muted-foreground">Khong tim thay ket qua</p>
+              <p className="px-3 py-3 text-xs text-center text-muted-foreground">Không tìm thấy kết quả</p>
             ) : tree.length === 0 ? (
-              <p className="px-3 py-2 text-xs text-muted-foreground">Khong co danh muc</p>
+              <p className="px-3 py-2 text-xs text-muted-foreground">Không có danh mục</p>
             ) : (
               tree.map((node) => renderNode(node))
             )}
@@ -445,6 +444,8 @@ export default function ProductFormPage() {
     const payload = {
       name: form.name.trim(),
       sku: form.sku.trim(),
+      unit: form.unit || 'Cái',
+      itemType: form.itemType || 'merchandise',
       categories: form.categories,
       brand: form.brand || undefined,
       supplierId: form.supplierId || undefined,
@@ -475,8 +476,11 @@ export default function ProductFormPage() {
     }
 
     const opts = {
-      onSuccess: () => { toast.success(isEdit ? 'Cập nhật sản phẩm thành công' : 'Tạo sản phẩm thành công'); navigate('/products'); },
-      onError: (e) => toast.error(e.response?.data?.message || 'Lỗi'),
+      onSuccess: () => {
+        toast.success(isEdit ? 'Cập nhật sản phẩm thành công' : 'Tạo sản phẩm thành công');
+        navigate('/products');
+      },
+      onError: (e) => toast.error(e.response?.data?.message || 'Lỗi lưu sản phẩm'),
     };
 
     if (isEdit) updateMut.mutate({ id, data: payload }, opts);
@@ -488,23 +492,24 @@ export default function ProductFormPage() {
   if (isEdit && productLoading) {
     return (
       <div className="flex justify-center items-center py-20 text-muted-foreground gap-2">
-        <Loader2 className="animate-spin" size={28} />
+        <Loader2 className="animate-spin text-primary" size={24} />
       </div>
     );
   }
 
   return (
     <div className="p-3 sm:p-6 flex flex-col gap-6 w-full max-w-6xl mx-auto min-h-full bg-background text-foreground">
-      <div className="sticky -top-3 sm:-top-6 z-30 -mt-3 sm:-mt-6 -mx-3 sm:-mx-6 px-4 sm:px-6 py-3 bg-background/95 backdrop-blur-md border-b border-border flex items-center justify-between gap-3 shadow-xs">
+      <div className="sticky -top-3 sm:-top-6 z-30 -mt-3 sm:-mt-6 -mx-3 sm:-mx-6 px-4 sm:px-6 py-3 bg-background/95 border-b border-border flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0 flex-1">
-          <button
-            type="button"
-            className="inline-flex size-8 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer shrink-0"
+          <Button
+            variant="outline"
+            size="icon"
             onClick={() => navigate('/products')}
+            className="h-8 w-8 rounded-[6px] border-border text-muted-foreground hover:bg-accent hover:text-foreground shrink-0"
             title="Quay lại danh sách"
           >
             <ArrowLeft size={16} />
-          </button>
+          </Button>
           <div className="min-w-0 flex-1">
             <h1 className="text-base sm:text-lg font-bold tracking-tight text-foreground truncate">
               {isEdit ? 'Chỉnh sửa sản phẩm' : 'Thêm sản phẩm mới'}
@@ -519,177 +524,182 @@ export default function ProductFormPage() {
 
         <div className="flex items-center gap-2 shrink-0">
           {isEdit && (
-            <button
+            <Button
               type="button"
-              className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-violet-500/40 px-3.5 text-xs sm:text-sm font-medium text-violet-600 dark:text-violet-400 hover:bg-violet-500/10 transition-colors cursor-pointer"
+              variant="outline"
+              size="sm"
+              className="h-8 rounded-[6px] text-xs font-semibold text-primary border-primary/30 hover:bg-primary/5 active:scale-[0.98]"
               onClick={() => navigate(`/products/${id}/variants`)}
             >
-              <Layers size={15} /> <span className="hidden sm:inline">Quản lý</span> biến thể
-            </button>
+              <Layers size={14} className="mr-1.5" /> <span className="hidden sm:inline">Quản lý</span> biến thể
+            </Button>
           )}
-          <button
+          <Button
             type="button"
-            className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-primary px-4 text-xs sm:text-sm font-medium text-primary-foreground shadow-xs hover:bg-primary/90 transition-colors cursor-pointer disabled:pointer-events-none disabled:opacity-50"
+            size="sm"
+            className="h-8 rounded-[6px] bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 active:scale-[0.98] transition-all disabled:opacity-50"
             onClick={handleSubmit}
             disabled={isMutating}
           >
-            {isMutating ? <Loader2 size={15} className="animate-spin" /> : (isEdit ? 'Cập nhật' : 'Tạo sản phẩm')}
-          </button>
+            {isMutating ? <Loader2 size={13} className="animate-spin mr-1.5" /> : null}
+            {isEdit ? 'Cập nhật' : 'Tạo sản phẩm'}
+          </Button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 flex flex-col gap-6">
-          <div className="rounded-xl border border-border bg-card p-5 text-card-foreground shadow-2xs flex flex-col gap-4">
-            <h3 className="text-base font-semibold text-foreground pb-2 border-b border-border">Thông tin cơ bản</h3>
+          <Card className="rounded-[6px] border border-border shadow-none">
+            <CardHeader className="pb-3 border-b border-border">
+              <CardTitle className="text-sm font-semibold text-foreground">Thông tin cơ bản</CardTitle>
+            </CardHeader>
 
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-foreground">Tên sản phẩm <span className="text-destructive ml-0.5">*</span></label>
-              <input
-                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 placeholder:text-muted-foreground transition-colors"
-                value={form.name}
-                onChange={(e) => setField('name', e.target.value)}
-                placeholder="Tên sản phẩm"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-              <div className="flex flex-col gap-1.5 sm:col-span-1">
-                <label className="text-xs font-medium text-foreground">
-                  Mã SKU
-                  <span className="ml-1 text-[10px] font-normal text-muted-foreground">(Tùy chọn)</span>
-                </label>
-                <input
-                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 placeholder:text-muted-foreground transition-colors"
-                  value={form.sku}
-                  onChange={(e) => setField('sku', e.target.value)}
-                  placeholder="Mã SKU"
-                />
-              </div>
-
-              <div className="flex flex-col gap-1.5 sm:col-span-1">
-                <label className="text-xs font-medium text-foreground">
-                  Đơn vị tính (ĐVT) <span className="text-destructive ml-0.5">*</span>
-                </label>
-                <SearchableSelect
-                  options={UNIT_OPTIONS}
-                  value={form.unit || 'Cái'}
-                  onChange={(v) => setField('unit', v)}
-                  creatable={true}
-                  placeholder="Chọn hoặc gõ ĐVT..."
-                />
-              </div>
-
-              <div className="flex flex-col gap-1.5 sm:col-span-1">
-                <label className="text-xs font-medium text-foreground">Tính chất VTHH</label>
-                <SearchableSelect
-                  options={ITEM_TYPE_OPTIONS}
-                  value={form.itemType || 'merchandise'}
-                  onChange={(v) => setField('itemType', v)}
-                  creatable={false}
-                  placeholder="Chọn tính chất..."
-                />
-              </div>
-
-              <div className="flex flex-col gap-1.5 sm:col-span-1">
-                <label className="text-xs font-medium text-foreground">Tồn kho <span className="text-destructive ml-0.5">*</span></label>
-                <input
-                  type="number"
-                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 transition-colors font-bold"
-                  value={form.stock}
-                  onChange={(e) => setField('stock', e.target.value)}
-                  min="0"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <CardContent className="pt-4 space-y-4">
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-foreground">
-                  Giá nhập vốn (Giá gốc)
-                  <span className="ml-1 text-[10px] font-normal text-muted-foreground">(Quản lý kho/kế toán)</span>
-                </label>
-                <PriceInput value={form.costPrice} onChange={(v) => setField('costPrice', v)} placeholder="5,000,000" />
+                <label className="text-xs font-medium text-muted-foreground">Tên sản phẩm <span className="text-destructive ml-0.5">*</span></label>
+                <Input
+                  className="h-8 rounded-[6px] text-xs"
+                  value={form.name}
+                  onChange={(e) => setField('name', e.target.value)}
+                  placeholder="Tên sản phẩm"
+                />
               </div>
 
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-foreground">
-                  Giá niêm yết <span className="text-destructive ml-0.5">*</span>
-                  <span className="ml-1.5 text-[10px] font-normal text-muted-foreground">(Giá bán)</span>
-                </label>
-                <PriceInput value={form.price} onChange={(v) => setField('price', v)} placeholder="8,000,000" />
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-medium text-foreground">Giá khuyến mãi</label>
-                  <div className="flex items-center rounded-md border border-border bg-muted p-0.5 text-xs">
-                    <button
-                      type="button"
-                      className={`px-2 py-0.5 rounded transition-colors cursor-pointer ${discountMode === 'price' ? 'bg-background text-foreground font-semibold shadow-2xs' : 'text-muted-foreground hover:text-foreground'}`}
-                      onClick={() => setDiscountMode('price')}
-                    >
-                      Giá
-                    </button>
-                    <button
-                      type="button"
-                      className={`px-2 py-0.5 rounded transition-colors cursor-pointer ${discountMode === 'percent' ? 'bg-background text-foreground font-semibold shadow-2xs' : 'text-muted-foreground hover:text-foreground'}`}
-                      onClick={() => setDiscountMode('percent')}
-                    >
-                      %
-                    </button>
-                  </div>
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                <div className="flex flex-col gap-1.5 sm:col-span-1">
+                  <label className="text-xs font-medium text-muted-foreground">
+                    Mã SKU <span className="text-destructive ml-0.5">*</span>
+                  </label>
+                  <Input
+                    className="h-8 rounded-[6px] text-xs font-mono"
+                    value={form.sku}
+                    onChange={(e) => setField('sku', e.target.value)}
+                    placeholder="Mã SKU"
+                  />
                 </div>
 
-                {discountMode === 'price' ? (
-                  <PriceInput
-                    value={form.salePrice}
-                    onChange={(v) => setField('salePrice', v)}
-                    placeholder="0"
+                <div className="flex flex-col gap-1.5 sm:col-span-1">
+                  <label className="text-xs font-medium text-muted-foreground">
+                    ĐVT <span className="text-destructive ml-0.5">*</span>
+                  </label>
+                  <SearchableSelect
+                    options={UNIT_OPTIONS}
+                    value={form.unit || 'Cái'}
+                    onChange={(v) => setField('unit', v)}
+                    creatable={true}
+                    placeholder="Chọn ĐVT..."
                   />
-                ) : (
-                  <div className="relative flex items-center">
-                    <input
-                      type="number"
-                      className="h-9 w-full rounded-md border border-input bg-background pl-3 pr-8 text-sm text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 transition-colors"
-                      min="0"
-                      max="100"
-                      placeholder="0"
-                      value={
-                        form.price && form.salePrice
-                          ? Math.round((1 - form.salePrice / form.price) * 100)
-                          : ''
-                      }
-                      onChange={(e) => {
-                        const pct = Math.min(100, Math.max(0, Number(e.target.value)));
-                        if (form.price) setField('salePrice', Math.round(form.price * (1 - pct / 100)));
-                      }}
-                    />
-                    <span className="absolute right-3 text-xs text-muted-foreground font-medium pointer-events-none">%</span>
-                  </div>
-                )}
+                </div>
 
-                {form.price > 0 && form.salePrice > 0 && form.salePrice < form.price && (
-                  <div className="mt-1 rounded-md bg-emerald-500/10 px-2.5 py-1 text-xs text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-medium">
-                    Giảm {Math.round((1 - form.salePrice / form.price) * 100)}% — Tiết kiệm {formatVND(form.price - form.salePrice)}đ → Còn <strong>{formatVND(form.salePrice)}đ</strong>
-                  </div>
-                )}
+                <div className="flex flex-col gap-1.5 sm:col-span-1">
+                  <label className="text-xs font-medium text-muted-foreground">Tính chất VTHH</label>
+                  <SearchableSelect
+                    options={ITEM_TYPE_OPTIONS}
+                    value={form.itemType || 'merchandise'}
+                    onChange={(v) => setField('itemType', v)}
+                    creatable={false}
+                    placeholder="Chọn..."
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5 sm:col-span-1">
+                  <label className="text-xs font-medium text-muted-foreground">Tồn kho <span className="text-destructive ml-0.5">*</span></label>
+                  <Input
+                    type="number"
+                    className="h-8 rounded-[6px] text-xs font-mono font-bold tabular-nums"
+                    value={form.stock}
+                    onChange={(e) => setField('stock', e.target.value)}
+                    min="0"
+                  />
+                </div>
               </div>
-            </div>
-          </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">
+                    Giá nhập vốn (Giá gốc)
+                  </label>
+                  <PriceInput value={form.costPrice} onChange={(v) => setField('costPrice', v)} placeholder="5,000,000" />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">
+                    Giá niêm yết <span className="text-destructive ml-0.5">*</span>
+                  </label>
+                  <PriceInput value={form.price} onChange={(v) => setField('price', v)} placeholder="8,000,000" />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-medium text-muted-foreground">Giá khuyến mãi</label>
+                    <div className="flex items-center rounded-[4px] border border-border bg-muted p-0.5 text-[11px]">
+                      <button
+                        type="button"
+                        className={`px-1.5 py-0.5 rounded-[3px] transition-colors cursor-pointer ${discountMode === 'price' ? 'bg-background text-foreground font-semibold shadow-xs' : 'text-muted-foreground hover:text-foreground'}`}
+                        onClick={() => setDiscountMode('price')}
+                      >
+                        Giá
+                      </button>
+                      <button
+                        type="button"
+                        className={`px-1.5 py-0.5 rounded-[3px] transition-colors cursor-pointer ${discountMode === 'percent' ? 'bg-background text-foreground font-semibold shadow-xs' : 'text-muted-foreground hover:text-foreground'}`}
+                        onClick={() => setDiscountMode('percent')}
+                      >
+                        %
+                      </button>
+                    </div>
+                  </div>
+
+                  {discountMode === 'price' ? (
+                    <PriceInput
+                      value={form.salePrice}
+                      onChange={(v) => setField('salePrice', v)}
+                      placeholder="0"
+                    />
+                  ) : (
+                    <div className="relative flex items-center">
+                      <Input
+                        type="number"
+                        className="h-8 rounded-[6px] pr-8 text-xs font-mono tabular-nums"
+                        min="0"
+                        max="100"
+                        placeholder="0"
+                        value={
+                          form.price && form.salePrice
+                            ? Math.round((1 - form.salePrice / form.price) * 100)
+                            : ''
+                        }
+                        onChange={(e) => {
+                          const pct = Math.min(100, Math.max(0, Number(e.target.value)));
+                          if (form.price) setField('salePrice', Math.round(form.price * (1 - pct / 100)));
+                        }}
+                      />
+                      <span className="absolute right-3 text-xs text-muted-foreground font-medium pointer-events-none">%</span>
+                    </div>
+                  )}
+
+                  {form.price > 0 && form.salePrice > 0 && form.salePrice < form.price && (
+                    <div className="mt-1 rounded-[4px] bg-emerald-500/10 px-2.5 py-1 text-[11px] text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-medium font-mono tabular-nums">
+                      Giảm {Math.round((1 - form.salePrice / form.price) * 100)}% — Tiết kiệm {formatVND(form.price - form.salePrice)}đ → Còn <strong>{formatVND(form.salePrice)}đ</strong>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* SECTION: BẬT TẠO BIẾN THỂ CÙNG LÚC KHI TẠO MỚI */}
           {!isEdit && (
-            <div className="rounded-xl border border-border bg-card p-5 text-card-foreground shadow-2xs flex flex-col gap-4">
-              <div className="flex items-center justify-between pb-2 border-b border-border">
+            <Card className="rounded-[6px] border border-border shadow-none">
+              <CardHeader className="pb-3 border-b border-border flex flex-row items-center justify-between space-y-0">
                 <div>
-                  <h3 className="text-base font-semibold text-foreground">Biến thể & Phiên bản sản phẩm</h3>
-                  <p className="text-xs text-muted-foreground">Tùy chọn tạo nhiều kích thước, màu sắc cùng lúc (Hoặc để trống tạo sau)</p>
+                  <CardTitle className="text-sm font-semibold text-foreground">Biến thể & Phiên bản</CardTitle>
+                  <p className="text-[11px] text-muted-foreground">Tùy chọn tạo nhiều kích thước, màu sắc cùng lúc</p>
                 </div>
-                <label className="flex items-center gap-2 text-xs font-medium text-foreground cursor-pointer bg-muted/50 px-3 py-1.5 rounded-lg border border-border hover:bg-muted transition-colors">
+                <label className="flex items-center gap-2 text-xs font-medium text-foreground cursor-pointer bg-muted/50 px-2.5 py-1 rounded-[6px] border border-border hover:bg-muted transition-colors">
                   <input
                     type="checkbox"
-                    className="size-4 rounded border-input text-primary focus:ring-ring cursor-pointer"
+                    className="size-3.5 rounded-[4px] border-input text-primary focus:ring-ring cursor-pointer"
                     checked={hasVariants}
                     onChange={(e) => {
                       const enabled = e.target.checked;
@@ -699,30 +709,32 @@ export default function ProductFormPage() {
                       }
                     }}
                   />
-                  <span>Sản phẩm này có nhiều phiên bản</span>
+                  <span>Có nhiều phiên bản</span>
                 </label>
-              </div>
+              </CardHeader>
 
               {hasVariants && (
-                <div className="flex flex-col gap-5 pt-1">
+                <CardContent className="pt-4 space-y-4">
                   {/* Quản lý các thuộc tính */}
                   <div className="flex flex-col gap-3">
                     <div className="flex items-center justify-between">
-                      <label className="text-xs font-semibold text-foreground">1. Danh sách thuộc tính (Ví dụ: Kích thước, Màu sắc)</label>
-                      <button
+                      <label className="text-xs font-semibold text-foreground">1. Danh sách thuộc tính</label>
+                      <Button
                         type="button"
-                        className="inline-flex h-7 items-center justify-center gap-1 rounded-md bg-primary/10 border border-primary/20 text-primary px-2.5 text-xs font-medium hover:bg-primary/20 transition-colors cursor-pointer"
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs rounded-[6px]"
                         onClick={() => setOptions([...options, { name: '', values: [] }])}
                       >
-                        <Plus size={13} /> Thêm thuộc tính khác
-                      </button>
+                        <Plus size={12} className="mr-1" /> Thêm thuộc tính
+                      </Button>
                     </div>
 
                     {options.map((opt, optIdx) => (
-                      <div key={optIdx} className="p-3.5 rounded-lg border border-border bg-muted/20 flex flex-col gap-2.5">
+                      <div key={optIdx} className="p-3 rounded-[6px] border border-border bg-muted/20 flex flex-col gap-2">
                         <div className="flex items-center gap-2">
-                          <input
-                            className="h-8.5 flex-1 max-w-xs rounded-md border border-input bg-background px-3 text-xs font-medium text-foreground outline-none focus:border-ring focus:ring-1 focus:ring-ring/20 placeholder:text-muted-foreground"
+                          <Input
+                            className="h-8 max-w-xs rounded-[6px] text-xs"
                             placeholder="Tên thuộc tính (VD: Kích thước)"
                             value={opt.name}
                             onChange={(e) => {
@@ -731,22 +743,24 @@ export default function ProductFormPage() {
                               setOptions(copy);
                             }}
                           />
-                          <button
+                          <Button
                             type="button"
-                            className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors cursor-pointer ml-auto"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 rounded-[6px] text-muted-foreground hover:bg-destructive/10 hover:text-destructive ml-auto"
                             onClick={() => {
                               const copy = options.filter((_, i) => i !== optIdx);
                               setOptions(copy);
                             }}
                           >
-                            <Trash2 size={14} />
-                          </button>
+                            <Trash2 size={13} />
+                          </Button>
                         </div>
 
                         {/* Thêm chip giá trị */}
                         <div className="flex flex-wrap items-center gap-1.5">
                           {opt.values.map((val, valIdx) => (
-                            <span key={valIdx} className="inline-flex items-center gap-1 rounded-md bg-background border border-border px-2 py-1 text-xs font-medium text-foreground shadow-2xs">
+                            <span key={valIdx} className="inline-flex items-center gap-1 rounded-[4px] bg-background border border-border px-2 py-0.5 text-xs font-medium text-foreground">
                               {val}
                               <button
                                 type="button"
@@ -757,15 +771,15 @@ export default function ProductFormPage() {
                                   setOptions(copy);
                                 }}
                               >
-                                <X size={12} />
+                                <X size={11} />
                               </button>
                             </span>
                           ))}
 
                           <div className="flex items-center gap-1 flex-1 min-w-[180px]">
-                            <input
-                              className="h-7 flex-1 rounded-md border border-dashed border-input bg-background px-2.5 text-xs text-foreground outline-none focus:border-primary placeholder:text-muted-foreground"
-                              placeholder="Nhập giá trị (VD: Đỏ, Xanh, XL)..."
+                            <Input
+                              className="h-7 rounded-[4px] border-dashed text-xs"
+                              placeholder="Nhập giá trị (VD: Đỏ, Xanh)..."
                               value={optionInputs[optIdx] || ''}
                               onChange={(e) => setOptionInputs({ ...optionInputs, [optIdx]: e.target.value })}
                               onBlur={() => {
@@ -791,9 +805,10 @@ export default function ProductFormPage() {
                               }}
                             />
                             {optionInputs[optIdx]?.trim() && (
-                              <button
+                              <Button
                                 type="button"
-                                className="h-7 px-2 text-xs rounded bg-primary/10 hover:bg-primary/20 text-primary font-medium cursor-pointer shrink-0 transition-colors"
+                                size="sm"
+                                className="h-7 px-2 text-xs rounded-[4px]"
                                 onClick={() => {
                                   const val = (optionInputs[optIdx] || '').trim();
                                   if (val && !opt.values.includes(val)) {
@@ -805,7 +820,7 @@ export default function ProductFormPage() {
                                 }}
                               >
                                 + Thêm
-                              </button>
+                              </Button>
                             )}
                           </div>
                         </div>
@@ -816,11 +831,11 @@ export default function ProductFormPage() {
                   {/* Nút bấm sinh ma trận biến thể */}
                   <div className="flex items-center justify-between pt-2 border-t border-border">
                     <span className="text-xs font-semibold text-foreground">2. Ma trận phiên bản ({generatedVariants.length} loại)</span>
-                    <button
+                    <Button
                       type="button"
-                      className="inline-flex h-8 items-center justify-center gap-1.5 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer shadow-xs"
+                      size="sm"
+                      className="h-8 rounded-[6px] text-xs font-semibold active:scale-[0.98]"
                       onClick={() => {
-                        // Tự động gộp tất cả các giá trị đang gõ dở trong input mà người dùng quên bấm Enter
                         const latestOpts = options.map((opt, optIdx) => {
                           const pendingVal = (optionInputs[optIdx] || '').trim();
                           if (pendingVal && !opt.values.includes(pendingVal)) {
@@ -837,15 +852,15 @@ export default function ProductFormPage() {
                         else toast.error('Vui lòng nhập ít nhất 1 tên thuộc tính và 1 giá trị');
                       }}
                     >
-                      <Layers size={14} /> Sinh ma trận biến thể
-                    </button>
+                      <Layers size={13} className="mr-1.5" /> Sinh ma trận biến thể
+                    </Button>
                   </div>
 
                   {/* Bảng ma trận biến thể */}
                   {generatedVariants.length > 0 && (
                     <div className="flex flex-col gap-3">
                       {/* Hàng Áp dụng hàng loạt */}
-                      <div className="p-3 rounded-lg bg-muted/40 border border-border flex flex-wrap items-center gap-3 text-xs">
+                      <div className="p-3 rounded-[6px] bg-muted/40 border border-border flex flex-wrap items-center gap-3 text-xs">
                         <span className="font-semibold text-foreground shrink-0">Áp dụng cho tất cả:</span>
                         <div className="flex items-center gap-1.5">
                           <PriceInput
@@ -854,9 +869,11 @@ export default function ProductFormPage() {
                             placeholder="Giá niêm yết"
                             className="h-8 w-28 text-xs"
                           />
-                          <button
+                          <Button
                             type="button"
-                            className="h-8 px-2.5 rounded-md bg-background border border-border hover:bg-accent font-medium cursor-pointer"
+                            variant="outline"
+                            size="sm"
+                            className="h-8 rounded-[6px] text-xs"
                             onClick={() => {
                               if (!bulkPrice) return;
                               setGeneratedVariants(generatedVariants.map(v => ({ ...v, price: Number(bulkPrice) })));
@@ -864,7 +881,7 @@ export default function ProductFormPage() {
                             }}
                           >
                             Áp dụng
-                          </button>
+                          </Button>
                         </div>
 
                         <div className="flex items-center gap-1.5">
@@ -874,60 +891,64 @@ export default function ProductFormPage() {
                             placeholder="Giá KM"
                             className="h-8 w-28 text-xs"
                           />
-                          <button
+                          <Button
                             type="button"
-                            className="h-8 px-2.5 rounded-md bg-background border border-border hover:bg-accent font-medium cursor-pointer"
+                            variant="outline"
+                            size="sm"
+                            className="h-8 rounded-[6px] text-xs"
                             onClick={() => {
                               setGeneratedVariants(generatedVariants.map(v => ({ ...v, salePrice: Number(bulkSalePrice || 0) })));
                               toast.success('Đã áp dụng Giá KM cho tất cả');
                             }}
                           >
                             Áp dụng
-                          </button>
+                          </Button>
                         </div>
 
                         <div className="flex items-center gap-1.5">
-                          <input
+                          <Input
                             type="number"
                             value={bulkStock}
                             onChange={(e) => setBulkStock(e.target.value)}
                             placeholder="Tồn kho"
-                            className="h-8 w-20 rounded-md border border-input bg-background px-2 text-xs outline-none focus:border-ring"
+                            className="h-8 w-20 rounded-[6px] text-xs font-mono tabular-nums"
                           />
-                          <button
+                          <Button
                             type="button"
-                            className="h-8 px-2.5 rounded-md bg-background border border-border hover:bg-accent font-medium cursor-pointer"
+                            variant="outline"
+                            size="sm"
+                            className="h-8 rounded-[6px] text-xs"
                             onClick={() => {
                               setGeneratedVariants(generatedVariants.map(v => ({ ...v, stock: Number(bulkStock || 0) })));
                               toast.success('Đã áp dụng Tồn kho cho tất cả');
                             }}
                           >
                             Áp dụng
-                          </button>
+                          </Button>
                         </div>
                       </div>
 
                       {/* Bảng chi tiết */}
-                      <div className="overflow-x-auto rounded-lg border border-border">
-                        <table className="w-full text-xs text-left border-collapse">
-                          <thead className="bg-muted/80 text-foreground font-semibold">
-                            <tr>
-                              <th className="px-3 py-2 border-b border-border">#</th>
-                              <th className="px-3 py-2 border-b border-border">Tên phiên bản</th>
-                              <th className="px-3 py-2 border-b border-border">Mã SKU</th>
-                              <th className="px-3 py-2 border-b border-border">Giá niêm yết</th>
-                              <th className="px-3 py-2 border-b border-border">Giá KM</th>
-                              <th className="px-3 py-2 border-b border-border">Tồn kho</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-border">
+                      <div className="overflow-x-auto rounded-[6px] border border-border">
+                        <Table>
+                          <TableHeader className="bg-muted/40">
+                            <TableRow>
+                              <TableHead className="py-2 text-xs w-10">#</TableHead>
+                              <TableHead className="py-2 text-xs">Tên phiên bản</TableHead>
+                              <TableHead className="py-2 text-xs">Mã SKU</TableHead>
+                              <TableHead className="py-2 text-xs">Giá niêm yết</TableHead>
+                              <TableHead className="py-2 text-xs">Giá KM</TableHead>
+                              <TableHead className="py-2 text-xs">Tồn kho</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
                             {generatedVariants.map((v, vIdx) => (
-                              <tr key={vIdx} className="hover:bg-muted/20">
-                                <td className="px-3 py-2 font-mono text-muted-foreground">{vIdx + 1}</td>
-                                <td className="px-3 py-2 font-medium text-foreground">{v.displayName}</td>
-                                <td className="px-3 py-2">
-                                  <input
-                                    className="h-7 w-28 rounded border border-input bg-background px-2 text-xs font-mono outline-none focus:border-ring"
+                              <TableRow key={vIdx} className="hover:bg-muted/20">
+                                <TableCell className="py-1.5 font-mono text-muted-foreground text-xs tabular-nums">{vIdx + 1}</TableCell>
+                                <TableCell className="py-1.5 font-medium text-foreground text-xs">{v.displayName}</TableCell>
+                                <TableCell className="py-1.5">
+                                  <Input
+                                    className="h-7 w-28 rounded-[4px] text-xs font-mono uppercase"
                                     value={v.sku}
                                     onChange={(e) => {
                                       const copy = [...generatedVariants];
@@ -935,8 +956,8 @@ export default function ProductFormPage() {
                                       setGeneratedVariants(copy);
                                     }}
                                   />
-                                </td>
-                                <td className="px-3 py-2">
+                                </TableCell>
+                                <TableCell className="py-1.5">
                                   <PriceInput
                                     value={v.price}
                                     onChange={(val) => {
@@ -946,8 +967,8 @@ export default function ProductFormPage() {
                                     }}
                                     className="h-7 w-28 text-xs"
                                   />
-                                </td>
-                                <td className="px-3 py-2">
+                                </TableCell>
+                                <TableCell className="py-1.5">
                                   <PriceInput
                                     value={v.salePrice}
                                     onChange={(val) => {
@@ -957,12 +978,12 @@ export default function ProductFormPage() {
                                     }}
                                     className="h-7 w-28 text-xs"
                                   />
-                                </td>
-                                <td className="px-3 py-2">
-                                  <input
+                                </TableCell>
+                                <TableCell className="py-1.5">
+                                  <Input
                                     type="number"
                                     min="0"
-                                    className="h-7 w-20 rounded border border-input bg-background px-2 text-xs font-bold outline-none focus:border-ring"
+                                    className="h-7 w-20 rounded-[4px] text-xs font-mono font-bold tabular-nums"
                                     value={v.stock}
                                     onChange={(e) => {
                                       const copy = [...generatedVariants];
@@ -970,226 +991,244 @@ export default function ProductFormPage() {
                                       setGeneratedVariants(copy);
                                     }}
                                   />
-                                </td>
-                              </tr>
+                                </TableCell>
+                              </TableRow>
                             ))}
-                          </tbody>
-                        </table>
+                          </TableBody>
+                        </Table>
                       </div>
                     </div>
                   )}
-                </div>
+                </CardContent>
               )}
-            </div>
+            </Card>
           )}
 
-          <div className="rounded-xl border border-border bg-card p-5 text-card-foreground shadow-2xs flex flex-col gap-4">
-            <h3 className="text-base font-semibold text-foreground pb-2 border-b border-border">Mô tả sản phẩm</h3>
-            <RichTextEditor
-              value={form.description}
-              onChange={(v) => setField('description', v)}
-            />
-          </div>
+          <Card className="rounded-[6px] border border-border shadow-none">
+            <CardHeader className="pb-3 border-b border-border">
+              <CardTitle className="text-sm font-semibold text-foreground">Mô tả sản phẩm</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-4">
+              <RichTextEditor
+                value={form.description}
+                onChange={(v) => setField('description', v)}
+              />
+            </CardContent>
+          </Card>
 
-          <div className="rounded-xl border border-border bg-card p-5 text-card-foreground shadow-2xs flex flex-col gap-4">
-            <div className="flex items-center justify-between pb-2 border-b border-border">
-              <h3 className="text-base font-semibold text-foreground">Thông số kỹ thuật</h3>
-              <button
+          <Card className="rounded-[6px] border border-border shadow-none">
+            <CardHeader className="pb-3 border-b border-border flex flex-row items-center justify-between space-y-0">
+              <CardTitle className="text-sm font-semibold text-foreground">Thông số kỹ thuật</CardTitle>
+              <Button
                 type="button"
-                className="inline-flex h-8 items-center justify-center gap-1 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer"
+                variant="outline"
+                size="sm"
+                className="h-7 rounded-[6px] text-xs"
                 onClick={addSpecRow}
               >
-                <Plus size={14} /> Thêm dòng
-              </button>
-            </div>
+                <Plus size={13} className="mr-1" /> Thêm dòng
+              </Button>
+            </CardHeader>
 
-            {form.specifications.length === 0 ? (
-              <p className="text-xs text-muted-foreground italic py-2">Chưa có thông số nào</p>
-            ) : (
-              <div className="flex flex-col gap-2">
-                {form.specifications.map((s, idx) => (
-                  <div key={idx} className="flex items-center gap-2">
-                    <input
-                      className="h-9 flex-1 rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 placeholder:text-muted-foreground transition-colors"
-                      placeholder="Tên thông số (VD: Màn hình)"
-                      value={s.key}
-                      onChange={(e) => updateSpecRow(idx, e.target.value, s.value)}
-                    />
-                    <input
-                      className="h-9 flex-1 rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 placeholder:text-muted-foreground transition-colors"
-                      placeholder="Giá trị (VD: 6.7 inch Dynamic AMOLED)"
-                      value={s.value}
-                      onChange={(e) => updateSpecRow(idx, s.key, e.target.value)}
-                    />
-                    <button
-                      type="button"
-                      className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors cursor-pointer"
-                      onClick={() => removeSpecRow(idx)}
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+            <CardContent className="pt-4">
+              {form.specifications.length === 0 ? (
+                <p className="text-xs text-muted-foreground italic py-2">Chưa có thông số nào</p>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {form.specifications.map((s, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <Input
+                        className="h-8 flex-1 rounded-[6px] text-xs"
+                        placeholder="Tên thông số (VD: Màn hình)"
+                        value={s.key}
+                        onChange={(e) => updateSpecRow(idx, e.target.value, s.value)}
+                      />
+                      <Input
+                        className="h-8 flex-1 rounded-[6px] text-xs"
+                        placeholder="Giá trị (VD: 6.7 inch Dynamic AMOLED)"
+                        value={s.value}
+                        onChange={(e) => updateSpecRow(idx, s.key, e.target.value)}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 rounded-[6px] text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                        onClick={() => removeSpecRow(idx)}
+                      >
+                        <Trash2 size={13} />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         <div className="flex flex-col gap-6">
-          <div className="rounded-xl border border-border bg-card p-5 text-card-foreground shadow-2xs flex flex-col gap-4">
-            <h3 className="text-base font-semibold text-foreground pb-2 border-b border-border">Ảnh sản phẩm</h3>
+          <Card className="rounded-[6px] border border-border shadow-none">
+            <CardHeader className="pb-3 border-b border-border">
+              <CardTitle className="text-sm font-semibold text-foreground">Ảnh sản phẩm</CardTitle>
+            </CardHeader>
 
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-foreground">Ảnh đại diện <span className="text-destructive ml-0.5">*</span></label>
-              {form.thumbnailUrl ? (
-                <div className="relative aspect-square w-full rounded-lg border border-border overflow-hidden bg-muted group">
-                  <MediaThumbnailHover media={mediaMap[form.thumbnailMediaId]} className="size-full">
-                    <img src={form.thumbnailUrl} alt="thumbnail" className="size-full object-cover" />
-                  </MediaThumbnailHover>
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                    <button type="button" className="inline-flex h-8 items-center justify-center gap-1 rounded-md border border-input bg-background px-3 text-xs font-medium text-foreground hover:bg-accent cursor-pointer" onClick={() => setPickerMode('thumbnail')}>
-                      Thay đổi ảnh
-                    </button>
-                    <button type="button" className="inline-flex h-8 items-center justify-center gap-1 rounded-md bg-destructive/10 text-destructive px-3 text-xs font-medium hover:bg-destructive/20 cursor-pointer" onClick={() => setForm((f) => ({ ...f, thumbnailMediaId: '', thumbnailUrl: '' }))}>
-                      Xóa
-                    </button>
+            <CardContent className="pt-4 space-y-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Ảnh đại diện <span className="text-destructive ml-0.5">*</span></label>
+                {form.thumbnailUrl ? (
+                  <div className="relative aspect-square w-full rounded-[6px] border border-border overflow-hidden bg-muted group">
+                    <MediaThumbnailHover media={mediaMap[form.thumbnailMediaId]} className="size-full">
+                      <img src={form.thumbnailUrl} alt="thumbnail" className="size-full object-cover" />
+                    </MediaThumbnailHover>
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                      <Button type="button" size="sm" variant="secondary" className="h-7 text-xs rounded-[4px]" onClick={() => setPickerMode('thumbnail')}>
+                        Thay đổi
+                      </Button>
+                      <Button type="button" size="sm" variant="destructive" className="h-7 text-xs rounded-[4px]" onClick={() => setForm((f) => ({ ...f, thumbnailMediaId: '', thumbnailUrl: '' }))}>
+                        Xóa
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <div
-                  className="flex flex-col items-center justify-center gap-2 p-6 rounded-lg border-2 border-dashed border-border bg-muted/20 hover:border-primary/50 transition-colors cursor-pointer text-center"
-                  onClick={() => setPickerMode('thumbnail')}
-                >
-                  <Image size={28} className="text-muted-foreground" />
-                  <span className="text-xs font-medium text-foreground">Chọn ảnh đại diện</span>
-                </div>
-              )}
-            </div>
-
-            <div className="flex flex-col gap-1.5 mt-2">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-medium text-foreground">Bộ ảnh sản phẩm</label>
-                {form.imageUrls.length > 1 && (
-                  <span className="text-[10px] text-muted-foreground">Kéo thả để sắp xếp</span>
+                ) : (
+                  <div
+                    className="flex flex-col items-center justify-center gap-2 p-6 rounded-[6px] border-2 border-dashed border-border bg-muted/20 hover:border-primary/50 transition-colors cursor-pointer text-center"
+                    onClick={() => setPickerMode('thumbnail')}
+                  >
+                    <Image size={24} className="text-muted-foreground" />
+                    <span className="text-xs font-medium text-foreground">Chọn ảnh đại diện</span>
+                  </div>
                 )}
               </div>
 
-              <DndContext sensors={gallerySensors} collisionDetection={closestCenter} onDragEnd={handleDragEndGallery}>
-                <SortableContext
-                  items={form.imageUrls.map((_, i) => form.imageMediaIds[i] || `img-${i}`)}
-                  strategy={rectSortingStrategy}
-                >
-                  <div className="grid grid-cols-3 gap-2">
-                    {form.imageUrls.map((url, idx) => {
-                      const itemId = form.imageMediaIds[idx] || `img-${idx}`;
-                      return (
-                        <SortableGalleryItem
-                          key={itemId}
-                          id={itemId}
-                          url={url}
-                          idx={idx}
-                          onRemove={removeGalleryImage}
-                          media={mediaMap[itemId] || null}
-                        />
-                      );
-                    })}
-                    <div
-                      className="aspect-square rounded-md border-2 border-dashed border-border bg-muted/20 hover:border-primary/50 transition-colors cursor-pointer flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-foreground"
-                      onClick={() => setPickerMode('images')}
-                    >
-                      <Plus size={20} />
-                      <span className="text-[10px] font-medium">Thêm ảnh</span>
+              <div className="flex flex-col gap-1.5 mt-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-medium text-muted-foreground">Bộ ảnh sản phẩm</label>
+                  {form.imageUrls.length > 1 && (
+                    <span className="text-[11px] text-muted-foreground">Kéo thả để sắp xếp</span>
+                  )}
+                </div>
+
+                <DndContext sensors={gallerySensors} collisionDetection={closestCenter} onDragEnd={handleDragEndGallery}>
+                  <SortableContext
+                    items={form.imageUrls.map((_, i) => form.imageMediaIds[i] || `img-${i}`)}
+                    strategy={rectSortingStrategy}
+                  >
+                    <div className="grid grid-cols-3 gap-2">
+                      {form.imageUrls.map((url, idx) => {
+                        const itemId = form.imageMediaIds[idx] || `img-${idx}`;
+                        return (
+                          <SortableGalleryItem
+                            key={itemId}
+                            id={itemId}
+                            url={url}
+                            idx={idx}
+                            onRemove={removeGalleryImage}
+                            media={mediaMap[itemId] || null}
+                          />
+                        );
+                      })}
+                      <div
+                        className="aspect-square rounded-[6px] border-2 border-dashed border-border bg-muted/20 hover:border-primary/50 transition-colors cursor-pointer flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-foreground active:scale-[0.98]"
+                        onClick={() => setPickerMode('images')}
+                      >
+                        <Plus size={18} />
+                        <span className="text-[10px] font-medium">Thêm ảnh</span>
+                      </div>
                     </div>
-                  </div>
-                </SortableContext>
-              </DndContext>
-            </div>
-          </div>
+                  </SortableContext>
+                </DndContext>
+              </div>
+            </CardContent>
+          </Card>
 
-          <div className="rounded-xl border border-border bg-card p-5 text-card-foreground shadow-2xs flex flex-col gap-4">
-            <h3 className="text-base font-semibold text-foreground pb-2 border-b border-border">Phân loại & Trạng thái</h3>
+          <Card className="rounded-[6px] border border-border shadow-none">
+            <CardHeader className="pb-3 border-b border-border">
+              <CardTitle className="text-sm font-semibold text-foreground">Phân loại & Trạng thái</CardTitle>
+            </CardHeader>
 
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-foreground">Danh mục <span className="text-destructive ml-0.5">*</span></label>
-              <CategoryTreeMultiPicker
-                categories={Array.isArray(categories) ? categories : []}
-                value={form.categories}
-                onChange={(v) => setField('categories', v)}
-              />
-              {form.categories.length === 0 && (
-                <p className="text-xs text-muted-foreground">Có thể chọn nhiều danh mục. Khi chọn danh mục con, danh mục cha sẽ tự động được chọn.</p>
-              )}
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-foreground">Thương hiệu</label>
-              <SearchableSelect
-                options={(Array.isArray(brands) ? brands : []).map((b) => ({ label: b.name, value: b._id }))}
-                value={form.brand}
-                onChange={(v) => setField('brand', v)}
-                creatable={false}
-                placeholder="-- Chọn thương hiệu --"
-              />
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-foreground">Nhà Cung Cấp (Procurement)</label>
-              <SearchableSelect
-                options={(Array.isArray(suppliers) ? suppliers : []).map((s) => ({ label: `${s.name} (${s.code})`, value: s._id }))}
-                value={form.supplierId}
-                onChange={(v) => setField('supplierId', v)}
-                creatable={false}
-                placeholder="-- Chọn nhà cung cấp mặc định --"
-              />
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-foreground">Trạng thái sản phẩm</label>
-              <SearchableSelect
-                options={[
-                  { label: 'Công khai', value: 'published' },
-                  { label: 'Nháp', value: 'draft' },
-                  { label: 'Hết hàng', value: 'out_of_stock' },
-                ]}
-                value={form.status}
-                onChange={(v) => setField('status', v)}
-                creatable={false}
-                placeholder="Chọn trạng thái..."
-              />
-            </div>
-
-            <div className="flex flex-col gap-2 pt-2 border-t border-border">
-              <label className="flex items-center gap-2 text-xs font-medium text-foreground cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="size-4 rounded border-input text-primary focus:ring-ring"
-                  checked={form.isActive}
-                  onChange={(e) => setField('isActive', e.target.checked)}
+            <CardContent className="pt-4 space-y-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Danh mục <span className="text-destructive ml-0.5">*</span></label>
+                <CategoryTreeMultiPicker
+                  categories={Array.isArray(categories) ? categories : []}
+                  value={form.categories}
+                  onChange={(v) => setField('categories', v)}
                 />
-                <span>Kích hoạt hiển thị sản phẩm</span>
-              </label>
+                {form.categories.length === 0 && (
+                  <p className="text-[11px] text-muted-foreground">Có thể chọn nhiều danh mục</p>
+                )}
+              </div>
 
-              <label className="flex items-center gap-2 text-xs font-medium text-foreground cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="size-4 rounded border-input text-primary focus:ring-ring"
-                  checked={form.isFeatured}
-                  onChange={(e) => setField('isFeatured', e.target.checked)}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Thương hiệu</label>
+                <SearchableSelect
+                  options={(Array.isArray(brands) ? brands : []).map((b) => ({ label: b.name, value: b._id }))}
+                  value={form.brand}
+                  onChange={(v) => setField('brand', v)}
+                  creatable={false}
+                  placeholder="-- Chọn thương hiệu --"
                 />
-                <span>Sản phẩm nổi bật</span>
-              </label>
+              </div>
 
-              <label className="flex items-center gap-2 text-xs font-medium text-foreground cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="size-4 rounded border-input text-primary focus:ring-ring"
-                  checked={form.isHot}
-                  onChange={(e) => setField('isHot', e.target.checked)}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Nhà Cung Cấp</label>
+                <SearchableSelect
+                  options={(Array.isArray(suppliers) ? suppliers : []).map((s) => ({ label: `${s.name} (${s.code})`, value: s._id }))}
+                  value={form.supplierId}
+                  onChange={(v) => setField('supplierId', v)}
+                  creatable={false}
+                  placeholder="-- Chọn nhà cung cấp --"
                 />
-                <span>Sản phẩm HOT</span>
-              </label>
-            </div>
-          </div>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Trạng thái sản phẩm</label>
+                <SearchableSelect
+                  options={[
+                    { label: 'Công khai', value: 'published' },
+                    { label: 'Nháp', value: 'draft' },
+                    { label: 'Hết hàng', value: 'out_of_stock' },
+                  ]}
+                  value={form.status}
+                  onChange={(v) => setField('status', v)}
+                  creatable={false}
+                  placeholder="Chọn trạng thái..."
+                />
+              </div>
+
+              <div className="flex flex-col gap-2.5 pt-3 border-t border-border">
+                <label className="flex items-center gap-2 text-xs font-medium text-foreground cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="size-3.5 rounded-[4px] border-input text-primary focus:ring-ring"
+                    checked={form.isActive}
+                    onChange={(e) => setField('isActive', e.target.checked)}
+                  />
+                  <span>Kích hoạt hiển thị sản phẩm</span>
+                </label>
+
+                <label className="flex items-center gap-2 text-xs font-medium text-foreground cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="size-3.5 rounded-[4px] border-input text-primary focus:ring-ring"
+                    checked={form.isFeatured}
+                    onChange={(e) => setField('isFeatured', e.target.checked)}
+                  />
+                  <span>Sản phẩm nổi bật</span>
+                </label>
+
+                <label className="flex items-center gap-2 text-xs font-medium text-foreground cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="size-3.5 rounded-[4px] border-input text-primary focus:ring-ring"
+                    checked={form.isHot}
+                    onChange={(e) => setField('isHot', e.target.checked)}
+                  />
+                  <span>Sản phẩm HOT</span>
+                </label>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
 

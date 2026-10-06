@@ -28,6 +28,8 @@ import MenuListPage from '@/pages/menus/MenuListPage';
 import MenuEditorPage from '@/pages/menus/MenuEditorPage';
 import AuditLogListPage from '@/pages/audit/AuditLogListPage';
 import UnusedMediaPage from '@/pages/media/UnusedMediaPage';
+import CustomerListPage from '@/pages/customers/CustomerListPage';
+import StaffListPage from '@/pages/staffs/StaffListPage';
 
 // Inventory / Kho & Cung ứng
 import SupplierListPage from '@/pages/inventory/SupplierListPage';
@@ -63,7 +65,7 @@ const router = createBrowserRouter([
                 element: <AdminLayout />,
                 children: [
                     { index: true, element: <RootRedirector /> },
-                    { path: 'dashboard', element: <DashboardPage /> },
+                    { path: 'dashboard', element: <PermissionGuard requiredPermission="dashboard.view"><DashboardPage /></PermissionGuard> },
                     { path: 'media', element: <PermissionGuard requiredPermission="media.manage"><MediaPage /></PermissionGuard> },
                     { path: 'banners', element: <PermissionGuard requiredPermission="media.manage"><BannerPage /></PermissionGuard> },
                     { path: 'categories', element: <PermissionGuard requiredPermission="category.manage"><CategoryPage /></PermissionGuard> },
@@ -85,8 +87,10 @@ const router = createBrowserRouter([
                     { path: 'blog/tags', element: <PermissionGuard requiredPermission="blog.edit"><BlogTagPage /></PermissionGuard> },
                     { path: 'menus', element: <PermissionGuard requiredPermission="menu.manage"><MenuListPage /></PermissionGuard> },
                     { path: 'menus/:id/edit', element: <PermissionGuard requiredPermission="menu.manage"><MenuEditorPage /></PermissionGuard> },
+                    { path: 'customers', element: <PermissionGuard requiredPermission="user.view"><CustomerListPage /></PermissionGuard> },
+                    { path: 'staffs', element: <PermissionGuard requiredPermission="role.assign"><StaffListPage /></PermissionGuard> },
                     { path: 'roles', element: <PermissionGuard requiredPermission="role.manage"><RoleListPage /></PermissionGuard> },
-                    { path: 'audit-logs', element: <AuditLogListPage /> },
+                    { path: 'audit-logs', element: <PermissionGuard requiredPermission="audit_log.view"><AuditLogListPage /></PermissionGuard> },
                     { path: 'settings', element: <PermissionGuard requiredPermission="role.manage"><ComingSoonPage title="Cài đặt hệ thống" /></PermissionGuard> },
 
                     // ── Kho & Cung Ứng ─────────────────────────────────────────────────────────────────────

@@ -8,6 +8,11 @@ export const authService = {
     return api.post('/auth/login', { ...data, sessionId });
   },
 
+  googleLogin: (credential) => {
+    const sessionId = useAuthStore.getState().getOrCreateAnonymousId();
+    return api.post('/auth/google', { credential, sessionId, isAdminRequest: true });
+  },
+
   register: (data) => {
     // Tương tự login — merge guest interactions vào account mới tạo
     const sessionId = useAuthStore.getState().getOrCreateAnonymousId();
