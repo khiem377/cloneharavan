@@ -114,11 +114,11 @@ function AccountContent() {
     isDefault: false,
   });
 
-  // GHN v3 Post-Merger Lookup State
+  // GHN v3 Post-Merger Lookup State (developer.ghn.vn/vi/docs/master-data/get-province-new)
   const [postMergerInfo, setPostMergerInfo] = useState(null);
   const [mergerLoading, setMergerLoading] = useState(false);
 
-  // Tra cứu tự động từ GHN v3 khi chọn xong Phường / Xã (Debounce 300ms)
+  // Tra cứu tự động chuẩn hóa địa chỉ từ GHN v3 khi chọn xong Phường / Xã (Debounce 200ms)
   useEffect(() => {
     let isMounted = true;
     if (addressForm.province && addressForm.ward) {
@@ -130,8 +130,8 @@ function AccountContent() {
             district: addressForm.district,
             ward: addressForm.ward,
             detailAddress: addressForm.detailAddress,
-            provinceCode: addressForm.provinceId,
-            districtCode: addressForm.districtId,
+            provinceId: addressForm.provinceId,
+            districtId: addressForm.districtId,
             wardCode: addressForm.wardCode,
           })
           .then((res) => {
@@ -145,7 +145,7 @@ function AccountContent() {
               setMergerLoading(false);
             }
           });
-      }, 300);
+      }, 200);
 
       return () => {
         isMounted = false;

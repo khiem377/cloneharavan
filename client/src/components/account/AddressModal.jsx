@@ -1,21 +1,11 @@
 'use client';
 
 import React from 'react';
-import {
-  X,
-  MapPin,
-  Truck,
-  Loader2,
-  CheckCircle2,
-  AlertCircle,
-  Building2,
-} from 'lucide-react';
+import { X, CheckCircle2, MapPin } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
-import { Badge } from '../ui/badge';
 import { Card } from '../ui/card';
-import { Separator } from '../ui/separator';
 import { SearchableSelect } from '../ui/searchable-select';
 
 export default function AddressModal({
@@ -36,21 +26,29 @@ export default function AddressModal({
   handleSaveAddress,
   addressSaving,
   postMergerInfo,
-  mergerLoading,
 }) {
   if (!isOpen) return null;
 
+  const detailPrefix = addressForm.detailAddress ? `${addressForm.detailAddress.trim()}, ` : '';
+  const currentAddress = `${detailPrefix}${addressForm.ward}, ${addressForm.district}, ${addressForm.province}`;
+  const isMerged = Boolean(postMergerInfo?.isMerged);
+  const newAddress = postMergerInfo?.postMergerFullAddress || (
+    addressForm.province && addressForm.ward
+      ? `${detailPrefix}${postMergerInfo?.newWard || addressForm.ward}, ${postMergerInfo?.province || addressForm.province}`
+      : ''
+  );
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 animate-fadeIn">
-      <Card className="max-w-lg w-full shadow-lg overflow-hidden animate-scaleUp p-0">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 sm:p-6 animate-fadeIn">
+      <Card className="max-w-2xl sm:max-w-3xl w-full shadow-xl overflow-hidden animate-scaleUp p-0 rounded-[6px] border border-slate-200/90 bg-white">
         {/* Header */}
-        <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+        <div className="px-5 sm:px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white">
           <div className="space-y-0.5">
-            <h3 className="text-sm font-bold text-slate-900">
+            <h3 className="text-sm sm:text-base font-bold text-slate-900">
               {editingAddressId ? 'Cập nhật địa chỉ nhận hàng' : 'Thêm địa chỉ nhận hàng mới'}
             </h3>
-            <p className="text-[11px] text-slate-400">
-              Tích hợp chuẩn địa giới hành chính Giao Hàng Nhanh (GHN)
+            <p className="text-[11px] text-slate-500">
+              Vui lòng nhập chính xác để đơn hàng được giao nhanh chóng và tận tay
             </p>
           </div>
           <Button
@@ -65,11 +63,11 @@ export default function AddressModal({
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSaveAddress} className="p-5 space-y-4 max-h-[82vh] overflow-y-auto">
+        <form onSubmit={handleSaveAddress} className="p-5 sm:p-6 space-y-4 max-h-[82vh] overflow-y-auto">
           {/* Row 1: Name & Phone */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label htmlFor="recipientName">
+              <Label htmlFor="recipientName" className="text-xs font-semibold text-slate-700">
                 Họ và tên người nhận <span className="text-[#e30019]">*</span>
               </Label>
               <Input
@@ -86,7 +84,7 @@ export default function AddressModal({
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="recipientPhone">
+              <Label htmlFor="recipientPhone" className="text-xs font-semibold text-slate-700">
                 Số điện thoại người nhận <span className="text-[#e30019]">*</span>
               </Label>
               <Input
@@ -97,16 +95,16 @@ export default function AddressModal({
                 onChange={(e) =>
                   setAddressForm({ ...addressForm, phone: e.target.value })
                 }
-                placeholder="0919615474"
+                placeholder="0949527013"
                 className="h-9 text-xs font-mono rounded-[6px] focus-visible:ring-[#e30019] focus-visible:border-[#e30019]"
               />
             </div>
           </div>
 
-          {/* Row 2: Cascading Selects via GHN */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {/* Row 2: Cascading Selects */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
             <div className="space-y-1.5">
-              <Label>
+              <Label className="text-xs font-semibold text-slate-700">
                 Tỉnh / Thành phố <span className="text-[#e30019]">*</span>
               </Label>
               <SearchableSelect
@@ -124,7 +122,7 @@ export default function AddressModal({
             </div>
 
             <div className="space-y-1.5">
-              <Label>
+              <Label className="text-xs font-semibold text-slate-700">
                 Quận / Huyện <span className="text-[#e30019]">*</span>
               </Label>
               <SearchableSelect
@@ -142,7 +140,7 @@ export default function AddressModal({
             </div>
 
             <div className="space-y-1.5">
-              <Label>
+              <Label className="text-xs font-semibold text-slate-700">
                 Phường / Xã <span className="text-[#e30019]">*</span>
               </Label>
               <SearchableSelect
@@ -162,7 +160,7 @@ export default function AddressModal({
 
           {/* Row 3: Detail Street Address */}
           <div className="space-y-1.5">
-            <Label htmlFor="detailAddress">
+            <Label htmlFor="detailAddress" className="text-xs font-semibold text-slate-700">
               Địa chỉ cụ thể (Số nhà, tên đường...) <span className="text-[#e30019]">*</span>
             </Label>
             <Input
@@ -178,71 +176,50 @@ export default function AddressModal({
             />
           </div>
 
-          {/* Real-time Address Preview Card */}
-          {addressForm.province && addressForm.district && addressForm.ward && (
-            <Card className="p-3.5 bg-slate-50/80 border-slate-200 space-y-2.5 animate-fadeIn">
-              <div className="flex items-center justify-between gap-2 flex-wrap">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
-                  <span
-                    className={`w-2 h-2 rounded-full ${
-                      postMergerInfo?.isNameChanged ? 'bg-amber-500' : 'bg-emerald-500'
-                    }`}
-                  />
-                  <span>
-                    {postMergerInfo?.isNameChanged
-                      ? 'Đơn vị hành chính sau sáp nhập'
-                      : 'Địa chỉ nhận hàng chuẩn hóa'}
+          {/* User-friendly Address Preview */}
+          {addressForm.province && addressForm.ward && (
+            <Card className="p-3.5 bg-slate-50/90 border-slate-200/90 space-y-2.5 animate-fadeIn rounded-[6px]">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
+                <MapPin size={14} className="text-[#e30019] shrink-0" />
+                <span>Xem trước địa chỉ nhận hàng:</span>
+              </div>
+
+              {isMerged ? (
+                <div className="space-y-2 text-xs">
+                  <div className="flex items-start gap-2">
+                    <span className="text-slate-500 font-medium shrink-0 w-28 text-[11px]">
+                      Địa chỉ hiện tại:
+                    </span>
+                    <span className="text-slate-800 font-medium leading-relaxed">
+                      {currentAddress}
+                    </span>
+                  </div>
+
+                  <div className="flex items-start gap-2 pt-1.5 border-t border-slate-200/70">
+                    <span className="text-emerald-700 font-semibold shrink-0 w-28 text-[11px]">
+                      Địa chỉ mới (sau sáp nhập):
+                    </span>
+                    <div className="flex-1 space-y-1">
+                      <span className="font-semibold text-emerald-900 bg-emerald-50 px-2 py-0.5 rounded-[4px] border border-emerald-200 inline-block leading-relaxed">
+                        {newAddress}
+                      </span>
+                      {/* <p className="text-[11px] text-emerald-600 font-normal flex items-center gap-1">
+                        <CheckCircle2 size={12} className="text-emerald-600 shrink-0" />
+                        <span>Hệ thống tự động đồng bộ theo địa giới mới để giao hàng chính xác.</span>
+                      </p> */}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-xs flex items-start gap-2">
+                  <span className="text-slate-500 font-medium shrink-0 w-28 text-[11px]">
+                    Địa chỉ đầy đủ:
+                  </span>
+                  <span className="text-slate-900 font-semibold leading-relaxed">
+                    {currentAddress}
                   </span>
                 </div>
-
-                <div className="flex items-center gap-1.5">
-                  {mergerLoading ? (
-                    <Badge variant="secondary" className="text-[10px] px-2 py-0.5 rounded-[4px] flex items-center gap-1">
-                      <Loader2 size={10} className="animate-spin text-[#e30019]" />
-                      <span>Đang tra cứu GHN v3...</span>
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="text-[10px] px-2 py-0.5 rounded-[4px] bg-emerald-50 text-emerald-800 border-emerald-200">
-                      {postMergerInfo?.source || 'Giao Hàng Nhanh (GHN)'}
-                    </Badge>
-                  )}
-                  {addressForm.wardCode && (
-                    <Badge variant="secondary" className="font-mono text-[10px] px-2 py-0.5 rounded-[4px]">
-                      Mã GHN: {addressForm.wardCode}
-                    </Badge>
-                  )}
-                </div>
-              </div>
-
-              {/* Địa chỉ hành chính hiện tại (GHN cũ) */}
-              <div className="text-xs text-slate-600 flex items-start gap-2">
-                <span className="font-semibold text-slate-500 shrink-0 w-28 text-[11px]">
-                  Hành chính (GHN/Cũ):
-                </span>
-                <span className="text-slate-800 font-medium">
-                  {addressForm.detailAddress ? `${addressForm.detailAddress}, ` : ''}
-                  {addressForm.ward}, {addressForm.district}, {addressForm.province}
-                </span>
-              </div>
-
-              {/* Sau sáp nhập (chỉ hiển thị khi có chuyển đổi hoặc theo GHN v3) */}
-              <div className="text-xs flex items-start gap-2 pt-2 border-t border-slate-200/80">
-                <span className="font-semibold text-emerald-700 shrink-0 w-28 text-[11px]">
-                  Sau sáp nhập:
-                </span>
-                <div className="flex-1 space-y-1">
-                  <span className="font-bold text-emerald-900 bg-emerald-50 px-1.5 py-0.5 rounded-[4px] border border-emerald-100 inline-block">
-                    {postMergerInfo?.postMergerFullAddress ||
-                      `${addressForm.detailAddress ? `${addressForm.detailAddress}, ` : ''}${addressForm.ward}, ${addressForm.province}`}
-                  </span>
-                  {postMergerInfo?.isNameChanged && postMergerInfo?.changeDescription && (
-                    <p className="text-[11px] text-emerald-700 font-medium flex items-center gap-1">
-                      <Truck size={12} className="text-emerald-600 shrink-0" />
-                      <span>{postMergerInfo.changeDescription}</span>
-                    </p>
-                  )}
-                </div>
-              </div>
+              )}
             </Card>
           )}
 
@@ -264,7 +241,7 @@ export default function AddressModal({
           </div>
 
           {/* Modal Actions */}
-          <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+          <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
             <Button
               type="button"
               variant="outline"
@@ -278,7 +255,7 @@ export default function AddressModal({
               type="submit"
               disabled={addressSaving}
               size="sm"
-              className="bg-[#e30019] hover:bg-[#c40015] text-white text-xs rounded-[6px] h-9 px-5 shadow-xs active:scale-[0.98] disabled:opacity-50"
+              className="bg-[#e30019] hover:bg-[#c40015] text-white text-xs font-semibold rounded-[6px] h-9 px-5 shadow-xs active:scale-[0.98] disabled:opacity-50 cursor-pointer"
             >
               {addressSaving ? 'Đang lưu...' : editingAddressId ? 'Lưu thay đổi' : 'Thêm địa chỉ'}
             </Button>

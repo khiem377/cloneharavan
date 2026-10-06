@@ -106,6 +106,12 @@ const getPostMergerAddress = async (req, res, next) => {
       district,
       ward,
       detailAddress,
+      wardCode,
+      ward_code,
+      districtId,
+      district_id,
+      provinceId,
+      province_id,
     } = req.query;
 
     const result = await ghnService.lookupGhnPostMergerAddress({
@@ -113,6 +119,9 @@ const getPostMergerAddress = async (req, res, next) => {
       district: district || '',
       ward: ward || '',
       detailAddress: detailAddress || '',
+      wardCode: wardCode || ward_code || '',
+      districtId: districtId || district_id || '',
+      provinceId: provinceId || province_id || '',
     });
 
     res.json({

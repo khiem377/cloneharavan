@@ -1,34 +1,9 @@
 /**
- * TIỆN ÍCH ĐỊNH DẠNG ĐỊA CHỈ 2 CẤP
- * Toàn bộ logic phân tích và chuyển đổi được gọi động 100% từ Live API (GeoVina Engine, Casso AddressKit, Open API)
+ * TIỆN ÍCH ĐỊNH DẠNG ĐỊA CHỈ GHN (100% Giao Hàng Nhanh)
+ * - Cấu trúc 3 cấp (Trước sáp nhập / truyền thống): [Số nhà], [Phường/Xã], [Quận/Huyện], [Tỉnh/Thành]
+ * - Cấu trúc 2 cấp (Sau sáp nhập / GHN bưu chính): [Số nhà], [Phường/Xã], [Tỉnh/Thành]
  */
 
-export const normalizeAddressText = (str) => {
-  if (!str) return '';
-  return String(str)
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/đ/g, 'd')
-    .replace(/Đ/g, 'D')
-    .replace(/[^a-z0-9]/g, '')
-    .trim();
-};
-
-export const formatFullProvince = (province = '') => {
-  const p = province.trim();
-  if (!p) return '';
-  if (p.startsWith('Tỉnh') || p.startsWith('TP') || p.startsWith('Thành phố')) return p;
-  const lower = p.toLowerCase();
-  if (lower.includes('hồ chí minh') || lower.includes('hà nội') || lower.includes('đà nẵng') || lower.includes('hải phòng') || lower.includes('cần thơ')) {
-    return `TP. ${p}`;
-  }
-  return `Tỉnh ${p}`;
-};
-
-/**
- * Fallback format 2 cấp tức thời khi đang chờ Live API phản hồi
- */
 export const getAdministrativeMergerInfo = ({
   province = '',
   district = '',
@@ -39,18 +14,25 @@ export const getAdministrativeMergerInfo = ({
     return null;
   }
 
-  const provDisplay = formatFullProvince(province);
-  const detailPart = detailAddress ? `${detailAddress.trim()}, ` : '';
+  const cleanDetail = detailAddress ? detailAddress.trim() : '';
+
+  const preMergerParts = [cleanDetail, ward, district, province].filter(Boolean);
+  const preMergerFullAddress = preMergerParts.join(', ');
+
+  const postMergerParts = [cleanDetail, ward, province].filter(Boolean);
+  const postMergerFullAddress = postMergerParts.join(', ');
 
   return {
     isMerged: false,
     isNameChanged: false,
     oldWard: ward,
     newWard: ward,
-    province: provDisplay,
+    district,
+    province,
     source: 'Giao Hàng Nhanh (GHN)',
-    changeDescription: '',
-    postMergerFullAddress: `${detailPart}${ward}, ${provDisplay}`,
+    changeDescription: 'Định danh địa chỉ chuẩn hóa đồng bộ 100% Giao Hàng Nhanh (GHN)',
+    preMergerFullAddress,
+    postMergerFullAddress,
   };
 };
 

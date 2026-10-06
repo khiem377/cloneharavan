@@ -226,7 +226,8 @@ export const SearchableSelect = ({
         } ${buttonClassName}`}
       >
         <span
-          className={`truncate ${
+          title={selectedOption ? selectedOption.label : ''}
+          className={`truncate flex-1 min-w-0 ${
             selectedOption ? 'font-medium text-slate-900' : 'text-slate-400'
           }`}
         >
@@ -237,7 +238,7 @@ export const SearchableSelect = ({
             : placeholder}
         </span>
 
-        <div className="flex items-center gap-1 shrink-0 text-slate-400">
+        <div className="flex items-center gap-1 shrink-0 text-slate-400 ml-1">
           {loading ? (
             <Loader2 size={13} className="animate-spin text-[#e30019]" />
           ) : (
@@ -266,7 +267,7 @@ export const SearchableSelect = ({
 
       {/* Popover Dropdown */}
       {isOpen && !disabled && (
-        <div className="absolute left-0 min-w-full sm:min-w-[260px] w-max max-w-[340px] top-full mt-1 z-[60] bg-white rounded-[6px] border border-slate-200 shadow-md overflow-hidden animate-fadeIn text-xs">
+        <div className="absolute left-0 w-full min-w-full sm:min-w-[260px] top-full mt-1 z-[60] bg-white rounded-[6px] border border-slate-200 shadow-lg overflow-hidden animate-fadeIn text-xs">
           {/* Search Box with Autofill Prevention */}
           <div className="p-2 border-b border-slate-100 bg-slate-50/50">
             <div className="relative">

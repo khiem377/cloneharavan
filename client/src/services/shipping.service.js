@@ -47,15 +47,15 @@ export const shippingService = {
   },
 
   /**
-   * Tra cứu địa giới sau sáp nhập qua TinhThanhPho.com API & Casso AddressKit
+   * Chuẩn hóa và đối soát địa chỉ bưu chính 100% Giao Hàng Nhanh (GHN)
    */
   getPostMergerAddress: async ({
     province,
     district,
     ward,
     detailAddress,
-    provinceCode,
-    districtCode,
+    provinceId,
+    districtId,
     wardCode,
   }) => {
     if (!ward && !province) return null;
@@ -66,14 +66,14 @@ export const shippingService = {
           district,
           ward,
           detailAddress,
-          provinceCode,
-          districtCode,
-          wardCode,
+          province_id: provinceId,
+          district_id: districtId,
+          ward_code: wardCode,
         },
       });
       return res.data?.data || null;
     } catch (err) {
-      console.warn('Lỗi tra cứu API địa giới sau sáp nhập:', err);
+      console.warn('Lỗi tra cứu chuẩn hóa địa chỉ GHN:', err);
       return null;
     }
   },
