@@ -5,9 +5,11 @@ dist/
 build/
 .DS_Store
 
-# Seed / migration scripts (local only)
-scripts/
+# Seed / migration scripts
+scripts/*
+!scripts/seed-full-permissions.js
 seed*
+!scripts/seed-full-permissions.js
 
 # Route analysis & inspection tools
 *analyze*
