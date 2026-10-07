@@ -51,6 +51,7 @@ const PAGE_TITLES = {
   '/blog/posts/new':   'Viết bài mới',
   '/blog/categories':  'Chuyên mục bài viết',
   '/blog/tags':        'Thẻ tag phân loại',
+  '/profile':          'Hồ sơ tài khoản & Quản trị',
 };
 
 // ── Change Password Modal (Flat, 1px border, 6px radius) ───────────────────────
@@ -167,67 +168,6 @@ function ChangePasswordModal({ onClose }) {
   );
 }
 
-// ── Profile Modal (Flat, 1px border, 6px radius) ──────────────────────────────
-function ProfileModal({ user, onClose }) {
-  const initials = (user?.fullName?.[0] || user?.email?.[0] || 'A').toUpperCase();
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 antialiased">
-      <div className="w-full max-w-sm rounded-[6px] border border-border bg-card p-6 shadow-sm text-card-foreground">
-        <div className="flex items-center justify-between border-b border-border pb-3 mb-4">
-          <div className="flex items-center gap-2">
-            <UserIcon className="size-4 text-primary" />
-            <h3 className="text-sm font-semibold text-foreground">Thông tin tài khoản</h3>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="size-7 flex items-center justify-center rounded-[4px] text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-          >
-            <X size={16} />
-          </button>
-        </div>
-
-        <div className="flex flex-col items-center text-center gap-2 pb-4">
-          <div className="size-14 rounded-[6px] bg-primary text-primary-foreground text-xl font-bold font-mono flex items-center justify-center shadow-xs">
-            {initials}
-          </div>
-          <div className="flex flex-col">
-            <h4 className="text-sm font-bold text-foreground">{user?.fullName || 'Quản trị viên'}</h4>
-            <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-[4px] bg-secondary text-[11px] font-mono uppercase tracking-wider text-muted-foreground font-semibold mt-1">
-              {user?.role || 'Admin'}
-            </span>
-          </div>
-        </div>
-
-        <div className="flex flex-col divide-y divide-border border-y border-border text-xs">
-          <div className="flex items-center justify-between py-2.5">
-            <span className="text-muted-foreground">Họ và tên</span>
-            <span className="font-semibold text-foreground">{user?.fullName || '—'}</span>
-          </div>
-          <div className="flex items-center justify-between py-2.5">
-            <span className="text-muted-foreground">Email</span>
-            <span className="font-mono text-foreground">{user?.email || '—'}</span>
-          </div>
-          <div className="flex items-center justify-between py-2.5">
-            <span className="text-muted-foreground">Số điện thoại</span>
-            <span className="font-mono tabular-nums text-foreground">{user?.phone || '—'}</span>
-          </div>
-        </div>
-
-        <div className="mt-4 flex justify-end">
-          <button
-            type="button"
-            className="h-8 px-4 rounded-[6px] bg-primary text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-colors active:scale-[0.98]"
-            onClick={onClose}
-          >
-            Đóng
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // ── Topbar (Clean, Flat, Border-b 1px, 6px controls) ──────────────────────────
 function Topbar({ title }) {
@@ -314,7 +254,7 @@ export default function AdminLayout() {
     <SidebarProvider defaultOpen={true}>
       <SessionStreamListener />
       <AppSidebar
-        onProfile={() => setModal('profile')}
+        onProfile={() => navigate('/profile')}
         onChangePass={() => setModal('changepass')}
       />
       <SidebarInset className="min-h-[100dvh] max-h-[100dvh] overflow-hidden flex flex-col bg-background">
@@ -333,11 +273,9 @@ export default function AdminLayout() {
       </SidebarInset>
 
       {/* Modals */}
-      {modal === 'profile' && (
-        <ProfileModal user={useAuthStore.getState().user} onClose={() => setModal(null)} />
-      )}
       {modal === 'changepass' && <ChangePasswordModal onClose={() => setModal(null)} />}
     </SidebarProvider>
   );
 }
+
 

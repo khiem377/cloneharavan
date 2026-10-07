@@ -279,7 +279,7 @@ export default function MascotAdminWelcome({ size = 190, activeField = null, isS
           />
           <circle cx="282" cy="228" r="9" fill="url(#bodyPearl)" stroke="#94a3b8" strokeWidth="2" />
 
-          {/* Welcome Board ("Xin chào! 👋 Quản trị viên OMS") */}
+          {/* Welcome Board ("Xin chào! Quản trị viên OMS") */}
           <g transform="translate(232, 154) rotate(7)">
             {/* Board Stick */}
             <line x1="50" y1="46" x2="50" y2="90" stroke="#64748b" strokeWidth="5" strokeLinecap="round" />
@@ -312,7 +312,7 @@ export default function MascotAdminWelcome({ size = 190, activeField = null, isS
               fontFamily="system-ui, -apple-system, sans-serif"
               letterSpacing="0.2px"
             >
-              Xin chào! 👋
+              Xin chào!
             </text>
 
             {/* Subtitle Text */}

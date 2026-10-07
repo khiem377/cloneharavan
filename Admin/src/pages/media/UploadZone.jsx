@@ -291,7 +291,7 @@ function UploadUrlTab({ folderId, onClose }) {
         </Button>
       </div>
       {status === 'error' && <p className="text-xs text-destructive">{errMsg}</p>}
-      {status === 'done' && <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">✓ Upload thành công!</p>}
+      {status === 'done' && <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">Upload thành công!</p>}
     </div>
   );
 }

@@ -30,6 +30,7 @@ import AuditLogListPage from '@/pages/audit/AuditLogListPage';
 import UnusedMediaPage from '@/pages/media/UnusedMediaPage';
 import CustomerListPage from '@/pages/customers/CustomerListPage';
 import StaffListPage from '@/pages/staffs/StaffListPage';
+import AdminProfilePage from '@/pages/profile/AdminProfilePage';
 
 // Inventory / Kho & Cung ứng
 import SupplierListPage from '@/pages/inventory/SupplierListPage';
@@ -47,11 +48,24 @@ import InventoryReportPage from '@/pages/inventory/InventoryReportPage';
 import StockDocumentListPage from '@/pages/inventory/StockDocumentListPage';
 
 import RootRedirector from '@/components/auth/RootRedirector';
+import AdminAuthCallbackPage from '@/pages/auth/AdminAuthCallbackPage';
 
 const router = createBrowserRouter([
     {
         path: '/login',
         element: <LoginPage />,
+    },
+    {
+        path: '/auth/callback',
+        element: <AdminAuthCallbackPage />,
+    },
+    {
+        path: '/auth/tiktok/callback',
+        element: <AdminAuthCallbackPage />,
+    },
+    {
+        path: '/auth/zalo/callback',
+        element: <AdminAuthCallbackPage />,
     },
     {
         path: '/403',
@@ -65,6 +79,7 @@ const router = createBrowserRouter([
                 element: <AdminLayout />,
                 children: [
                     { index: true, element: <RootRedirector /> },
+                    { path: 'profile', element: <AdminProfilePage /> },
                     { path: 'dashboard', element: <PermissionGuard requiredPermission="dashboard.view"><DashboardPage /></PermissionGuard> },
                     { path: 'media', element: <PermissionGuard requiredPermission="media.manage"><MediaPage /></PermissionGuard> },
                     { path: 'banners', element: <PermissionGuard requiredPermission="media.manage"><BannerPage /></PermissionGuard> },

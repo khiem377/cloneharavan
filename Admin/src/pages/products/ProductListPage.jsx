@@ -16,6 +16,15 @@ import ColumnToggleDropdown from '@/components/ui/ColumnToggleDropdown';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableHead,
+  TableRow,
+  TableCell,
+} from '@/components/ui/table';
 
 const STATUS_LABELS = { published: 'Công khai', draft: 'Nháp', out_of_stock: 'Hết hàng' };
 const STATUS_BADGE = {
@@ -326,100 +335,114 @@ export default function ProductListPage() {
         </div>
       ) : viewMode === 'table' ? (
         <Card className="rounded-[6px] border border-border shadow-xs overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr className="border-b border-border bg-muted/60 text-[11px] font-bold text-foreground">
-                  <th className="px-3.5 py-3 w-10">
-                    <input type="checkbox" className="size-4 rounded-[4px] border-input text-primary focus:ring-ring" checked={selected.length === products.length && products.length > 0} onChange={toggleSelectAll} />
-                  </th>
-                  {isColumnVisible('product') && <th className="px-3.5 py-3.5 whitespace-nowrap">Sản phẩm</th>}
-                  {isColumnVisible('sku') && <th className="px-3.5 py-3.5 whitespace-nowrap">SKU</th>}
-                  {isColumnVisible('status') && <th className="px-3.5 py-3.5 whitespace-nowrap">Trạng thái</th>}
-                  {isColumnVisible('category') && <th className="px-3.5 py-3.5 whitespace-nowrap">Danh mục</th>}
-                  {isColumnVisible('brand') && <th className="px-3.5 py-3.5 whitespace-nowrap">Thương hiệu</th>}
-                  {isColumnVisible('price') && <th className="px-3.5 py-3.5 whitespace-nowrap">Giá bán</th>}
-                  {isColumnVisible('variants') && <th className="px-3.5 py-3.5 text-center whitespace-nowrap">Biến thể</th>}
-                  {isColumnVisible('stock') && <th className="px-3.5 py-3.5 whitespace-nowrap">Tồn kho</th>}
-                  {isColumnVisible('actions') && <th className="px-3.5 py-3.5 whitespace-nowrap text-right">Thao tác</th>}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {products.length === 0 ? (
-                  <tr><td colSpan={columnVisibility.visibleCount + 1} className="py-12 text-center text-xs text-muted-foreground">Chưa có sản phẩm nào</td></tr>
-                ) : products.map((p) => (
-                  <tr
-                    key={p._id}
-                    ref={(el) => { rowRefs.current[p._id] = el; }}
-                    className={`transition-colors hover:bg-muted/40 align-middle ${selected.includes(p._id) || p._id === highlightId ? 'bg-primary/8 ring-1 ring-inset ring-primary/30' : ''}`}
-                  >
-                    <td className="px-3.5 py-3 align-middle"><input type="checkbox" className="size-4 rounded-[4px] border-input text-primary focus:ring-ring" checked={selected.includes(p._id)} onChange={() => toggleSelect(p._id)} /></td>
-                    {isColumnVisible('product') && (
-                      <td className="px-3.5 py-3 align-middle whitespace-nowrap">
-                        <div className="flex items-center gap-2.5">
-                          {(() => {
-                            const mid = resolveId(p.thumbnail?.mediaId || p.thumbnail?._id);
-                            return (
-                              <MediaThumbnailHover media={mid ? mediaMap[mid] : null} className="size-9 shrink-0 rounded-[4px] overflow-hidden border border-border bg-muted">
-                                <img src={p.thumbnail?.url || 'https://placehold.co/40x40/1e293b/fff?text=?'} alt={p.name} className="size-full object-cover" />
-                              </MediaThumbnailHover>
-                            );
-                          })()}
-                          <span className="font-semibold text-foreground text-xs line-clamp-1 max-w-xs">{p.name}</span>
-                        </div>
-                      </td>
-                    )}
+          <Table>
+            <TableHeader className="bg-muted/60">
+              <TableRow className="border-b border-border text-[11px] font-bold text-foreground">
+                <TableHead className="px-3.5 py-3 w-10">
+                  <input type="checkbox" className="size-4 rounded-[4px] border-input text-primary focus:ring-ring" checked={selected.length === products.length && products.length > 0} onChange={toggleSelectAll} />
+                </TableHead>
+                {isColumnVisible('product') && <TableHead className="px-3.5 py-3.5 whitespace-nowrap">Sản phẩm</TableHead>}
+                {isColumnVisible('sku') && <TableHead className="px-3.5 py-3.5 whitespace-nowrap">SKU</TableHead>}
+                {isColumnVisible('status') && <TableHead className="px-3.5 py-3.5 whitespace-nowrap">Trạng thái</TableHead>}
+                {isColumnVisible('category') && <TableHead className="px-3.5 py-3.5 whitespace-nowrap">Danh mục</TableHead>}
+                {isColumnVisible('brand') && <TableHead className="px-3.5 py-3.5 whitespace-nowrap">Thương hiệu</TableHead>}
+                {isColumnVisible('price') && <TableHead className="px-3.5 py-3.5 whitespace-nowrap">Giá bán</TableHead>}
+                {isColumnVisible('variants') && <TableHead className="px-3.5 py-3.5 text-center whitespace-nowrap">Biến thể</TableHead>}
+                {isColumnVisible('stock') && <TableHead className="px-3.5 py-3.5 whitespace-nowrap">Tồn kho</TableHead>}
+                {isColumnVisible('actions') && <TableHead className="px-3.5 py-3.5 whitespace-nowrap text-right">Thao tác</TableHead>}
+              </TableRow>
+            </TableHeader>
+            <TableBody className="divide-y divide-border">
+              {products.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={columnVisibility.visibleCount + 1} className="py-12 text-center text-xs text-muted-foreground">
+                    Chưa có sản phẩm nào
+                  </TableCell>
+                </TableRow>
+              ) : products.map((p) => (
+                <TableRow
+                  key={p._id}
+                  ref={(el) => { rowRefs.current[p._id] = el; }}
+                  className={`transition-colors hover:bg-muted/40 align-middle ${selected.includes(p._id) || p._id === highlightId ? 'bg-primary/8 ring-1 ring-inset ring-primary/30' : ''}`}
+                >
+                  <TableCell className="px-3.5 py-3 align-middle">
+                    <input type="checkbox" className="size-4 rounded-[4px] border-input text-primary focus:ring-ring" checked={selected.includes(p._id)} onChange={() => toggleSelect(p._id)} />
+                  </TableCell>
+                  {isColumnVisible('product') && (
+                    <TableCell className="px-3.5 py-3 align-middle whitespace-nowrap">
+                      <div className="flex items-center gap-2.5">
+                        {(() => {
+                          const mid = resolveId(p.thumbnail?.mediaId || p.thumbnail?._id);
+                          return (
+                            <MediaThumbnailHover media={mid ? mediaMap[mid] : null} className="size-9 shrink-0 rounded-[4px] overflow-hidden border border-border bg-muted">
+                              <img src={p.thumbnail?.url || 'https://placehold.co/40x40/1e293b/fff?text=?'} alt={p.name} className="size-full object-cover" />
+                            </MediaThumbnailHover>
+                          );
+                        })()}
+                        <span className="font-semibold text-foreground text-xs line-clamp-1 max-w-xs">{p.name}</span>
+                      </div>
+                    </TableCell>
+                  )}
                   {isColumnVisible('sku') && (
-                    <td className="px-3.5 py-3 align-middle"><code className="inline-flex items-center rounded bg-muted px-2 py-0.5 font-mono text-xs text-muted-foreground border border-border/50">{p.sku}</code></td>
+                    <TableCell className="px-3.5 py-3 align-middle">
+                      <code className="inline-flex items-center rounded bg-muted px-2 py-0.5 font-mono text-xs text-muted-foreground border border-border/50">{p.sku}</code>
+                    </TableCell>
                   )}
                   {isColumnVisible('status') && (
-                    <td className="px-3.5 py-3 align-middle">
+                    <TableCell className="px-3.5 py-3 align-middle">
                       <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border ${STATUS_BADGE[p.status]}`}>
                         {STATUS_LABELS[p.status]}
                       </span>
-                    </td>
+                    </TableCell>
                   )}
                   {isColumnVisible('category') && (
-                    <td className="px-3.5 py-3 align-middle text-muted-foreground">
+                    <TableCell className="px-3.5 py-3 align-middle text-muted-foreground">
                       {p.category?.name || (Array.isArray(p.categories) && p.categories[0]?.name) || '—'}
-                    </td>
+                    </TableCell>
                   )}
                   {isColumnVisible('brand') && (
-                    <td className="px-3.5 py-3 align-middle text-muted-foreground">{p.brand?.name || '—'}</td>
+                    <TableCell className="px-3.5 py-3 align-middle text-muted-foreground">
+                      {p.brand?.name || '—'}
+                    </TableCell>
                   )}
                   {isColumnVisible('price') && (
-                    <td className="px-3.5 py-3 align-middle">
+                    <TableCell className="px-3.5 py-3 align-middle">
                       {p.salePrice > 0 && p.salePrice < p.price ? (
                         <div className="flex items-center gap-1">
-                          <span className="font-semibold text-foreground text-sm">{formatPrice(p.salePrice)}</span>
-                          <span className="text-xs text-muted-foreground line-through">{formatPrice(p.price)}</span>
+                          <span className="font-semibold text-foreground text-sm font-mono tabular-nums">{formatPrice(p.salePrice)}</span>
+                          <span className="text-xs text-muted-foreground line-through font-mono tabular-nums">{formatPrice(p.price)}</span>
                         </div>
                       ) : (
-                        <span className="font-medium text-foreground">{formatPrice(p.price)}</span>
+                        <span className="font-medium text-foreground font-mono tabular-nums">{formatPrice(p.price)}</span>
                       )}
-                    </td>
+                    </TableCell>
                   )}
                   {isColumnVisible('variants') && (
-                    <td className="px-3.5 py-3 align-middle text-center">
+                    <TableCell className="px-3.5 py-3 align-middle text-center">
                       {p.variantCount > 0 ? (
-                        <button
-                          className="inline-flex items-center gap-1 rounded-full bg-violet-500/10 border border-violet-500/20 px-2.5 py-0.5 text-xs font-semibold text-violet-600 dark:text-violet-400 hover:bg-violet-500/20 transition-colors cursor-pointer"
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="xs"
+                          className="inline-flex items-center gap-1 rounded-[4px] bg-violet-500/10 border border-violet-500/20 px-2.5 py-0.5 text-xs font-semibold text-violet-600 dark:text-violet-400 hover:bg-violet-500/20 h-6"
                           title="Quản lý biến thể"
                           onClick={() => navigate(`/products/${p._id}/variants`)}
                         >
                           <Layers size={11} />
-                          {p.variantCount}
-                        </button>
+                          <span>{p.variantCount}</span>
+                        </Button>
                       ) : (
                         <span className="text-xs text-muted-foreground">—</span>
                       )}
-                    </td>
+                    </TableCell>
                   )}
                   {isColumnVisible('stock') && (
-                    <td className="px-3.5 py-3 align-middle font-mono text-xs font-semibold">{p.stock} <span className="text-[11px] text-muted-foreground font-normal">{p.unit || 'Cái'}</span></td>
+                    <TableCell className="px-3.5 py-3 align-middle font-mono text-xs font-semibold tabular-nums">
+                      {p.stock} <span className="text-[11px] text-muted-foreground font-normal">{p.unit || 'Cái'}</span>
+                    </TableCell>
                   )}
                   {isColumnVisible('actions') && (
-                    <td className="px-3.5 py-3 align-middle">
+                    <TableCell className="px-3.5 py-3 align-middle">
                       <div className="flex items-center gap-1">
                         <button className="inline-flex size-7 items-center justify-center rounded-[4px] text-muted-foreground hover:bg-accent hover:text-foreground transition-transform active:scale-[0.98] cursor-pointer" title="Xem trên Cửa hàng" onClick={() => handleViewFrontend(p.slug)}><Eye size={14} /></button>
                         <Can do="product.edit">
@@ -437,14 +460,13 @@ export default function ProductListPage() {
                           <button className="inline-flex size-7 items-center justify-center rounded-[4px] text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-transform active:scale-[0.98] cursor-pointer" title="Xóa" onClick={() => setDeleteTarget(p)}><Trash2 size={14} /></button>
                         </Can>
                       </div>
-                    </td>
+                    </TableCell>
                   )}
-                </tr>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+            </TableBody>
+          </Table>
+        </Card>
     ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {products.map((p) => (

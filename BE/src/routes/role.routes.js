@@ -6,7 +6,7 @@ const { requirePermission } = require('../middleware/permission.middleware');
 
 router.use(protect);
 
-router.get('/permissions', requirePermission(['role.manage', 'role.view']), ctrl.getPermissions);
+router.get('/permissions', requirePermission(['role.manage', 'role.view', 'role.assign', 'user.create', 'user.edit', 'user.assign']), ctrl.getPermissions);
 router.post('/seed-full-permissions', requirePermission('role.manage'), ctrl.seedPermissions);
 
 router.get('/',            requirePermission(['role.manage', 'role.view', 'role.assign', 'user.view', 'user.create']), ctrl.getRoles);

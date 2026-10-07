@@ -343,24 +343,25 @@ function UserFooterMenu({ onProfile, onChangePass }) {
               <button
                 onClick={() => {
                   setOpen(false);
-                  onProfile();
+                  navigate('/profile');
                 }}
-                className="flex w-full items-center gap-2.5 px-3 py-2 text-xs font-medium text-foreground hover:bg-accent transition-colors"
+                className="flex w-full items-center gap-2.5 px-3 py-2 text-xs font-medium text-foreground hover:bg-accent transition-colors cursor-pointer"
               >
                 <UserIcon size={14} className="text-muted-foreground shrink-0" />
-                Thông tin tài khoản
+                Hồ sơ & Tài khoản
               </button>
               <button
                 onClick={() => {
                   setOpen(false);
-                  onChangePass();
+                  navigate('/profile');
                 }}
-                className="flex w-full items-center gap-2.5 px-3 py-2 text-xs font-medium text-foreground hover:bg-accent transition-colors"
+                className="flex w-full items-center gap-2.5 px-3 py-2 text-xs font-medium text-foreground hover:bg-accent transition-colors cursor-pointer"
               >
                 <KeyIcon size={14} className="text-muted-foreground shrink-0" />
-                Đổi mật khẩu
+                Đổi mật khẩu & Bảo mật
               </button>
             </div>
+
 
             <div className="py-1">
               <button

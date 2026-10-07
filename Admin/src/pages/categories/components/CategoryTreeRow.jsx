@@ -103,10 +103,10 @@ export default function CategoryTreeRow({
             <div className="flex flex-col min-w-0">
               <span className="font-semibold text-foreground text-xs truncate">{cat.name}</span>
               {cat.brandId && (
-                <span className="text-[10px] text-muted-foreground truncate">🔗 {cat.brandId.name}</span>
+                <span className="text-[10px] text-muted-foreground truncate font-mono">Brand: {cat.brandId.name}</span>
               )}
               {cat.link && !cat.brandId && (
-                <span className="text-[10px] text-muted-foreground truncate">↗ {cat.link}</span>
+                <span className="text-[10px] text-muted-foreground truncate font-mono">{cat.link}</span>
               )}
             </div>
           </div>

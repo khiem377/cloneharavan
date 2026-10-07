@@ -199,7 +199,7 @@ export default function StockExportListPage() {
             Lệnh Xuất Kho 4 Bước (Outbound Workflow)
           </h1>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Quy trình xuất kho MISA AMIS: Chờ soạn hàng ➔ Đang lấy hàng ➔ Đã đóng gói ➔ Hoàn thành xuất kho
+            Quy trình xuất kho MISA AMIS: Chờ soạn hàng -&gt; Đang lấy hàng -&gt; Đã đóng gói -&gt; Hoàn thành xuất kho
           </p>
         </div>
         <Button

@@ -223,7 +223,7 @@ export default function PurchaseOrderCreatePage() {
               Tạo Đơn Nhập Kho Mới
             </h1>
             <p className="text-xs text-muted-foreground">
-              Quy trình 3 bước chuẩn hoá: Lập đơn ➔ Xem trước bảng kê Excel ➔ Xác nhận chốt đơn
+              Quy trình 3 bước chuẩn hoá: Lập đơn -&gt; Xem trước bảng kê Excel -&gt; Xác nhận chốt đơn
             </p>
           </div>
         </div>

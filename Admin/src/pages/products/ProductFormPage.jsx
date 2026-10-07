@@ -759,22 +759,25 @@ export default function ProductFormPage() {
 
                         {/* Thêm chip giá trị */}
                         <div className="flex flex-wrap items-center gap-1.5">
-                          {opt.values.map((val, valIdx) => (
-                            <span key={valIdx} className="inline-flex items-center gap-1 rounded-[4px] bg-background border border-border px-2 py-0.5 text-xs font-medium text-foreground">
-                              {val}
-                              <button
-                                type="button"
-                                className="text-muted-foreground hover:text-destructive cursor-pointer ml-0.5"
-                                onClick={() => {
-                                  const copy = [...options];
-                                  copy[optIdx].values = copy[optIdx].values.filter((_, i) => i !== valIdx);
-                                  setOptions(copy);
-                                }}
-                              >
-                                <X size={11} />
-                              </button>
-                            </span>
-                          ))}
+                          {opt.values.map((val, valIdx) => {
+                            const valStr = typeof val === 'object' && val !== null ? (val.value || '') : String(val || '');
+                            return (
+                              <span key={valIdx} className="inline-flex items-center gap-1 rounded-[4px] bg-background border border-border px-2 py-0.5 text-xs font-medium text-foreground">
+                                {valStr}
+                                <button
+                                  type="button"
+                                  className="text-muted-foreground hover:text-destructive cursor-pointer ml-0.5"
+                                  onClick={() => {
+                                    const copy = [...options];
+                                    copy[optIdx].values = copy[optIdx].values.filter((_, i) => i !== valIdx);
+                                    setOptions(copy);
+                                  }}
+                                >
+                                  <X size={11} />
+                                </button>
+                              </span>
+                            );
+                          })}
 
                           <div className="flex items-center gap-1 flex-1 min-w-[180px]">
                             <Input

@@ -204,9 +204,20 @@ export default function StaffListPage() {
     } catch (_) {}
   };
 
+  const validateStaffPassword = (pw) => {
+    return (
+      pw &&
+      pw.length >= 8 &&
+      /[A-Z]/.test(pw) &&
+      /[a-z]/.test(pw) &&
+      /[0-9]/.test(pw) &&
+      /[^A-Za-z0-9]/.test(pw)
+    );
+  };
+
   const handleConfirmResetPassword = async (e) => {
     e.preventDefault();
-    if (!resetPassUser || !newPassword || newPassword.length < 6) return;
+    if (!resetPassUser || !newPassword || !validateStaffPassword(newPassword)) return;
     try {
       await resetPassMut.mutateAsync({
         id: resetPassUser._id,
@@ -219,7 +230,7 @@ export default function StaffListPage() {
 
   const handleCreateSubmit = async (e) => {
     e.preventDefault();
-    if (!createForm.email || !createForm.password) return;
+    if (!createForm.email || !createForm.password || !validateStaffPassword(createForm.password)) return;
 
     const targetRole = roles.find((r) => r._id === createForm.roleId);
     const roleCode = targetRole?.code || 'staff';
@@ -746,10 +757,10 @@ export default function StaffListPage() {
                 <h3 className="text-base font-semibold text-foreground">Hồ Sơ & Quyền Hạn Nhân Sự</h3>
               </div>
               <button
-                className="size-7 inline-flex items-center justify-center rounded-[6px] text-muted-foreground hover:bg-accent cursor-pointer"
+                className="size-7 inline-flex items-center justify-center rounded-[6px] text-muted-foreground hover:bg-accent cursor-pointer transition-colors"
                 onClick={() => setDrawerStaff(null)}
               >
-                ✕
+                <XCircle size={18} />
               </button>
             </div>
 
@@ -823,18 +834,27 @@ export default function StaffListPage() {
             {drawerTab === 'preview' && (
               <div className="flex flex-col gap-3 flex-1 overflow-y-auto pr-1">
                 {drawerStaff.role === 'administrator' || drawerStaff.role === 'admin' ? (
-                  <div className="p-4 rounded-[6px] border border-emerald-500/30 bg-emerald-500/5 text-xs text-emerald-700 dark:text-emerald-400 font-medium leading-relaxed">
-                    ✓ Nhân viên này giữ vai trò Administrator tối cao (Toàn quyền tuyệt đối bypass trên tất cả quyền hệ thống).
+                  <div className="p-4 rounded-[6px] border border-emerald-500/30 bg-emerald-500/5 text-xs text-emerald-700 dark:text-emerald-400 font-medium leading-relaxed flex items-start gap-2">
+                    <CheckCircle2 size={16} className="text-emerald-600 shrink-0 mt-0.5" />
+                    <span>Nhân viên này giữ vai trò Administrator tối cao (Toàn quyền tuyệt đối bypass trên tất cả quyền hệ thống).</span>
                   </div>
                 ) : (
                   <div className="space-y-3">
                     {Object.entries(permissionsGrouped).map(([mod, perms]) => {
-                      const rolePermIds = (drawerStaff.roleId?.permissions || []).map((p) =>
-                        typeof p === 'object' ? p._id : p
+                      const activeRole = roles.find((r) =>
+                        (drawerStaff.roleId && (r._id === drawerStaff.roleId._id || r._id === drawerStaff.roleId)) ||
+                        r.code === drawerStaff.role
                       );
+                      const rolePerms = activeRole?.permissions || drawerStaff.roleId?.permissions || [];
+                      const rolePermIds = rolePerms.map((p) => (typeof p === 'object' ? (p._id || p.id) : p));
+                      const rolePermCodes = rolePerms.map((p) => (typeof p === 'object' ? p.code : p));
                       const customIds = (drawerStaff.customPermissions || []).map((p) =>
-                        typeof p === 'object' ? p._id : p
+                        typeof p === 'object' ? (p._id || p.id) : p
                       );
+
+                      const activeCount = perms.filter(
+                        (p) => rolePermIds.includes(p._id) || (p.code && rolePermCodes.includes(p.code)) || customIds.includes(p._id)
+                      ).length;
 
                       return (
                         <div key={mod} className="rounded-[6px] border border-border bg-card p-3 shadow-none">
@@ -843,40 +863,46 @@ export default function StaffListPage() {
                               Module: {mod}
                             </span>
                             <span className="text-[11px] text-muted-foreground font-mono tabular-nums">
-                              {perms.filter((p) => rolePermIds.includes(p._id) || customIds.includes(p._id)).length}/{perms.length} quyền
+                              {activeCount}/{perms.length} quyền
                             </span>
                           </div>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                             {perms.map((p) => {
-                              const isFromRole = rolePermIds.includes(p._id);
+                              const isFromRole = rolePermIds.includes(p._id) || (p.code && rolePermCodes.includes(p.code));
                               const isCustom = customIds.includes(p._id);
                               const hasPerm = isFromRole || isCustom;
 
                               return (
                                 <div
                                   key={p._id}
-                                  className={`flex items-center justify-between gap-1.5 text-xs p-1.5 rounded-[4px] border ${
+                                  className={`flex items-center justify-between gap-1.5 text-xs p-1.5 rounded-[4px] border transition-colors ${
                                     hasPerm
-                                      ? 'bg-muted/40 border-border text-foreground'
+                                      ? 'bg-muted/40 border-border text-foreground font-medium'
                                       : 'opacity-40 border-dashed border-border/40 text-muted-foreground'
                                   }`}
                                 >
-                                  <div className="flex items-center gap-1.5 truncate">
-                                    {hasPerm ? (
-                                      <CheckCircle2 size={13} className={isCustom ? 'text-blue-600' : 'text-emerald-600'} />
-                                    ) : (
-                                      <XCircle size={13} className="text-muted-foreground" />
-                                    )}
+                                  <div className="flex items-center gap-2 truncate">
+                                    <div
+                                      className={`size-4 rounded-[3px] flex items-center justify-center shrink-0 ${
+                                        hasPerm ? (isCustom ? 'bg-blue-600 text-white' : 'bg-emerald-600 text-white') : 'border border-border bg-muted/40'
+                                      }`}
+                                    >
+                                      {hasPerm && <CheckCircle2 size={12} className="text-white" />}
+                                    </div>
                                     <span className="truncate" title={p.name}>
                                       {p.name}
                                     </span>
                                   </div>
 
-                                  {isCustom && (
-                                    <span className="text-[9px] px-1 rounded-[3px] bg-blue-500/10 text-blue-600 shrink-0 font-semibold">
+                                  {isCustom ? (
+                                    <span className="text-[9px] px-1 py-0.2 rounded-[3px] bg-blue-500/10 text-blue-600 shrink-0 font-semibold font-mono">
                                       Riêng
                                     </span>
-                                  )}
+                                  ) : isFromRole ? (
+                                    <span className="text-[9px] px-1 py-0.2 rounded-[3px] bg-emerald-500/10 text-emerald-600 shrink-0 font-semibold font-mono">
+                                      Vai trò
+                                    </span>
+                                  ) : null}
                                 </div>
                               );
                             })}
@@ -892,48 +918,84 @@ export default function StaffListPage() {
             {/* TAB 2: CUSTOM OVERRIDE PERMISSIONS */}
             {drawerTab === 'custom_perms' && (
               <div className="flex flex-col gap-3 flex-1 overflow-y-auto pr-1">
-                <div className="p-3 rounded-[6px] border border-blue-500/20 bg-blue-500/5 text-xs text-blue-700 dark:text-blue-400 leading-relaxed">
-                  💡 <strong>Cấp quyền riêng biệt (Custom Permissions):</strong> Bạn có thể bổ sung thêm các quyền đặc thù cho nhân viên này ngoài các quyền mặc định mà vai trò của họ đang có.
+                <div className="p-3 rounded-[6px] border border-blue-500/20 bg-blue-500/5 text-xs text-blue-700 dark:text-blue-400 leading-relaxed flex items-start gap-2">
+                  <ShieldCheck size={16} className="text-blue-600 shrink-0 mt-0.5" />
+                  <div>
+                    <strong>Cấp quyền riêng biệt (Custom Permissions):</strong> Bổ sung thêm các quyền đặc thù cho nhân viên này ngoài các quyền mặc định từ vai trò.
+                  </div>
                 </div>
 
                 <div className="space-y-3">
-                  {Object.entries(permissionsGrouped).map(([mod, perms]) => (
-                    <div key={mod} className="rounded-[6px] border border-border bg-card p-3 shadow-none">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-semibold text-xs text-foreground capitalize">
-                          Module: {mod}
-                        </span>
+                  {Object.entries(permissionsGrouped).map(([mod, perms]) => {
+                    const activeRole = roles.find((r) =>
+                      (drawerStaff.roleId && (r._id === drawerStaff.roleId._id || r._id === drawerStaff.roleId)) ||
+                      r.code === drawerStaff.role
+                    );
+                    const rolePerms = activeRole?.permissions || drawerStaff.roleId?.permissions || [];
+                    const rolePermIds = rolePerms.map((p) => (typeof p === 'object' ? (p._id || p.id) : p));
+                    const rolePermCodes = rolePerms.map((p) => (typeof p === 'object' ? p.code : p));
+
+                    return (
+                      <div key={mod} className="rounded-[6px] border border-border bg-card p-3 shadow-none">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-semibold text-xs text-foreground capitalize">
+                            Module: {mod}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {perms.map((p) => {
+                            const isInheritedFromRole = rolePermIds.includes(p._id) || (p.code && rolePermCodes.includes(p.code));
+                            const isChecked = customPermIds.includes(p._id);
+
+                            if (isInheritedFromRole) {
+                              return (
+                                <div
+                                  key={p._id}
+                                  className="flex items-center justify-between gap-2 p-1.5 rounded-[4px] border border-emerald-500/30 bg-emerald-500/5 text-xs text-foreground cursor-not-allowed opacity-90"
+                                  title="Quyền này đã được cấp mặc định từ Vai trò"
+                                >
+                                  <div className="flex items-center gap-2 truncate">
+                                    <div className="size-4 rounded-[3px] bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                                      <CheckCircle2 size={12} />
+                                    </div>
+                                    <span className="truncate">{p.name}</span>
+                                  </div>
+                                  <span className="text-[9px] px-1 py-0.2 rounded-[3px] bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 shrink-0 font-semibold font-mono">
+                                    Từ vai trò (Đã có)
+                                  </span>
+                                </div>
+                              );
+                            }
+
+                            return (
+                              <label
+                                key={p._id}
+                                className={`flex items-center gap-2 p-1.5 rounded-[4px] border cursor-pointer transition-colors text-xs ${
+                                  isChecked
+                                    ? 'bg-primary/5 border-primary/40 text-foreground font-medium'
+                                    : 'hover:bg-muted/40 border-border text-muted-foreground'
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  onChange={() => handleToggleCustomPerm(p._id)}
+                                  className="size-3.5 rounded-[3px] border-border text-primary cursor-pointer"
+                                />
+                                <span className="truncate" title={p.description || p.name}>
+                                  {p.name}
+                                </span>
+                              </label>
+                            );
+                          })}
+                        </div>
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        {perms.map((p) => {
-                          const isChecked = customPermIds.includes(p._id);
-                          return (
-                            <label
-                              key={p._id}
-                              className={`flex items-center gap-2 p-1.5 rounded-[4px] border cursor-pointer transition-colors text-xs ${
-                                isChecked
-                                  ? 'bg-primary/5 border-primary/40 text-foreground font-medium'
-                                  : 'hover:bg-muted/40 border-border text-muted-foreground'
-                              }`}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={isChecked}
-                                onChange={() => handleToggleCustomPerm(p._id)}
-                                className="size-3.5 rounded-[3px] border-border text-primary cursor-pointer"
-                              />
-                              <span className="truncate" title={p.description || p.name}>
-                                {p.name}
-                              </span>
-                            </label>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
+
 
             {/* Drawer Footer */}
             <div className="flex items-center justify-between pt-3 border-t border-border mt-auto">
@@ -1069,16 +1131,21 @@ export default function StaffListPage() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-foreground">Mật khẩu mới (tối thiểu 6 ký tự):</label>
+              <label className="text-xs font-medium text-foreground">Mật khẩu mới (tối thiểu 8 ký tự, gồm hoa, thường, số, ký tự đặc biệt):</label>
               <Input
                 type="password"
                 required
-                minLength={6}
+                minLength={8}
                 placeholder="Nhập mật khẩu mới..."
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 className="h-9 rounded-[6px] text-xs"
               />
+              {newPassword && !validateStaffPassword(newPassword) && (
+                <p className="text-[10px] text-destructive font-medium">
+                  Tối thiểu 8 ký tự, gồm ít nhất 1 chữ hoa, 1 chữ thường, 1 số, 1 ký tự đặc biệt
+                </p>
+              )}
             </div>
 
             <DialogFooter className="pt-3 border-t border-border flex items-center justify-end gap-2 bg-transparent">
@@ -1094,7 +1161,7 @@ export default function StaffListPage() {
               <Button
                 type="submit"
                 size="sm"
-                disabled={resetPassMut.isPending || newPassword.length < 6}
+                disabled={resetPassMut.isPending || !validateStaffPassword(newPassword)}
                 className="h-8 rounded-[6px] text-xs active:scale-[0.98] transition-transform"
               >
                 {resetPassMut.isPending ? 'Đang cập nhật...' : 'Cập Nhật Mật Khẩu'}
@@ -1157,12 +1224,17 @@ export default function StaffListPage() {
                 <Input
                   type="password"
                   required
-                  minLength={6}
-                  placeholder="Tối thiểu 6 ký tự"
+                  minLength={8}
+                  placeholder="Tối thiểu 8 ký tự (hoa, thường, số, ký tự đặc biệt)"
                   value={createForm.password}
                   onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
                   className="h-9 rounded-[6px] text-xs"
                 />
+                {createForm.password && !validateStaffPassword(createForm.password) && (
+                  <p className="text-[10px] text-destructive font-medium">
+                    Ít nhất 8 ký tự, 1 hoa, 1 thường, 1 số, 1 ký tự đặc biệt
+                  </p>
+                )}
               </div>
 
               <div className="flex flex-col gap-1.5">

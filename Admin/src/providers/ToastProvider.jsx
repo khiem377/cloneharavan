@@ -7,6 +7,7 @@ export const toast = {
   success: (msg, opts = {}) => toastListener?.({ id: Date.now(), message: msg, type: 'success', ...opts }),
   error:   (msg, opts = {}) => toastListener?.({ id: Date.now(), message: msg, type: 'error', ...opts }),
   warning: (msg, opts = {}) => toastListener?.({ id: Date.now(), message: msg, type: 'warning', ...opts }),
+  info:    (msg, opts = {}) => toastListener?.({ id: Date.now(), message: msg, type: 'info', ...opts }),
 };
 
 // ─── Per-type config ──────────────────────────────────────────────────────────
@@ -36,6 +37,17 @@ const TYPE_CONFIG = {
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
         <line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
+      </svg>
+    ),
+  },
+  info: {
+    label: 'Thông tin',
+    accent: '#3b82f6',
+    icon: (
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="10" />
+        <line x1="12" y1="16" x2="12" y2="12" />
+        <line x1="12" y1="8" x2="12.01" y2="8" />
       </svg>
     ),
   },
