@@ -51,6 +51,8 @@ const {
   parseSearchQuery,
   calculateRelevanceScore,
 } = require('../utils/searchEngine');
+const { getStoreCorpus } = require('../utils/dynamicSearchCorpus');
+const { trainSearchCorpusWithAI } = require('./aiSearchEnricher.service');
 const {
   calculateTrendingScore,
   isSpamSearchRequest,
@@ -437,7 +439,8 @@ const globalSearch = async (query = {}, req = null) => {
     attrs,
   } = query;
 
-  const parsed = parseSearchQuery(q);
+  const corpus = await getStoreCorpus();
+  const parsed = parseSearchQuery(q, corpus);
 
   const hasKeyword = Boolean(parsed.normalized);
   const hasCollectionFilter = Boolean(category || brand);
@@ -1178,7 +1181,8 @@ const globalSearch = async (query = {}, req = null) => {
  * Instant Autocomplete Search Suggestions Endpoint (Sub-20ms preview)
  */
 const getInstantSuggestions = async (q = '') => {
-  const parsed = parseSearchQuery(q);
+  const corpus = await getStoreCorpus();
+  const parsed = parseSearchQuery(q, corpus);
   if (!parsed.normalized) {
     const trending = await getTrendingKeywords();
     return {
@@ -1251,6 +1255,24 @@ const getInstantSuggestions = async (q = '') => {
       .lean();
   }
 
+  const brandOrConditions = [{ name: regex }, { slug: regex }];
+  const categoryOrConditions = [{ name: regex }, { slug: regex }];
+
+  // Add synonym & didYouMean matching to brands & categories
+  (parsed.synonyms || []).forEach((syn) => {
+    if (syn && syn.length >= 2) {
+      const synReg = new RegExp(escapeRegExp(syn), 'i');
+      brandOrConditions.push({ name: synReg });
+      categoryOrConditions.push({ name: synReg });
+    }
+  });
+
+  if (parsed.didYouMean) {
+    const dymReg = new RegExp(escapeRegExp(parsed.didYouMean), 'i');
+    brandOrConditions.push({ name: dymReg });
+    categoryOrConditions.push({ name: dymReg });
+  }
+
   const [blogs, brands, categories, trendingKeywords] = await Promise.all([
     BlogPost.find({
       status: 'published',
@@ -1260,14 +1282,14 @@ const getInstantSuggestions = async (q = '') => {
       .limit(3)
       .lean(),
 
-    Brand.find({ isActive: true, name: regex })
+    Brand.find({ isActive: true, $or: brandOrConditions })
       .select('name slug logo')
-      .limit(3)
+      .limit(4)
       .lean(),
 
-    Category.find({ isActive: true, name: regex })
+    Category.find({ isActive: true, $or: categoryOrConditions })
       .select('name slug icon image')
-      .limit(3)
+      .limit(4)
       .lean(),
 
     getTrendingKeywords(),
@@ -1305,6 +1327,10 @@ const getInstantSuggestions = async (q = '') => {
 
   return {
     query: parsed.raw,
+    prediction: parsed.predictedQuery || parsed.raw,
+    didYouMean: parsed.didYouMean || '',
+    isTypo: !!parsed.isTypo,
+    suggestedKeywords: parsed.suggestedKeywords || [],
     products: scoredProducts.slice(0, 5),
     blogs,
     brands,
@@ -1531,4 +1557,5 @@ module.exports = {
   recordDiscussionKeyword,
   recordPurchaseKeyword,
   exportSearchDataToCSV,
+  trainSearchCorpusWithAI,
 };

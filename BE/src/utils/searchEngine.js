@@ -1,66 +1,19 @@
 /**
- * Smart Search Engine Utility
- * Advanced Vietnamese Unaccenting, Dynamic Acronym/Initials Generator, Tokenizer and Relevance Scoring
+ * Universal Dynamic Search Engine Utility
+ * 
+ * Works 100% dynamically for any store catalog (Fashion, Tech, Food, Cosmetics, etc.)
+ * Adapts to dynamic store corpus with automatic typo-correction, acronym expansion, and relevance scoring.
  */
 
-const removeVietnameseTones = (str) => {
-  if (!str) return '';
-  return str
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/đ/g, 'd')
-    .replace(/Đ/g, 'd')
-    .trim();
-};
+const {
+  removeVietnameseTones,
+  damerauLevenshteinDistance,
+  calculateSimilarity,
+  extractDynamicAcronyms,
+  predictFromCorpus,
+} = require('./dynamicSearchCorpus');
 
-/**
- * Extracts initials/acronyms from a phrase
- * Example: "Loa vi tính Bluetooth Enkor" -> ["lvt", "lvtb", "lvtbe"]
- */
-const extractAcronyms = (str) => {
-  if (!str) return [];
-  const normalized = removeVietnameseTones(str);
-  const words = normalized.split(/[^a-z0-9]+/i).filter(Boolean);
-  
-  if (words.length < 2) return [];
-
-  const acronyms = [];
-  
-  // Full phrase acronym: "Loa vi tính Bluetooth" -> "lvtb"
-  const fullAcronym = words.map(w => w[0]).join('');
-  if (fullAcronym.length >= 2) acronyms.push(fullAcronym);
-
-  // Sub-phrase acronyms (first 2, 3, 4 words)
-  for (let len = 2; len < words.length; len++) {
-    const subAcronym = words.slice(0, len).map(w => w[0]).join('');
-    if (!acronyms.includes(subAcronym)) {
-      acronyms.push(subAcronym);
-    }
-  }
-
-  return acronyms;
-};
-
-const SYNONYM_MAP = {
-  tv: ['tivi', 'ti vi', 'television', 'smart tv'],
-  tivi: ['tv', 'television', 'smart tv'],
-  dt: ['dien thoai', 'smartphone', 'iphone', 'samsung'],
-  dienthoai: ['dt', 'dien thoai', 'smartphone'],
-  mtb: ['may tinh bang', 'tablet', 'ipad'],
-  ml: ['may lanh', 'dieu hoa'],
-  maylanh: ['dieu hoa', 'ml'],
-  dieuhoa: ['may lanh', 'ml'],
-  tl: ['tu lanh'],
-  tulanh: ['tl'],
-  mg: ['may giat'],
-  maygiat: ['mg'],
-  quat: ['quat dien', 'quat dung', 'quat lung'],
-  noicom: ['noi com dien'],
-  tainghe: ['headphone', 'earphone', 'airpods'],
-  laptop: ['may tinh xach tay', 'macbook'],
-  macbook: ['laptop', 'apple macbook'],
-};
+const extractAcronyms = extractDynamicAcronyms;
 
 // Generic modifiers, specs, and stop-tokens that should have lower scoring weight
 const GENERIC_MODIFIERS = new Set([
@@ -77,44 +30,73 @@ const isGenericToken = (token) => {
   if (!token) return true;
   const clean = token.toLowerCase().replace(/[^a-z0-9]/g, '');
   if (!clean || clean.length <= 1) return true;
-  if (/^\d+$/.test(clean)) return true; // standalone numbers like 14, 15, 512
-  if (/^\d+(?:gb|tb|mb|inch|in|mhz|w|l|lit)$/i.test(clean)) return true; // 18gb, 512gb, 14inch
+  if (/^\d+$/.test(clean)) return true; // standalone numbers
+  if (/^\d+(?:gb|tb|mb|inch|in|mhz|w|l|lit|ml|kg|g)$/i.test(clean)) return true;
   return GENERIC_MODIFIERS.has(clean);
 };
 
 /**
- * Tokenizes search query into clean tokens, synonyms and acronym candidates
+ * Tokenizes search query into clean tokens, dynamic predictions, synonyms and core tokens
+ * 
+ * @param {string} query - Raw search query
+ * @param {object} corpus - Dynamic store corpus built from MongoDB
  */
-const parseSearchQuery = (query) => {
+const parseSearchQuery = (query, corpus = null) => {
   if (!query || !query.trim()) {
-    return { raw: '', normalized: '', tokens: [], coreTokens: [], modifierTokens: [], acronyms: [], synonyms: [] };
+    return {
+      raw: '',
+      normalized: '',
+      tokens: [],
+      coreTokens: [],
+      modifierTokens: [],
+      acronyms: [],
+      synonyms: [],
+      predictedQuery: '',
+      didYouMean: '',
+      suggestedKeywords: [],
+      isTypo: false,
+    };
   }
 
   const raw = query.trim();
   const normalized = removeVietnameseTones(raw);
-  
-  // Clean punctuation from tokens but preserve clean alphanumeric tokens
+
   const cleanTokensString = normalized.replace(/[()[\]{}:;,.!?+=\-_/\\*~"']/g, ' ');
   const rawTokens = cleanTokensString.split(/\s+/).filter(Boolean);
-  const acronyms = extractAcronyms(raw);
+  const acronyms = extractDynamicAcronyms(raw);
 
+  let predictedQuery = raw;
+  let didYouMean = '';
+  let isTypo = false;
+  let suggestedKeywords = [];
   const synonyms = [];
-  const normalizedNoSpaces = normalized.replace(/\s+/g, '');
-  
-  if (SYNONYM_MAP[normalizedNoSpaces]) {
-    synonyms.push(...SYNONYM_MAP[normalizedNoSpaces]);
-  }
-  
-  rawTokens.forEach((t) => {
-    if (SYNONYM_MAP[t]) {
-      synonyms.push(...SYNONYM_MAP[t]);
+
+  // Dynamic Corpus prediction (if corpus provided)
+  if (corpus) {
+    const predictionResult = predictFromCorpus(raw, corpus);
+    predictedQuery = predictionResult.prediction || raw;
+    didYouMean = predictionResult.didYouMean || '';
+    isTypo = !!predictionResult.isTypo;
+    suggestedKeywords = predictionResult.suggestedKeywords || [];
+    if (predictionResult.synonyms) {
+      synonyms.push(...predictionResult.synonyms);
     }
-  });
+  }
 
   const uniqueSynonyms = [...new Set(synonyms)];
   const nonTrivialTokens = rawTokens.filter((t) => t.length >= 2);
   const coreTokens = nonTrivialTokens.filter((t) => !isGenericToken(t));
   const modifierTokens = nonTrivialTokens.filter((t) => isGenericToken(t));
+
+  // Add synonym tokens to coreTokens
+  uniqueSynonyms.forEach((syn) => {
+    const synTokens = syn.split(/\s+/).filter((w) => w.length >= 2 && !isGenericToken(w));
+    synTokens.forEach((st) => {
+      if (!coreTokens.includes(st)) {
+        coreTokens.push(st);
+      }
+    });
+  });
 
   return {
     raw,
@@ -124,15 +106,27 @@ const parseSearchQuery = (query) => {
     modifierTokens,
     acronyms,
     synonyms: uniqueSynonyms,
+    predictedQuery: predictedQuery || raw,
+    didYouMean,
+    isTypo,
+    suggestedKeywords,
   };
 };
 
 /**
- * Calculates relevance score for a item based on title, acronyms, and content
+ * Calculates relevance score for an item dynamically based on title, brand, category, and query tokens
  */
 const calculateRelevanceScore = (item, parsedQuery) => {
-  const { normalized: queryNorm, tokens = [], coreTokens = [], modifierTokens = [], acronyms = [], synonyms = [] } = parsedQuery;
-  
+  const {
+    normalized: queryNorm,
+    tokens = [],
+    coreTokens = [],
+    modifierTokens = [],
+    acronyms = [],
+    synonyms = [],
+    didYouMean = '',
+  } = parsedQuery;
+
   const titleNorm = removeVietnameseTones(item.name || item.title || '');
   const brandNorm = removeVietnameseTones(item.brand?.name || '');
   const catNames = Array.isArray(item.categories)
@@ -145,40 +139,9 @@ const calculateRelevanceScore = (item, parsedQuery) => {
   const codeNorm = removeVietnameseTones(item.sku || item.productCode || item.code || '');
   const searchTokensNorm = (item.searchTokens || []).map((t) => removeVietnameseTones(t));
 
-  const fullItemText = `${titleNorm} ${brandNorm} ${catNames} ${codeNorm} ${searchTokensNorm.join(' ')}`;
-
-  // 1. Cross-category intent protection
-  const isTvQuery = /\b(?:tivi|ti vi|tv|smart tv|television)\b/i.test(queryNorm);
-  const isFridgeQuery = /\b(?:tu lanh|tu dong)\b/i.test(queryNorm);
-  const isLaptopQuery = /\b(?:macbook|laptop|zenbook|thinkpad|vivobook|legion|nitro|xps)\b/i.test(queryNorm);
-  const isPhoneQuery = /\b(?:iphone|dien thoai|galaxy s|galaxy z|redmi|xiaomi 14|smartphone)\b/i.test(queryNorm);
-  const isTabletQuery = /\b(?:ipad|galaxy tab|pad 6|may tinh bang|tablet)\b/i.test(queryNorm);
-
-  const isTvProduct = /\b(?:tivi|ti vi|tv|smart tv)\b/i.test(titleNorm) || /tivi|man hinh/i.test(catNames);
-  const isFridgeProduct = /^(?:tu lanh|tu dong)\b/i.test(titleNorm) || /tu lanh|tu dong/i.test(catNames);
-  const isLaptopProduct = /\b(?:macbook|laptop|may tinh xach tay)\b/i.test(titleNorm) || /laptop|macbook/i.test(catNames);
-
-  if (isTvQuery && isFridgeProduct) return -1000;
-  if (isFridgeQuery && isTvProduct) return -1000;
-  if (isLaptopQuery && (isTvProduct || isFridgeProduct || /\b(?:may loc khong khi|loa keo|noi com)\b/i.test(titleNorm))) {
-    return -1000;
-  }
-
-  // 2. Core Entity Token Gate:
-  // If user searched for specific core entities (e.g., "macbook", "iphone"), product MUST match at least one core token
-  if (coreTokens.length > 0) {
-    const matchesAnyCore = coreTokens.some((ct) => {
-      const syns = [ct, ...synonyms.filter((s) => s.includes(ct) || ct.includes(s))];
-      return syns.some((s) => fullItemText.includes(s));
-    });
-    if (!matchesAnyCore) {
-      return -500; // Complete mismatch
-    }
-  }
-
   let score = 0;
 
-  // 3. Exact phrase match in title
+  // 1. Exact phrase match in title
   if (titleNorm === queryNorm) {
     score += 500;
   } else if (titleNorm.startsWith(queryNorm)) {
@@ -187,12 +150,20 @@ const calculateRelevanceScore = (item, parsedQuery) => {
     score += 250;
   }
 
-  // 4. Exact match in code / SKU
+  // 2. Exact match in brand / category / didYouMean
+  if (didYouMean) {
+    const didYouMeanNorm = removeVietnameseTones(didYouMean);
+    if (brandNorm.includes(didYouMeanNorm)) score += 300;
+    if (catNames.includes(didYouMeanNorm)) score += 250;
+    if (titleNorm.includes(didYouMeanNorm)) score += 250;
+  }
+
+  // 3. Exact match in code / SKU
   if (codeNorm && codeNorm.includes(queryNorm)) {
     score += 300;
   }
 
-  // 5. Token matching with differentiated weights
+  // 4. Token matching with differentiated weights
   let matchedCoreCount = 0;
   let matchedModifierCount = 0;
 
@@ -207,10 +178,10 @@ const calculateRelevanceScore = (item, parsedQuery) => {
       score += 120;
       matchedCoreCount++;
     } else if (matchInBrand) {
-      score += 90;
+      score += 100;
       matchedCoreCount++;
     } else if (matchInCat) {
-      score += 60;
+      score += 70;
       matchedCoreCount++;
     } else if (matchInCode) {
       score += 50;
@@ -226,7 +197,7 @@ const calculateRelevanceScore = (item, parsedQuery) => {
     const matchInCode = syns.some((s) => codeNorm.includes(s));
 
     if (matchInTitle) {
-      score += 20; // Lower weight for generic tokens like "pro", "14", "inch"
+      score += 20;
       matchedModifierCount++;
     } else if (matchInCode) {
       score += 15;
@@ -234,14 +205,14 @@ const calculateRelevanceScore = (item, parsedQuery) => {
     }
   });
 
-  // 6. Token Coverage bonus
+  // 5. Token Coverage bonus
   const totalNonTrivialTokens = coreTokens.length + modifierTokens.length;
   const totalMatched = matchedCoreCount + matchedModifierCount;
 
   if (totalNonTrivialTokens > 0) {
     const coverageRatio = totalMatched / totalNonTrivialTokens;
     if (coverageRatio >= 1.0) {
-      score += 250; // Matched 100% of tokens in the query
+      score += 250;
     } else if (coverageRatio >= 0.75) {
       score += 150;
     } else if (coverageRatio >= 0.5) {
@@ -249,16 +220,11 @@ const calculateRelevanceScore = (item, parsedQuery) => {
     }
   }
 
-  // 7. Multi-word core token full match bonus
-  if (coreTokens.length > 1 && matchedCoreCount >= coreTokens.length) {
-    score += 150;
-  }
-
-  // 8. Acronym match (e.g. "lvt" for "Loa vi tính")
+  // 6. Dynamic Acronym match
   tokens.forEach((token) => {
-    const itemAcronyms = extractAcronyms(item.name || item.title || '');
+    const itemAcronyms = extractDynamicAcronyms(item.name || item.title || '');
     if (itemAcronyms.includes(token)) {
-      score += 75;
+      score += 100;
     }
   });
 
@@ -268,6 +234,9 @@ const calculateRelevanceScore = (item, parsedQuery) => {
 module.exports = {
   removeVietnameseTones,
   extractAcronyms,
+  extractDynamicAcronyms,
+  damerauLevenshteinDistance,
+  calculateSimilarity,
   isGenericToken,
   parseSearchQuery,
   calculateRelevanceScore,

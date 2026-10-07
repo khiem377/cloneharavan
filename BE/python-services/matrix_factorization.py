@@ -150,7 +150,7 @@ def load_interactions_data():
                     p_key = str(row.get('product_id', '')).strip()
                     if not u_key or not p_key:
                         continue
-                    i_type = row.get('interaction_type', 'view')
+                    i_type = row.get('event_type') or row.get('interaction_type', 'view')
                     base_w = INTERACTION_WEIGHTS.get(i_type, float(row.get('weight', 1.0)))
                     interactions.append({
                         'userId':      u_key if len(u_key) == 24 else None,

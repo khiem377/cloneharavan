@@ -2,17 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import {
-  SlidersHorizontal,
-  RotateCcw,
-  X,
-  Star,
-  CheckCircle2,
-  Sparkles,
-  Zap,
-  Percent,
-  Check,
-} from 'lucide-react';
+import { RotateCcw, X } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '../../../components/ui/card';
 import { Checkbox } from '../../../components/ui/checkbox';
 import { Button } from '../../../components/ui/button';
@@ -141,7 +131,6 @@ export default function SearchSidebarFilter({
       {/* Header */}
       <div className="shrink-0 flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-white">
         <div className="flex items-center gap-2">
-          <SlidersHorizontal size={15} className="text-[#e30019]" />
           <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
             Bộ lọc tìm kiếm
           </h2>

@@ -1030,6 +1030,16 @@ const recordUserInteraction = async (data = {}) => {
   // Bắt ngay lập tức và ghi trực tiếp vào interactions.csv cho Python Recommendation Engine
   appendInteractionToCsv(interaction);
 
+  // Trigger cron counter để tự động kích hoạt Python SVD batch khi đủ ngưỡng tương tác
+  try {
+    const { incrementInteractionCounter } = require('../utils/cronJobs');
+    if (typeof incrementInteractionCounter === 'function') {
+      incrementInteractionCounter();
+    }
+  } catch (cronErr) {
+    // Ignore if cronJobs is not initialized yet
+  }
+
   return interaction;
 };
 

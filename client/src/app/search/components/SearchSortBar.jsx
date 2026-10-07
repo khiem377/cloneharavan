@@ -2,26 +2,16 @@
 
 import React, { useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import {
-  SlidersHorizontal,
-  X,
-  RotateCcw,
-  Sparkles,
-  ArrowUpDown,
-  TrendingDown,
-  TrendingUp,
-  Clock,
-  Flame,
-} from 'lucide-react';
+import { SlidersHorizontal, X, RotateCcw } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import { Badge } from '../../../components/ui/badge';
 import { Card } from '../../../components/ui/card';
 
 const SORT_OPTIONS = [
-  { value: 'relevance', label: 'Liên quan nhất', icon: Sparkles },
-  { value: 'newest', label: 'Mới nhất', icon: Clock },
-  { value: 'price_asc', label: 'Giá tăng dần', icon: TrendingUp },
-  { value: 'price_desc', label: 'Giá giảm dần', icon: TrendingDown },
+  { value: 'relevance', label: 'Liên quan nhất' },
+  { value: 'newest', label: 'Mới nhất' },
+  { value: 'price_asc', label: 'Giá tăng dần' },
+  { value: 'price_desc', label: 'Giá giảm dần' },
 ];
 
 export default function SearchSortBar({
@@ -165,7 +155,6 @@ export default function SearchSortBar({
           <div className="flex items-center gap-1 bg-slate-100/70 p-0.5 rounded-[6px] border border-slate-200/80">
             {SORT_OPTIONS.map((opt) => {
               const isActive = (currentSort || 'relevance') === opt.value;
-              const IconComp = opt.icon;
               return (
                 <Button
                   key={opt.value}
@@ -173,16 +162,12 @@ export default function SearchSortBar({
                   variant={isActive ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => handleSortChange(opt.value)}
-                  className={`h-7 px-2.5 text-xs rounded-[4px] transition whitespace-nowrap active:scale-[0.98] ${
+                  className={`h-7 px-3 text-xs rounded-[4px] transition whitespace-nowrap active:scale-[0.98] ${
                     isActive
                       ? 'bg-white text-slate-900 font-bold shadow-2xs hover:bg-white hover:text-slate-900 border border-slate-200'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
                   }`}
                 >
-                  <IconComp
-                    size={12}
-                    className={`mr-1 ${isActive ? 'text-[#e30019]' : 'text-slate-400'}`}
-                  />
                   <span>{opt.label}</span>
                 </Button>
               );

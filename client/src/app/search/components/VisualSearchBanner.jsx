@@ -2,9 +2,7 @@
 
 import React, { useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import Icon from '../../../components/common/Icon';
 import { Button } from '../../../components/ui/button';
-import { Badge } from '../../../components/ui/badge';
 import { Card } from '../../../components/ui/card';
 import { searchService } from '../../../services/search.service';
 
@@ -42,35 +40,34 @@ export default function VisualSearchBanner({ visualInfo = null, onClear }) {
     }
   };
 
+  const detectedInfo = [category, brand, color].filter(Boolean).join(' • ') || 'Sản phẩm tương đồng';
+
   return (
-    <Card className="p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
+    <Card className="p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border border-slate-200 bg-white rounded-[6px]">
       <div className="flex items-center gap-3">
         {imageUrl ? (
           <img
             src={imageUrl}
             alt="Ảnh tìm kiếm"
-            className="w-12 h-12 object-cover rounded-[6px] border border-gray-200 shrink-0"
+            className="w-12 h-12 object-cover rounded-[6px] border border-slate-200 shrink-0 bg-slate-50"
           />
         ) : (
-          <div className="w-12 h-12 rounded-[6px] bg-gray-100 flex items-center justify-center text-gray-500 shrink-0">
-            <Icon name="camera" size={20} />
+          <div className="w-12 h-12 rounded-[6px] bg-slate-100 border border-slate-200 flex items-center justify-center text-[10px] text-slate-400 font-medium shrink-0">
+            Chưa có ảnh
           </div>
         )}
 
         <div>
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-xs font-bold text-gray-900">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-slate-900">
               Tìm kiếm bằng hình ảnh
             </span>
-            <Badge variant="destructive" className="text-[10px] font-semibold px-1.5 py-0">
-              AI Vision
-            </Badge>
           </div>
 
-          <p className="text-xs text-gray-500 mt-0.5">
+          <p className="text-xs text-slate-500 mt-0.5">
             Nhận diện:{' '}
-            <strong className="text-gray-800">
-              {[category, brand, color].filter(Boolean).join(' • ') || 'Sản phẩm tương đồng'}
+            <strong className="text-slate-800 font-semibold">
+              {detectedInfo}
             </strong>
           </p>
         </div>
@@ -86,7 +83,7 @@ export default function VisualSearchBanner({ visualInfo = null, onClear }) {
         />
         <Button
           type="button"
-          variant="secondary"
+          variant="outline"
           size="sm"
           onClick={() => fileInputRef.current?.click()}
           className="text-xs font-medium"
@@ -99,7 +96,7 @@ export default function VisualSearchBanner({ visualInfo = null, onClear }) {
           variant="ghost"
           size="sm"
           onClick={onClear}
-          className="text-xs font-medium text-gray-400 hover:text-red-600"
+          className="text-xs font-medium text-slate-500 hover:text-red-600 hover:bg-red-50"
         >
           Xóa
         </Button>
@@ -107,3 +104,4 @@ export default function VisualSearchBanner({ visualInfo = null, onClear }) {
     </Card>
   );
 }
+

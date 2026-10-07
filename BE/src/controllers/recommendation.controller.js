@@ -128,6 +128,20 @@ const syncInteractionsCsv = async (req, res, next) => {
   }
 };
 
+// ── POST /api/recommendations/run-python-svd ─────────────────────────────
+const triggerPythonSVD = async (req, res, next) => {
+  try {
+    const { runPythonSVDBatch } = require('../utils/cronJobs');
+    await runPythonSVDBatch();
+    res.json({
+      status: 'success',
+      message: 'Đã kích hoạt chạy mô hình SVD Machine Learning Python thành công.',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   recordInteraction,
   getPersonalizedRecommendations,
@@ -136,4 +150,5 @@ module.exports = {
   getSimilarProducts,
   computeItemCF,
   syncInteractionsCsv,
+  triggerPythonSVD,
 };

@@ -106,6 +106,19 @@ const exportSearchCSV = async (req, res, next) => {
   }
 };
 
+const trainSearchWithAI = async (req, res, next) => {
+  try {
+    const result = await searchService.trainSearchCorpusWithAI();
+    res.json({
+      status: 'success',
+      message: 'Đã hoàn tất quá trình huấn luyện AI Search từ Catalog & Gemini',
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   globalSearch,
   getInstantSuggestions,
@@ -115,4 +128,5 @@ module.exports = {
   recordPurchaseKeyword,
   searchByImage,
   exportSearchCSV,
+  trainSearchWithAI,
 };
