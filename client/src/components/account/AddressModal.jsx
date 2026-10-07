@@ -1,12 +1,14 @@
 'use client';
 
-import React from 'react';
-import { X, CheckCircle2, MapPin } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { X, MapPin, Loader2 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Card } from '../ui/card';
 import { SearchableSelect } from '../ui/searchable-select';
+import { formatProvinceName } from '@/utils/vietnamAddressMerger';
+import shippingService from '@/services/shipping.service';
 
 export default function AddressModal({
   isOpen,
@@ -25,27 +27,103 @@ export default function AddressModal({
   handleWardSelect,
   handleSaveAddress,
   addressSaving,
-  postMergerInfo,
 }) {
+  const [mergerData, setMergerData] = useState(null);
+  const [loadingMerger, setLoadingMerger] = useState(false);
+  const lookupTimerRef = useRef(null);
+
+  // Tự động đối soát và tra cứu địa chỉ sau sáp nhập
+  useEffect(() => {
+    if (!isOpen) {
+      setMergerData(null);
+      setLoadingMerger(false);
+      return;
+    }
+
+    if (!addressForm.province || !addressForm.ward) {
+      setMergerData(null);
+      setLoadingMerger(false);
+      return;
+    }
+
+    if (lookupTimerRef.current) {
+      clearTimeout(lookupTimerRef.current);
+    }
+
+    setLoadingMerger(true);
+    lookupTimerRef.current = setTimeout(async () => {
+      try {
+        const data = await shippingService.getPostMergerAddress({
+          province: addressForm.province,
+          district: addressForm.district,
+          ward: addressForm.ward,
+          detailAddress: addressForm.detailAddress,
+          provinceId: addressForm.provinceId,
+          districtId: addressForm.districtId,
+          wardCode: addressForm.wardCode,
+        });
+        if (data) {
+          setMergerData(data);
+        }
+      } catch (err) {
+        console.warn('Lỗi tra cứu địa chỉ sau sáp nhập:', err);
+      } finally {
+        setLoadingMerger(false);
+      }
+    }, 200);
+
+    return () => {
+      if (lookupTimerRef.current) {
+        clearTimeout(lookupTimerRef.current);
+      }
+    };
+  }, [
+    isOpen,
+    addressForm.province,
+    addressForm.district,
+    addressForm.ward,
+    addressForm.detailAddress,
+    addressForm.provinceId,
+    addressForm.districtId,
+    addressForm.wardCode,
+  ]);
+
   if (!isOpen) return null;
 
-  const detailPrefix = addressForm.detailAddress ? `${addressForm.detailAddress.trim()}, ` : '';
-  const currentAddress = `${detailPrefix}${addressForm.ward}, ${addressForm.district}, ${addressForm.province}`;
-  const isMerged = Boolean(postMergerInfo?.isMerged);
-  const newAddress = postMergerInfo?.postMergerFullAddress || (
-    addressForm.province && addressForm.ward
-      ? `${detailPrefix}${postMergerInfo?.newWard || addressForm.ward}, ${postMergerInfo?.province || addressForm.province}`
-      : ''
-  );
+  // 1. Địa chỉ trước sáp nhập (lấy trực tiếp từ input & select người dùng chọn)
+  const preMergerParts = [
+    addressForm.detailAddress?.trim(),
+    addressForm.ward,
+    addressForm.district,
+    addressForm.province,
+  ].filter(Boolean);
+  const preMergerAddress = preMergerParts.join(', ');
+
+  // 2. Địa chỉ sau sáp nhập (lấy từ kết quả đối soát API chuẩn hóa GHN / TraDiaChi)
+  const targetWard = mergerData?.newWard || addressForm.ward || '';
+  const targetProvince =
+    mergerData?.province ||
+    formatProvinceName(addressForm.province) ||
+    addressForm.province ||
+    '';
+
+  const postMergerParts = [
+    addressForm.detailAddress?.trim(),
+    targetWard,
+    targetProvince,
+  ].filter(Boolean);
+  const postMergerAddress = postMergerParts.join(', ');
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 sm:p-6 animate-fadeIn">
-      <Card className="max-w-2xl sm:max-w-3xl w-full shadow-xl overflow-hidden animate-scaleUp p-0 rounded-[6px] border border-slate-200/90 bg-white">
+      <Card className="max-w-2xl sm:max-w-3xl w-full shadow-xl overflow-hidden animate-scaleUp p-0 rounded-[6px] border border-slate-200 bg-white">
         {/* Header */}
         <div className="px-5 sm:px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white">
           <div className="space-y-0.5">
             <h3 className="text-sm sm:text-base font-bold text-slate-900">
-              {editingAddressId ? 'Cập nhật địa chỉ nhận hàng' : 'Thêm địa chỉ nhận hàng mới'}
+              {editingAddressId
+                ? 'Cập nhật địa chỉ nhận hàng'
+                : 'Thêm địa chỉ nhận hàng mới'}
             </h3>
             <p className="text-[11px] text-slate-500">
               Vui lòng nhập chính xác để đơn hàng được giao nhanh chóng và tận tay
@@ -56,18 +134,24 @@ export default function AddressModal({
             variant="ghost"
             size="icon-sm"
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-700 h-7 w-7 rounded-[6px]"
+            className="text-slate-400 hover:text-slate-700 h-7 w-7 rounded-[6px] cursor-pointer"
           >
             <X size={16} />
           </Button>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSaveAddress} className="p-5 sm:p-6 space-y-4 max-h-[82vh] overflow-y-auto">
+        <form
+          onSubmit={handleSaveAddress}
+          className="p-5 sm:p-6 space-y-4 max-h-[82vh] overflow-y-auto"
+        >
           {/* Row 1: Name & Phone */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label htmlFor="recipientName" className="text-xs font-semibold text-slate-700">
+              <Label
+                htmlFor="recipientName"
+                className="text-xs font-semibold text-slate-700"
+              >
                 Họ và tên người nhận <span className="text-[#e30019]">*</span>
               </Label>
               <Input
@@ -79,12 +163,15 @@ export default function AddressModal({
                   setAddressForm({ ...addressForm, fullName: e.target.value })
                 }
                 placeholder="Ví dụ: Nguyễn Văn A"
-                className="h-9 text-xs rounded-[6px] focus-visible:ring-[#e30019] focus-visible:border-[#e30019]"
+                className="h-9 text-xs rounded-[6px] border-slate-200 focus-visible:ring-[#e30019] focus-visible:border-[#e30019]"
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="recipientPhone" className="text-xs font-semibold text-slate-700">
+              <Label
+                htmlFor="recipientPhone"
+                className="text-xs font-semibold text-slate-700"
+              >
                 Số điện thoại người nhận <span className="text-[#e30019]">*</span>
               </Label>
               <Input
@@ -96,7 +183,7 @@ export default function AddressModal({
                   setAddressForm({ ...addressForm, phone: e.target.value })
                 }
                 placeholder="0949527013"
-                className="h-9 text-xs font-mono rounded-[6px] focus-visible:ring-[#e30019] focus-visible:border-[#e30019]"
+                className="h-9 text-xs font-mono rounded-[6px] border-slate-200 focus-visible:ring-[#e30019] focus-visible:border-[#e30019]"
               />
             </div>
           </div>
@@ -160,7 +247,10 @@ export default function AddressModal({
 
           {/* Row 3: Detail Street Address */}
           <div className="space-y-1.5">
-            <Label htmlFor="detailAddress" className="text-xs font-semibold text-slate-700">
+            <Label
+              htmlFor="detailAddress"
+              className="text-xs font-semibold text-slate-700"
+            >
               Địa chỉ cụ thể (Số nhà, tên đường...) <span className="text-[#e30019]">*</span>
             </Label>
             <Input
@@ -169,58 +259,54 @@ export default function AddressModal({
               required
               value={addressForm.detailAddress}
               onChange={(e) =>
-                setAddressForm({ ...addressForm, detailAddress: e.target.value })
+                setAddressForm({
+                  ...addressForm,
+                  detailAddress: e.target.value,
+                })
               }
               placeholder="Ví dụ: Số 123 đường Lê Lợi, Khóm 1"
-              className="h-9 text-xs rounded-[6px] focus-visible:ring-[#e30019] focus-visible:border-[#e30019]"
+              className="h-9 text-xs rounded-[6px] border-slate-200 focus-visible:ring-[#e30019] focus-visible:border-[#e30019]"
             />
           </div>
 
-          {/* User-friendly Address Preview */}
+          {/* Dual Address Preview (Trước & Sau sáp nhập) */}
           {addressForm.province && addressForm.ward && (
-            <Card className="p-3.5 bg-slate-50/90 border-slate-200/90 space-y-2.5 animate-fadeIn rounded-[6px]">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
-                <MapPin size={14} className="text-[#e30019] shrink-0" />
-                <span>Xem trước địa chỉ nhận hàng:</span>
+            <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-[6px] text-xs space-y-2.5 animate-fadeIn">
+              {/* Địa chỉ trước sáp nhập */}
+              <div className="flex items-start gap-2.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0 mt-1.5" />
+                <div className="flex-1 leading-relaxed">
+                  <span className="text-slate-500 font-medium mr-1.5">
+                    Địa chỉ trước sáp nhập:
+                  </span>
+                  <span className="text-slate-700 font-medium">
+                    {preMergerAddress}
+                  </span>
+                </div>
               </div>
 
-              {isMerged ? (
-                <div className="space-y-2 text-xs">
-                  <div className="flex items-start gap-2">
-                    <span className="text-slate-500 font-medium shrink-0 w-28 text-[11px]">
-                      Địa chỉ hiện tại:
-                    </span>
-                    <span className="text-slate-800 font-medium leading-relaxed">
-                      {currentAddress}
-                    </span>
-                  </div>
+              <div className="border-t border-slate-200/80" />
 
-                  <div className="flex items-start gap-2 pt-1.5 border-t border-slate-200/70">
-                    <span className="text-emerald-700 font-semibold shrink-0 w-28 text-[11px]">
-                      Địa chỉ mới (sau sáp nhập):
+              {/* Địa chỉ sau sáp nhập */}
+              <div className="flex items-start gap-2.5">
+                <MapPin size={14} className="text-[#e30019] shrink-0 mt-0.5" />
+                <div className="flex-1 leading-relaxed">
+                  <span className="text-slate-500 font-medium mr-1.5">
+                    Địa chỉ sau sáp nhập:
+                  </span>
+                  {loadingMerger && !mergerData ? (
+                    <span className="text-slate-400 inline-flex items-center gap-1.5">
+                      <Loader2 size={12} className="animate-spin text-[#e30019]" />
+                      Đang tra cứu...
                     </span>
-                    <div className="flex-1 space-y-1">
-                      <span className="font-semibold text-emerald-900 bg-emerald-50 px-2 py-0.5 rounded-[4px] border border-emerald-200 inline-block leading-relaxed">
-                        {newAddress}
-                      </span>
-                      {/* <p className="text-[11px] text-emerald-600 font-normal flex items-center gap-1">
-                        <CheckCircle2 size={12} className="text-emerald-600 shrink-0" />
-                        <span>Hệ thống tự động đồng bộ theo địa giới mới để giao hàng chính xác.</span>
-                      </p> */}
-                    </div>
-                  </div>
+                  ) : (
+                    <span className="text-slate-900 font-semibold">
+                      {postMergerAddress}
+                    </span>
+                  )}
                 </div>
-              ) : (
-                <div className="text-xs flex items-start gap-2">
-                  <span className="text-slate-500 font-medium shrink-0 w-28 text-[11px]">
-                    Địa chỉ đầy đủ:
-                  </span>
-                  <span className="text-slate-900 font-semibold leading-relaxed">
-                    {currentAddress}
-                  </span>
-                </div>
-              )}
-            </Card>
+              </div>
+            </div>
           )}
 
           {/* Default address checkbox */}
@@ -230,9 +316,12 @@ export default function AddressModal({
                 type="checkbox"
                 checked={addressForm.isDefault}
                 onChange={(e) =>
-                  setAddressForm({ ...addressForm, isDefault: e.target.checked })
+                  setAddressForm({
+                    ...addressForm,
+                    isDefault: e.target.checked,
+                  })
                 }
-                className="rounded-[4px] text-[#e30019] focus:ring-[#e30019]"
+                className="rounded-[4px] text-[#e30019] focus:ring-[#e30019] accent-[#e30019]"
               />
               <span className="text-xs text-slate-700 font-medium">
                 Đặt làm địa chỉ nhận hàng mặc định
@@ -247,7 +336,7 @@ export default function AddressModal({
               variant="outline"
               size="sm"
               onClick={onClose}
-              className="text-xs rounded-[6px] h-9 px-4 active:scale-[0.98]"
+              className="text-xs rounded-[6px] h-9 px-4 active:scale-[0.98] cursor-pointer"
             >
               Hủy
             </Button>
@@ -257,7 +346,11 @@ export default function AddressModal({
               size="sm"
               className="bg-[#e30019] hover:bg-[#c40015] text-white text-xs font-semibold rounded-[6px] h-9 px-5 shadow-xs active:scale-[0.98] disabled:opacity-50 cursor-pointer"
             >
-              {addressSaving ? 'Đang lưu...' : editingAddressId ? 'Lưu thay đổi' : 'Thêm địa chỉ'}
+              {addressSaving
+                ? 'Đang lưu...'
+                : editingAddressId
+                ? 'Lưu thay đổi'
+                : 'Thêm địa chỉ'}
             </Button>
           </div>
         </form>

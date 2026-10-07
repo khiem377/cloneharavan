@@ -4,6 +4,8 @@ const connectDB = require('./src/config/db');
 const { initElasticsearch } = require('./src/config/elasticsearch');
 
 const PORT = process.env.PORT || 5000;
+// Trigger restart for AI Predictive Search Engine v2
+
 
 process.on('unhandledRejection', (err) => {
   console.error('[Unhandled Rejection]', err);

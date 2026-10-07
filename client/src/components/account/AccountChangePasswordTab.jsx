@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Eye, EyeOff, CheckCircle2, AlertCircle, KeyRound, ShieldCheck } from 'lucide-react';
+import { Eye, EyeOff, CheckCircle2, AlertCircle, KeyRound, ShieldCheck, Check } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../ui/card';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
@@ -18,6 +18,16 @@ export default function AccountChangePasswordTab({
   passwordMessage,
   handleChangePassword,
 }) {
+  const newPw = passwordForm.newPassword || '';
+  const rules = [
+    { label: 'Tối thiểu 8 ký tự', ok: newPw.length >= 8 },
+    { label: 'Chữ in hoa (A-Z)', ok: /[A-Z]/.test(newPw) },
+    { label: 'Chữ in thường (a-z)', ok: /[a-z]/.test(newPw) },
+    { label: 'Chữ số (0-9)', ok: /[0-9]/.test(newPw) },
+    { label: 'Ký tự đặc biệt (!@#$...)', ok: /[^A-Za-z0-9]/.test(newPw) },
+  ];
+  const isFormValid = rules.every((r) => r.ok) && newPw === passwordForm.confirmPassword && passwordForm.currentPassword;
+
   return (
     <Card className="animate-fadeIn">
       <CardHeader>
@@ -113,9 +123,34 @@ export default function AccountChangePasswordTab({
                 {showPassword.new ? <EyeOff size={14} /> : <Eye size={14} />}
               </Button>
             </div>
-            <p className="text-[11px] text-slate-400">
-              Mật khẩu tối thiểu 8 ký tự, khuyến khích có chữ in hoa và chữ số.
+          </div>
+
+          {/* Password Checklist */}
+          <div className="rounded-[6px] border border-slate-200 bg-slate-50/50 p-3 space-y-1.5">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono">
+              Yêu cầu mật khẩu an toàn:
             </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-xs">
+              {rules.map((rule, idx) => (
+                <div
+                  key={idx}
+                  className={`flex items-center gap-1.5 text-[11px] ${
+                    rule.ok ? 'text-emerald-600 font-medium' : 'text-slate-400'
+                  }`}
+                >
+                  <div
+                    className={`w-3.5 h-3.5 rounded-[3px] border flex items-center justify-center shrink-0 ${
+                      rule.ok
+                        ? 'bg-emerald-500 border-emerald-500 text-white'
+                        : 'border-slate-300 bg-white'
+                    }`}
+                  >
+                    {rule.ok && <Check size={10} />}
+                  </div>
+                  <span>{rule.label}</span>
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Confirm Password */}

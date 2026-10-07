@@ -22,6 +22,8 @@ import { Alert, AlertDescription } from '../../../components/ui/alert';
 import { authService } from '../../../services/auth.service';
 import useAuthStore from '../../../store/authStore';
 import GoogleLoginButton from '../../../components/auth/GoogleLoginButton';
+import TikTokLoginButton from '../../../components/auth/TikTokLoginButton';
+import ZaloLoginButton from '../../../components/auth/ZaloLoginButton';
 
 export default function TrangDangKy() {
   const router = useRouter();
@@ -44,7 +46,9 @@ export default function TrangDangKy() {
   const matKhauHopLe =
     duLieu.password.length >= 8 &&
     /[A-Z]/.test(duLieu.password) &&
-    /[0-9]/.test(duLieu.password);
+    /[a-z]/.test(duLieu.password) &&
+    /[0-9]/.test(duLieu.password) &&
+    /[^A-Za-z0-9]/.test(duLieu.password);
 
   const daBatDauMatKhau = duLieu.password.length > 0;
   const matKhauSai = daBatDauMatKhau && !matKhauHopLe;
@@ -70,7 +74,7 @@ export default function TrangDangKy() {
       return;
     }
     if (!matKhauHopLe) {
-      setLoi('Mật khẩu phải có ít nhất 8 ký tự, bao gồm ít nhất 1 chữ hoa và 1 chữ số');
+      setLoi('Mật khẩu phải có ít nhất 8 ký tự, gồm ít nhất 1 chữ hoa, 1 chữ thường, 1 chữ số và 1 ký tự đặc biệt');
       return;
     }
     if (duLieu.password !== duLieu.confirmPassword) {
@@ -248,7 +252,7 @@ export default function TrangDangKy() {
                 </div>
                 {matKhauSai && (
                   <p className="text-[10px] text-red-600 font-medium">
-                    Ít nhất 8 ký tự, 1 chữ hoa, 1 chữ số
+                    Ít nhất 8 ký tự, 1 hoa, 1 thường, 1 số, 1 ký tự đặc biệt
                   </p>
                 )}
               </div>
@@ -317,6 +321,10 @@ export default function TrangDangKy() {
           </div>
 
           <GoogleLoginButton text="signup_with" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <TikTokLoginButton text="TikTok" />
+            <ZaloLoginButton text="Zalo" />
+          </div>
 
           {/* Login Link */}
           <div className="text-center text-xs text-slate-500 pt-3 border-t border-slate-100">

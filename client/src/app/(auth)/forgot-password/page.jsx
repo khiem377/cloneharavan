@@ -45,8 +45,13 @@ export default function ForgotPasswordPage() {
     <div className="min-h-[100dvh] bg-slate-50 flex items-center justify-center p-4">
       <Card className="w-full max-w-[440px] p-6 sm:p-8 space-y-5 animate-fadeIn">
         {/* Mascot Security Header */}
-        <div className="flex justify-center -mt-3 mb-2">
-          <MascotSecurityAuth size={160} />
+        <div className="flex justify-center -mt-6 -mb-2">
+          <MascotSecurityAuth
+            size={240}
+            isTyping={Boolean(email.trim())}
+            isLoading={loading}
+            isSuccess={submitted}
+          />
         </div>
 
         {submitted ? (

@@ -331,7 +331,11 @@ const getAllUsers = async (query = {}) => {
   const [total, users] = await Promise.all([
     User.countDocuments(filter),
     User.find(filter)
-      .populate('roleId', 'name code description')
+      .populate({
+        path: 'roleId',
+        select: 'name code description permissions',
+        populate: { path: 'permissions', select: 'name code module description' },
+      })
       .populate('customPermissions', 'name code module description')
       .sort(sort)
       .skip(skip)
@@ -351,7 +355,13 @@ const getAllUsers = async (query = {}) => {
  * Lấy chi tiết người dùng theo ID
  */
 const getUserById = async (id) => {
-  const user = await User.findById(id).populate('roleId', 'name code description');
+  const user = await User.findById(id)
+    .populate({
+      path: 'roleId',
+      select: 'name code description permissions',
+      populate: { path: 'permissions', select: 'name code module description' },
+    })
+    .populate('customPermissions', 'name code module description');
   if (!user) throw new AppError('Không tìm thấy người dùng', 404);
   return user;
 };

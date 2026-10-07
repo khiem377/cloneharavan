@@ -1,4 +1,5 @@
 const User = require('../models/user.model');
+const Permission = require('../models/permission.model');
 const { AppError } = require('../utils/AppError');
 const {
   buildTokenResponse,
@@ -6,9 +7,23 @@ const {
   registerAdmin: registerAdminService,
   loginUser,
   loginWithGoogle,
+  getTikTokAuthUrl,
+  loginWithTikTok,
+  getZaloAuthUrl,
+  loginWithZalo,
+  linkGoogleAccount,
+  linkZaloAccount,
+  linkTikTokAccount,
+  unlinkSocialAccount,
+  getLinkedProviders,
   rotateRefreshToken,
   changeUserPassword,
   logoutUser,
+  recordUserSession,
+  getUserSessions,
+  logoutUserSession,
+  logoutOtherSessions,
+  setUserPassword,
   forgotPassword: forgotPasswordService,
   resetPassword: resetPasswordService,
   sendEmailVerification,
@@ -16,6 +31,13 @@ const {
   sendPhoneOtp,
   verifyPhoneOtp,
   COOKIE_OPTIONS,
+  requestAdminLoginOtp,
+  verifyAdminLoginOtp,
+  generatePasskeyLoginOptions,
+  verifyPasskeyLogin,
+  generatePasskeyRegisterOptions,
+  verifyPasskeyRegister,
+  deletePasskey,
 } = require('../services/auth.service');
 const { mergeSessionInteractions } = require('../services/recommendation.service');
 
@@ -195,7 +217,177 @@ const googleLogin = async (req, res, next) => {
   }
 };
 
+const getTikTokAuthUrlController = async (req, res, next) => {
+  try {
+    const { state, redirectUri, codeChallenge } = req.query;
+    const authData = getTikTokAuthUrl(state, redirectUri, codeChallenge);
+    res.json({
+      status: 'success',
+      statusCode: 200,
+      data: authData,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 
+const tiktokLogin = async (req, res, next) => {
+  try {
+    const { code, redirectUri, codeVerifier, sessionId, isAdminRequest } = req.body;
+    const user = await loginWithTikTok(code, redirectUri, codeVerifier, !!isAdminRequest);
+    const { accessToken, refreshToken } = await buildTokenResponse(user, res, true);
+
+    // Merge guest session interactions vào userId (fire-and-forget)
+    if (sessionId) mergeSessionInteractions(sessionId, user._id);
+
+    const clientIp = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip || req.socket?.remoteAddress;
+    const clientUserAgent = req.headers['user-agent'] || 'Unknown';
+
+    const populatedUser = await User.findByIdAndUpdate(
+      user._id,
+      {
+        lastLoginAt: new Date(),
+        lastLoginIp: clientIp,
+        lastLoginUserAgent: clientUserAgent,
+      },
+      { returnDocument: 'after' }
+    )
+      .populate({ path: 'roleId', populate: { path: 'permissions', select: 'code name module' } })
+      .populate('customPermissions', 'code name module');
+
+    const userRole = (populatedUser.role || '').toLowerCase();
+    const roleCode = (populatedUser.roleId?.code || '').toLowerCase();
+    const roleName = (populatedUser.roleId?.name || '').toLowerCase();
+    const userEmail = (populatedUser.email || '').toLowerCase();
+
+    const isSuperAdmin =
+      userRole === 'administrator' ||
+      userRole === 'admin' ||
+      userRole.includes('admin') ||
+      roleCode === 'administrator' ||
+      roleCode === 'admin' ||
+      roleName.includes('administrator') ||
+      roleName.includes('quản trị') ||
+      userEmail.startsWith('admin');
+
+    const permissions = isSuperAdmin 
+      ? ['*']
+      : [...new Set([
+          ...(populatedUser.roleId?.permissions || []).map(p => p.code),
+          ...(populatedUser.customPermissions || []).map(p => p.code)
+        ])];
+
+    res.json({
+      status: 'success',
+      statusCode: 200,
+      message: 'Đăng nhập TikTok thành công',
+      data: {
+        accessToken,
+        refreshToken,
+        user: {
+          _id: populatedUser._id,
+          fullName: populatedUser.fullName,
+          email: populatedUser.email,
+          phone: populatedUser.phone,
+          avatar: populatedUser.avatar,
+          gender: populatedUser.gender,
+          role: populatedUser.role,
+          roleId: populatedUser.roleId,
+          authProvider: populatedUser.authProvider || 'tiktok',
+          permissions,
+        },
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getZaloAuthUrlController = async (req, res, next) => {
+  try {
+    const { state, redirectUri, codeChallenge } = req.query;
+    const authData = getZaloAuthUrl(state, redirectUri, codeChallenge);
+    res.json({
+      status: 'success',
+      statusCode: 200,
+      data: authData,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const zaloLogin = async (req, res, next) => {
+  try {
+    const { code, redirectUri, codeVerifier, sessionId, isAdminRequest } = req.body;
+    const user = await loginWithZalo(code, redirectUri, codeVerifier, !!isAdminRequest);
+    const { accessToken, refreshToken } = await buildTokenResponse(user, res, true);
+
+    // Merge guest session interactions vào userId (fire-and-forget)
+    if (sessionId) mergeSessionInteractions(sessionId, user._id);
+
+    const clientIp = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip || req.socket?.remoteAddress;
+    const clientUserAgent = req.headers['user-agent'] || 'Unknown';
+
+    const populatedUser = await User.findByIdAndUpdate(
+      user._id,
+      {
+        lastLoginAt: new Date(),
+        lastLoginIp: clientIp,
+        lastLoginUserAgent: clientUserAgent,
+      },
+      { returnDocument: 'after' }
+    )
+      .populate({ path: 'roleId', populate: { path: 'permissions', select: 'code name module' } })
+      .populate('customPermissions', 'code name module');
+
+    const userRole = (populatedUser.role || '').toLowerCase();
+    const roleCode = (populatedUser.roleId?.code || '').toLowerCase();
+    const roleName = (populatedUser.roleId?.name || '').toLowerCase();
+    const userEmail = (populatedUser.email || '').toLowerCase();
+
+    const isSuperAdmin =
+      userRole === 'administrator' ||
+      userRole === 'admin' ||
+      userRole.includes('admin') ||
+      roleCode === 'administrator' ||
+      roleCode === 'admin' ||
+      roleName.includes('administrator') ||
+      roleName.includes('quản trị') ||
+      userEmail.startsWith('admin');
+
+    const permissions = isSuperAdmin 
+      ? ['*']
+      : [...new Set([
+          ...(populatedUser.roleId?.permissions || []).map(p => p.code),
+          ...(populatedUser.customPermissions || []).map(p => p.code)
+        ])];
+
+    res.json({
+      status: 'success',
+      statusCode: 200,
+      message: 'Đăng nhập Zalo thành công',
+      data: {
+        accessToken,
+        refreshToken,
+        user: {
+          _id: populatedUser._id,
+          fullName: populatedUser.fullName,
+          email: populatedUser.email,
+          phone: populatedUser.phone,
+          avatar: populatedUser.avatar,
+          gender: populatedUser.gender,
+          role: populatedUser.role,
+          roleId: populatedUser.roleId,
+          authProvider: populatedUser.authProvider || 'zalo',
+          permissions,
+        },
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 
 const refreshToken = async (req, res, next) => {
   try {
@@ -222,10 +414,13 @@ const refreshToken = async (req, res, next) => {
 const getProfile = async (req, res, next) => {
   try {
     const populatedUser = await User.findById(req.user._id)
+      .select('+password')
       .populate({ path: 'roleId', populate: { path: 'permissions', select: 'code name module' } })
       .populate('customPermissions', 'code name module');
 
     if (!populatedUser) throw new AppError('Không tìm thấy người dùng', 404);
+
+    const hasPassword = !!populatedUser.password;
 
     const userRole = (populatedUser.role || '').toLowerCase();
     const roleCode = (populatedUser.roleId?.code || '').toLowerCase();
@@ -250,7 +445,12 @@ const getProfile = async (req, res, next) => {
         ])];
 
     const userObj = populatedUser.toObject();
+    delete userObj.password;
+    userObj.hasPassword = hasPassword;
     userObj.permissions = permissions;
+
+    // Ghi nhận session nền không chặn
+    recordUserSession(req.user._id, req).catch(() => {});
 
     res.json({
       status: 'success',
@@ -263,15 +463,182 @@ const getProfile = async (req, res, next) => {
   }
 };
 
-const changePassword = async (req, res, next) => {
+const getMyPermissions = async (req, res, next) => {
   try {
-    const { currentPassword, newPassword } = req.body;
-    await changeUserPassword(req.user._id, currentPassword, newPassword);
+    const populatedUser = await User.findById(req.user._id)
+      .populate({
+        path: 'roleId',
+        populate: {
+          path: 'permissions',
+          match: { isActive: true },
+          select: 'code name module description',
+        },
+      })
+      .populate({
+        path: 'customPermissions',
+        match: { isActive: true },
+        select: 'code name module description',
+      });
+
+    if (!populatedUser) throw new AppError('Không tìm thấy người dùng', 404);
+
+    const userRole = (populatedUser.role || '').toLowerCase();
+    const roleDoc = populatedUser.roleId;
+    const roleCode = (roleDoc?.code || '').toLowerCase();
+    const roleName = (roleDoc?.name || '').toLowerCase();
+    const userEmail = (populatedUser.email || '').toLowerCase();
+
+    const isSuperAdmin =
+      userRole === 'administrator' ||
+      userRole === 'admin' ||
+      userRole.includes('admin') ||
+      roleCode === 'administrator' ||
+      roleCode === 'admin' ||
+      roleName.includes('administrator') ||
+      roleName.includes('quản trị') ||
+      userEmail.startsWith('admin');
+
+    let permissionDocs = [];
+
+    if (isSuperAdmin) {
+      permissionDocs = await Permission.find({ isActive: true }).sort({ module: 1, name: 1 });
+    } else {
+      const rolePerms = Array.isArray(roleDoc?.permissions) ? roleDoc.permissions : [];
+      const customPerms = Array.isArray(populatedUser.customPermissions) ? populatedUser.customPermissions : [];
+
+      const permMap = new Map();
+      [...rolePerms, ...customPerms].forEach((p) => {
+        if (p && p.code) {
+          permMap.set(p.code, {
+            _id: p._id,
+            name: p.name,
+            code: p.code,
+            module: p.module || 'Khác',
+            description: p.description || '',
+          });
+        }
+      });
+
+      permissionDocs = Array.from(permMap.values()).sort((a, b) => {
+        const modCompare = (a.module || '').localeCompare(b.module || '');
+        if (modCompare !== 0) return modCompare;
+        return (a.name || '').localeCompare(b.name || '');
+      });
+    }
+
+    // Gom nhóm permissions theo module
+    const grouped = permissionDocs.reduce((acc, p) => {
+      const mod = p.module || 'Khác';
+      if (!acc[mod]) acc[mod] = [];
+      acc[mod].push(p);
+      return acc;
+    }, {});
 
     res.json({
       status: 'success',
       statusCode: 200,
-      message: 'Đổi mật khẩu thành công',
+      data: {
+        isSuperAdmin,
+        role: {
+          name: roleDoc?.name || (isSuperAdmin ? 'Quản trị viên tối cao' : 'Nhân viên'),
+          code: roleDoc?.code || populatedUser.role || 'staff',
+        },
+        permissions: permissionDocs.map((p) => p.code),
+        permissionDetails: permissionDocs,
+        grouped,
+        count: permissionDocs.length,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const setPassword = async (req, res, next) => {
+  try {
+    const { newPassword } = req.body;
+    if (!newPassword || newPassword.length < 6) {
+      throw new AppError('Mật khẩu mới phải có tối thiểu 6 ký tự', 400);
+    }
+
+    const result = await setUserPassword(req.user._id, newPassword);
+
+    res.json({
+      status: 'success',
+      statusCode: 200,
+      message: result.message,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const changePassword = async (req, res, next) => {
+  try {
+    const { currentPassword, newPassword, logoutOtherDevices } = req.body;
+    const result = await changeUserPassword(
+      req.user._id,
+      currentPassword,
+      newPassword,
+      !!logoutOtherDevices,
+      req
+    );
+
+    res.json({
+      status: 'success',
+      statusCode: 200,
+      message: result.message || 'Đổi mật khẩu thành công',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getSessions = async (req, res, next) => {
+  try {
+    const currentSessionId = req.headers['x-session-id'] || req.cookies?.sessionId;
+    const clientIp = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip;
+    const clientUA = req.headers['user-agent'] || '';
+    const result = await getUserSessions(req.user._id, currentSessionId, clientIp, clientUA);
+
+    res.json({
+      status: 'success',
+      statusCode: 200,
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const logoutSession = async (req, res, next) => {
+  try {
+    const { sessionId } = req.params;
+    if (!sessionId) throw new AppError('Mã phiên đăng nhập là bắt buộc', 400);
+
+    const result = await logoutUserSession(req.user._id, sessionId);
+
+    res.json({
+      status: 'success',
+      statusCode: 200,
+      message: result.message,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const logoutOtherSessionsController = async (req, res, next) => {
+  try {
+    const currentSessionId = req.headers['x-session-id'] || req.cookies?.sessionId;
+    const clientIp = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip;
+    const clientUA = req.headers['user-agent'] || '';
+    const result = await logoutOtherSessions(req.user._id, currentSessionId, clientIp, clientUA);
+
+    res.json({
+      status: 'success',
+      statusCode: 200,
+      message: result.message,
     });
   } catch (error) {
     next(error);
@@ -486,14 +853,293 @@ const sessionStream = async (req, res, next) => {
   }
 };
 
+const linkGoogle = async (req, res, next) => {
+  try {
+    const { credential } = req.body;
+    const result = await linkGoogleAccount(req.user._id, credential);
+    res.json({
+      status: 'success',
+      statusCode: 200,
+      message: result.message,
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const linkZalo = async (req, res, next) => {
+  try {
+    const { code, redirectUri, codeVerifier } = req.body;
+    const result = await linkZaloAccount(req.user._id, code, redirectUri, codeVerifier);
+    res.json({
+      status: 'success',
+      statusCode: 200,
+      message: result.message,
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const linkTikTok = async (req, res, next) => {
+  try {
+    const { code, redirectUri, codeVerifier } = req.body;
+    const result = await linkTikTokAccount(req.user._id, code, redirectUri, codeVerifier);
+    res.json({
+      status: 'success',
+      statusCode: 200,
+      message: result.message,
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const unlinkSocial = async (req, res, next) => {
+  try {
+    const { provider } = req.params;
+    const result = await unlinkSocialAccount(req.user._id, provider);
+    res.json({
+      status: 'success',
+      statusCode: 200,
+      message: result.message,
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getLinkedAccounts = async (req, res, next) => {
+  try {
+    const result = await getLinkedProviders(req.user._id);
+    res.json({
+      status: 'success',
+      statusCode: 200,
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * =========================================================
+ * ADMIN EXCLUSIVE CONTROLLERS: EMAIL OTP & PASSKEY
+ * =========================================================
+ */
+
+const populateAdminAndBuildResponse = async (user, req, res, rememberMe, sessionId) => {
+  const { accessToken, refreshToken } = await buildTokenResponse(user, res, !!rememberMe);
+
+  if (sessionId) mergeSessionInteractions(sessionId, user._id);
+
+  const clientIp = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip || req.socket?.remoteAddress;
+  const clientUserAgent = req.headers['user-agent'] || 'Unknown';
+
+  const populatedUser = await User.findByIdAndUpdate(
+    user._id,
+    {
+      lastLoginAt: new Date(),
+      lastLoginIp: clientIp,
+      lastLoginUserAgent: clientUserAgent,
+    },
+    { returnDocument: 'after' }
+  )
+    .populate({ path: 'roleId', populate: { path: 'permissions', select: 'code name module' } })
+    .populate('customPermissions', 'code name module');
+
+  const userRole = (populatedUser.role || '').toLowerCase();
+  const roleCode = (populatedUser.roleId?.code || '').toLowerCase();
+  const roleName = (populatedUser.roleId?.name || '').toLowerCase();
+  const userEmail = (populatedUser.email || '').toLowerCase();
+
+  const isSuperAdmin =
+    userRole === 'administrator' ||
+    userRole === 'admin' ||
+    userRole.includes('admin') ||
+    roleCode === 'administrator' ||
+    roleCode === 'admin' ||
+    roleName.includes('administrator') ||
+    roleName.includes('quản trị') ||
+    userEmail.startsWith('admin');
+
+  const permissions = isSuperAdmin
+    ? ['*']
+    : [...new Set([
+        ...(populatedUser.roleId?.permissions || []).map((p) => p.code),
+        ...(populatedUser.customPermissions || []).map((p) => p.code),
+      ])];
+
+  return {
+    accessToken,
+    refreshToken,
+    user: {
+      _id: populatedUser._id,
+      fullName: populatedUser.fullName,
+      email: populatedUser.email,
+      phone: populatedUser.phone,
+      avatar: populatedUser.avatar,
+      gender: populatedUser.gender,
+      role: populatedUser.role,
+      roleId: populatedUser.roleId,
+      authProvider: populatedUser.authProvider || 'local',
+      permissions,
+    },
+  };
+};
+
+const requestAdminOtp = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    const result = await requestAdminLoginOtp(email);
+    res.json({
+      status: 'success',
+      statusCode: 200,
+      message: 'Mã xác thực đã được gửi tới email của bạn!',
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const verifyAdminOtp = async (req, res, next) => {
+  try {
+    const { email, otp, rememberMe, sessionId } = req.body;
+    const user = await verifyAdminLoginOtp(email, otp);
+    const authData = await populateAdminAndBuildResponse(user, req, res, rememberMe, sessionId);
+
+    res.json({
+      status: 'success',
+      statusCode: 200,
+      message: 'Xác thực OTP thành công!',
+      data: authData,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const resendAdminOtp = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    const result = await requestAdminLoginOtp(email);
+    res.json({
+      status: 'success',
+      statusCode: 200,
+      message: 'Đã gửi lại mã xác thực tới email của bạn!',
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getPasskeyLoginOptions = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    const options = await generatePasskeyLoginOptions(email);
+    res.json({
+      status: 'success',
+      statusCode: 200,
+      data: options,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const verifyPasskeyLoginController = async (req, res, next) => {
+  try {
+    const { email, credentialId, clientDataJSON, authenticatorData, signature, rememberMe, sessionId } = req.body;
+    const user = await verifyPasskeyLogin({
+      email,
+      credentialId,
+      clientDataJSON,
+      authenticatorData,
+      signature,
+    });
+    const authData = await populateAdminAndBuildResponse(user, req, res, rememberMe, sessionId);
+
+    res.json({
+      status: 'success',
+      statusCode: 200,
+      message: 'Đăng nhập bằng Passkey thành công!',
+      data: authData,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getPasskeyRegisterOptions = async (req, res, next) => {
+  try {
+    const options = await generatePasskeyRegisterOptions(req.user._id);
+    res.json({
+      status: 'success',
+      statusCode: 200,
+      data: options,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const verifyPasskeyRegisterController = async (req, res, next) => {
+  try {
+    const result = await verifyPasskeyRegister(req.user._id, req.body);
+    res.json({
+      status: 'success',
+      statusCode: 200,
+      message: result.message,
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const deletePasskeyController = async (req, res, next) => {
+  try {
+    const { credentialId } = req.params;
+    const result = await deletePasskey(req.user._id, credentialId || req.query.credentialId);
+    res.json({
+      status: 'success',
+      statusCode: 200,
+      message: result.message,
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   register,
   registerAdmin,
   login,
   googleLogin,
+  getTikTokAuthUrl: getTikTokAuthUrlController,
+  tiktokLogin,
+  getZaloAuthUrl: getZaloAuthUrlController,
+  zaloLogin,
+  linkGoogle,
+  linkZalo,
+  linkTikTok,
+  unlinkSocial,
+  getLinkedAccounts,
   refreshToken,
   getProfile,
+  getMyPermissions,
   changePassword,
+  setPassword,
+  getSessions,
+  logoutSession,
+  logoutOtherSessions: logoutOtherSessionsController,
   logout,
   forgotPassword,
   resetPassword,
@@ -502,5 +1148,17 @@ module.exports = {
   sendVerifyPhone,
   verifyPhone,
   sessionStream,
+  // Admin exclusive OTP & Passkey
+  requestAdminOtp,
+  verifyAdminOtp,
+  resendAdminOtp,
+  getPasskeyLoginOptions,
+  verifyPasskeyLogin: verifyPasskeyLoginController,
+  getPasskeyRegisterOptions,
+  verifyPasskeyRegister: verifyPasskeyRegisterController,
+  deletePasskey: deletePasskeyController,
 };
+
+
+
 

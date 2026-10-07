@@ -45,10 +45,34 @@ const userSchema = new mongoose.Schema(
       default: null,
     },
 
+    tiktokId: {
+      type: String,
+      sparse: true,
+      unique: true,
+      default: null,
+    },
+
+    zaloId: {
+      type: String,
+      sparse: true,
+      unique: true,
+      default: null,
+    },
+
     authProvider: {
       type: String,
-      enum: ['local', 'google', 'facebook'],
+      enum: ['local', 'google', 'facebook', 'tiktok', 'zalo'],
       default: 'local',
+    },
+
+    zaloName: {
+      type: String,
+      default: null,
+    },
+
+    tiktokUsername: {
+      type: String,
+      default: null,
     },
 
     dateOfBirth: {
@@ -192,12 +216,58 @@ const userSchema = new mongoose.Schema(
     },
 
     // =========================
-    // AUTHENTICATION
+    // AUTHENTICATION & SESSIONS
     // =========================
     refreshToken: {
       type: String,
       select: false,
     },
+
+    sessions: [
+      {
+        sessionId: {
+          type: String,
+          required: true,
+        },
+        deviceName: {
+          type: String,
+          default: 'Trình duyệt Web',
+        },
+        deviceType: {
+          type: String,
+          enum: ['desktop', 'mobile', 'tablet'],
+          default: 'desktop',
+        },
+        browser: {
+          type: String,
+          default: 'Trình duyệt',
+        },
+        os: {
+          type: String,
+          default: 'Không xác định',
+        },
+        ip: {
+          type: String,
+          default: '127.0.0.1',
+        },
+        location: {
+          type: String,
+          default: 'Hồ Chí Minh, Việt Nam',
+        },
+        userAgent: {
+          type: String,
+          default: '',
+        },
+        lastActiveAt: {
+          type: Date,
+          default: Date.now,
+        },
+        createdAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
 
     // =========================
     // RESET PASSWORD
@@ -250,6 +320,40 @@ const userSchema = new mongoose.Schema(
     isAccountActivated: {
       type: Boolean,
       default: false,
+    },
+
+    // =========================
+    // ADMIN EXCLUSIVE AUTH: OTP & PASSKEY
+    // =========================
+    adminLoginOtp: {
+      type: String,
+      select: false,
+    },
+
+    adminLoginOtpExpires: {
+      type: Date,
+      select: false,
+    },
+
+    passkeys: [
+      {
+        credentialId: { type: String, required: true },
+        publicKey: { type: String, required: true },
+        counter: { type: Number, default: 0 },
+        deviceName: { type: String, default: 'Khóa bảo mật Passkey' },
+        transports: [{ type: String }],
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
+
+    passkeyChallenge: {
+      type: String,
+      select: false,
+    },
+
+    passkeyChallengeExpires: {
+      type: Date,
+      select: false,
     },
   },
   { timestamps: true }
@@ -335,6 +439,16 @@ userSchema.methods.createPhoneOtp = function () {
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
   this.phoneOtp = crypto.createHash('sha256').update(otp).digest('hex');
   this.phoneOtpExpires = Date.now() + 5 * 60 * 1000;
+  return otp;
+};
+
+// =========================
+// CREATE ADMIN LOGIN OTP (5 phút)
+// =========================
+userSchema.methods.createAdminLoginOtp = function () {
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  this.adminLoginOtp = crypto.createHash('sha256').update(otp).digest('hex');
+  this.adminLoginOtpExpires = new Date(Date.now() + 5 * 60 * 1000);
   return otp;
 };
 

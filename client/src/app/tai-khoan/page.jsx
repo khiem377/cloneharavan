@@ -6,8 +6,10 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { User, Loader2 } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import userService from '../../services/user.service';
+import authService from '../../services/auth.service';
 import shippingService from '../../services/shipping.service';
 import { toast } from '../../components/ui/toast';
+import { confirm } from '../../components/ui/confirm-dialog';
 
 // Modular Account Sub-Components
 import AccountSidebar from '../../components/account/AccountSidebar';
@@ -17,15 +19,21 @@ import AccountWarrantyTab from '../../components/account/AccountWarrantyTab';
 import AccountProfileTab from '../../components/account/AccountProfileTab';
 import AccountAddressesTab from '../../components/account/AccountAddressesTab';
 import AccountChangePasswordTab from '../../components/account/AccountChangePasswordTab';
+import AccountSecurityTab from '../../components/account/AccountSecurityTab';
 import AddressModal from '../../components/account/AddressModal';
 
 function AccountContent() {
+  const [mounted, setMounted] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialTab = searchParams.get('tab') || 'overview';
 
   const { user, isAuthenticated, setUser, clearAuth } = useAuthStore();
   const [activeTab, setActiveTab] = useState(initialTab);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Avatar Upload State
   const [avatarUploading, setAvatarUploading] = useState(false);
@@ -47,12 +55,17 @@ function AccountContent() {
     router.replace(`/tai-khoan?tab=${newTab}`, { scroll: false });
   };
 
+  const isUserAuth =
+    typeof isAuthenticated === 'function'
+      ? isAuthenticated()
+      : !!isAuthenticated || !!user;
+
   // Protect page
   useEffect(() => {
-    if (!isAuthenticated()) {
+    if (mounted && !isUserAuth) {
       router.push('/login');
     }
-  }, [isAuthenticated, router]);
+  }, [mounted, isUserAuth, router]);
 
   // Profile Form State
   const [profileForm, setProfileForm] = useState({
@@ -114,56 +127,6 @@ function AccountContent() {
     isDefault: false,
   });
 
-  // GHN v3 Post-Merger Lookup State (developer.ghn.vn/vi/docs/master-data/get-province-new)
-  const [postMergerInfo, setPostMergerInfo] = useState(null);
-  const [mergerLoading, setMergerLoading] = useState(false);
-
-  // Tra cứu tự động chuẩn hóa địa chỉ từ GHN v3 khi chọn xong Phường / Xã (Debounce 200ms)
-  useEffect(() => {
-    let isMounted = true;
-    if (addressForm.province && addressForm.ward) {
-      setMergerLoading(true);
-      const timer = setTimeout(() => {
-        shippingService
-          .getPostMergerAddress({
-            province: addressForm.province,
-            district: addressForm.district,
-            ward: addressForm.ward,
-            detailAddress: addressForm.detailAddress,
-            provinceId: addressForm.provinceId,
-            districtId: addressForm.districtId,
-            wardCode: addressForm.wardCode,
-          })
-          .then((res) => {
-            if (isMounted && res) {
-              setPostMergerInfo(res);
-            }
-          })
-          .catch(() => {})
-          .finally(() => {
-            if (isMounted) {
-              setMergerLoading(false);
-            }
-          });
-      }, 200);
-
-      return () => {
-        isMounted = false;
-        clearTimeout(timer);
-      };
-    } else {
-      setPostMergerInfo(null);
-      setMergerLoading(false);
-    }
-  }, [
-    addressForm.province,
-    addressForm.district,
-    addressForm.ward,
-    addressForm.detailAddress,
-    addressForm.provinceId,
-    addressForm.districtId,
-    addressForm.wardCode,
-  ]);
 
   // Sync user profile data
   useEffect(() => {
@@ -194,11 +157,11 @@ function AccountContent() {
   };
 
   useEffect(() => {
-    if (isAuthenticated()) {
+    if (mounted && isUserAuth) {
       fetchAddresses();
       ensureProvincesLoaded();
     }
-  }, [isAuthenticated]);
+  }, [mounted, isUserAuth]);
 
   // Avatar Upload Handlers
   const handleAvatarFileChange = async (e) => {
@@ -234,7 +197,14 @@ function AccountContent() {
   };
 
   const handleDeleteAvatar = async () => {
-    if (!window.confirm('Bạn có chắc chắn muốn gỡ ảnh đại diện hiện tại?')) return;
+    const isConfirmed = await confirm({
+      title: 'Gỡ ảnh đại diện?',
+      description: 'Bạn có chắc chắn muốn gỡ ảnh đại diện hiện tại khỏi tài khoản?',
+      confirmText: 'Gỡ ảnh',
+      cancelText: 'Hủy bỏ',
+      variant: 'destructive',
+    });
+    if (!isConfirmed) return;
     setAvatarUploading(true);
     try {
       await userService.deleteAvatar();
@@ -314,10 +284,39 @@ function AccountContent() {
       return;
     }
 
-    if (passwordForm.newPassword.length < 8) {
+    const npw = passwordForm.newPassword || '';
+    if (npw.length < 8) {
       setPasswordMessage({
         type: 'error',
         text: 'Mật khẩu mới phải có tối thiểu 8 ký tự!',
+      });
+      return;
+    }
+    if (!/[A-Z]/.test(npw)) {
+      setPasswordMessage({
+        type: 'error',
+        text: 'Mật khẩu mới phải chứa ít nhất 1 chữ in hoa (A-Z)!',
+      });
+      return;
+    }
+    if (!/[a-z]/.test(npw)) {
+      setPasswordMessage({
+        type: 'error',
+        text: 'Mật khẩu mới phải chứa ít nhất 1 chữ in thường (a-z)!',
+      });
+      return;
+    }
+    if (!/[0-9]/.test(npw)) {
+      setPasswordMessage({
+        type: 'error',
+        text: 'Mật khẩu mới phải chứa ít nhất 1 chữ số (0-9)!',
+      });
+      return;
+    }
+    if (!/[^A-Za-z0-9]/.test(npw)) {
+      setPasswordMessage({
+        type: 'error',
+        text: 'Mật khẩu mới phải chứa ít nhất 1 ký tự đặc biệt (!@#$%...)!',
       });
       return;
     }
@@ -479,9 +478,14 @@ function AccountContent() {
       return;
     }
 
+    const matched =
+      matchedProvince ||
+      provinces.find((p) => String(p.ProvinceID) === String(selectedPid));
+    const pName = matched?.ProvinceName || matched?.label || '';
+
     setAddressForm((prev) => ({
       ...prev,
-      province: matchedProvince ? matchedProvince.ProvinceName || matchedProvince.label : '',
+      province: pName,
       provinceId: Number(selectedPid),
       district: '',
       districtId: null,
@@ -494,7 +498,7 @@ function AccountContent() {
     setLoadingDistricts(true);
     try {
       const data = await shippingService.getDistricts(selectedPid);
-      setDistricts(data);
+      setDistricts(Array.isArray(data) ? data : []);
     } catch (err) {
       toast.error('Không thể tải danh sách quận/huyện');
     } finally {
@@ -515,9 +519,14 @@ function AccountContent() {
       return;
     }
 
+    const matched =
+      matchedDistrict ||
+      districts.find((d) => String(d.DistrictID) === String(selectedDid));
+    const dName = matched?.DistrictName || matched?.label || '';
+
     setAddressForm((prev) => ({
       ...prev,
-      district: matchedDistrict ? matchedDistrict.DistrictName || matchedDistrict.label : '',
+      district: dName,
       districtId: Number(selectedDid),
       ward: '',
       wardCode: '',
@@ -527,7 +536,7 @@ function AccountContent() {
     setLoadingWards(true);
     try {
       const data = await shippingService.getWards(selectedDid);
-      setWards(data);
+      setWards(Array.isArray(data) ? data : []);
     } catch (err) {
       toast.error('Không thể tải danh sách phường/xã');
     } finally {
@@ -536,29 +545,55 @@ function AccountContent() {
   };
 
   const handleWardSelect = (selectedWardCode, matchedWard) => {
+    if (!selectedWardCode) {
+      setAddressForm((prev) => ({
+        ...prev,
+        ward: '',
+        wardCode: '',
+      }));
+      return;
+    }
+
+    const matched =
+      matchedWard ||
+      wards.find((w) => String(w.WardCode) === String(selectedWardCode));
+    const wName = matched?.WardName || matched?.label || '';
+
     setAddressForm((prev) => ({
       ...prev,
-      ward: matchedWard ? matchedWard.WardName || matchedWard.label : '',
-      wardCode: selectedWardCode ? String(selectedWardCode) : '',
+      ward: wName,
+      wardCode: String(selectedWardCode),
     }));
   };
 
   const handleSaveAddress = async (e) => {
     e.preventDefault();
-    if (
-      !addressForm.fullName.trim() ||
-      !addressForm.phone.trim() ||
-      !addressForm.province.trim() ||
-      !addressForm.district.trim() ||
-      !addressForm.ward.trim() ||
-      !addressForm.detailAddress.trim()
-    ) {
-      toast.error('Vui lòng điền đầy đủ Tỉnh/Thành, Quận/Huyện, Phường/Xã và Số nhà');
+    if (!addressForm.fullName?.trim()) {
+      toast.error('Vui lòng nhập họ và tên người nhận');
       return;
     }
-
+    if (!addressForm.phone?.trim()) {
+      toast.error('Vui lòng nhập số điện thoại người nhận');
+      return;
+    }
     if (!/^0\d{9}$/.test(addressForm.phone.trim())) {
       toast.error('Số điện thoại phải có 10 chữ số và bắt đầu bằng số 0');
+      return;
+    }
+    if (!addressForm.province?.trim()) {
+      toast.error('Vui lòng chọn Tỉnh / Thành phố');
+      return;
+    }
+    if (!addressForm.district?.trim()) {
+      toast.error('Vui lòng chọn Quận / Huyện');
+      return;
+    }
+    if (!addressForm.ward?.trim()) {
+      toast.error('Vui lòng chọn Phường / Xã');
+      return;
+    }
+    if (!addressForm.detailAddress?.trim()) {
+      toast.error('Vui lòng nhập địa chỉ cụ thể (Số nhà, tên đường...)');
       return;
     }
 
@@ -596,7 +631,14 @@ function AccountContent() {
   };
 
   const handleDeleteAddress = async (addressId) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa địa chỉ này?')) return;
+    const isConfirmed = await confirm({
+      title: 'Xóa địa chỉ nhận hàng?',
+      description: 'Bạn có chắc chắn muốn xóa địa chỉ nhận hàng này? Thao tác này không thể hoàn tác.',
+      confirmText: 'Xóa địa chỉ',
+      cancelText: 'Hủy bỏ',
+      variant: 'destructive',
+    });
+    if (!isConfirmed) return;
     try {
       await userService.deleteAddress(addressId);
       toast.success('Đã xóa địa chỉ thành công!');
@@ -623,7 +665,15 @@ function AccountContent() {
     router.push('/login');
   };
 
-  if (!user && !isAuthenticated()) {
+  if (!mounted) {
+    return (
+      <div className="min-h-[70vh] flex items-center justify-center bg-slate-50">
+        <Loader2 size={24} className="animate-spin text-[#e30019]" />
+      </div>
+    );
+  }
+
+  if (!user && !isUserAuth) {
     return (
       <div className="min-h-[70vh] flex flex-col items-center justify-center p-6 text-center bg-slate-50">
         <div className="w-12 h-12 rounded-[6px] bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-500 mb-3">
@@ -656,7 +706,8 @@ function AccountContent() {
     warranty: 'Bảo hành & Thiết bị',
     profile: 'Thông tin cá nhân',
     addresses: 'Địa chỉ nhận hàng',
-    'change-password': 'Đổi mật khẩu',
+    security: 'Mật khẩu & Bảo mật',
+    'change-password': 'Mật khẩu & Bảo mật',
   };
 
   return (
@@ -758,15 +809,18 @@ function AccountContent() {
               />
             )}
 
-            {activeTab === 'change-password' && (
-              <AccountChangePasswordTab
-                passwordForm={passwordForm}
-                setPasswordForm={setPasswordForm}
-                showPassword={showPassword}
-                setShowPassword={setShowPassword}
-                passwordLoading={passwordLoading}
-                passwordMessage={passwordMessage}
-                handleChangePassword={handleChangePassword}
+            {(activeTab === 'security' || activeTab === 'change-password') && (
+              <AccountSecurityTab
+                user={user}
+                setUser={setUser}
+                onRefreshProfile={async () => {
+                  try {
+                    const res = await authService.getProfile();
+                    if (res?.data?.user) {
+                      setUser(res.data.user);
+                    }
+                  } catch (_) {}
+                }}
               />
             )}
           </div>
@@ -791,8 +845,6 @@ function AccountContent() {
         handleWardSelect={handleWardSelect}
         handleSaveAddress={handleSaveAddress}
         addressSaving={addressSaving}
-        postMergerInfo={postMergerInfo}
-        mergerLoading={mergerLoading}
       />
     </div>
   );

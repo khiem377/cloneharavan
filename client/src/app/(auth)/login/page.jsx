@@ -23,6 +23,8 @@ import { authService } from '../../../services/auth.service';
 import useAuthStore from '../../../store/authStore';
 import { toast } from '../../../components/ui/toast';
 import GoogleLoginButton from '../../../components/auth/GoogleLoginButton';
+import TikTokLoginButton from '../../../components/auth/TikTokLoginButton';
+import ZaloLoginButton from '../../../components/auth/ZaloLoginButton';
 
 function LoginNoticeBanner() {
   const searchParams = useSearchParams();
@@ -226,6 +228,10 @@ export default function LoginPage() {
           </div>
 
           <GoogleLoginButton text="signin_with" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <TikTokLoginButton text="TikTok" />
+            <ZaloLoginButton text="Zalo" />
+          </div>
 
           {/* Register Link */}
           <div className="text-center text-xs text-slate-500 pt-3 border-t border-slate-100">

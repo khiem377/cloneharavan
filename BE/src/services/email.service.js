@@ -230,8 +230,57 @@ const sendVerificationEmail = async (email, verifyToken) => {
   return sendEmail({ to: email, subject, html, text });
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Admin Login OTP Email
+// ─────────────────────────────────────────────────────────────────────────────
+const sendAdminLoginOtpEmail = async (email, otp) => {
+  const shopName = process.env.SHOP_NAME || 'Haravan OMS';
+  const supportEmail = process.env.SUPPORT_EMAIL || process.env.EMAIL_USER || 'support@shop.com';
+  const subject = `[${shopName}] Mã xác thực đăng nhập Quản trị viên: ${otp}`;
+
+  const bodyHtml = `
+    <p style="margin:0 0 4px;font-family:${F};font-size:20px;font-weight:700;color:#09090b;line-height:1.25;letter-spacing:-0.4px;">Mã xác thực đăng nhập Admin</p>
+    <p style="margin:0 0 24px;font-family:${F};font-size:13px;color:#71717a;">Yêu cầu lúc ${new Date().toLocaleString('vi-VN')}</p>
+
+    <hr style="border:none;border-top:1px solid #f4f4f5;margin:0 0 24px;" />
+
+    <p style="margin:0 0 20px;font-family:${F};font-size:14px;color:#3f3f46;line-height:1.65;">
+      Xin chào Quản trị viên,<br/>
+      Bạn vừa yêu cầu đăng nhập vào hệ thống quản trị <strong style="color:#09090b;">${shopName}</strong> bằng email <strong style="color:#09090b;">${email}</strong>.
+      Nhập mã xác thực gồm 6 chữ số dưới đây để hoàn tất đăng nhập:
+    </p>
+
+    <!-- OTP BOX -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px;">
+      <tr>
+        <td align="center">
+          <div style="display:inline-block;padding:16px 36px;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:6px;">
+            <span style="font-family:'Courier New',Courier,monospace;font-size:32px;font-weight:800;letter-spacing:8px;color:#0f172a;">${otp}</span>
+          </div>
+        </td>
+      </tr>
+    </table>
+
+    <p style="margin:0 0 16px;font-family:${F};font-size:13px;color:#64748b;text-align:center;">
+      Mã xác thực có hiệu lực trong vòng <strong style="color:#0f172a;">5 phút</strong>. Tuyệt đối không chia sẻ mã này cho người khác.
+    </p>
+
+    <hr style="border:none;border-top:1px solid #f4f4f5;margin:0 0 20px;" />
+
+    <p style="margin:0;font-family:${F};font-size:12px;color:#a1a1aa;line-height:1.6;">
+      Nếu bạn không thực hiện yêu cầu đăng nhập này, hãy bỏ qua email hoặc thông báo cho Quản trị viên bảo mật.
+    </p>
+  `;
+
+  const html = emailShell({ shopName, supportEmail, bodyHtml });
+  const text = `Mã xác thực đăng nhập Admin ${shopName}\n\nMã OTP: ${otp}\nHiệu lực: 5 phút.\nNếu bạn không yêu cầu, vui lòng bỏ qua email này.`;
+
+  return sendEmail({ to: email, subject, html, text });
+};
+
 module.exports = {
   sendEmail,
   sendResetPasswordEmail,
   sendVerificationEmail,
+  sendAdminLoginOtpEmail,
 };

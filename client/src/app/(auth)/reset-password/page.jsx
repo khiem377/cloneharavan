@@ -12,18 +12,22 @@ import { authService } from '../../../services/auth.service';
 import { toast } from '../../../components/ui/toast';
 import MascotSecurityAuth from '../../../components/mascot/MascotSecurityAuth';
 
-// Quy tắc BE: tối thiểu 8 ký tự, 1 chữ hoa, 1 chữ số
+// Quy tắc BE: tối thiểu 8 ký tự, 1 chữ hoa, 1 chữ thường, 1 chữ số, 1 ký tự đặc biệt
 const validatePassword = (pw) => {
   if (!pw || pw.length < 8) return 'Mật khẩu phải có ít nhất 8 ký tự';
-  if (!/[A-Z]/.test(pw)) return 'Mật khẩu phải chứa ít nhất 1 chữ hoa';
+  if (!/[A-Z]/.test(pw)) return 'Mật khẩu phải chứa ít nhất 1 chữ in hoa';
+  if (!/[a-z]/.test(pw)) return 'Mật khẩu phải chứa ít nhất 1 chữ in thường';
   if (!/[0-9]/.test(pw)) return 'Mật khẩu phải chứa ít nhất 1 chữ số';
+  if (!/[^A-Za-z0-9]/.test(pw)) return 'Mật khẩu phải chứa ít nhất 1 ký tự đặc biệt';
   return null;
 };
 
 const QUY_TAC = [
-  { id: 'len',   label: 'Ít nhất 8 ký tự',         test: (pw) => pw.length >= 8 },
-  { id: 'upper', label: 'Ít nhất 1 chữ hoa (A-Z)', test: (pw) => /[A-Z]/.test(pw) },
-  { id: 'digit', label: 'Ít nhất 1 chữ số (0-9)',  test: (pw) => /[0-9]/.test(pw) },
+  { id: 'len',     label: 'Ít nhất 8 ký tự',                     test: (pw) => pw.length >= 8 },
+  { id: 'upper',   label: 'Ít nhất 1 chữ in hoa (A-Z)',          test: (pw) => /[A-Z]/.test(pw) },
+  { id: 'lower',   label: 'Ít nhất 1 chữ in thường (a-z)',        test: (pw) => /[a-z]/.test(pw) },
+  { id: 'digit',   label: 'Ít nhất 1 chữ số (0-9)',              test: (pw) => /[0-9]/.test(pw) },
+  { id: 'special', label: 'Ít nhất 1 ký tự đặc biệt (!@#$%...)', test: (pw) => /[^A-Za-z0-9]/.test(pw) },
 ];
 
 function FormDatLaiMatKhau() {
@@ -89,8 +93,13 @@ function FormDatLaiMatKhau() {
     <div className="min-h-[100dvh] bg-slate-50 flex items-center justify-center px-4 py-12">
       <Card className="w-full max-w-[440px] p-6 sm:p-8 space-y-5 animate-fadeIn">
         {/* Mascot Security Header */}
-        <div className="flex justify-center -mt-3 mb-2">
-          <MascotSecurityAuth size={160} />
+        <div className="flex justify-center -mt-6 -mb-2">
+          <MascotSecurityAuth
+            size={240}
+            isTyping={Boolean(matKhau.trim())}
+            isLoading={dangGui}
+            isSuccess={thanhCong}
+          />
         </div>
 
         {thanhCong ? (

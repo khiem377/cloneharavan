@@ -200,76 +200,39 @@ const getNewWards = async (provinceId) => {
 };
 
 
-// Bảng ánh xạ 63 tỉnh thành sang 34 tỉnh thành mới theo chuẩn GHN v3 (developer.ghn.vn/vi/docs/master-data/get-province-new)
-const LEGACY_TO_V3_PROVINCE_MAP = {
-  'bạc liêu': { id: 1000022, name: 'Cà Mau' },
-  'cà mau': { id: 1000022, name: 'Cà Mau' },
-  'bà rịa - vũng tàu': { id: 1000001, name: 'Hồ Chí Minh' },
-  'bà rịa vũng tàu': { id: 1000001, name: 'Hồ Chí Minh' },
-  'bình dương': { id: 1000001, name: 'Hồ Chí Minh' },
-  'hồ chí minh': { id: 1000001, name: 'Hồ Chí Minh' },
-  'thừa thiên huế': { id: 1000002, name: 'Huế' },
-  'thừa thiên - huế': { id: 1000002, name: 'Huế' },
-  'huế': { id: 1000002, name: 'Huế' },
-  'quảng nam': { id: 1000003, name: 'Đà Nẵng' },
-  'đà nẵng': { id: 1000003, name: 'Đà Nẵng' },
-  'hải dương': { id: 1000004, name: 'Hải Phòng' },
-  'hải phòng': { id: 1000004, name: 'Hải Phòng' },
-  'hậu giang': { id: 1000005, name: 'Cần Thơ' },
-  'sóc trăng': { id: 1000005, name: 'Cần Thơ' },
-  'cần thơ': { id: 1000005, name: 'Cần Thơ' },
-  'bình phước': { id: 1000006, name: 'Đồng Nai' },
-  'bình thuận': { id: 1000006, name: 'Đồng Nai' },
-  'đồng nai': { id: 1000006, name: 'Đồng Nai' },
-  'ninh thuận': { id: 1000008, name: 'Khánh Hòa' },
-  'khánh hòa': { id: 1000008, name: 'Khánh Hòa' },
-  'đắk nông': { id: 1000010, name: 'Đắk Lắk' },
-  'đắk lắk': { id: 1000010, name: 'Đắk Lắk' },
-  'kon tum': { id: 1000007, name: 'Gia Lai' },
-  'gia lai': { id: 1000007, name: 'Gia Lai' },
-  'bến tre': { id: 1000011, name: 'Vĩnh Long' },
-  'trà vinh': { id: 1000011, name: 'Vĩnh Long' },
-  'vĩnh long': { id: 1000011, name: 'Vĩnh Long' },
-  'tiền giang': { id: 1000012, name: 'Đồng Tháp' },
-  'long an': { id: 1000012, name: 'Đồng Tháp' },
-  'đồng tháp': { id: 1000012, name: 'Đồng Tháp' },
-  'kiên giang': { id: 1000013, name: 'An Giang' },
-  'an giang': { id: 1000013, name: 'An Giang' },
-  'bắc kạn': { id: 1000020, name: 'Thái Nguyên' },
-  'thái nguyên': { id: 1000020, name: 'Thái Nguyên' },
-  'bắc giang': { id: 1000021, name: 'Bắc Ninh' },
-  'bắc ninh': { id: 1000021, name: 'Bắc Ninh' },
-  'hà nam': { id: 1000016, name: 'Ninh Bình' },
-  'nam định': { id: 1000016, name: 'Ninh Bình' },
-  'ninh bình': { id: 1000016, name: 'Ninh Bình' },
-  'thái bình': { id: 1000023, name: 'Hưng Yên' },
-  'hưng yên': { id: 1000023, name: 'Hưng Yên' },
-  'hòa bình': { id: 1000015, name: 'Phú Thọ' },
-  'vĩnh phúc': { id: 1000015, name: 'Phú Thọ' },
-  'phú thọ': { id: 1000015, name: 'Phú Thọ' },
-  'yên bái': { id: 1000024, name: 'Lào Cai' },
-  'lào cai': { id: 1000024, name: 'Lào Cai' },
-  'hà giang': { id: 1000014, name: 'Tuyên Quang' },
-  'tuyên quang': { id: 1000014, name: 'Tuyên Quang' },
-  'quảng bình': { id: 1000017, name: 'Quảng Trị' },
-  'quảng trị': { id: 1000017, name: 'Quảng Trị' },
-  'bình định': { id: 1000019, name: 'Quảng Ngãi' },
-  'phú yên': { id: 1000019, name: 'Quảng Ngãi' },
-  'quảng ngãi': { id: 1000019, name: 'Quảng Ngãi' },
-  'lạng sơn': { id: 1000033, name: 'Lạng Sơn' },
-  'cao bằng': { id: 1000032, name: 'Cao Bằng' },
-  'nghệ an': { id: 1000031, name: 'Nghệ An' },
-  'thanh hóa': { id: 1000030, name: 'Thanh Hóa' },
-  'hà tĩnh': { id: 1000029, name: 'Hà Tĩnh' },
-  'quảng ninh': { id: 1000028, name: 'Quảng Ninh' },
-  'sơn la': { id: 1000027, name: 'Sơn La' },
-  'điện biên': { id: 1000026, name: 'Điện Biên' },
-  'lai châu': { id: 1000025, name: 'Lai Châu' },
-  'tây ninh': { id: 1000018, name: 'Tây Ninh' },
-  'lâm đồng': { id: 1000009, name: 'Lâm Đồng' },
-  'hà nội': { id: 1000000, name: 'Hà Nội' },
+/**
+ * Chuẩn hóa chuỗi tiếng Việt để so khớp (bỏ dấu, lowercase, bỏ khoảng trắng thừa)
+ */
+const normalizeVnString = (str = '') => {
+  return String(str || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/\s+/g, ' ')
+    .trim();
 };
 
+/**
+ * Loại bỏ tiền tố hành chính (Tỉnh, TP, Thành phố, Quận, Huyện, Thị xã, Phường, Xã, Thị trấn...)
+ */
+const cleanAdminPrefix = (name = '') => {
+  return String(name || '')
+    .replace(/^(tỉnh|tp\.|tp|thành phố|thị xã|tx\.|quận|q\.|huyện|h\.|phường|p\.|xã|x\.|thị trấn|tt\.)\s+/i, '')
+    .trim();
+};
+
+/**
+ * Cache kết quả tra cứu TraDiaChi để tối ưu tốc độ & tiết kiệm request
+ */
+const traDiaChiCache = new Map();
+
+/**
+ * Tra cứu địa chỉ bưu chính chuẩn Quốc Gia (GSO & NQ 202/2025/QH15 qua TraDiaChi) kết hợp GHN v3
+ * - Tự động đối soát chuyển đổi Phường/Xã sáp nhập mới và cũ
+ * - Chuẩn hóa địa chỉ 2 cấp & 3 cấp
+ * - Fallback an toàn về GHN Master Data nếu mạng/timeout
+ */
 const lookupGhnPostMergerAddress = async ({
   province = '',
   district = '',
@@ -293,65 +256,185 @@ const lookupGhnPostMergerAddress = async ({
 
   const cleanDetail = detailAddress ? detailAddress.trim() : '';
 
-  // 1. Địa chỉ 3 cấp trước sáp nhập (chuẩn GHN legacy)
+  // 1. Địa chỉ 3 cấp truyền thống (chuẩn GHN legacy)
   const preMergerParts = [cleanDetail, ward, district, province].filter(Boolean);
   const preMergerFullAddress = preMergerParts.join(', ');
 
-  // 2. Tra cứu tỉnh thành & phường xã mới theo API GHN v3
-  const pLower = province.toLowerCase().trim().replace(/^(tỉnh|tp|thành phố|t\.)\s+/i, '').trim();
-  const matchedV3 = LEGACY_TO_V3_PROVINCE_MAP[pLower] || { id: null, name: province };
+  // 2. Tra cứu qua API TraDiaChi (Tổng cục Thống kê & Nghị quyết 202/2025/QH15)
+  const cacheKey = preMergerFullAddress.toLowerCase();
+  let tdcResult = traDiaChiCache.get(cacheKey) || null;
+
+  if (!tdcResult && preMergerFullAddress.length >= 3) {
+    try {
+      const tdcRes = await axios.post(
+        'https://tradiachi.com/v1/address/normalize',
+        { address: preMergerFullAddress },
+        {
+          headers: { 'Content-Type': 'application/json' },
+          timeout: 3500,
+        }
+      );
+
+      if (tdcRes.data && tdcRes.data.data?.address) {
+        tdcResult = tdcRes.data.data.address;
+        traDiaChiCache.set(cacheKey, tdcResult);
+      }
+    } catch (tdcErr) {
+      console.warn('[TraDiaChi API] Normalize fallback to GHN v3:', tdcErr.response?.data?.message || tdcErr.message);
+    }
+  }
+
+  // Nếu TraDiaChi trả về kết quả thành công
+  if (tdcResult && tdcResult.ward?.name) {
+    const tdcNewWard = tdcResult.ward.name;
+    const tdcNewProvince = tdcResult.province?.name || province;
+    const tdcOldWard = tdcResult.historical?.oldWard?.name || ward;
+    const tdcOldDistrict = tdcResult.historical?.oldDistrict?.name || district;
+    const tdcOldProvince = tdcResult.historical?.oldProvince?.name || province;
+
+    // Tìm v3ProvinceId tương ứng từ GHN v3 Master Data
+    let matchedV3Province = null;
+    try {
+      const v3Provinces = await getNewProvinces();
+      if (Array.isArray(v3Provinces) && v3Provinces.length > 0) {
+        const normTdcProv = normalizeVnString(cleanAdminPrefix(tdcNewProvince));
+        matchedV3Province = v3Provinces.find((p) => {
+          const pNorm = normalizeVnString(cleanAdminPrefix(p.name));
+          if (pNorm === normTdcProv) return true;
+          if (Array.isArray(p.extension_names)) {
+            return p.extension_names.some((ext) => normalizeVnString(cleanAdminPrefix(ext)) === normTdcProv);
+          }
+          return false;
+        });
+      }
+    } catch (_) {}
+
+    const normTarget = normalizeVnString(tdcNewProvince);
+    const isDirectCity = ['ha noi', 'ho chi minh', 'da nang', 'hai phong', 'can tho', 'hue'].includes(normTarget);
+    let provDisplay = tdcNewProvince;
+    if (!/^(tỉnh|tp\.|tp|thành phố)\s+/i.test(provDisplay)) {
+      provDisplay = isDirectCity ? `TP. ${tdcNewProvince}` : `Tỉnh ${tdcNewProvince}`;
+    }
+
+    const postMergerParts = [cleanDetail, tdcNewWard, provDisplay].filter(Boolean);
+    const postMergerFullAddress = postMergerParts.join(', ');
+
+    const isNameChanged =
+      normalizeVnString(cleanAdminPrefix(tdcNewWard)) !== normalizeVnString(cleanAdminPrefix(ward));
+
+    return {
+      isMerged: true,
+      isNameChanged,
+      oldWard: tdcOldWard,
+      newWard: tdcNewWard,
+      district: tdcOldDistrict || district,
+      oldProvince: tdcOldProvince || province,
+      province: provDisplay,
+      newProvince: tdcNewProvince,
+      v3ProvinceId: matchedV3Province?._id || null,
+      wardCode,
+      districtId,
+      provinceId,
+      confidence: tdcResult.confidence?.level || 'exact',
+      source: 'Tổng cục Thống kê (GSO) & Nghị quyết Quốc hội (TraDiaChi API)',
+      changeDescription: isNameChanged
+        ? `Sắp xếp đơn vị hành chính 2025: ${ward}${district ? ` (${district})` : ''} ➔ ${tdcNewWard}, ${provDisplay}`
+        : `Chuẩn hóa mô hình bưu chính 2 cấp: "${tdcNewWard}, ${provDisplay}"`,
+      preMergerFullAddress,
+      postMergerFullAddress,
+    };
+  }
+
+  // 3. Fallback: Tra cứu đối soát từ API GHN v3
+  let matchedV3Province = null;
+  const cleanProv = cleanAdminPrefix(province);
+  const normProv = normalizeVnString(cleanProv);
+
+  try {
+    const v3Provinces = await getNewProvinces();
+    if (Array.isArray(v3Provinces) && v3Provinces.length > 0) {
+      matchedV3Province = v3Provinces.find((p) => {
+        const pClean = cleanAdminPrefix(p.name);
+        const pNorm = normalizeVnString(pClean);
+        if (pNorm === normProv) return true;
+        if (Array.isArray(p.extension_names)) {
+          return p.extension_names.some((ext) => normalizeVnString(cleanAdminPrefix(ext)) === normProv);
+        }
+        return false;
+      });
+    }
+  } catch (provErr) {
+    console.warn('[GHN Service] Tra cứu v3 province error:', provErr.message);
+  }
+
+  const targetProvinceName = matchedV3Province?.name || cleanProv || province;
+  const targetProvinceId = matchedV3Province?._id || null;
 
   let newWardName = ward;
   let isWardFound = false;
 
-  if (matchedV3.id) {
+  if (targetProvinceId) {
     try {
-      const v3Wards = await getNewWards(matchedV3.id);
+      const v3Wards = await getNewWards(targetProvinceId);
       if (Array.isArray(v3Wards) && v3Wards.length > 0) {
-        const cleanW = ward.toLowerCase().replace(/^(phường|xã|thị trấn)\s+/i, '').trim();
-        const found = v3Wards.find(
-          (w) =>
-            w.name?.toLowerCase().includes(cleanW) ||
-            w.extension_names?.some((e) => e.toLowerCase().includes(cleanW))
-        );
-        if (found) {
-          newWardName = found.name;
+        const cleanW = cleanAdminPrefix(ward);
+        const normW = normalizeVnString(cleanW);
+
+        let foundWard = v3Wards.find((w) => {
+          const wClean = cleanAdminPrefix(w.name);
+          const wNorm = normalizeVnString(wClean);
+          if (wNorm === normW) return true;
+          if (Array.isArray(w.extension_names)) {
+            return w.extension_names.some((ext) => normalizeVnString(cleanAdminPrefix(ext)) === normW);
+          }
+          return false;
+        });
+
+        if (!foundWard && normW.length >= 2) {
+          foundWard = v3Wards.find((w) => {
+            const wNorm = normalizeVnString(w.name);
+            return wNorm.includes(normW);
+          });
+        }
+
+        if (foundWard) {
+          newWardName = foundWard.name;
           isWardFound = true;
         }
       }
-    } catch (err) {
-      console.warn('[GHN Service] Tra cứu v3 ward lỗi:', err.message);
+    } catch (wardErr) {
+      console.warn('[GHN Service] Tra cứu v3 ward error:', wardErr.message);
     }
   }
 
-  const isProvChanged = matchedV3.name.toLowerCase() !== province.toLowerCase().replace(/^(tỉnh|tp|thành phố|t\.)\s+/i, '').trim();
-  const isMerged = isProvChanged || isWardFound;
+  const normTarget = normalizeVnString(targetProvinceName);
+  const isDirectCity = ['ha noi', 'ho chi minh', 'da nang', 'hai phong', 'can tho', 'hue'].includes(normTarget);
 
-  const provDisplay =
-    matchedV3.name.startsWith('TP') || matchedV3.name.startsWith('Thành phố') || matchedV3.name.startsWith('Tỉnh')
-      ? matchedV3.name
-      : matchedV3.name === 'Hà Nội' || matchedV3.name === 'Hồ Chí Minh' || matchedV3.name === 'Đà Nẵng' || matchedV3.name === 'Hải Phòng' || matchedV3.name === 'Cần Thơ' || matchedV3.name === 'Huế'
-      ? `TP. ${matchedV3.name}`
-      : `Tỉnh ${matchedV3.name}`;
+  let provDisplay = targetProvinceName;
+  if (!/^(tỉnh|tp\.|tp|thành phố)\s+/i.test(provDisplay)) {
+    provDisplay = isDirectCity ? `TP. ${targetProvinceName}` : `Tỉnh ${targetProvinceName}`;
+  }
 
-  const postMergerFullAddress = [cleanDetail, newWardName, provDisplay].filter(Boolean).join(', ');
+  const postMergerParts = [cleanDetail, newWardName, provDisplay].filter(Boolean);
+  const postMergerFullAddress = postMergerParts.join(', ');
 
   return {
-    isMerged,
-    isNameChanged: isMerged,
+    isMerged: true,
+    isNameChanged: isWardFound,
     oldWard: ward,
     newWard: newWardName,
     district,
     oldProvince: province,
     province: provDisplay,
-    newProvince: matchedV3.name,
+    newProvince: targetProvinceName,
+    v3ProvinceId: targetProvinceId,
     wardCode,
     districtId,
     provinceId,
     source: 'Giao Hàng Nhanh API (v3)',
-    changeDescription: isMerged
-      ? `Chuẩn hóa theo danh mục bưu chính GHN v3: "${newWardName}, ${provDisplay}"`
-      : 'Chuẩn hóa định danh bưu chính GHN',
+    changeDescription: isWardFound
+      ? `Định danh bưu chính chuẩn GHN v3: "${newWardName}, ${provDisplay}"`
+      : `Định danh mô hình 2 cấp GHN: "${newWardName}, ${provDisplay}"`,
     preMergerFullAddress,
     postMergerFullAddress,
   };

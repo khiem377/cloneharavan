@@ -8,6 +8,7 @@ const { startCronJobs } = require('./utils/cronJobs');
 
 const app = express();
 
+// AI Predictive Search Engine v2 loaded
 
 // Storefront client origins
 const CLIENT_ORIGINS = [
