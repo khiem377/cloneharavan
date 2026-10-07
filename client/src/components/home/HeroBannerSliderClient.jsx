@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 import bannerService from '../../services/banner.service';
@@ -107,17 +108,19 @@ export default function HeroBannerSliderClient({ slides = [] }) {
 
                         const content = (
                             <div className="relative w-full h-full shrink-0 flex-none overflow-hidden select-none">
-                                <img
+                                <Image
                                     src={slide.imageUrl}
                                     alt={
                                         slide.title ||
                                         slide.altText ||
                                         `Banner ${index + 1}`
                                     }
+                                    fill
+                                    priority={index === 0}
+                                    sizes="(max-width: 1280px) 100vw, 1280px"
                                     className={`w-full h-full object-cover object-center transition-transform duration-700 ease-out ${
                                         isCurrent ? 'scale-100' : 'scale-105'
                                     }`}
-                                    loading={index === 0 ? 'eager' : 'lazy'}
                                 />
                             </div>
                         );

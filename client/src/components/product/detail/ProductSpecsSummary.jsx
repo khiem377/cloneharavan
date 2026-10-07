@@ -83,7 +83,7 @@ export default function ProductSpecsSummary({ product, selectedVariant }) {
                 {spec.key}
               </TableCell>
               <TableCell className="w-3/5 p-2 text-slate-900 font-semibold break-words text-xs">
-                {spec.value}
+                {typeof spec.value === 'object' && spec.value !== null ? JSON.stringify(spec.value) : String(spec.value ?? '')}
               </TableCell>
             </TableRow>
           ))}
@@ -141,7 +141,7 @@ export default function ProductSpecsSummary({ product, selectedVariant }) {
                           {item.key}
                         </TableCell>
                         <TableCell className="w-3/5 p-2.5 text-slate-900 font-semibold break-words text-xs">
-                          {item.value}
+                          {typeof item.value === 'object' && item.value !== null ? JSON.stringify(item.value) : String(item.value ?? '')}
                         </TableCell>
                       </TableRow>
                     ))}

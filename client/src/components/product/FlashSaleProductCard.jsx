@@ -173,6 +173,7 @@ export default function FlashSaleProductCard({ item, onAddToCartMock, onBuyNowMo
                 data-no-progress="true"
                 onClick={handleQuickViewClick}
                 title="Xem nhanh"
+                aria-label={`Xem nhanh ${productName}`}
                 className="size-7 rounded-[4px] bg-white border border-slate-200 hover:bg-slate-900 hover:text-white text-slate-700 flex items-center justify-center transition-colors cursor-pointer"
               >
                 <Eye size={13} />
@@ -182,6 +183,7 @@ export default function FlashSaleProductCard({ item, onAddToCartMock, onBuyNowMo
                 data-no-progress="true"
                 onClick={handleCompareClick}
                 title="So sánh"
+                aria-label={compared ? `Đã thêm ${productName} vào so sánh` : `Thêm ${productName} vào so sánh`}
                 className={`size-7 rounded-[4px] border flex items-center justify-center transition-colors cursor-pointer ${
                   compared ? 'bg-slate-900 border-slate-900 text-white' : 'bg-white border-slate-200 hover:bg-slate-900 hover:text-white text-slate-700'
                 }`}

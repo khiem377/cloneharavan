@@ -1,11 +1,13 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import Header from '@/components/header/Header';
 import Footer from '@/components/layout/Footer';
-import AiChatWidget from '@/components/chat/AiChatWidget';
-import QuickViewModal from '@/components/product/QuickViewModal';
-import CompareBar from '@/components/product/CompareBar';
+
+const AiChatWidget = dynamic(() => import('@/components/chat/AiChatWidget'), { ssr: false });
+const QuickViewModal = dynamic(() => import('@/components/product/QuickViewModal'), { ssr: false });
+const CompareBar = dynamic(() => import('@/components/product/CompareBar'), { ssr: false });
 
 // Các path không cần header/footer/chatbot
 const AUTH_PATHS = ['/login', '/register', '/forgot-password', '/reset-password'];

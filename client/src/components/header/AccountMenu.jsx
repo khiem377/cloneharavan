@@ -37,7 +37,12 @@ export const AccountMenu = () => {
     router.push('/login');
   };
 
-  if (mounted && isAuthenticated()) {
+  const isUserAuthenticated =
+    typeof isAuthenticated === 'function'
+      ? isAuthenticated()
+      : !!isAuthenticated || !!user;
+
+  if (mounted && isUserAuthenticated) {
     const displayName = user?.fullName || user?.name || user?.email?.split('@')[0] || 'Tài khoản';
     const initial = displayName.charAt(0).toUpperCase();
 
@@ -108,16 +113,16 @@ export const AccountMenu = () => {
                 className="flex items-center gap-2.5 px-3.5 py-2 text-slate-700 hover:bg-slate-50 hover:text-[#e30019] transition font-medium group text-xs"
               >
                 <IconAddress size={15} />
-                <span>Sổ địa chỉ</span>
+                <span>Địa chỉ nhận hàng</span>
               </Link>
 
               <Link
-                href="/tai-khoan?tab=change-password"
+                href="/tai-khoan?tab=security"
                 onClick={() => setIsOpen(false)}
                 className="flex items-center gap-2.5 px-3.5 py-2 text-slate-700 hover:bg-slate-50 hover:text-[#e30019] transition font-medium group text-xs"
               >
                 <IconChangePassword size={15} />
-                <span>Đổi mật khẩu</span>
+                <span>Mật khẩu & Bảo mật</span>
               </Link>
             </div>
 

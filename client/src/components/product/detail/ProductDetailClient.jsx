@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import ProductBreadcrumbs from './ProductBreadcrumbs';
 import ProductGallery from './ProductGallery';
 import ProductInfo from './ProductInfo';
@@ -12,6 +12,7 @@ import ProductRecommendationsSection from './ProductRecommendationsSection';
 import ProductReviewsAndComments from './ProductReviewsAndComments';
 import StickyPurchaseBar from './StickyPurchaseBar';
 import ProductViewTracker from '@/components/common/ProductViewTracker';
+import { recommendationService } from '@/services/recommendation.service';
 
 export default function ProductDetailClient({
   product,
@@ -22,6 +23,30 @@ export default function ProductDetailClient({
   personalizedProducts = [],
   frequentlyBought = [],
 }) {
+  const [clientPersonalized, setClientPersonalized] = useState(personalizedProducts);
+
+  // Tự động tải gợi ý cá nhân hóa dựa trên Session ID & User ID thực tế của Client
+  useEffect(() => {
+    let isMounted = true;
+    const fetchPersonalized = async () => {
+      try {
+        const recs = await recommendationService.getPersonalized(12);
+        if (isMounted && Array.isArray(recs) && recs.length > 0) {
+          const currentId = (product._id || product.id)?.toString();
+          const filtered = recs.filter((p) => (p._id || p.id)?.toString() !== currentId);
+          if (filtered.length > 0) {
+            setClientPersonalized(filtered);
+          }
+        }
+      } catch (err) {
+        // Fallback giữ nguyên SSR recommendations nếu có lỗi mạng
+      }
+    };
+    fetchPersonalized();
+    return () => {
+      isMounted = false;
+    };
+  }, [product._id, product.id]);
   const initialVariant = useMemo(() => {
     if (!Array.isArray(variants) || variants.length === 0) return null;
     // Ưu tiên variant thực có attributes hoặc displayName khác 'Mặc định'
@@ -126,7 +151,7 @@ export default function ProductDetailClient({
         {/* CỤM GỢI Ý ĐA TẦNG (CÁ NHÂN HÓA SVD + CÙNG LOẠI + MUA KÈM) */}
         <ProductRecommendationsSection
           similarProducts={similarProducts}
-          personalizedProducts={personalizedProducts}
+          personalizedProducts={clientPersonalized}
           frequentlyBought={frequentlyBought}
         />
       </div>

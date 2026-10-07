@@ -21,6 +21,7 @@ import { Textarea } from '@/components/ui/textarea';
 import useAuthStore from '@/store/authStore';
 import commentService from '@/services/comment.client.service';
 import { toast } from '@/components/ui/toast';
+import { confirm } from '@/components/ui/confirm-dialog';
 import ReactionIcon, { REACTION_SVG_MAP, ReactionFlyoutBar } from '@/components/common/ReactionIcons';
 
 const REACTION_CONFIG = {
@@ -339,10 +340,16 @@ export default function ProductReviewsAndComments({ productId, productName }) {
     }
   };
 
-  // 6. Xóa bình luận
   const handleDeleteComment = async (commentId) => {
     if (!isAuthenticated()) return;
-    if (!window.confirm('Bạn có chắc chắn muốn xóa bình luận này?')) return;
+    const isConfirmed = await confirm({
+      title: 'Xóa bình luận?',
+      description: 'Bạn có chắc chắn muốn xóa bình luận này? Thao tác này không thể hoàn tác.',
+      confirmText: 'Xóa bình luận',
+      cancelText: 'Hủy bỏ',
+      variant: 'destructive',
+    });
+    if (!isConfirmed) return;
 
     try {
       await commentService.deleteComment({ commentId, token: accessToken });

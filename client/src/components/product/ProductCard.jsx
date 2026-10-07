@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Eye, ArrowLeftRight, Check } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import useQuickViewStore from '@/store/quickViewStore';
 import useCompareStore from '@/store/compareStore';
@@ -158,52 +159,58 @@ export default function ProductCard({ product, onProductClick }) {
           <div className="w-full aspect-square bg-white rounded-[4px] overflow-hidden flex items-center justify-center p-2 mb-2 relative">
             <div className="absolute top-1.5 left-1.5 z-10 flex flex-col gap-1 items-start">
               {isFlashSale && (
-                <span className="px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold bg-red-600 text-white uppercase tracking-wider">
+                <Badge variant="default" className="px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold bg-red-600 text-white uppercase tracking-wider">
                   FLASH SALE
-                </span>
+                </Badge>
               )}
               {product.isHot && !isFlashSale && (
-                <span className="px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold bg-amber-600 text-white uppercase">
+                <Badge variant="default" className="px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold bg-amber-600 text-white uppercase">
                   HOT
-                </span>
+                </Badge>
               )}
               {product.isFeatured && !product.isHot && !isFlashSale && (
-                <span className="px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold bg-slate-800 text-white uppercase">
+                <Badge variant="default" className="px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold bg-slate-800 text-white uppercase">
                   NỔI BẬT
-                </span>
+                </Badge>
               )}
               {hasDiscount && (
-                <span className="px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold bg-red-600 text-white">
+                <Badge variant="default" className="px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold bg-red-600 text-white font-mono">
                   -{discountPercent}%
-                </span>
+                </Badge>
               )}
             </div>
 
             {/* Floating Action Icons on Hover */}
             <div className="absolute right-1.5 top-1.5 z-20 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-              <button
+              <Button
                 type="button"
+                variant="outline"
+                size="icon"
                 data-no-progress="true"
                 onClick={handleQuickViewClick}
-                className="size-7 rounded-[4px] bg-white border border-slate-200 hover:bg-slate-900 hover:text-white text-slate-700 flex items-center justify-center transition-colors cursor-pointer"
+                className="size-7 rounded-[4px] bg-white border border-slate-200 hover:bg-slate-900 hover:text-white text-slate-700 flex items-center justify-center transition-colors cursor-pointer p-0 shadow-none"
                 title="Xem nhanh"
+                aria-label={`Xem nhanh sản phẩm ${product.name || ''}`}
               >
                 <Eye size={13} />
-              </button>
+              </Button>
 
-              <button
+              <Button
                 type="button"
+                variant="outline"
+                size="icon"
                 data-no-progress="true"
                 onClick={handleCompareClick}
-                className={`size-7 rounded-[4px] border flex items-center justify-center transition-colors cursor-pointer ${
+                className={`size-7 rounded-[4px] border flex items-center justify-center transition-colors cursor-pointer p-0 shadow-none ${
                   compared
                     ? 'bg-slate-900 border-slate-900 text-white'
                     : 'bg-white border-slate-200 hover:bg-slate-900 hover:text-white text-slate-700'
                 }`}
                 title={compared ? 'Đã thêm so sánh' : 'So sánh'}
+                aria-label={compared ? `Đã thêm ${product.name || ''} vào so sánh` : `Thêm ${product.name || ''} vào so sánh`}
               >
                 {compared ? <Check size={13} /> : <ArrowLeftRight size={13} />}
-              </button>
+              </Button>
             </div>
 
             {/* Images */}

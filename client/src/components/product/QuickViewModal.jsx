@@ -35,7 +35,9 @@ export const QuickViewModal = () => {
       setSelectedVariant(defaultVar);
 
       if (product.options?.[0]?.values?.[0]) {
-        setSelectedOptionVal(product.options[0].values[0]);
+        const firstVal = product.options[0].values[0];
+        const valStr = typeof firstVal === 'object' && firstVal !== null ? (firstVal.value || '') : String(firstVal || '');
+        setSelectedOptionVal(valStr);
       } else {
         setSelectedOptionVal('');
       }
@@ -393,20 +395,28 @@ export const QuickViewModal = () => {
                   </label>
                   <div className="flex flex-wrap gap-2">
                     {product.options[0].values.map((val, i) => {
+                      const valStr = typeof val === 'object' && val !== null ? (val.value || '') : String(val || '');
+                      const colorCode = typeof val === 'object' && val !== null ? val.colorCode : '';
                       const isSelected =
-                        selectedOptionVal === val || (!selectedOptionVal && i === 0);
+                        selectedOptionVal === valStr || (!selectedOptionVal && i === 0);
                       return (
                         <button
-                          key={i}
+                          key={val?._id || i}
                           type="button"
-                          onClick={() => setSelectedOptionVal(val)}
-                          className={`min-w-16 px-3 py-1.5 rounded-[6px] text-xs font-medium border transition-all cursor-pointer active:scale-[0.98] ${
+                          onClick={() => setSelectedOptionVal(valStr)}
+                          className={`min-w-16 px-3 py-1.5 rounded-[6px] text-xs font-medium border transition-all cursor-pointer active:scale-[0.98] flex items-center gap-1.5 ${
                             isSelected
                               ? 'border-2 border-slate-900 text-slate-900 bg-white font-bold shadow-2xs'
                               : 'border border-slate-200 text-slate-700 bg-white hover:border-slate-300 hover:text-slate-900'
                           }`}
                         >
-                          {val}
+                          {colorCode && (
+                            <span
+                              className="w-3.5 h-3.5 rounded-full border border-slate-300 shrink-0"
+                              style={{ backgroundColor: colorCode }}
+                            />
+                          )}
+                          <span>{valStr}</span>
                         </button>
                       );
                     })}

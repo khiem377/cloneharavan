@@ -8,6 +8,7 @@ import LayoutShell from '@/components/layout/LayoutShell';
 import TopProgressBar from '@/components/common/TopProgressBar';
 import ScrollToTop from '@/components/common/ScrollToTop';
 import { ToastContainer } from '@/components/ui/toast';
+import { ConfirmDialogContainer } from '@/components/ui/confirm-dialog';
 
 const beVietnamPro = Be_Vietnam_Pro({
   subsets: ['latin', 'vietnamese'],
@@ -107,6 +108,7 @@ export default async function RootLayout({ children }) {
         <TopProgressBar />
         <ScrollToTop />
         <ToastContainer />
+        <ConfirmDialogContainer />
         <StoreProvider
           initialMenu={initialMenu}
           initialCategories={initialCategories}

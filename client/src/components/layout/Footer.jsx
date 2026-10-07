@@ -210,7 +210,7 @@ export default function Footer({ initialMenu = null }) {
                   className="w-9 h-9 rounded-[6px] border border-slate-200 bg-white flex items-center justify-center p-1.5 hover:bg-slate-50 hover:border-slate-300 transition-colors active:scale-[0.98]"
                 >
                   <img
-                    src="/images/logo zalo.webp"
+                    src="/images/logo-zalo.webp"
                     alt="Zalo"
                     className="w-full h-full object-contain"
                     loading="lazy"
