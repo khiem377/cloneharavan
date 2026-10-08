@@ -138,8 +138,10 @@ const validateCoupon = async (code, orderTotal) => {
   };
 };
 
-const applyCoupon = async (couponId, orderTotal) => {
+const applyCoupon = async (couponId, orderTotal, session = null) => {
   const now = new Date();
+  const options = { new: true };
+  if (session) options.session = session;
 
   const coupon = await Coupon.findOneAndUpdate(
     {
@@ -153,14 +155,25 @@ const applyCoupon = async (couponId, orderTotal) => {
       ],
     },
     { $inc: { usedCount: 1 } },
-    { new: true }
+    options
   );
 
   if (!coupon) {
-    throw new AppError('Coupon đã hết lượt hoặc không còn hiệu lực', 400);
+    throw new AppError('Mã giảm giá đã hết lượt sử dụng hoặc không còn hiệu lực', 400);
   }
 
   return calcDiscount(coupon, orderTotal);
+};
+
+const releaseCoupon = async (couponCode, session = null) => {
+  if (!couponCode) return;
+  const options = {};
+  if (session) options.session = session;
+  await Coupon.updateOne(
+    { code: couponCode.trim().toUpperCase(), usedCount: { $gt: 0 } },
+    { $inc: { usedCount: -1 } },
+    options
+  );
 };
 
 // Xóa nhiều mã cùng lúc
@@ -180,5 +193,6 @@ module.exports = {
   toggleCouponStatus,
   validateCoupon,
   applyCoupon,
+  releaseCoupon,
   calcDiscount,
 };

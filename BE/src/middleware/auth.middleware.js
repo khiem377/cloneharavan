@@ -17,7 +17,7 @@ const protect = async (req, res, next) => {
     }
 
     if (!token) {
-      throw new AppError('Not authorized, no token provided', 401);
+      throw new AppError('Yêu cầu cần đăng nhập mới sử dụng chức năng này', 401);
     }
 
 
@@ -25,8 +25,8 @@ const protect = async (req, res, next) => {
 
 
     const user = await User.findById(decoded.id);
-    if (!user) throw new AppError('User belonging to this token no longer exists', 401);
-    if (!user.isActive) throw new AppError('Account has been deactivated', 403);
+    if (!user) throw new AppError('Tài khoản liên kết với phiên đăng nhập này không còn tồn tại', 401);
+    if (!user.isActive) throw new AppError('Tài khoản của bạn đã bị khóa', 403);
 
     req.user = user;
     next();

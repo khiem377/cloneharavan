@@ -6,6 +6,7 @@ const Product = require('../models/product.model');
 const ProductVariant = require('../models/productVariant.model');
 const Category = require('../models/category.model');
 const Brand = require('../models/brand.model');
+const { getSellingPrice } = require('../utils/pricing.helper');
 
 let _genAI = null;
 const getGeminiClient = () => {
@@ -220,8 +221,8 @@ const searchByImage = async (buffer, mimeType, options = {}) => {
     const pVariants = variantMap.get(product._id.toString()) || [];
     const defaultVariant = pVariants.find((v) => v.isDefault) || pVariants[0] || null;
     const finalPrice = defaultVariant
-      ? (defaultVariant.salePrice || defaultVariant.price)
-      : (product.salePrice || product.price || 0);
+      ? getSellingPrice(defaultVariant)
+      : getSellingPrice(product);
 
     return {
       _id: product._id,

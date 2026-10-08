@@ -1,1 +1,4 @@
-{}
+{
+  "javascript.suggest.paths": true,
+  "js/ts.implicitProjectConfig.checkJs": false
+}

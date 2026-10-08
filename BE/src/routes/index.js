@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 
 const cartRoutes = require('./cart.routes');
+const orderRoutes = require('./order.routes');
 const authRoutes = require('./auth.routes');
 const userRoutes = require('./user.routes');
 const bannerRoutes = require('./banner.routes');
@@ -75,6 +76,7 @@ router.use('/chat', chatbotRoutes);
 router.use('/upsell', upsellRoutes);
 router.use('/comments', commentRoutes);
 router.use('/cart', cartRoutes);
+router.use('/orders', orderRoutes);
 
 
 module.exports = router;

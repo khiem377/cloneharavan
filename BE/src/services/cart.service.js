@@ -5,6 +5,7 @@ const ProductVariant = require('../models/productVariant.model');
 const checkoutService = require('./checkout.service');
 const flashSaleService = require('./flashSale.service');
 const { AppError } = require('../utils/AppError');
+const { getSellingPrice } = require('../utils/pricing.helper');
 
 /**
  * Service quản lý Giỏ hàng đồng bộ với Kho hàng (Real-Time Inventory Cart)
@@ -213,7 +214,7 @@ const formatAndValidateCart = async (cartDoc) => {
         availableStock: 0,
         isOutOfStock: true,
         canCheckout: false,
-        unitPrice: variant.salePrice || variant.price || 0,
+        unitPrice: getSellingPrice(variant),
         originalPrice: variant.price || 0,
         subtotal: 0,
       });
@@ -258,7 +259,7 @@ const formatAndValidateCart = async (cartDoc) => {
 
     // 4. Tính toán giá hiện tại (kiểm tra Flash Sale)
     const originalPrice = variant.price || 0;
-    let unitPrice = variant.salePrice || variant.price || 0;
+    let unitPrice = getSellingPrice(variant);
     let isFlashSale = false;
 
     const fsKey = `${product._id.toString()}_${variant._id.toString()}`;
@@ -415,7 +416,7 @@ const addToCart = async (cartOwner, { productId, variantId, sku, quantity = 1 })
     (item) => item.variantId.toString() === variant._id.toString()
   );
 
-  const currentPrice = variant.salePrice || variant.price || 0;
+  const currentPrice = getSellingPrice(variant);
 
   if (existingItemIndex > -1) {
     const existingItem = cart.items[existingItemIndex];

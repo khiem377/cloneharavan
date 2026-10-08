@@ -805,7 +805,7 @@ const getProductDeals = async (idOrSlug) => {
     }).sort({ createdAt: -1 }).limit(10),
   ]);
 
-  let effectivePrice = productSalePrice > 0 ? productSalePrice : productPrice;
+  let effectivePrice = (productSalePrice > 0 && productSalePrice < productPrice) ? productSalePrice : productPrice;
   let bestPromotion = null;
   let flashSaleDeal = null;
 

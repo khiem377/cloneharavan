@@ -25,8 +25,8 @@ const getInstantSuggestions = async (req, res, next) => {
 const getTrendingKeywords = async (req, res, next) => {
   try {
     const limit = req.query.limit || 10;
-    const type  = req.query.type  || 'all'; // 'all' | 'rising'
-    const data  = await searchService.getTrendingKeywords(limit, type);
+    const type = req.query.type || 'all'; // 'all' | 'rising'
+    const data = await searchService.getTrendingKeywords(limit, type);
     res.json({ status: 'success', data });
   } catch (error) {
     next(error);

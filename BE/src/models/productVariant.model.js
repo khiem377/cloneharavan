@@ -115,6 +115,12 @@ productVariantSchema.pre('save', function () {
   } else if (this.isDefault) {
     this.displayName = 'Mặc định';
   }
+
+  if (this.salePrice !== null && this.salePrice !== undefined) {
+    if (this.salePrice < 0 || (this.price !== undefined && this.salePrice >= this.price)) {
+      this.salePrice = null;
+    }
+  }
 });
 
 productVariantSchema.index({ productId: 1, sku: 1 });
