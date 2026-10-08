@@ -762,7 +762,8 @@ const globalSearch = async (query = {}, req = null) => {
         const score = calculateRelevanceScore(p, parsed);
 
         const basePrice = defaultVar?.price || p.cachedPrice || p.price || 0;
-        const baseSalePrice = defaultVar?.salePrice || p.cachedSalePrice || p.salePrice || 0;
+        const rawSale = defaultVar?.salePrice ?? p.cachedSalePrice ?? p.salePrice ?? null;
+        const baseSalePrice = (rawSale !== null && Number(rawSale) >= 0 && Number(rawSale) < basePrice) ? Number(rawSale) : null;
 
         const fsInfo = activeFsMap.get(p._id.toString());
         const isFs = Boolean(fsInfo && fsInfo.flashSalePrice > 0);
@@ -1201,7 +1202,8 @@ const getInstantSuggestions = async (q = '') => {
     .map((p) => {
       const fsInfo = activeFsMap.get(p._id.toString());
       const basePrice = p.cachedPrice || p.price || 0;
-      const baseSalePrice = p.cachedSalePrice || p.salePrice || 0;
+      const rawSale = p.cachedSalePrice ?? p.salePrice ?? null;
+      const baseSalePrice = (rawSale !== null && Number(rawSale) >= 0 && Number(rawSale) < basePrice) ? Number(rawSale) : null;
 
       const isFs = Boolean(fsInfo && fsInfo.flashSalePrice > 0);
       const effSalePrice = isFs ? fsInfo.flashSalePrice : baseSalePrice;
