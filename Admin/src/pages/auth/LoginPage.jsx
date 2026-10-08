@@ -1,108 +1,105 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Eye, EyeOff, Loader2 } from '@/components/ui/Icons';
-import { toast } from '@/providers/ToastProvider';
-import { authService } from '@/services/auth.service';
-import useAuthStore from '@/store/authStore';
-import { cn } from '@/lib/utils';
-
-import { getDefaultRedirectPath } from '@/utils/permissionUtils';
-
-const schema = z.object({
-  email: z.string().email('Email không hợp lệ'),
-  password: z.string().min(6, 'Mật khẩu tối thiểu 6 ký tự'),
-});
+import React from 'react';
+import { useAdminAuthFlow } from '@/hooks/useAdminAuthFlow';
+import MascotAdminWelcome from '@/components/ui/MascotAdminWelcome';
+import AuthReasonAlert from '@/components/auth/AuthReasonAlert';
+import PasswordLoginForm from '@/components/auth/PasswordLoginForm';
+import OtpRequestForm from '@/components/auth/OtpRequestForm';
+import OtpVerifyForm from '@/components/auth/OtpVerifyForm';
 
 export default function LoginPage() {
-  const navigate = useNavigate();
-  const setAuth = useAuthStore((s) => s.setAuth);
-  const [showPass, setShowPass] = useState(false);
-
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm({
-    resolver: zodResolver(schema),
-  });
-
-  const onSubmit = async (values) => {
-    try {
-      const { data } = await authService.login(values);
-      const user = data.data.user;
-      setAuth({
-        user,
-        accessToken: data.data.accessToken,
-        refreshToken: data.data.refreshToken,
-      });
-      toast.success(data.message || 'Đăng nhập thành công!');
-      
-      // Chuyển hướng thông minh theo đúng quyền hạn của tài khoản
-      const targetPath = getDefaultRedirectPath(user);
-      navigate(targetPath, { replace: true });
-    } catch (err) {
-      const msg = err.response?.data?.message ?? err.message ?? 'Có lỗi xảy ra';
-      toast.error(msg);
-    }
-  };
+  const {
+    reason,
+    mode,
+    setMode,
+    email,
+    setEmail,
+    password,
+    setPassword,
+    showPass,
+    setShowPass,
+    isLoading,
+    isPasskeyLoading,
+    otpValues,
+    setOtpValues,
+    otpInputRefs,
+    countdown,
+    devOtpHint,
+    handlePasswordSubmit,
+    handleRequestOtp,
+    handleVerifyOtpDirect,
+    handleOtpChange,
+    handleOtpKeyDown,
+    handleOtpPaste,
+    handleResendOtp,
+    handlePasskeyLogin,
+  } = useAdminAuthFlow();
 
   return (
-    <div className="flex min-h-svh items-center justify-center bg-background p-4 md:p-6">
-      <div className="w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-sm text-card-foreground">
-        <div className="flex flex-col gap-1 text-center mb-6">
-          <h1 className="text-xl font-bold tracking-tight text-foreground">Admin Dashboard</h1>
-          <p className="text-xs text-muted-foreground">Đăng nhập để tiếp tục</p>
+    <div className="flex min-h-[100dvh] w-full items-center justify-center bg-background px-4 py-8 antialiased selection:bg-primary selection:text-primary-foreground font-sans">
+      <div className="w-full max-w-[420px] flex flex-col gap-4">
+        {/* Animated Mascot Header */}
+        <div className="flex flex-col items-center text-center -mb-1">
+          <MascotAdminWelcome size={165} />
+          <div className="flex flex-col gap-0.5 mt-1">
+            <h1 className="text-xl font-bold tracking-tight text-foreground">Hệ thống Quản trị OMS</h1>
+            <p className="text-xs text-muted-foreground">
+              Đăng nhập để quản lý đơn hàng, kho và sản phẩm
+            </p>
+          </div>
         </div>
 
-        <form className="flex flex-col gap-4" onSubmit={handleSubmit(onSubmit)} noValidate>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium text-foreground">Email</label>
-            <input
-              {...register('email')}
-              type="email"
-              placeholder="admin@example.com"
-              className={cn(
-                'h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/20',
-                errors.email && 'border-destructive focus:border-destructive focus:ring-destructive/20'
-              )}
-              autoComplete="email"
+        <div className="rounded-[6px] border border-border bg-card p-6 shadow-xs text-card-foreground">
+          <AuthReasonAlert reason={reason} />
+
+          {mode === 'password' && (
+            <PasswordLoginForm
+              email={email}
+              setEmail={setEmail}
+              password={password}
+              setPassword={setPassword}
+              showPass={showPass}
+              setShowPass={setShowPass}
+              isLoading={isLoading}
+              isPasskeyLoading={isPasskeyLoading}
+              onSubmit={handlePasswordSubmit}
+              onPasskeyLogin={handlePasskeyLogin}
+              onSwitchToOtp={() => setMode('otp_request')}
             />
-            {errors.email && <span className="text-xs text-destructive">{errors.email.message}</span>}
-          </div>
+          )}
 
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium text-foreground">Mật khẩu</label>
-            <div className="relative">
-              <input
+          {mode === 'otp_request' && (
+            <OtpRequestForm
+              email={email}
+              setEmail={setEmail}
+              isLoading={isLoading}
+              isPasskeyLoading={isPasskeyLoading}
+              onSubmit={handleRequestOtp}
+              onPasskeyLogin={handlePasskeyLogin}
+              onBackToPassword={() => setMode('password')}
+            />
+          )}
 
-                {...register('password')}
-                type={showPass ? 'text' : 'password'}
-                placeholder="••••••••"
-                className={cn(
-                  'h-9 w-full rounded-md border border-input bg-background pl-3 pr-9 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/20',
-                  errors.password && 'border-destructive focus:border-destructive focus:ring-destructive/20'
-                )}
-                autoComplete="current-password"
-              />
-              <button
-                type="button"
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                onClick={() => setShowPass(!showPass)}
-              >
-                {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
-            </div>
-            {errors.password && <span className="text-xs text-destructive">{errors.password.message}</span>}
-          </div>
-
-          <button
-            type="submit"
-            className="mt-2 inline-flex h-9 items-center justify-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground shadow-xs hover:bg-primary/90 transition-colors disabled:pointer-events-none disabled:opacity-50"
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : null}
-            {isSubmitting ? 'Đang đăng nhập...' : 'Đăng nhập'}
-          </button>
-        </form>
+          {mode === 'otp_verify' && (
+            <OtpVerifyForm
+              email={email}
+              otpValues={otpValues}
+              setOtpValues={setOtpValues}
+              otpInputRefs={otpInputRefs}
+              onOtpChange={handleOtpChange}
+              onOtpKeyDown={handleOtpKeyDown}
+              onOtpPaste={handleOtpPaste}
+              countdown={countdown}
+              devOtpHint={devOtpHint}
+              isLoading={isLoading}
+              isPasskeyLoading={isPasskeyLoading}
+              onVerifyOtp={handleVerifyOtpDirect}
+              onResendOtp={handleResendOtp}
+              onPasskeyLogin={handlePasskeyLogin}
+              onChangeEmail={() => setMode('otp_request')}
+              onBackToPassword={() => setMode('password')}
+            />
+          )}
+        </div>
       </div>
     </div>
   );

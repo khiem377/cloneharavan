@@ -49,6 +49,7 @@ MONGO_URI = os.getenv('MONGO_URI', 'mongodb://localhost:27017/cloneharavan')
 # ── Layer 1: Interaction Weights (chuẩn với Node service) ───────────────────
 INTERACTION_WEIGHTS = {
     'view':              1.0,
+    'view_deep':         2.5,
     'product_detail':    1.8,
     'search_click':      2.0,
     'filter_apply':      1.5,
@@ -59,6 +60,7 @@ INTERACTION_WEIGHTS = {
     'add_to_cart':       5.0,
     'purchase':         10.0,
     # Negative signals
+    'view_bounce':      -1.5,
     'cart_remove':      -1.0,
     'checkout_abandon': -0.5,
     'search_noresult':  -0.5,
@@ -148,7 +150,7 @@ def load_interactions_data():
                     p_key = str(row.get('product_id', '')).strip()
                     if not u_key or not p_key:
                         continue
-                    i_type = row.get('interaction_type', 'view')
+                    i_type = row.get('event_type') or row.get('interaction_type', 'view')
                     base_w = INTERACTION_WEIGHTS.get(i_type, float(row.get('weight', 1.0)))
                     interactions.append({
                         'userId':      u_key if len(u_key) == 24 else None,

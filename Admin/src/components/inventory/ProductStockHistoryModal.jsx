@@ -166,7 +166,7 @@ export default function ProductStockHistoryModal({ isOpen, onClose, product }) {
                   <th className="p-3 whitespace-nowrap font-mono">Mã Chứng Từ</th>
                   <th className="p-3 whitespace-nowrap">Biến Thể / Mặt Hàng</th>
                   <th className="p-3 text-center whitespace-nowrap">Thay Đổi (SL)</th>
-                  <th className="p-3 text-center whitespace-nowrap">Tồn Kho (Trước ➔ Sau)</th>
+                  <th className="p-3 text-center whitespace-nowrap">Tồn Kho (Trước -&gt; Sau)</th>
                   <th className="p-3 min-w-[180px]">Lý Do / Ghi Chú</th>
                 </tr>
               </thead>
@@ -214,7 +214,7 @@ export default function ProductStockHistoryModal({ isOpen, onClose, product }) {
                         </span>
                       </td>
                       <td className="p-3 text-center font-mono whitespace-nowrap text-muted-foreground">
-                        {m.calcBeforeStock} ➔ <span className="font-bold text-foreground">{m.calcAfterStock}</span>
+                        {m.calcBeforeStock} -&gt; <span className="font-bold text-foreground">{m.calcAfterStock}</span>
                       </td>
                       <td className="p-3 text-muted-foreground">
                         {m.reason || 'Không có ghi chú'}

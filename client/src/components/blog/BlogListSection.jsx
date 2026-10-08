@@ -21,7 +21,7 @@ export const BlogListSection = ({
       />
 
       {posts.length === 0 ? (
-        <div className="py-16 text-center bg-white rounded-xl border border-gray-200 p-8 shadow-2xs">
+        <div className="py-16 text-center bg-white rounded-[6px] border border-gray-200 p-8 shadow-2xs">
           <h3 className="text-base font-bold text-slate-800 mb-1">
             Không tìm thấy bài viết nào
           </h3>
@@ -30,7 +30,7 @@ export const BlogListSection = ({
           </p>
           <a
             href="/blogs"
-            className="inline-flex items-center px-4 py-2 rounded-xl bg-[#284ea1] text-white text-xs font-semibold hover:bg-[#1f3d80] transition shadow-2xs"
+            className="inline-flex items-center px-4 py-2 rounded-[6px] bg-[#284ea1] text-white text-xs font-semibold hover:bg-[#1f3d80] active:scale-[0.98] transition shadow-2xs"
           >
             Xem tất cả bài viết
           </a>

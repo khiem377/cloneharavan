@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Shield, Plus, Edit3, Trash2, CheckCircle2, Lock, KeyRound,
+import {
+  Plus, Trash2, Lock, KeyRound,
   SearchIcon as Search, ShieldCheck, CheckSquare, Square, Layers, RefreshCw,
-  Info, AlertTriangle, Save
+  Info, Save
 } from '@/components/ui/Icons';
 import Can from '../../components/auth/Can';
 import SearchableSelect from '@/components/ui/SearchableSelect';
@@ -13,17 +14,18 @@ import {
   useCreateRole,
   useUpdateRole,
   useDeleteRole,
-  useSeedFullPermissions,
 } from '@/hooks/useRoles';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
 
 export default function RoleListPage() {
-  // React Query — thay fetchData() thủ công
   const { data: roles = [], isLoading: loading, refetch: refetchRoles } = useRoles();
   const { data: permissionsGrouped = {} } = usePermissions();
   const createMut = useCreateRole();
   const updateMut = useUpdateRole();
   const deleteMut = useDeleteRole();
-  const seedMut   = useSeedFullPermissions();
 
   const [saving, setSaving] = useState(false);
 
@@ -45,8 +47,6 @@ export default function RoleListPage() {
   // Mode tạo mới hay chỉnh sửa
   const [isCreating, setIsCreating] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
-
-  const handleSeedFullPermissions = () => seedMut.mutate();
 
   // Tự động chọn role đầu tiên khi data load xong lần đầu
   useEffect(() => {
@@ -215,49 +215,51 @@ export default function RoleListPage() {
   }, [permissionsGrouped, searchQuery, selectedModule]);
 
   return (
-    <div className="min-h-screen bg-muted/20 p-4 md:p-6 space-y-6">
+    <div className="min-h-full bg-background p-4 md:p-6 space-y-5 text-foreground">
       {/* Header Bar */}
-      <div className="bg-card border border-border rounded-xl p-5 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2.5">
-            <ShieldCheck className="size-7 text-primary" /> Phân Quyền & Quản Lý Vai Trò
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Giao diện Master-Detail: Tích chọn phân quyền linh hoạt theo nhóm chức năng, bảo vệ hệ thống tuyệt đối.
-          </p>
-        </div>
-
-        <Can do="role.manage">
-          <button
-            onClick={handleStartCreate}
-            className="flex items-center gap-2 px-4 h-10 bg-primary text-primary-foreground rounded-lg font-medium shadow-sm hover:bg-primary/90 transition-all text-sm shrink-0"
-          >
-            <Plus className="size-4" /> Tạo Vai Trò Mới
-          </button>
-        </Can>
-      </div>
-
-      {/* Main Split Layout (2 Columns) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        
-        {/* ========================================================================= */}
-        {/* CỘT TRÁI: DANH SÁCH VAI TRÒ (30% Width - 4 cols) */}
-        {/* ========================================================================= */}
-        <div className="lg:col-span-4 bg-card border border-border rounded-xl shadow-sm overflow-hidden flex flex-col">
-          <div className="p-4 bg-muted/40 border-b border-border flex items-center justify-between">
-            <span className="font-bold text-sm text-foreground flex items-center gap-2">
-              <Layers className="size-4 text-primary" /> Danh sách Vai trò ({roles.length})
-            </span>
-            <button
-              onClick={refetchRoles}
-              title="Làm mới"
-              className="p-1 text-muted-foreground hover:text-foreground rounded hover:bg-muted transition-colors"
-            >
-              <RefreshCw className={`size-4 ${loading ? 'animate-spin' : ''}`} />
-            </button>
+      <Card className="rounded-[6px] border border-border shadow-none">
+        <CardContent className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
+              <ShieldCheck className="size-6 text-primary" /> Phân Quyền & Quản Lý Vai Trò
+            </h1>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Giao diện Master-Detail: Tích chọn phân quyền linh hoạt theo nhóm chức năng, bảo vệ hệ thống tuyệt đối.
+            </p>
           </div>
 
-          <div className="divide-y divide-border max-h-[calc(100vh-220px)] overflow-y-auto">
+          <Can do="role.manage">
+            <Button
+              onClick={handleStartCreate}
+              className="h-9 px-4 rounded-[6px] text-xs font-medium active:scale-[0.98] transition-transform"
+            >
+              <Plus className="size-4 mr-1.5" /> Tạo Vai Trò Mới
+            </Button>
+          </Can>
+        </CardContent>
+      </Card>
+
+      {/* Main Split Layout (2 Columns) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+        
+        {/* CỘT TRÁI: DANH SÁCH VAI TRÒ (4 cols) */}
+        <Card className="lg:col-span-4 rounded-[6px] border border-border shadow-none overflow-hidden flex flex-col">
+          <div className="p-3 bg-muted/40 border-b border-border flex items-center justify-between">
+            <span className="font-semibold text-xs text-foreground flex items-center gap-2">
+              <Layers className="size-4 text-primary" /> Danh sách Vai trò ({roles.length})
+            </span>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={refetchRoles}
+              title="Làm mới"
+              className="size-7 rounded-[4px] text-muted-foreground hover:text-foreground"
+            >
+              <RefreshCw className={`size-3.5 ${loading ? 'animate-spin' : ''}`} />
+            </Button>
+          </div>
+
+          <div className="divide-y divide-border max-h-[calc(100vh-240px)] overflow-y-auto">
             {roles.map((role) => {
               const isSelected = !isCreating && role._id === activeRoleId;
               const isAdministrator = role.code === 'administrator';
@@ -266,35 +268,35 @@ export default function RoleListPage() {
                 <div
                   key={role._id}
                   onClick={() => selectRole(role)}
-                  className={`p-4 cursor-pointer transition-all flex items-start justify-between gap-3 ${
+                  className={`p-3.5 cursor-pointer transition-all flex items-start justify-between gap-3 ${
                     isSelected
-                      ? 'bg-primary/10 border-l-4 border-l-primary text-foreground font-medium shadow-inner'
-                      : 'hover:bg-muted/50 text-muted-foreground hover:text-foreground'
+                      ? 'bg-primary/10 border-l-4 border-l-primary text-foreground font-medium'
+                      : 'hover:bg-muted/40 text-muted-foreground hover:text-foreground'
                   }`}
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-semibold text-sm line-clamp-1 text-foreground">
+                      <span className="font-semibold text-xs line-clamp-1 text-foreground">
                         {role.name}
                       </span>
                       {role.isSystem && (
-                        <span className="shrink-0 bg-amber-500/10 text-amber-600 text-[10px] font-bold px-1.5 py-0.5 rounded border border-amber-500/20 flex items-center gap-0.5">
-                          <Lock className="size-2.5" /> Hệ thống
-                        </span>
+                        <Badge variant="outline" className="rounded-[4px] text-[10px] font-bold px-1.5 py-0 bg-amber-500/10 text-amber-600 border-amber-500/20">
+                          <Lock className="size-2.5 mr-0.5" /> Hệ thống
+                        </Badge>
                       )}
                     </div>
 
-                    <div className="flex items-center gap-2 mt-1">
-                      <code className="text-[11px] bg-muted px-1.5 py-0.2 rounded font-mono text-muted-foreground">
+                    <div className="flex items-center gap-2 mt-1 font-mono text-[11px] tabular-nums">
+                      <code className="bg-muted px-1.5 py-0.2 rounded-[3px] text-muted-foreground">
                         {role.code}
                       </code>
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-muted-foreground">
                         • {isAdministrator ? 'Full Quyền (*)' : `${role.permissions?.length || 0} quyền`}
                       </span>
                     </div>
 
                     {role.description && (
-                      <p className="text-xs text-muted-foreground/80 mt-1 line-clamp-1">
+                      <p className="text-[11px] text-muted-foreground/80 mt-1 line-clamp-1">
                         {role.description}
                       </p>
                     )}
@@ -303,16 +305,18 @@ export default function RoleListPage() {
                   <div className="flex items-center gap-1 shrink-0 self-center">
                     {!role.isSystem && (
                       <Can do="role.manage">
-                        <button
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleDelete(role);
                           }}
                           title="Xóa vai trò"
-                          className="p-1.5 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                          className="size-7 rounded-[4px] text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                         >
                           <Trash2 className="size-3.5" />
-                        </button>
+                        </Button>
                       </Can>
                     )}
                   </div>
@@ -320,19 +324,17 @@ export default function RoleListPage() {
               );
             })}
           </div>
-        </div>
+        </Card>
 
-        {/* ========================================================================= */}
-        {/* CỘT PHẢI: CHI TIẾT VAI TRÒ & MA TRẬN PHÂN QUYỀN (70% Width - 8 cols) */}
-        {/* ========================================================================= */}
-        <div className="lg:col-span-8 bg-card border border-border rounded-xl shadow-sm p-6 space-y-6">
-          <form onSubmit={handleSubmit} className="space-y-6">
+        {/* CỘT PHẢI: CHI TIẾT VAI TRÒ & MA TRẬN PHÂN QUYỀN (8 cols) */}
+        <Card className="lg:col-span-8 rounded-[6px] border border-border shadow-none p-5 space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-5">
             
             {/* Header Form Chỉnh Sửa */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border">
               <div>
-                <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
-                  <KeyRound className="size-5 text-primary" />
+                <h2 className="text-base font-bold text-foreground flex items-center gap-2">
+                  <KeyRound className="size-4 text-primary" />
                   {isCreating
                     ? 'Tạo Vai Trò Mới'
                     : `Cấu hình Phân quyền: ${formData.name || '...'}`}
@@ -347,50 +349,53 @@ export default function RoleListPage() {
               <div className="flex items-center gap-2">
                 {!isCreating && activeRole && !activeRole.isSystem && (
                   <Can do="role.manage">
-                    <button
+                    <Button
                       type="button"
+                      variant="destructive"
+                      size="sm"
                       onClick={() => handleDelete(activeRole)}
-                      className="px-3 h-9 bg-destructive/10 text-destructive rounded-lg text-xs font-medium hover:bg-destructive/20 transition-colors"
+                      className="h-8 rounded-[6px] text-xs font-medium"
                     >
                       Xóa Vai Trò
-                    </button>
+                    </Button>
                   </Can>
                 )}
 
                 <Can do="role.manage">
-                  <button
+                  <Button
                     type="submit"
+                    size="sm"
                     disabled={saving}
-                    className="flex items-center gap-2 px-5 h-9 bg-primary text-primary-foreground rounded-lg text-xs font-semibold shadow hover:bg-primary/90 transition-colors disabled:opacity-50"
+                    className="h-8 px-4 rounded-[6px] text-xs font-semibold active:scale-[0.98] transition-transform"
                   >
-                    {saving ? <RefreshCw className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
+                    {saving ? <RefreshCw className="size-3.5 animate-spin mr-1.5" /> : <Save className="size-3.5 mr-1.5" />}
                     {isCreating ? 'Tạo Vai Trò' : 'Lưu Thay Đổi'}
-                  </button>
+                  </Button>
                 </Can>
               </div>
             </div>
 
             {/* Thẻ Thông Tin Cơ Bản Của Role */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-muted/30 p-4 rounded-lg border border-border">
-              <div>
-                <label className="block text-xs font-semibold uppercase text-muted-foreground mb-1">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 bg-muted/20 p-3.5 rounded-[6px] border border-border">
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-semibold uppercase text-muted-foreground">
                   Tên Vai Trò <span className="text-destructive">*</span>
                 </label>
-                <input
+                <Input
                   type="text"
                   required
                   placeholder="Ví dụ: Quản lý Kho & Sản phẩm"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full h-9 px-3 bg-background border border-input rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="h-8 rounded-[6px] text-xs"
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold uppercase text-muted-foreground mb-1">
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-semibold uppercase text-muted-foreground">
                   Mã Vai Trò (Code) <span className="text-destructive">*</span>
                 </label>
-                <input
+                <Input
                   type="text"
                   required
                   disabled={activeRole?.isSystem}
@@ -399,28 +404,28 @@ export default function RoleListPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, code: e.target.value.toLowerCase().replace(/\s+/g, '_') })
                   }
-                  className="w-full h-9 px-3 bg-background border border-input rounded-md text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                  className="h-8 rounded-[6px] text-xs font-mono"
                 />
               </div>
 
-              <div className="md:col-span-2">
-                <label className="block text-xs font-semibold uppercase text-muted-foreground mb-1">
+              <div className="md:col-span-2 flex flex-col gap-1">
+                <label className="text-xs font-semibold uppercase text-muted-foreground">
                   Mô tả phạm vi vai trò
                 </label>
-                <input
+                <Input
                   type="text"
                   placeholder="Mô tả công việc và trách nhiệm của vai trò này..."
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full h-9 px-3 bg-background border border-input rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="h-8 rounded-[6px] text-xs"
                 />
               </div>
             </div>
 
             {/* Thông báo nếu là Administrator */}
             {formData.code === 'administrator' ? (
-              <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-700 dark:text-amber-400 text-sm flex items-center gap-3">
-                <Info className="size-6 shrink-0" />
+              <div className="p-3.5 bg-amber-500/10 border border-amber-500/30 rounded-[6px] text-amber-700 dark:text-amber-400 text-xs flex items-center gap-3">
+                <Info className="size-5 shrink-0" />
                 <div>
                   <div className="font-bold">Vai trò Administrator Tối Cao</div>
                   <div className="text-xs mt-0.5 opacity-90">
@@ -429,27 +434,25 @@ export default function RoleListPage() {
                 </div>
               </div>
             ) : (
-              /* ========================================================================= */
-              /* MA TRẬN PHÂN QUYỀN CHI TIẾT (PERMISSIONS MATRIX GRID) */
-              /* ========================================================================= */
-              <div className="space-y-4">
+              /* MA TRẬN PHÂN QUYỀN CHI TIẾT */
+              <div className="space-y-3">
                 
                 {/* Search & Filter Bar trong bảng Quyền */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-card p-3 rounded-lg border border-border">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-card p-3 rounded-[6px] border border-border">
                   <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                    <input
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+                    <Input
                       type="text"
                       placeholder="Tìm kiếm mã quyền hoặc tên quyền..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full h-9 pl-9 pr-3 bg-background border border-input rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-primary"
+                      className="h-8 pl-8 rounded-[6px] text-xs"
                     />
                   </div>
 
                   <div className="flex items-center gap-2">
                     <SearchableSelect
-                      className="w-56"
+                      className="w-52"
                       options={[
                         { label: `Tất cả nhóm (${Object.keys(permissionsGrouped).length} nhóm)`, value: 'all' },
                         ...Object.keys(permissionsGrouped).map((modKey) => ({
@@ -463,35 +466,39 @@ export default function RoleListPage() {
                       placeholder="Tất cả nhóm"
                     />
 
-                    <button
+                    <Button
                       type="button"
+                      variant="outline"
+                      size="sm"
                       onClick={() => toggleSelectAllPermissions(true)}
-                      className="px-2.5 h-9 border border-input bg-background rounded-md text-xs font-medium hover:bg-muted transition-colors whitespace-nowrap"
+                      className="h-8 px-2.5 rounded-[6px] text-xs font-medium whitespace-nowrap"
                     >
                       Chọn Tất Cả
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="button"
+                      variant="ghost"
+                      size="sm"
                       onClick={() => toggleSelectAllPermissions(false)}
-                      className="px-2.5 h-9 border border-input bg-background rounded-md text-xs font-medium hover:bg-muted transition-colors whitespace-nowrap text-muted-foreground"
+                      className="h-8 px-2.5 rounded-[6px] text-xs font-medium whitespace-nowrap text-muted-foreground"
                     >
                       Bỏ Chọn
-                    </button>
+                    </Button>
                   </div>
                 </div>
 
                 {/* Counter Bar */}
-                <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
-                  <span>Tải ma trận danh mục quyền hạn:</span>
+                <div className="flex items-center justify-between text-xs text-muted-foreground px-1 font-mono tabular-nums">
+                  <span>Danh mục ma trận quyền hạn:</span>
                   <span>
-                    Đã cấp <strong className="text-primary font-bold text-sm">{formData.permissions.length}</strong> quyền cho vai trò này
+                    Đã cấp <strong className="text-primary font-bold">{formData.permissions.length}</strong> quyền cho vai trò này
                   </span>
                 </div>
 
                 {/* Danh sách nhóm Module & Permissions */}
-                <div className="space-y-4 max-h-[calc(100vh-380px)] overflow-y-auto pr-1">
+                <div className="space-y-3 max-h-[calc(100vh-420px)] overflow-y-auto pr-1">
                   {Object.keys(filteredGroupedPermissions).length === 0 ? (
-                    <div className="p-8 text-center text-muted-foreground border border-dashed rounded-xl">
+                    <div className="p-8 text-center text-muted-foreground border border-dashed border-border rounded-[6px] text-xs">
                       Không tìm thấy quyền nào phù hợp với từ khóa "{searchQuery}"
                     </div>
                   ) : (
@@ -501,25 +508,25 @@ export default function RoleListPage() {
                       const allChecked = checkedCount === permIds.length && permIds.length > 0;
 
                       return (
-                        <div
+                        <Card
                           key={modKey}
-                          className="border border-border rounded-xl overflow-hidden bg-card shadow-2xs"
+                          className="border border-border rounded-[6px] overflow-hidden shadow-none"
                         >
                           {/* Module Header Bar */}
-                          <div className="bg-muted/40 px-4 py-3 border-b border-border flex items-center justify-between">
-                            <div className="flex items-center gap-2.5">
-                              <span className="font-bold text-sm text-foreground">
+                          <div className="bg-muted/40 px-3.5 py-2.5 border-b border-border flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-xs text-foreground">
                                 {MODULE_NAMES[modKey] || modKey}
                               </span>
-                              <span className="text-xs bg-muted px-2 py-0.5 rounded-full font-medium text-muted-foreground">
-                                {checkedCount} / {perms.length} đã cấp
-                              </span>
+                              <Badge variant="secondary" className="rounded-[4px] px-1.5 py-0 text-[10px] font-mono tabular-nums">
+                                {checkedCount} / {perms.length}
+                              </Badge>
                             </div>
 
                             <button
                               type="button"
                               onClick={() => toggleModuleAll(perms)}
-                              className="text-xs font-semibold text-primary hover:underline flex items-center gap-1"
+                              className="text-xs font-semibold text-primary hover:underline flex items-center gap-1 cursor-pointer"
                             >
                               {allChecked ? (
                                 <>
@@ -534,16 +541,16 @@ export default function RoleListPage() {
                           </div>
 
                           {/* Permissions Checkbox Grid */}
-                          <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div className="p-3 grid grid-cols-1 md:grid-cols-2 gap-2">
                             {perms.map((p) => {
                               const isChecked = formData.permissions.includes(p._id);
                               return (
                                 <div
                                   key={p._id}
                                   onClick={() => togglePermission(p._id)}
-                                  className={`p-3 rounded-lg border cursor-pointer transition-all flex items-start gap-3 select-none ${
+                                  className={`p-2.5 rounded-[4px] border cursor-pointer transition-all flex items-start gap-2.5 select-none ${
                                     isChecked
-                                      ? 'bg-primary/10 border-primary/50 text-foreground shadow-2xs'
+                                      ? 'bg-primary/10 border-primary/40 text-foreground'
                                       : 'border-border hover:bg-muted/30 text-muted-foreground'
                                   }`}
                                 >
@@ -551,19 +558,19 @@ export default function RoleListPage() {
                                     type="checkbox"
                                     checked={isChecked}
                                     onChange={() => {}}
-                                    className="mt-1 rounded text-primary focus:ring-primary size-4 cursor-pointer"
+                                    className="mt-0.5 rounded-[3px] text-primary focus:ring-primary size-3.5 cursor-pointer"
                                   />
                                   <div className="flex-1 min-w-0">
-                                    <div className="flex items-center justify-between gap-2">
-                                      <span className="font-semibold text-xs text-foreground line-clamp-1">
+                                    <div className="flex items-center justify-between gap-1.5">
+                                      <span className="font-medium text-xs text-foreground line-clamp-1">
                                         {p.name}
                                       </span>
-                                      <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded font-mono text-muted-foreground shrink-0">
+                                      <code className="text-[10px] bg-muted px-1 py-0.2 rounded-[2px] font-mono text-muted-foreground shrink-0">
                                         {p.code}
                                       </code>
                                     </div>
                                     {p.description && (
-                                      <p className="text-[11px] text-muted-foreground/80 mt-1 line-clamp-2">
+                                      <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2">
                                         {p.description}
                                       </p>
                                     )}
@@ -572,7 +579,7 @@ export default function RoleListPage() {
                               );
                             })}
                           </div>
-                        </div>
+                        </Card>
                       );
                     })
                   )}
@@ -580,9 +587,16 @@ export default function RoleListPage() {
               </div>
             )}
           </form>
-        </div>
-
+        </Card>
       </div>
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Xóa Vai Trò Phân Quyền"
+        description={`Bạn có chắc chắn muốn xóa vai trò "${deleteTarget?.name}"? Các nhân viên đang thuộc vai trò này sẽ cần được gán lại vai trò mới.`}
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

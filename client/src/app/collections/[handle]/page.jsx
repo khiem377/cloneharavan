@@ -4,6 +4,8 @@ import { notFound } from 'next/navigation';
 import { Search, RotateCcw } from 'lucide-react';
 import searchService from '@/services/search.service';
 import ProductCard from '@/components/product/ProductCard';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import SearchSidebarFilter from '@/app/search/components/SearchSidebarFilter';
 import SearchSortSelector from '@/app/search/components/SearchSortSelector';
 import SearchPagination from '@/app/search/components/SearchPagination';
@@ -26,7 +28,14 @@ function formatHandleTitle(handle = '') {
     'may-lanh': 'Máy lạnh',
     'dieu-hoa': 'Điều hòa',
     'dien-thoai': 'Điện thoại',
-    laptop: 'Laptop',
+    'dien-thoai-thong-minh': 'Điện thoại thông minh',
+    'dong-ho': 'Đồng hồ thông minh',
+    'dong-ho-thong-minh': 'Đồng hồ thông minh',
+    laptop: 'Laptop & MacBook',
+    'macbook-laptop': 'Laptop & MacBook',
+    'ipad-tablet': 'iPad & Máy tính bảng',
+    'robot-hut-bui': 'Robot hút bụi & Vệ sinh',
+    'may-choi-game-console': 'Máy chơi game & Console',
     'am-thanh': 'Âm thanh & Loa',
     'gia-dung': 'Gia dụng',
     'gia-dung-sac-mau': 'Gia dụng sắc màu',
@@ -104,7 +113,7 @@ export default async function CollectionPage({ params, searchParams }) {
         </div>
 
         {/* Category Header Banner / Title */}
-        <div className="bg-white rounded-lg border border-gray-200/80 p-4 sm:p-5 mb-5 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="bg-white rounded-[6px] border border-gray-200/80 p-4 sm:p-5 mb-5 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h1 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight flex items-baseline gap-2.5">
               <span>{categoryTitle}</span>
@@ -129,7 +138,7 @@ export default async function CollectionPage({ params, searchParams }) {
           {/* Main Product Grid (Left 3 Columns) */}
           <div className="lg:col-span-3 space-y-5">
             {products.length === 0 ? (
-              <div className="bg-white rounded-lg border border-gray-200/80 p-12 text-center shadow-2xs">
+              <div className="bg-white rounded-[6px] border border-gray-200/80 p-12 text-center shadow-2xs">
                 <div className="w-14 h-14 rounded-full bg-red-50 text-[#e30019] flex items-center justify-center mx-auto mb-3">
                   <Search size={26} />
                 </div>
@@ -139,12 +148,14 @@ export default async function CollectionPage({ params, searchParams }) {
                 <p className="text-xs text-gray-500 max-w-sm mx-auto mb-4">
                   Không có sản phẩm nào khớp với bộ lọc bạn đã chọn. Hãy thử xóa bớt tiêu chí lọc hoặc chọn danh mục khác.
                 </p>
-                <Link
-                  href={`/collections/${handle}`}
-                  className="inline-flex items-center gap-1.5 px-5 py-2 bg-[#e30019] hover:bg-[#c40015] text-white text-xs font-semibold rounded-md shadow-xs transition"
-                >
-                  <RotateCcw size={13} />
-                  <span>Xóa bộ lọc</span>
+                <Link href={`/collections/${handle}`}>
+                  <Button
+                    variant="default"
+                    className="bg-red-600 hover:bg-red-700 text-white text-xs font-semibold gap-1.5 h-8.5 px-5"
+                  >
+                    <RotateCcw size={13} />
+                    <span>Xóa bộ lọc</span>
+                  </Button>
                 </Link>
               </div>
             ) : (

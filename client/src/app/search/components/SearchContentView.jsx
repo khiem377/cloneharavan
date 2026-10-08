@@ -93,7 +93,7 @@ export default function SearchContentView({
                 <Card className="p-4 hover:shadow-md hover:border-gray-300 transition flex flex-col justify-between h-full cursor-pointer">
                   <div>
                     {b.thumbnailUrl && (
-                      <div className="w-full aspect-video rounded-md overflow-hidden bg-slate-100 mb-3">
+                      <div className="w-full aspect-video rounded-[6px] overflow-hidden bg-slate-100 mb-3">
                         <img
                           src={b.thumbnailUrl}
                           alt={b.title}
@@ -147,10 +147,10 @@ export default function SearchContentView({
       {mobileFilterOpen && (
         <div className="fixed inset-0 z-50 lg:hidden flex">
           <div
-            className="fixed inset-0 bg-black/40 backdrop-blur-xs transition-opacity"
+            className="fixed inset-0 bg-black/40 transition-opacity"
             onClick={() => setMobileFilterOpen(false)}
           />
-          <div className="relative ml-auto w-full max-w-xs h-full bg-white shadow-xl p-3.5 overflow-y-auto z-10 flex flex-col">
+          <div className="relative ml-auto w-full max-w-xs h-full bg-white shadow-md border-l border-slate-200 p-3.5 overflow-y-auto z-10 flex flex-col">
             <SearchSidebarFilter
               facets={facets}
               currentFilters={currentFilters}
@@ -178,7 +178,7 @@ export default function SearchContentView({
 
         {products.length > 0 ? (
           <>
-            <SearchProductGrid products={products} />
+            <SearchProductGrid products={products} query={query} />
             <SearchPagination
               pagination={pagination}
               buildUrl={buildPaginationUrl}

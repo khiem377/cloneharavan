@@ -8,17 +8,25 @@ const { startCronJobs } = require('./utils/cronJobs');
 
 const app = express();
 
+// AI Predictive Search Engine v2 loaded
 
-const ALLOWED_ORIGINS = [
+// Storefront client origins
+const CLIENT_ORIGINS = [
+  process.env.CLIENT_URL || 'http://localhost:3000',
+  process.env.STOREFRONT_URL,
   'http://localhost:3000',
   'http://localhost:3001',
-  'http://localhost:5173',
   'http://127.0.0.1:3000',
+];
+
+// Admin dashboard origins
+const ADMIN_ORIGINS = [
+  process.env.ADMIN_URL || 'http://localhost:5173',
+  'http://localhost:5173',
   'http://127.0.0.1:5173',
-  process.env.CLIENT_URL,
-  process.env.ADMIN_URL,
-  process.env.STOREFRONT_URL,
-].filter(Boolean);
+];
+
+const ALLOWED_ORIGINS = [...CLIENT_ORIGINS, ...ADMIN_ORIGINS].filter(Boolean);
 
 app.use(cors({
   origin: (origin, cb) => {
@@ -48,7 +56,9 @@ app.use('/api/v1', routes);
 app.use(notFound);
 app.use(errorHandler);
 
-// Start background cron jobs (Item-CF every 6h, Python SVD every 4h)
+
 startCronJobs();
+
+
 
 module.exports = app;

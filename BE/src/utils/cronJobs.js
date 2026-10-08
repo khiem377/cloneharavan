@@ -180,12 +180,25 @@ const startCronJobs = () => {
   });
   console.log('[CronJobs] Upsell Engine scheduled: every 8 hours');
 
+  // Flash Sale Realtime Menu Sync: every 1 minute — tự động mở/đóng menu đúng từng phút theo lịch
+  cron.schedule('*/1 * * * *', () => {
+    try {
+      const { syncFlashSalesToMenu } = require('../services/flashSale.service');
+      syncFlashSalesToMenu().catch(() => {});
+    } catch (e) {}
+  });
+  console.log('[CronJobs] Flash Sale menu sync scheduled: every 1 minute');
+
   // Run in background 10 seconds after startup to avoid blocking server boot
   setTimeout(() => {
+    try {
+      const { syncFlashSalesToMenu } = require('../services/flashSale.service');
+      syncFlashSalesToMenu().catch(() => {});
+    } catch (e) {}
     runItemCFBatch().catch(() => { });
     autoHideExpiredBanners().catch(() => { });
     runUpsellBatch().catch(() => { });
-  }, 10000);
+  }, 3000);
 };
 
 module.exports = {

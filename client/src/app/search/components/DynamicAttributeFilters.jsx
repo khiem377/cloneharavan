@@ -84,7 +84,7 @@ export default function DynamicAttributeFilters({
                           <span>{v.value}</span>
                           <Badge
                             variant={isSelected ? 'destructive' : 'secondary'}
-                            className="px-1 py-0 text-[10px] ml-1 rounded-sm"
+                            className="px-1 py-0 text-[10px] ml-1 rounded-[4px] font-mono"
                           >
                             {v.count}
                           </Badge>
@@ -99,7 +99,7 @@ export default function DynamicAttributeFilters({
                       return (
                         <label
                           key={v.value}
-                          className="flex items-center justify-between py-1 px-1 rounded hover:bg-gray-50 text-xs text-gray-700 cursor-pointer select-none"
+                          className="flex items-center justify-between py-1 px-1 rounded-[4px] hover:bg-gray-50 text-xs text-gray-700 cursor-pointer select-none"
                         >
                           <div className="flex items-center gap-2">
                             <Checkbox

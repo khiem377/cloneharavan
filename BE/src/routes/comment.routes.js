@@ -15,4 +15,7 @@ router.post('/', protect, ctrl.createComment);
 // Protected: Thả cảm xúc Facebook
 router.post('/:id/reactions', protect, ctrl.toggleReaction);
 
+// Protected: Xóa bình luận
+router.delete('/:id', protect, ctrl.deleteComment);
+
 module.exports = router;

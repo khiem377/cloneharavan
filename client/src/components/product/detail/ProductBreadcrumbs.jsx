@@ -1,5 +1,13 @@
 import React from 'react';
 import Link from 'next/link';
+import {
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
 
 export default function ProductBreadcrumbs({ product }) {
   if (!product) return null;
@@ -8,52 +16,50 @@ export default function ProductBreadcrumbs({ product }) {
   const brand = product.brand;
 
   return (
-    <nav aria-label="Breadcrumb" className="py-3 px-2 sm:px-0">
-      <ol className="flex items-center flex-wrap gap-2 text-xs text-slate-500">
-        <li className="flex items-center">
-          <Link
-            href="/"
-            className="hover:text-slate-900 transition-colors font-medium"
-          >
+    <Breadcrumb className="py-3 px-2 sm:px-0">
+      <BreadcrumbList className="text-xs text-slate-500 gap-1.5 sm:gap-2">
+        <BreadcrumbItem>
+          <Link href="/" className="hover:text-slate-900 transition-colors font-medium">
             Trang chủ
           </Link>
-        </li>
+        </BreadcrumbItem>
 
         {category && (
           <>
-            <li className="text-slate-300">/</li>
-            <li className="flex items-center">
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
               <Link
                 href={`/collections/${category.slug || category._id}`}
                 className="hover:text-slate-900 transition-colors max-w-[180px] truncate"
               >
                 {category.name}
               </Link>
-            </li>
+            </BreadcrumbItem>
           </>
         )}
 
         {brand?.name && (
           <>
-            <li className="text-slate-300">/</li>
-            <li className="flex items-center">
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
               <span className="text-slate-600 max-w-[140px] truncate">
                 {brand.name}
               </span>
-            </li>
+            </BreadcrumbItem>
           </>
         )}
 
-        <li className="text-slate-300">/</li>
-        <li className="flex items-center">
-          <span
+        <BreadcrumbSeparator />
+        <BreadcrumbItem>
+          <BreadcrumbPage
             className="font-medium text-slate-900 max-w-[280px] sm:max-w-md truncate"
             title={product.name}
           >
             {product.name}
-          </span>
-        </li>
-      </ol>
-    </nav>
+          </BreadcrumbPage>
+        </BreadcrumbItem>
+      </BreadcrumbList>
+    </Breadcrumb>
   );
 }
+

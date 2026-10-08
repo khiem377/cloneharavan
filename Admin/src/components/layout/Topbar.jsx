@@ -149,12 +149,24 @@ function ProfileModal({ user, onClose }) {
         <div className="custom-modal-body">
           {/* Avatar Header */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, paddingBottom: 8 }}>
-            <div style={{
-              width: 64, height: 64, borderRadius: '50%', background: '#0f172a', color: '#fff',
-              fontSize: 24, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center'
-            }}>
-              {initials}
-            </div>
+            {user?.avatar?.url ? (
+              <img
+                src={user.avatar.url}
+                alt={user.fullName || 'Avatar'}
+                referrerPolicy="no-referrer"
+                style={{
+                  width: 64, height: 64, borderRadius: '50%', objectFit: 'cover',
+                  border: '2px solid #e2e8f0'
+                }}
+              />
+            ) : (
+              <div style={{
+                width: 64, height: 64, borderRadius: '50%', background: '#0f172a', color: '#fff',
+                fontSize: 24, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center'
+              }}>
+                {initials}
+              </div>
+            )}
             <div style={{ textAlign: 'center' }}>
               <h4 style={{ fontSize: 15, fontWeight: 700, color: '#0f172a' }}>{user?.fullName || 'Admin User'}</h4>
               <span style={{
@@ -236,18 +248,36 @@ export default function Topbar({ title, onToggleSidebar }) {
           <div style={{ position: 'relative' }} ref={menuRef}>
             <button
               onClick={() => setDropdownOpen(prev => !prev)}
-              className="topbar-avatar"
+              className="topbar-avatar overflow-hidden p-0 flex items-center justify-center"
               title={user?.fullName || 'Admin'}
             >
-              {initials}
+              {user?.avatar?.url ? (
+                <img
+                  src={user.avatar.url}
+                  alt={user.fullName || 'Avatar'}
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-cover rounded-full"
+                />
+              ) : (
+                initials
+              )}
             </button>
 
             {dropdownOpen && (
               <div className="topbar-dropdown">
                 {/* Header User Card */}
                 <div className="dropdown-user-header">
-                  <div className="dropdown-avatar-circle">
-                    {initials}
+                  <div className="dropdown-avatar-circle overflow-hidden p-0 flex items-center justify-center">
+                    {user?.avatar?.url ? (
+                      <img
+                        src={user.avatar.url}
+                        alt={user.fullName || 'Avatar'}
+                        referrerPolicy="no-referrer"
+                        className="w-full h-full object-cover rounded-full"
+                      />
+                    ) : (
+                      initials
+                    )}
                   </div>
                   <div className="dropdown-user-info">
                     <span className="dropdown-user-name">

@@ -38,9 +38,11 @@ const recommendationRoutes = require('./recommendation.routes');
 const chatbotRoutes = require('./chatbot.routes');
 const upsellRoutes = require('./upsell.routes');
 const commentRoutes = require('./comment.routes');
+const shippingRoutes = require('./shipping.routes');
 
 router.use('/auth', authRoutes);
 router.use('/users', userRoutes);
+router.use('/shipping', shippingRoutes);
 router.use('/banners', bannerRoutes);
 router.use('/media', mediaRoutes);
 router.use('/folders', folderRoutes);

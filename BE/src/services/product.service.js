@@ -267,8 +267,31 @@ const createProduct = async (data) => {
 
   if (!data.categories || data.categories.length === 0)
     throw new AppError('Sản phẩm phải có ít nhất 1 danh mục', 400);
-  if (!data.thumbnailMediaId)
+  let thumbnail = null;
+  if (data.thumbnailMediaId) {
+    const [t] = await resolveMediaBulk([data.thumbnailMediaId]);
+    thumbnail = t;
+  } else if (data.thumbnailUrl) {
+    thumbnail = { mediaId: null, url: data.thumbnailUrl, publicId: '' };
+  } else if (data.thumbnail && typeof data.thumbnail === 'object') {
+    thumbnail = data.thumbnail;
+  }
+  if (!thumbnail || !thumbnail.url) {
     throw new AppError('Ảnh đại diện sản phẩm là bắt buộc', 400);
+  }
+
+  let images = [];
+  if (Array.isArray(data.imageMediaIds) && data.imageMediaIds.length > 0) {
+    images = await resolveMediaBulk(data.imageMediaIds);
+  } else if (Array.isArray(data.imageUrls) && data.imageUrls.length > 0) {
+    images = data.imageUrls.map((u) => ({
+      mediaId: null,
+      url: typeof u === 'string' ? u : u?.url || '',
+      publicId: '',
+    }));
+  } else if (Array.isArray(data.images) && data.images.length > 0) {
+    images = data.images.map((img) => (typeof img === 'string' ? { mediaId: null, url: img, publicId: '' } : img));
+  }
 
   // Batch validate parallel — 4 queries cùng lúc thay vì sequential
   const [existingSlug, existingSku, foundCats, brandExists] = await Promise.all([
@@ -283,12 +306,6 @@ const createProduct = async (data) => {
   if (foundCats.length !== data.categories.length)
     throw new AppError('Một hoặc nhiều danh mục không tồn tại', 400);
   if (!brandExists) throw new AppError('Thương hiệu sản phẩm không tồn tại', 404);
-
-  // Resolve tất cả media trong 1 batch query
-  const allMediaIds = [data.thumbnailMediaId, ...(data.imageMediaIds || [])];
-  const resolvedMedia = await resolveMediaBulk(allMediaIds);
-  const thumbnail = resolvedMedia[0];
-  const images = resolvedMedia.slice(1);
 
   const productCode = await generateProductCode(data.name);
 
@@ -683,12 +700,25 @@ const updateProduct = async (id, data) => {
   await Promise.all(checks);
 
   // Resolve media — bulk
-  if (data.thumbnailMediaId !== undefined) {
+  if (data.thumbnailMediaId) {
     const [thumbnail] = await resolveMediaBulk([data.thumbnailMediaId]);
-    product.thumbnail = thumbnail;
+    if (thumbnail) product.thumbnail = thumbnail;
+  } else if (data.thumbnailUrl) {
+    product.thumbnail = {
+      mediaId: null,
+      url: data.thumbnailUrl,
+      publicId: '',
+    };
   }
-  if (data.imageMediaIds !== undefined) {
+
+  if (data.imageMediaIds !== undefined && Array.isArray(data.imageMediaIds) && data.imageMediaIds.length > 0) {
     product.images = await resolveMediaBulk(data.imageMediaIds);
+  } else if (data.imageUrls !== undefined && Array.isArray(data.imageUrls)) {
+    product.images = data.imageUrls.map((u) => ({
+      mediaId: null,
+      url: typeof u === 'string' ? u : u?.url || '',
+      publicId: '',
+    }));
   }
 
   // Sync price/stock lên Default Variant
@@ -771,14 +801,30 @@ const getProductDeals = async (idOrSlug) => {
   const fsData = await getActiveFlashSaleMap();
   let matchedFsItem = null;
   if (fsData && fsData.itemMap) {
-    const keyWithVariant = dv ? `${product._id}_${dv._id}` : `${product._id}_default`;
-    const keyDefault = `${product._id}_default`;
+    const pIdStr = product._id.toString();
+    const keyWithVariant = dv ? `${pIdStr}_${dv._id}` : `${pIdStr}_default`;
+    const keyDefault = `${pIdStr}_default`;
     matchedFsItem = fsData.itemMap.get(keyWithVariant) || fsData.itemMap.get(keyDefault);
+
+    // Fallback: scan map tìm item theo productId (flash sale gắn với variant cụ thể)
+    if (!matchedFsItem) {
+      let bestItem = null;
+      let bestPrice = Infinity;
+      for (const [, item] of fsData.itemMap) {
+        const itemPId = item.productId?.toString() || '';
+        if (itemPId === pIdStr) {
+          const p = item.flashSalePrice ?? item.flashPrice ?? Infinity;
+          if (p < bestPrice) { bestPrice = p; bestItem = item; }
+        }
+      }
+      matchedFsItem = bestItem;
+    }
   }
 
   const fsPrice = matchedFsItem ? (matchedFsItem.flashSalePrice ?? matchedFsItem.flashPrice) : null;
   const fsRemaining = matchedFsItem ? Math.max(0, (matchedFsItem.stockLimit || 0) - (matchedFsItem.soldCount || 0)) : 0;
   const isFlashSaleActive = matchedFsItem && fsPrice !== null && fsPrice < productPrice && fsRemaining > 0;
+
 
   const activeFilter = {
     isActive: true,
@@ -844,11 +890,30 @@ const getProductDeals = async (idOrSlug) => {
     effectivePrice,
     bestPromotion,
     flashSale: flashSaleDeal,
+    flashSaleItems: fsData?.activeSale ? (() => {
+      // Trả về tất cả flash sale items của product này, key by variantId (hoặc 'default')
+      const items = [];
+      for (const [, item] of (fsData.itemMap || new Map())) {
+        const itemPId = item.productId?.toString() || '';
+        if (itemPId === product._id.toString()) {
+          items.push({
+            variantId: item.variantId ? item.variantId.toString() : null,
+            price: item.flashSalePrice ?? item.flashPrice,
+            originalPrice: item.originalPrice,
+            remaining: Math.max(0, (item.stockLimit || 0) - (item.soldCount || 0)),
+            stockLimit: item.stockLimit,
+            soldCount: item.soldCount,
+          });
+        }
+      }
+      return items;
+    })() : [],
     isFlashSale: isFlashSaleActive,
     dealNotice: isFlashSaleActive
       ? 'Sản phẩm đang trong Flash Sale — Giá sốc độc quyền, không áp dụng cộng dồn với khuyến mãi hoặc quà tặng kèm.'
       : null,
   };
+
 };
 
 const searchInventoryProducts = async (keyword) => {

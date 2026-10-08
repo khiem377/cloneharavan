@@ -30,7 +30,7 @@ export const SearchCategoryPicker = ({
       </button>
 
       {isOpen && (
-        <div className="absolute left-0 top-full mt-2 w-40 bg-white rounded-xl shadow-2xl border border-slate-200 py-1.5 z-50 text-xs animate-fadeIn">
+        <div className="absolute left-0 top-full mt-2 w-40 bg-white rounded-[6px] shadow-md border border-slate-200 py-1.5 z-50 text-xs animate-fadeIn">
           {categories.map((cat) => (
             <button
               key={cat.value}

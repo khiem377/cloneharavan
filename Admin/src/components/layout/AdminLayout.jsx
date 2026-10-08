@@ -1,8 +1,9 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { useState, useEffect, Suspense } from 'react';
-import { Bell, X, Eye, EyeOff, Loader2 } from '@/components/ui/Icons';
+import { useState, useEffect, useRef, Suspense } from 'react';
+import { Bell, X, Eye, EyeOff, Loader2, ShieldCheck, KeyRound, User as UserIcon } from 'lucide-react';
 import AppSidebar from './Sidebar';
-import ChatbotBubble from '@/components/ui/ChatbotBubble';
+import SessionStreamListener from '@/components/common/SessionStreamListener';
+import ThemeToggle from '@/components/ui/ThemeToggle';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -16,91 +17,150 @@ import {
 import useAuthStore from '@/store/authStore';
 import { authService } from '@/services/auth.service';
 import { toast } from '@/providers/ToastProvider';
+import { cn } from '@/lib/utils';
 
 const PAGE_TITLES = {
-  '/media':            'Thư viện ảnh',
-  '/banners':          'Banners',
-  '/categories':       'Danh mục',
+  '/media':            'Thư viện tệp & ảnh',
+  '/banners':          'Banner',
+  '/categories':       'Danh mục sản phẩm',
   '/brands':           'Thương hiệu',
-  '/products':         'Sản phẩm',
+  '/products':         'Quản lý sản phẩm',
   '/products/new':     'Tạo sản phẩm mới',
-  '/products/import':  'Import / Export',
-  '/settings':         'Cài đặt',
-  '/dashboard':        'Dashboard',
+  '/products/import':  'Nhập / Xuất dữ liệu',
+  '/customers':        'Quản lý khách hàng',
+  '/staffs':           'Nhân viên & Quản trị',
+  '/roles':            'Vai trò & Quyền',
+  '/menus':            'Điều hướng Menu',
+  '/audit-logs':       'Nhật ký thao tác',
+  '/settings':         'Cài đặt hệ thống',
+  '/dashboard':        'Tổng quan hệ thống',
+  '/stock-documents':  'Đơn & Phiếu kho',
+  '/suppliers':        'Nhà cung cấp',
+  '/purchase-orders':  'Đơn mua hàng (PO)',
+  '/stock-receivings': 'Phiếu nhập kho (PNK)',
+  '/purchase-returns': 'Trả hàng nhập',
+  '/stock-exports':    'Phiếu xuất kho',
+  '/stock-audits':     'Kiểm kê & Cân bằng',
+  '/stock-alerts':     'Cảnh báo hết kho',
+  '/inventory-report': 'Báo cáo tồn kho',
+  '/stock-movements':  'Nhật ký biến động',
+  '/promotions/coupons':     'Mã giảm giá (Coupon)',
+  '/promotions/discounts':   'Chương trình ưu đãi',
+  '/promotions/gifts':       'Quà tặng kèm',
+  '/promotions/flash-sales': 'Flash Sale giờ vàng',
+  '/blog/posts':       'Danh sách bài viết',
+  '/blog/posts/new':   'Viết bài mới',
+  '/blog/categories':  'Chuyên mục bài viết',
+  '/blog/tags':        'Thẻ tag phân loại',
+  '/profile':          'Hồ sơ tài khoản & Quản trị',
 };
 
-// ── Change Password Modal ─────────────────────────────────────────────────────
+// ── Change Password Modal (Flat, 1px border, 6px radius) ───────────────────────
 function ChangePasswordModal({ onClose }) {
   const [form, setForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [show, setShow] = useState({ current: false, next: false, confirm: false });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
 
-  const set = (key, val) => { setForm(p => ({ ...p, [key]: val })); setErrors(p => ({ ...p, [key]: '' })); };
+  const set = (key, val) => {
+    setForm((p) => ({ ...p, [key]: val }));
+    setErrors((p) => ({ ...p, [key]: '' }));
+  };
 
   const validate = () => {
     const e = {};
     if (!form.currentPassword) e.currentPassword = 'Vui lòng nhập mật khẩu hiện tại';
     if (form.newPassword.length < 6) e.newPassword = 'Tối thiểu 6 ký tự';
-    if (form.newPassword !== form.confirmPassword) e.confirmPassword = 'Không khớp mật khẩu mới';
+    if (form.newPassword !== form.confirmPassword) e.confirmPassword = 'Mật khẩu xác nhận không khớp';
     return e;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     const errs = validate();
-    if (Object.keys(errs).length) { setErrors(errs); return; }
+    if (Object.keys(errs).length) {
+      setErrors(errs);
+      return;
+    }
     setLoading(true);
     try {
-      await authService.changePassword({ currentPassword: form.currentPassword, newPassword: form.newPassword });
+      await authService.changePassword({
+        currentPassword: form.currentPassword,
+        newPassword: form.newPassword,
+      });
       toast.success('Đổi mật khẩu thành công');
       onClose();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Đổi mật khẩu thất bại');
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="custom-modal-overlay" onClick={onClose}>
-      <div className="custom-modal-box" onClick={e => e.stopPropagation()}>
-        <div className="custom-modal-header">
-          <h3 className="custom-modal-title">Đổi mật khẩu</h3>
-          <button className="custom-modal-close" onClick={onClose}><X size={16} /></button>
-        </div>
-        <form onSubmit={handleSubmit}>
-          <div className="custom-modal-body">
-            {[
-              { key: 'currentPassword', label: 'Mật khẩu hiện tại', showKey: 'current' },
-              { key: 'newPassword',     label: 'Mật khẩu mới',      showKey: 'next'    },
-              { key: 'confirmPassword', label: 'Xác nhận mật khẩu', showKey: 'confirm' },
-            ].map(({ key, label, showKey }) => (
-              <div className="form-group" key={key}>
-                <label className="form-label">{label}</label>
-                <div style={{ position: 'relative' }}>
-                  <input
-                    type={show[showKey] ? 'text' : 'password'}
-                    className="field-input"
-                    style={{ paddingRight: 36 }}
-                    value={form[key]}
-                    onChange={e => set(key, e.target.value)}
-                    placeholder={`Nhập ${label.toLowerCase()}`}
-                  />
-                  <button
-                    type="button"
-                    style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)' }}
-                    onClick={() => setShow(p => ({ ...p, [showKey]: !p[showKey] }))}
-                  >
-                    {show[showKey] ? <EyeOff size={15} /> : <Eye size={15} />}
-                  </button>
-                </div>
-                {errors[key] && <span className="form-error">{errors[key]}</span>}
-              </div>
-            ))}
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 antialiased">
+      <div className="w-full max-w-md rounded-[6px] border border-border bg-card p-6 shadow-sm text-card-foreground">
+        <div className="flex items-center justify-between border-b border-border pb-3 mb-4">
+          <div className="flex items-center gap-2">
+            <KeyRound className="size-4 text-primary" />
+            <h3 className="text-sm font-semibold text-foreground">Đổi mật khẩu tài khoản</h3>
           </div>
-          <div className="custom-modal-footer">
-            <button type="button" className="btn-ghost-sm" onClick={onClose} disabled={loading}>Hủy</button>
-            <button type="submit" className="btn-primary-sm" disabled={loading}>
-              {loading ? <Loader2 size={13} className="spin" /> : null} Đổi mật khẩu
+          <button
+            type="button"
+            onClick={onClose}
+            className="size-7 flex items-center justify-center rounded-[4px] text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3.5">
+          {[
+            { key: 'currentPassword', label: 'Mật khẩu hiện tại', showKey: 'current' },
+            { key: 'newPassword', label: 'Mật khẩu mới', showKey: 'next' },
+            { key: 'confirmPassword', label: 'Xác nhận mật khẩu mới', showKey: 'confirm' },
+          ].map(({ key, label, showKey }) => (
+            <div className="flex flex-col gap-1.5" key={key}>
+              <label className="text-xs font-semibold text-foreground">{label}</label>
+              <div className="relative">
+                <input
+                  type={show[showKey] ? 'text' : 'password'}
+                  className={cn(
+                    'h-9 w-full rounded-[6px] border border-input bg-background pl-3 pr-9 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-ring focus:ring-1 focus:ring-ring',
+                    errors[key] && 'border-destructive focus:border-destructive focus:ring-destructive'
+                  )}
+                  value={form[key]}
+                  onChange={(e) => set(key, e.target.value)}
+                  placeholder={`Nhập ${label.toLowerCase()}`}
+                />
+                <button
+                  type="button"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  onClick={() => setShow((p) => ({ ...p, [showKey]: !p[showKey] }))}
+                >
+                  {show[showKey] ? <EyeOff size={15} /> : <Eye size={15} />}
+                </button>
+              </div>
+              {errors[key] && <span className="text-[11px] font-medium text-destructive">{errors[key]}</span>}
+            </div>
+          ))}
+
+          <div className="mt-2 flex items-center justify-end gap-2 border-t border-border pt-4">
+            <button
+              type="button"
+              className="h-9 px-3.5 rounded-[6px] border border-border text-xs font-semibold text-foreground hover:bg-accent transition-colors active:scale-[0.98]"
+              onClick={onClose}
+              disabled={loading}
+            >
+              Hủy
+            </button>
+            <button
+              type="submit"
+              className="h-9 px-4 rounded-[6px] bg-primary text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-colors flex items-center gap-1.5 active:scale-[0.98] disabled:opacity-50"
+              disabled={loading}
+            >
+              {loading && <Loader2 size={14} className="animate-spin" />}
+              <span>Lưu thay đổi</span>
             </button>
           </div>
         </form>
@@ -109,67 +169,40 @@ function ChangePasswordModal({ onClose }) {
   );
 }
 
-// ── Profile Modal ─────────────────────────────────────────────────────────────
-function ProfileModal({ user, onClose }) {
-  const initials = (user?.fullName?.[0] || user?.email?.[0] || 'A').toUpperCase();
-  return (
-    <div className="custom-modal-overlay" onClick={onClose}>
-      <div className="custom-modal-box" onClick={e => e.stopPropagation()}>
-        <div className="custom-modal-header">
-          <h3 className="custom-modal-title">Thông tin tài khoản</h3>
-          <button className="custom-modal-close" onClick={onClose}><X size={16} /></button>
-        </div>
-        <div className="custom-modal-body">
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, paddingBottom: 8 }}>
-            <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#0f172a', color: '#fff', fontSize: 24, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {initials}
-            </div>
-            <div style={{ textAlign: 'center' }}>
-              <h4 style={{ fontSize: 15, fontWeight: 700, color: '#0f172a' }}>{user?.fullName || 'Admin User'}</h4>
-              <span style={{ display: 'inline-block', marginTop: 4, padding: '2px 10px', borderRadius: 12, fontSize: 11, fontWeight: 600, background: '#f1f5f9', color: '#475569', textTransform: 'uppercase' }}>
-                {user?.role || 'Admin'}
-              </span>
-            </div>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', borderTop: '1px solid #f1f5f9' }}>
-            {[['Họ và tên', user?.fullName], ['Email', user?.email], ['Số điện thoại', user?.phone]].map(([k, v]) => (
-              <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #f8fafc' }}>
-                <span style={{ fontSize: 13, color: '#64748b' }}>{k}</span>
-                <span style={{ fontSize: 13, fontWeight: 600, color: '#0f172a' }}>{v || '—'}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="custom-modal-footer">
-          <button className="btn-primary-sm" onClick={onClose}>Đóng</button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
-// ── Topbar ────────────────────────────────────────────────────────────────────
+// ── Topbar (Clean, Flat, Border-b 1px, 6px controls) ──────────────────────────
 function Topbar({ title }) {
   return (
-    <header className="flex h-16 shrink-0 items-center gap-2 border-b border-border bg-background px-4 transition-[width,height] ease-linear">
-      <div className="flex items-center gap-2">
-        <SidebarTrigger className="-ml-1" />
-        <Separator orientation="vertical" className="mr-2 h-4" />
+    <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-background px-4">
+      <div className="flex items-center gap-2.5">
+        <SidebarTrigger className="-ml-1 size-8 rounded-[6px] border border-border bg-card hover:bg-accent text-foreground flex items-center justify-center transition-colors active:scale-[0.98]" />
+        <Separator orientation="vertical" className="h-4" />
         <Breadcrumb>
-          <BreadcrumbList>
+          <BreadcrumbList className="text-xs font-medium">
             <BreadcrumbItem className="hidden md:block">
-              <BreadcrumbLink href="#">Quản trị</BreadcrumbLink>
+              <BreadcrumbLink href="/dashboard" className="text-muted-foreground hover:text-foreground">
+                Quản trị
+              </BreadcrumbLink>
             </BreadcrumbItem>
             <BreadcrumbSeparator className="hidden md:block" />
             <BreadcrumbItem>
-              <BreadcrumbPage>{title}</BreadcrumbPage>
+              <BreadcrumbPage className="font-semibold text-foreground">{title}</BreadcrumbPage>
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
       </div>
-      <div className="ml-auto flex items-center gap-2">
-        <button className="flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors">
-          <Bell size={16} />
+
+      <div className="flex items-center gap-2">
+        {/* Studio-grade Smooth Theme Toggle Button */}
+        <ThemeToggle />
+
+        {/* Notification Bell */}
+        <button
+          type="button"
+          className="size-8 flex items-center justify-center rounded-[6px] border border-border bg-card text-muted-foreground hover:text-foreground hover:bg-accent transition-colors active:scale-[0.98] cursor-pointer"
+          title="Thông báo"
+        >
+          <Bell size={15} />
         </button>
       </div>
     </header>
@@ -180,42 +213,48 @@ function Topbar({ title }) {
 export default function AdminLayout() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
+  const navigateRef = useRef(navigate);
+  navigateRef.current = navigate;
   const [modal, setModal] = useState(null); // 'profile' | 'changepass'
 
   useEffect(() => {
-    window.__navigate__ = navigate;
-    return () => { delete window.__navigate__; };
-  }, [navigate]);
+    window.__navigate__ = (...args) => navigateRef.current(...args);
+    return () => {
+      delete window.__navigate__;
+    };
+  }, []);
 
-  const title = Object.entries(PAGE_TITLES).find(([key]) =>
-    pathname === key || (key !== '/' && pathname.startsWith(key + '/'))
-  )?.[1] ?? 'Admin';
+  const title =
+    Object.entries(PAGE_TITLES).find(
+      ([key]) => pathname === key || (key !== '/' && pathname.startsWith(key + '/'))
+    )?.[1] ?? 'Bảng điều khiển';
 
   return (
     <SidebarProvider defaultOpen={true}>
+      <SessionStreamListener />
       <AppSidebar
-        onProfile={() => setModal('profile')}
+        onProfile={() => navigate('/profile')}
         onChangePass={() => setModal('changepass')}
       />
-      <SidebarInset className="h-screen max-h-screen overflow-hidden flex flex-col">
+      <SidebarInset className="min-h-[100dvh] max-h-[100dvh] overflow-hidden flex flex-col bg-background">
         <Topbar title={title} />
-        <main className="flex-1 overflow-y-auto p-3 sm:p-6">
-          <Suspense fallback={
-            <div className="flex items-center justify-center p-12 text-slate-500">
-              <Loader2 className="w-6 h-6 animate-spin mr-2" /> Đang tải...
-            </div>
-          }>
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-background">
+          <Suspense
+            fallback={
+              <div className="flex items-center justify-center p-12 text-muted-foreground text-xs font-mono">
+                <Loader2 className="size-4 animate-spin mr-2" /> Đang tải dữ liệu...
+              </div>
+            }
+          >
             <Outlet />
           </Suspense>
         </main>
       </SidebarInset>
 
       {/* Modals */}
-      {modal === 'profile'    && <ProfileModal user={useAuthStore.getState().user} onClose={() => setModal(null)} />}
       {modal === 'changepass' && <ChangePasswordModal onClose={() => setModal(null)} />}
-
-      {/* Chatbot test bubble — remove khi không cần nữa */}
-      <ChatbotBubble />
     </SidebarProvider>
   );
 }
+
+

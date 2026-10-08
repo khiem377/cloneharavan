@@ -1,6 +1,7 @@
 const User = require('../models/user.model');
 const { AppError } = require('../utils/AppError');
 const { uploadToCloudinary, deleteFromCloudinary } = require('../config/cloudinary');
+const sseService = require('./sse.service');
 
 // ==========================================
 // 1. AVATAR MANAGEMENT
@@ -180,8 +181,11 @@ const updateAddress = async (userId, addressId, updateData) => {
   if (updateData.fullName !== undefined) address.fullName = updateData.fullName;
   if (updateData.phone !== undefined) address.phone = updateData.phone;
   if (updateData.province !== undefined) address.province = updateData.province;
+  if (updateData.provinceId !== undefined) address.provinceId = updateData.provinceId;
   if (updateData.district !== undefined) address.district = updateData.district;
+  if (updateData.districtId !== undefined) address.districtId = updateData.districtId;
   if (updateData.ward !== undefined) address.ward = updateData.ward;
+  if (updateData.wardCode !== undefined) address.wardCode = updateData.wardCode;
   if (updateData.detailAddress !== undefined) address.detailAddress = updateData.detailAddress;
   if (updateData.isDefault !== undefined) address.isDefault = updateData.isDefault;
 
@@ -271,6 +275,7 @@ const syncOrderAddress = async (userId, orderAddress) => {
 
 /**
  * Lấy danh sách người dùng cho Admin
+ * Hỗ trợ userType: 'customer' (role: 'user') hoặc 'staff' (role khác 'user')
  */
 const getAllUsers = async (query = {}) => {
   const {
@@ -278,6 +283,7 @@ const getAllUsers = async (query = {}) => {
     limit = 10,
     q,
     role,
+    userType,
     isActive,
     isEmailVerified,
     isPhoneVerified,
@@ -295,11 +301,18 @@ const getAllUsers = async (query = {}) => {
     ];
   }
 
-  if (role) {
+  if (userType === 'customer') {
+    filter.role = 'user';
+  } else if (userType === 'staff') {
+    filter.role = { $ne: 'user' };
+    if (role && role !== 'all') {
+      filter.role = role;
+    }
+  } else if (role && role !== 'all') {
     filter.role = role;
   }
 
-  if (isActive !== undefined) {
+  if (isActive !== undefined && isActive !== 'all') {
     filter.isActive = isActive === 'true' || isActive === true;
   }
 
@@ -317,7 +330,16 @@ const getAllUsers = async (query = {}) => {
 
   const [total, users] = await Promise.all([
     User.countDocuments(filter),
-    User.find(filter).sort(sort).skip(skip).limit(limitNum),
+    User.find(filter)
+      .populate({
+        path: 'roleId',
+        select: 'name code description permissions',
+        populate: { path: 'permissions', select: 'name code module description' },
+      })
+      .populate('customPermissions', 'name code module description')
+      .sort(sort)
+      .skip(skip)
+      .limit(limitNum),
   ]);
 
   return {
@@ -333,13 +355,20 @@ const getAllUsers = async (query = {}) => {
  * Lấy chi tiết người dùng theo ID
  */
 const getUserById = async (id) => {
-  const user = await User.findById(id);
+  const user = await User.findById(id)
+    .populate({
+      path: 'roleId',
+      select: 'name code description permissions',
+      populate: { path: 'permissions', select: 'name code module description' },
+    })
+    .populate('customPermissions', 'name code module description');
   if (!user) throw new AppError('Không tìm thấy người dùng', 404);
   return user;
 };
 
 /**
  * Khóa / Mở khóa tài khoản người dùng
+ * Nếu khóa (isActive = false): Hủy refreshToken và bắn SSE Force Logout tức thì
  */
 const toggleUserStatus = async (adminUserId, targetUserId, isActive) => {
   if (adminUserId.toString() === targetUserId.toString()) {
@@ -350,6 +379,18 @@ const toggleUserStatus = async (adminUserId, targetUserId, isActive) => {
   if (!user) throw new AppError('Không tìm thấy người dùng', 404);
 
   user.isActive = isActive !== undefined ? isActive : !user.isActive;
+
+  // Nếu tài khoản bị khóa
+  if (!user.isActive) {
+    user.refreshToken = null; // Xóa refreshToken
+    // Gửi realtime SSE Force Logout tới tất cả thiết bị của user này
+    sseService.sendToUser(targetUserId.toString(), {
+      type: 'FORCE_LOGOUT',
+      reason: 'Tài khoản của bạn đã bị vô hiệu hóa bởi Quản trị viên.',
+      timestamp: Date.now(),
+    });
+  }
+
   await user.save();
   return user;
 };
@@ -364,18 +405,28 @@ const updateUser = async (id, updateData) => {
 };
 
 /**
- * Thay đổi vai trò người dùng (user / admin)
+ * Thay đổi vai trò người dùng (user / admin / staff...)
  */
-const updateUserRole = async (adminUserId, targetUserId, role) => {
+const updateUserRole = async (adminUserId, targetUserId, role, roleId, customPermissions) => {
   if (adminUserId.toString() === targetUserId.toString()) {
     throw new AppError('Bạn không thể tự thay đổi vai trò của chính mình', 400);
   }
 
+  const update = { role };
+  if (roleId !== undefined) {
+    update.roleId = roleId || null;
+  }
+  if (customPermissions !== undefined) {
+    update.customPermissions = Array.isArray(customPermissions) ? customPermissions : [];
+  }
+
   const user = await User.findByIdAndUpdate(
     targetUserId,
-    { role },
+    update,
     { returnDocument: 'after', runValidators: true }
-  );
+  )
+    .populate('roleId', 'name code description')
+    .populate('customPermissions', 'name code module description');
 
   if (!user) throw new AppError('Không tìm thấy người dùng', 404);
   return user;
@@ -392,6 +443,13 @@ const deleteUser = async (adminUserId, targetUserId) => {
   const user = await User.findById(targetUserId);
   if (!user) throw new AppError('Không tìm thấy người dùng', 404);
 
+  // Buộc đăng xuất trước khi xóa
+  sseService.sendToUser(targetUserId.toString(), {
+    type: 'FORCE_LOGOUT',
+    reason: 'Tài khoản của bạn đã bị xóa khỏi hệ thống.',
+    timestamp: Date.now(),
+  });
+
   if (user.avatar && user.avatar.publicId) {
     try {
       await deleteFromCloudinary(user.avatar.publicId);
@@ -405,7 +463,7 @@ const deleteUser = async (adminUserId, targetUserId) => {
 };
 
 /**
- * Tạo tài khoản Admin mới (do Admin quản lý tạo)
+ * Tạo tài khoản Nhân viên / Admin mới (do Admin quản lý tạo)
  */
 const createAdminUser = async (data) => {
   const emailTaken = await User.findOne({ email: data.email.toLowerCase().trim() });
@@ -413,19 +471,22 @@ const createAdminUser = async (data) => {
     throw new AppError('Email đã được sử dụng', 400);
   }
 
-  const phoneTaken = await User.findOne({ phone: data.phone.trim() });
-  if (phoneTaken) {
-    throw new AppError('Số điện thoại đã được sử dụng', 400);
+  if (data.phone) {
+    const phoneTaken = await User.findOne({ phone: data.phone.trim() });
+    if (phoneTaken) {
+      throw new AppError('Số điện thoại đã được sử dụng', 400);
+    }
   }
 
   const newAdmin = await User.create({
     fullName: data.fullName.trim(),
     email: data.email.toLowerCase().trim(),
     password: data.password,
-    phone: data.phone.trim(),
-    gender: data.gender,
+    phone: (data.phone || '').trim(),
+    gender: data.gender || 'other',
     dateOfBirth: data.dateOfBirth || null,
-    role: 'admin',
+    role: data.role || 'staff',
+    roleId: data.roleId || null,
     isActive: data.isActive !== undefined ? data.isActive : true,
     isEmailVerified: data.isEmailVerified !== undefined ? data.isEmailVerified : true,
     isPhoneVerified: data.isPhoneVerified !== undefined ? data.isPhoneVerified : true,
@@ -442,6 +503,86 @@ const createAdminUser = async (data) => {
   delete userObj.phoneOtpExpires;
 
   return userObj;
+};
+
+/**
+ * Thống kê KPI người dùng (Customers hoặc Staffs)
+ */
+const getUserStats = async (userType = 'customer') => {
+  const query = userType === 'customer' ? { role: 'user' } : { role: { $ne: 'user' } };
+  const total = await User.countDocuments(query);
+  const active = await User.countDocuments({ ...query, isActive: true });
+  const inactive = await User.countDocuments({ ...query, isActive: false });
+
+  const startOfMonth = new Date();
+  startOfMonth.setDate(1);
+  startOfMonth.setHours(0, 0, 0, 0);
+  const newThisMonth = await User.countDocuments({ ...query, createdAt: { $gte: startOfMonth } });
+
+  let roleDistribution = {};
+  if (userType === 'staff') {
+    const agg = await User.aggregate([
+      { $match: { role: { $ne: 'user' } } },
+      { $group: { _id: '$role', count: { $sum: 1 } } },
+    ]);
+    agg.forEach((item) => {
+      roleDistribution[item._id] = item.count;
+    });
+  }
+
+  return { total, active, inactive, newThisMonth, roleDistribution };
+};
+
+/**
+ * Cập nhật trạng thái hàng loạt (Khóa / Mở khóa)
+ */
+const bulkToggleUserStatus = async (adminUserId, userIds, isActive) => {
+  if (!Array.isArray(userIds) || userIds.length === 0) {
+    throw new AppError('Danh sách tài khoản không hợp lệ', 400);
+  }
+
+  const validIds = userIds.filter((id) => id.toString() !== adminUserId.toString());
+  await User.updateMany(
+    { _id: { $in: validIds } },
+    { $set: { isActive, ...(isActive ? {} : { refreshToken: null }) } }
+  );
+
+  if (!isActive) {
+    validIds.forEach((id) => {
+      sseService.sendToUser(id.toString(), {
+        type: 'FORCE_LOGOUT',
+        reason: 'Tài khoản của bạn đã bị vô hiệu hóa bởi Quản trị viên.',
+        timestamp: Date.now(),
+      });
+    });
+  }
+
+  return { modifiedCount: validIds.length };
+};
+
+/**
+ * Đặt lại mật khẩu nhân viên / người dùng (do Admin thực hiện)
+ */
+const resetUserPassword = async (adminUserId, targetUserId, newPassword) => {
+  if (!newPassword || newPassword.length < 6) {
+    throw new AppError('Mật khẩu mới phải có ít nhất 6 ký tự', 400);
+  }
+
+  const user = await User.findById(targetUserId);
+  if (!user) throw new AppError('Không tìm thấy người dùng', 404);
+
+  user.password = newPassword;
+  user.refreshToken = null;
+  await user.save();
+
+  // Đăng xuất các phiên cũ để bắt buộc đăng nhập với mật khẩu mới
+  sseService.sendToUser(targetUserId.toString(), {
+    type: 'FORCE_LOGOUT',
+    reason: 'Mật khẩu tài khoản của bạn đã được thay đổi bởi Quản trị viên. Vui lòng đăng nhập lại.',
+    timestamp: Date.now(),
+  });
+
+  return { message: 'Đặt lại mật khẩu thành công' };
 };
 
 module.exports = {
@@ -465,6 +606,9 @@ module.exports = {
   updateUserRole,
   deleteUser,
   createAdminUser,
+  getUserStats,
+  bulkToggleUserStatus,
+  resetUserPassword,
 };
 
 

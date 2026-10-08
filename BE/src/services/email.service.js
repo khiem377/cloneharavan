@@ -1,7 +1,4 @@
 const nodemailer = require('nodemailer');
-console.log('EMAIL_HOST:', process.env.EMAIL_HOST);
-console.log('EMAIL_USER:', process.env.EMAIL_USER);
-console.log('EMAIL_PASS:', process.env.EMAIL_PASS ? 'ĐÃ CÓ' : 'THIẾU');
 
 /**
  * Khởi tạo Nodemailer Transporter
@@ -15,7 +12,7 @@ const createTransporter = () => {
     return nodemailer.createTransport({
       host: process.env.EMAIL_HOST,
       port: Number(process.env.EMAIL_PORT) || 587,
-      secure: process.env.EMAIL_SECURE === 'true', // true cho 465, false cho các port khác
+      secure: process.env.EMAIL_SECURE === 'true',
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
@@ -27,23 +24,15 @@ const createTransporter = () => {
 
 /**
  * Gửi email chung
- * @param {Object} options - { to, subject, html, text }
  */
 const sendEmail = async ({ to, subject, html, text }) => {
   const transporter = createTransporter();
-  const from = process.env.EMAIL_FROM || '"E-Commerce App" <noreply@example.com>';
+  const from = process.env.EMAIL_FROM || '"SHOP" <noreply@shop.com>';
 
   if (transporter) {
-    return transporter.sendMail({
-      from,
-      to,
-      subject,
-      text,
-      html,
-    });
+    return transporter.sendMail({ from, to, subject, text, html });
   }
 
-  // Fallback cho môi trường Development khi chưa cấu hình SMTP
   console.log('\n================== [EMAIL SERVICE (DEV MODE)] ==================');
   console.log(`To: ${to}`);
   console.log(`Subject: ${subject}`);
@@ -53,61 +42,238 @@ const sendEmail = async ({ to, subject, html, text }) => {
   return { message: 'Email logged to console (SMTP credentials not configured)' };
 };
 
-/**
- * Gửi email đặt lại mật khẩu
- */
+// ─────────────────────────────────────────────────────────────────────────────
+// Shared layout helper — dùng chung cho reset + verify email
+// Inspired by: reallygoodemails.com, Shopify transactional, Postmates
+// Rules: solid colors only, border-radius 6px, no gradients, no emoji decoration
+// ─────────────────────────────────────────────────────────────────────────────
+const F = `-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif`;
+
+const emailShell = ({ shopName, supportEmail, bodyHtml }) => `<!DOCTYPE html>
+<html lang="vi" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+</head>
+<body style="margin:0;padding:0;background:#f4f4f5;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f4f4f5">
+  <tr><td align="center" style="padding:32px 16px 40px;">
+
+    <!-- CARD -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+           style="max-width:540px;background:#ffffff;border:1px solid #e4e4e7;border-radius:6px;">
+
+      <!-- NAV BAR: logo trái, label phải — giống Shopify / Postmates -->
+      <tr>
+        <td style="padding:20px 32px;border-bottom:1px solid #f4f4f5;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+            <tr>
+              <td>
+                <span style="font-family:${F};font-size:15px;font-weight:700;color:#09090b;letter-spacing:-0.3px;">${shopName}</span>
+              </td>
+              <td align="right">
+                <span style="font-family:${F};font-size:11px;color:#a1a1aa;letter-spacing:0.3px;text-transform:uppercase;">Thông báo tài khoản</span>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+
+      <!-- BODY -->
+      <tr>
+        <td style="padding:32px 32px 28px;">
+          ${bodyHtml}
+        </td>
+      </tr>
+
+      <!-- FOOTER -->
+      <tr>
+        <td style="padding:16px 32px 20px;border-top:1px solid #f4f4f5;">
+          <p style="margin:0;font-family:${F};font-size:11px;color:#a1a1aa;line-height:1.7;">
+            &copy; ${new Date().getFullYear()} ${shopName} &nbsp;&middot;&nbsp;
+            Email tự động, vui lòng không trả lời trực tiếp.<br/>
+            Cần hỗ trợ?&nbsp;<a href="mailto:${supportEmail}" style="color:#52525b;text-decoration:underline;">${supportEmail}</a>
+          </p>
+        </td>
+      </tr>
+
+    </table>
+    <!-- /CARD -->
+
+  </td></tr>
+</table>
+</body>
+</html>`;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Reset Password Email
+// ─────────────────────────────────────────────────────────────────────────────
 const sendResetPasswordEmail = async (email, resetToken) => {
   const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
   const resetUrl = `${clientUrl}/reset-password?token=${resetToken}`;
+  const shopName = process.env.SHOP_NAME || 'SHOP';
+  const supportEmail = process.env.SUPPORT_EMAIL || process.env.EMAIL_USER || 'support@shop.com';
 
-  const subject = '[E-Commerce] Yêu cầu đặt lại mật khẩu';
-  const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
-      <h2 style="color: #2563eb; text-align: center;">Đặt lại mật khẩu</h2>
-      <p>Xin chào,</p>
-      <p>Chúng tôi đã nhận được yêu cầu đặt lại mật khẩu cho tài khoản liên kết với email <strong>${email}</strong>.</p>
-      <p>Vui lòng click vào nút bên dưới để tiến hành đặt lại mật khẩu của bạn (liên kết có hiệu lực trong vòng <strong>15 phút</strong>):</p>
-      <div style="text-align: center; margin: 30px 0;">
-        <a href="${resetUrl}" style="background-color: #2563eb; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
-          Đặt lại mật khẩu
-        </a>
-      </div>
-      <p style="color: #64748b; font-size: 13px;">Hoặc copy đường dẫn sau vào trình duyệt: <br/><a href="${resetUrl}">${resetUrl}</a></p>
-      <p style="color: #64748b; font-size: 13px;">Mã token của bạn: <code>${resetToken}</code></p>
-      <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 20px 0;" />
-      <p style="color: #94a3b8; font-size: 12px;">Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email.</p>
-    </div>
+  const subject = `Đặt lại mật khẩu tài khoản ${shopName}`;
+
+  const bodyHtml = `
+    <!-- Headline -->
+    <p style="margin:0 0 4px;font-family:${F};font-size:20px;font-weight:700;color:#09090b;line-height:1.25;letter-spacing:-0.4px;">Đặt lại mật khẩu</p>
+    <p style="margin:0 0 24px;font-family:${F};font-size:13px;color:#71717a;line-height:1.5;">Yêu cầu được gửi lúc ${new Date().toLocaleString('vi-VN')}</p>
+
+    <hr style="border:none;border-top:1px solid #f4f4f5;margin:0 0 24px;" />
+
+    <!-- Body copy -->
+    <p style="margin:0 0 20px;font-family:${F};font-size:14px;color:#3f3f46;line-height:1.65;">
+      Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản gắn với địa chỉ
+      <strong style="color:#09090b;font-weight:600;">${email}</strong>.
+      Nhấn nút bên dưới để tiếp tục — liên kết hết hạn sau <strong style="color:#09090b;">15 phút</strong>.
+    </p>
+
+    <!-- CTA — centered, màu brand đỏ, border-radius 6px theo rules -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+            <tr>
+              <td style="border-radius:6px;background-color:#dc2626;">
+                <a href="${resetUrl}"
+                   target="_blank"
+                   style="display:inline-block;padding:14px 32px;font-family:${F};font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:6px;letter-spacing:0.2px;">
+                  Đặt lại mật khẩu
+                </a>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Fallback link — monospace, nền nhạt -->
+    <p style="margin:0 0 6px;font-family:${F};font-size:12px;color:#a1a1aa;">Không nhấn được nút? Dán liên kết sau vào trình duyệt:</p>
+    <p style="margin:0 0 24px;font-family:'Courier New',Courier,monospace;font-size:11px;color:#52525b;word-break:break-all;background:#fafafa;border:1px solid #e4e4e7;border-radius:4px;padding:10px 12px;">
+      <a href="${resetUrl}" style="color:#52525b;text-decoration:none;">${resetUrl}</a>
+    </p>
+
+    <hr style="border:none;border-top:1px solid #f4f4f5;margin:0 0 20px;" />
+
+    <!-- Security note — text thuần, không box màu vàng, không emoji -->
+    <p style="margin:0;font-family:${F};font-size:12px;color:#a1a1aa;line-height:1.6;">
+      Nếu bạn không thực hiện yêu cầu này, hãy bỏ qua email này.
+      Mật khẩu hiện tại sẽ không thay đổi.
+    </p>
   `;
-  const text = `Đặt lại mật khẩu cho tài khoản ${email}:\nTruy cập liên kết: ${resetUrl}\nHoặc sử dụng token: ${resetToken}\n(Liên kết có hiệu lực trong 15 phút).`;
+
+  const html = emailShell({ shopName, supportEmail, bodyHtml });
+  const text = `Đặt lại mật khẩu ${shopName}\n\nTài khoản: ${email}\nLinh kết đặt lại (hết hạn sau 15 phút):\n${resetUrl}\n\nNếu bạn không yêu cầu điều này, hãy bỏ qua email này.\n\n${shopName}`;
 
   return sendEmail({ to: email, subject, html, text });
 };
 
-/**
- * Gửi email xác minh tài khoản
- */
+// ─────────────────────────────────────────────────────────────────────────────
+// Verify Email
+// ─────────────────────────────────────────────────────────────────────────────
 const sendVerificationEmail = async (email, verifyToken) => {
   const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
   const verifyUrl = `${clientUrl}/verify-email?token=${verifyToken}`;
+  const shopName = process.env.SHOP_NAME || 'SHOP';
+  const supportEmail = process.env.SUPPORT_EMAIL || process.env.EMAIL_USER || 'support@shop.com';
 
-  const subject = '[E-Commerce] Xác minh tài khoản email của bạn';
-  const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
-      <h2 style="color: #16a34a; text-align: center;">Xác minh địa chỉ Email</h2>
-      <p>Xin chào,</p>
-      <p>Cảm ơn bạn đã đăng ký tài khoản. Vui lòng bấm vào nút bên dưới để hoàn tất xác minh email của bạn:</p>
-      <div style="text-align: center; margin: 30px 0;">
-        <a href="${verifyUrl}" style="background-color: #16a34a; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
-          Xác minh Email
-        </a>
-      </div>
-      <p style="color: #64748b; font-size: 13px;">Hoặc copy đường dẫn sau vào trình duyệt: <br/><a href="${verifyUrl}">${verifyUrl}</a></p>
-      <p style="color: #64748b; font-size: 13px;">Mã token xác minh: <code>${verifyToken}</code></p>
-      <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 20px 0;" />
-      <p style="color: #94a3b8; font-size: 12px;">Liên kết này có hiệu lực trong vòng 24 giờ.</p>
-    </div>
+  const subject = `Xác minh tài khoản ${shopName} của bạn`;
+
+  const bodyHtml = `
+    <p style="margin:0 0 4px;font-family:${F};font-size:20px;font-weight:700;color:#09090b;line-height:1.25;letter-spacing:-0.4px;">Xác minh email</p>
+    <p style="margin:0 0 24px;font-family:${F};font-size:13px;color:#71717a;">Gửi lúc ${new Date().toLocaleString('vi-VN')}</p>
+
+    <hr style="border:none;border-top:1px solid #f4f4f5;margin:0 0 24px;" />
+
+    <p style="margin:0 0 20px;font-family:${F};font-size:14px;color:#3f3f46;line-height:1.65;">
+      Cảm ơn bạn đã đăng ký tài khoản tại <strong style="color:#09090b;">${shopName}</strong>.
+      Nhấn nút bên dưới để xác minh địa chỉ <strong style="color:#09090b;">${email}</strong>
+      và kích hoạt tài khoản. Liên kết có hiệu lực trong <strong style="color:#09090b;">24 giờ</strong>.
+    </p>
+
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+            <tr>
+              <td style="border-radius:6px;background-color:#dc2626;">
+                <a href="${verifyUrl}"
+                   target="_blank"
+                   style="display:inline-block;padding:14px 32px;font-family:${F};font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:6px;letter-spacing:0.2px;">
+                  Xác minh tài khoản
+                </a>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <p style="margin:0 0 6px;font-family:${F};font-size:12px;color:#a1a1aa;">Không nhấn được nút? Dán liên kết sau vào trình duyệt:</p>
+    <p style="margin:0 0 24px;font-family:'Courier New',Courier,monospace;font-size:11px;color:#52525b;word-break:break-all;background:#fafafa;border:1px solid #e4e4e7;border-radius:4px;padding:10px 12px;">
+      <a href="${verifyUrl}" style="color:#52525b;text-decoration:none;">${verifyUrl}</a>
+    </p>
+
+    <hr style="border:none;border-top:1px solid #f4f4f5;margin:0 0 20px;" />
+
+    <p style="margin:0;font-family:${F};font-size:12px;color:#a1a1aa;line-height:1.6;">
+      Nếu bạn không đăng ký tài khoản tại ${shopName}, hãy bỏ qua email này.
+    </p>
   `;
-  const text = `Xác minh email cho tài khoản ${email}:\nTruy cập liên kết: ${verifyUrl}\nMã token xác minh: ${verifyToken}`;
+
+  const html = emailShell({ shopName, supportEmail, bodyHtml });
+  const text = `Xác minh tài khoản ${shopName}\n\nTài khoản: ${email}\nLiên kết xác minh:\n${verifyUrl}\n\nNếu bạn không đăng ký, hãy bỏ qua email này.`;
+
+  return sendEmail({ to: email, subject, html, text });
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Admin Login OTP Email
+// ─────────────────────────────────────────────────────────────────────────────
+const sendAdminLoginOtpEmail = async (email, otp) => {
+  const shopName = process.env.SHOP_NAME || 'Haravan OMS';
+  const supportEmail = process.env.SUPPORT_EMAIL || process.env.EMAIL_USER || 'support@shop.com';
+  const subject = `[${shopName}] Mã xác thực đăng nhập Quản trị viên: ${otp}`;
+
+  const bodyHtml = `
+    <p style="margin:0 0 4px;font-family:${F};font-size:20px;font-weight:700;color:#09090b;line-height:1.25;letter-spacing:-0.4px;">Mã xác thực đăng nhập Admin</p>
+    <p style="margin:0 0 24px;font-family:${F};font-size:13px;color:#71717a;">Yêu cầu lúc ${new Date().toLocaleString('vi-VN')}</p>
+
+    <hr style="border:none;border-top:1px solid #f4f4f5;margin:0 0 24px;" />
+
+    <p style="margin:0 0 20px;font-family:${F};font-size:14px;color:#3f3f46;line-height:1.65;">
+      Xin chào Quản trị viên,<br/>
+      Bạn vừa yêu cầu đăng nhập vào hệ thống quản trị <strong style="color:#09090b;">${shopName}</strong> bằng email <strong style="color:#09090b;">${email}</strong>.
+      Nhập mã xác thực gồm 6 chữ số dưới đây để hoàn tất đăng nhập:
+    </p>
+
+    <!-- OTP BOX -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px;">
+      <tr>
+        <td align="center">
+          <div style="display:inline-block;padding:16px 36px;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:6px;">
+            <span style="font-family:'Courier New',Courier,monospace;font-size:32px;font-weight:800;letter-spacing:8px;color:#0f172a;">${otp}</span>
+          </div>
+        </td>
+      </tr>
+    </table>
+
+    <p style="margin:0 0 16px;font-family:${F};font-size:13px;color:#64748b;text-align:center;">
+      Mã xác thực có hiệu lực trong vòng <strong style="color:#0f172a;">5 phút</strong>. Tuyệt đối không chia sẻ mã này cho người khác.
+    </p>
+
+    <hr style="border:none;border-top:1px solid #f4f4f5;margin:0 0 20px;" />
+
+    <p style="margin:0;font-family:${F};font-size:12px;color:#a1a1aa;line-height:1.6;">
+      Nếu bạn không thực hiện yêu cầu đăng nhập này, hãy bỏ qua email hoặc thông báo cho Quản trị viên bảo mật.
+    </p>
+  `;
+
+  const html = emailShell({ shopName, supportEmail, bodyHtml });
+  const text = `Mã xác thực đăng nhập Admin ${shopName}\n\nMã OTP: ${otp}\nHiệu lực: 5 phút.\nNếu bạn không yêu cầu, vui lòng bỏ qua email này.`;
 
   return sendEmail({ to: email, subject, html, text });
 };
@@ -116,4 +282,5 @@ module.exports = {
   sendEmail,
   sendResetPasswordEmail,
   sendVerificationEmail,
+  sendAdminLoginOtpEmail,
 };

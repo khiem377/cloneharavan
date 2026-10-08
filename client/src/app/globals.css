@@ -100,3 +100,91 @@ body {
   animation: toastSlideIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
+/* Infinite Marquee Animation */
+@keyframes marqueeScroll {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marqueeScroll 35s linear infinite;
+  will-change: transform;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+/* Product Detail Editorial Description (TGDD Standard Typography) */
+.product-content h3 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin-top: 1.25rem;
+  margin-bottom: 0.65rem;
+  padding-left: 0.65rem;
+  border-left: 3px solid #dc2626;
+  line-height: 1.4;
+}
+
+.product-content h4 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.product-content p {
+  font-size: 0.875rem;
+  line-height: 1.65;
+  color: #334155;
+  margin-bottom: 0.75rem;
+}
+
+.product-content ul {
+  list-style-type: disc;
+  padding-left: 1.25rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.product-content ul li {
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: #334155;
+}
+
+.product-content ul li::marker {
+  color: #dc2626;
+}
+
+.product-content strong,
+.product-content b {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+/* Shimmer Wave Animation for Lazy Loading */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+

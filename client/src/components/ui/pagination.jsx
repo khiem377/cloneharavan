@@ -54,7 +54,7 @@ const PaginationLink = ({
       variant: 'outline',
       size,
     }),
-    'min-w-8 h-8 px-2.5 text-xs font-semibold rounded-md transition-all cursor-pointer select-none',
+    'min-w-8 h-8 px-2.5 text-xs font-semibold rounded-[6px] transition-all cursor-pointer select-none',
     activeClass,
     className
   );

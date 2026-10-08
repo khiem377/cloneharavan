@@ -52,7 +52,7 @@ export const CategoryDrawer = ({ isOpen, onClose }) => {
   return (
     <div className="fixed inset-0 z-50 flex animate-fadeIn">
       <div
-        className="fixed inset-0 bg-black/50 backdrop-blur-xs transition-opacity cursor-pointer"
+        className="fixed inset-0 bg-black/50 transition-opacity cursor-pointer"
         onClick={onClose}
       />
 
@@ -60,7 +60,7 @@ export const CategoryDrawer = ({ isOpen, onClose }) => {
         className="relative flex h-full max-h-screen z-10"
         onMouseLeave={() => setActiveCategoryId(null)}
       >
-        <div className="w-72 sm:w-80 bg-white h-full shadow-2xl flex flex-col overflow-y-auto border-r border-slate-100">
+        <div className="w-72 sm:w-80 bg-white h-full shadow-md flex flex-col overflow-y-auto border-r border-slate-200">
           <div
             onMouseEnter={() => setActiveCategoryId(null)}
             className="flex items-center justify-between px-4 py-3 border-b border-slate-100 shrink-0"
@@ -71,7 +71,7 @@ export const CategoryDrawer = ({ isOpen, onClose }) => {
                 onClick={onClose}
                 className="flex items-center gap-2.5 hover:opacity-80 transition"
               >
-                <div className="w-9 h-9 rounded-lg border border-slate-200 flex items-center justify-center text-slate-700">
+                <div className="w-9 h-9 rounded-[6px] border border-slate-200 flex items-center justify-center text-slate-700">
                   <Icon name="user" size={18} color="#334155" />
                 </div>
                 <div className="text-xs leading-tight">
@@ -87,7 +87,7 @@ export const CategoryDrawer = ({ isOpen, onClose }) => {
                 onClick={onClose}
                 className="flex items-center gap-2.5 hover:opacity-80 transition"
               >
-                <div className="w-9 h-9 rounded-lg border border-slate-200 flex items-center justify-center text-slate-700">
+                <div className="w-9 h-9 rounded-[6px] border border-slate-200 flex items-center justify-center text-slate-700">
                   <Icon name="user" size={18} color="#334155" />
                 </div>
                 <div className="text-xs leading-tight">
@@ -202,7 +202,7 @@ export const CategoryDrawer = ({ isOpen, onClose }) => {
         </div>
 
         {currentActive && subGroups.length > 0 && (
-          <div className="hidden md:block bg-white h-full shadow-2xl border-l border-slate-100 p-6 overflow-y-auto w-[480px] lg:w-[680px] xl:w-[840px] max-w-[calc(100vw-340px)] animate-fadeIn">
+          <div className="hidden md:block bg-white h-full shadow-md border-l border-slate-200 p-6 overflow-y-auto w-[480px] lg:w-[680px] xl:w-[840px] max-w-[calc(100vw-340px)] animate-fadeIn">
             <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 items-start">
               {subGroups.map((group) => (
                 <div key={group._id} className="space-y-3">

@@ -1,6 +1,16 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import {
+  Star,
+  Trash2,
+  CornerDownLeft,
+  Loader2,
+  AlertCircle,
+  MoreHorizontal,
+  RotateCcw,
+  CheckCircle2,
+} from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -11,18 +21,60 @@ import { Textarea } from '@/components/ui/textarea';
 import useAuthStore from '@/store/authStore';
 import commentService from '@/services/comment.client.service';
 import { toast } from '@/components/ui/toast';
+import { confirm } from '@/components/ui/confirm-dialog';
+import ReactionIcon, { REACTION_SVG_MAP, ReactionFlyoutBar } from '@/components/common/ReactionIcons';
 
 const REACTION_CONFIG = {
-  like:  { label: 'Thích', emoji: '👍', color: 'text-blue-600', activeIcon: '👍' },
-  love:  { label: 'Yêu thích', emoji: '❤️', color: 'text-rose-600', activeIcon: '❤️' },
-  haha:  { label: 'Haha', emoji: '😆', color: 'text-amber-500', activeIcon: '😆' },
-  wow:   { label: 'Wow', emoji: '😮', color: 'text-amber-500', activeIcon: '😮' },
-  sad:   { label: 'Buồn', emoji: '😢', color: 'text-amber-500', activeIcon: '😢' },
-  angry: { label: 'Phẫn nộ', emoji: '😡', color: 'text-red-600', activeIcon: '😡' },
+  like:  { label: 'Thích',     color: 'text-blue-600' },
+  love:  { label: 'Yêu thích', color: 'text-rose-600' },
+  haha:  { label: 'Haha',      color: 'text-amber-500' },
+  wow:   { label: 'Wow',       color: 'text-amber-500' },
+  sad:   { label: 'Buồn',      color: 'text-amber-500' },
+  angry: { label: 'Phẫn nộ',   color: 'text-orange-600' },
 };
+
+const AVATAR_PALETTES = [
+  'bg-rose-100 text-rose-600',
+  'bg-orange-100 text-orange-600',
+  'bg-purple-100 text-purple-600',
+  'bg-sky-100 text-sky-600',
+  'bg-emerald-100 text-emerald-600',
+  'bg-amber-100 text-amber-700',
+  'bg-indigo-100 text-indigo-600',
+];
+
+function getAvatarPalette(name = '') {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return AVATAR_PALETTES[Math.abs(hash) % AVATAR_PALETTES.length];
+}
+
+function formatTimeAgo(dateString) {
+  if (!dateString) return 'Vừa xong';
+  const now = new Date();
+  const date = new Date(dateString);
+  const diffSec = Math.floor((now - date) / 1000);
+
+  if (diffSec < 60) return 'Vừa xong';
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin} phút trước`;
+  const diffHour = Math.floor(diffMin / 60);
+  if (diffHour < 24) return `${diffHour} giờ trước`;
+  const diffDay = Math.floor(diffHour / 24);
+  if (diffDay < 30) return `${diffDay} ngày trước`;
+  return date.toLocaleDateString('vi-VN');
+}
 
 export default function ProductReviewsAndComments({ productId, productName }) {
   const { user, accessToken, isAuthenticated } = useAuthStore();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const [data, setData] = useState({ comments: [], stats: {}, pagination: {} });
   const [loading, setLoading] = useState(true);
   const [starFilter, setStarFilter] = useState(null);
@@ -36,12 +88,15 @@ export default function ProductReviewsAndComments({ productId, productName }) {
   const [hasPurchased, setHasPurchased] = useState(false);
   const [checkingPurchase, setCheckingPurchase] = useState(false);
 
+  // Optimistic pending comments / replies list
+  const [pendingItems, setPendingItems] = useState([]);
+
   // Trạng thái phản hồi (Reply)
   const [replyingToId, setReplyingToId] = useState(null);
   const [replyContent, setReplyContent] = useState('');
   const [replySubmitting, setReplySubmitting] = useState(false);
 
-  // Reaction picker hover with smooth debounce bridge
+  // Reaction picker hover
   const [hoveredReactionCommentId, setHoveredReactionCommentId] = useState(null);
   const reactionHoverTimeoutRef = useRef(null);
 
@@ -72,7 +127,7 @@ export default function ProductReviewsAndComments({ productId, productName }) {
         productId,
         ratingFilter: filter,
       });
-      setData(res);
+      setData(res || { comments: [], stats: {}, pagination: {} });
     } catch (err) {
       console.error('Lỗi tải đánh giá:', err);
     } finally {
@@ -113,7 +168,7 @@ export default function ProductReviewsAndComments({ productId, productName }) {
   const starPercentages = stats.starPercentages || { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
   const starDistribution = stats.starDistribution || { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
 
-  // 3. Xử lý gửi đánh giá gốc
+  // 3. Gửi đánh giá gốc (Root Level 0) có Optimistic UI
   const handleSubmitReview = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
 
@@ -125,10 +180,38 @@ export default function ProductReviewsAndComments({ productId, productName }) {
       toast.error('Chỉ khách hàng đã từng đặt mua thành công sản phẩm này mới có quyền gửi đánh giá.');
       return;
     }
-    if (!content.trim()) {
+    const text = content.trim();
+    if (!text) {
       toast.warning('Vui lòng nhập nội dung đánh giá của bạn.');
       return;
     }
+
+    const tempId = `temp-root-${Date.now()}`;
+    const authorName = user?.fullName || user?.name || 'Khách hàng';
+    const authorAvatar = user?.avatar?.url || user?.avatar || '';
+
+    const optimisticNode = {
+      _id: tempId,
+      tempId,
+      content: text,
+      rating,
+      isPurchased: true,
+      authorInfo: {
+        name: authorName,
+        avatar: authorAvatar,
+        role: user?.role === 'admin' ? 'admin' : 'customer',
+      },
+      createdAt: new Date().toISOString(),
+      parentId: null,
+      depth: 0,
+      status: 'sending',
+      replies: [],
+      reactions: [],
+      reactionCounts: { total: 0 },
+    };
+
+    setPendingItems((prev) => [optimisticNode, ...prev]);
+    setContent('');
 
     try {
       setSubmitting(true);
@@ -136,35 +219,89 @@ export default function ProductReviewsAndComments({ productId, productName }) {
         targetType: 'product',
         productId,
         rating,
-        content: content.trim(),
+        content: text,
         token: accessToken,
       });
-      setContent('');
+      setPendingItems((prev) => prev.filter((i) => i.tempId !== tempId));
       toast.success('Gửi đánh giá thành công! Cảm ơn bạn đã đóng góp ý kiến.');
       await loadComments(starFilter);
     } catch (err) {
-      const msg = err?.response?.data?.message || err?.message || '';
-      if (err?.response?.status === 401 || msg.includes('hết hạn') || msg.includes('jwt')) {
-        useAuthStore.getState().clearAuth();
-        toast.error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
-      } else {
-        toast.error(msg || 'Không thể gửi đánh giá.');
-      }
+      const msg = err?.response?.data?.message || err?.message || 'Không thể gửi đánh giá.';
+      setPendingItems((prev) =>
+        prev.map((i) => (i.tempId === tempId ? { ...i, status: 'failed', errorMessage: msg } : i))
+      );
+      toast.error(msg);
     } finally {
       setSubmitting(false);
     }
   };
 
-  // 4. Xử lý gửi reply lồng nhau (Level 1, Level 2)
+  // Thử lại đánh giá / bình luận hỏng
+  const handleRetryItem = async (item) => {
+    setPendingItems((prev) =>
+      prev.map((i) => (i.tempId === item.tempId ? { ...i, status: 'sending' } : i))
+    );
+    try {
+      await commentService.createComment({
+        targetType: 'product',
+        productId,
+        parentId: item.parentId || null,
+        rating: item.depth === 0 ? item.rating : null,
+        content: item.content,
+        token: accessToken,
+      });
+      setPendingItems((prev) => prev.filter((i) => i.tempId !== item.tempId));
+      toast.success('Đã gửi lại thành công!');
+      await loadComments(starFilter);
+    } catch (err) {
+      setPendingItems((prev) =>
+        prev.map((i) => (i.tempId === item.tempId ? { ...i, status: 'failed' } : i))
+      );
+      toast.error('Gửi lại thất bại. Vui lòng kiểm tra lại.');
+    }
+  };
+
+  const handleCancelFailed = (tempId) => {
+    setPendingItems((prev) => prev.filter((i) => i.tempId !== tempId));
+  };
+
+  // 4. Gửi reply lồng nhau (Level 1, Level 2) có Optimistic UI
   const handleSubmitReply = async (parentComment) => {
     if (!isAuthenticated()) {
       toast.warning('Vui lòng đăng nhập để phản hồi bình luận.');
       return;
     }
-    if (!replyContent.trim()) {
+    const text = replyContent.trim();
+    if (!text) {
       toast.warning('Vui lòng nhập nội dung phản hồi.');
       return;
     }
+
+    const tempId = `temp-reply-${Date.now()}`;
+    const authorName = user?.fullName || user?.name || 'Bạn';
+    const authorAvatar = user?.avatar?.url || user?.avatar || '';
+
+    const optimisticReply = {
+      _id: tempId,
+      tempId,
+      content: text,
+      authorInfo: {
+        name: authorName,
+        avatar: authorAvatar,
+        role: user?.role === 'admin' ? 'admin' : 'customer',
+      },
+      createdAt: new Date().toISOString(),
+      parentId: parentComment._id,
+      depth: Math.min(2, (parentComment.depth || 0) + 1),
+      status: 'sending',
+      replies: [],
+      reactions: [],
+      reactionCounts: { total: 0 },
+    };
+
+    setPendingItems((prev) => [...prev, optimisticReply]);
+    setReplyContent('');
+    setReplyingToId(null);
 
     try {
       setReplySubmitting(true);
@@ -172,21 +309,17 @@ export default function ProductReviewsAndComments({ productId, productName }) {
         targetType: 'product',
         productId,
         parentId: parentComment._id,
-        content: replyContent.trim(),
+        content: text,
         token: accessToken,
       });
-      setReplyContent('');
-      setReplyingToId(null);
+      setPendingItems((prev) => prev.filter((i) => i.tempId !== tempId));
       toast.success('Gửi phản hồi thành công!');
       await loadComments(starFilter);
     } catch (err) {
-      const msg = err?.response?.data?.message || err?.message || '';
-      if (err?.response?.status === 401 || msg.includes('hết hạn') || msg.includes('jwt')) {
-        useAuthStore.getState().clearAuth();
-        toast.error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
-      } else {
-        toast.error(msg || 'Lỗi gửi phản hồi.');
-      }
+      setPendingItems((prev) =>
+        prev.map((i) => (i.tempId === tempId ? { ...i, status: 'failed' } : i))
+      );
+      toast.error('Lỗi gửi phản hồi.');
     } finally {
       setReplySubmitting(false);
     }
@@ -202,32 +335,62 @@ export default function ProductReviewsAndComments({ productId, productName }) {
       await commentService.toggleReaction({ commentId, type, token: accessToken });
       setHoveredReactionCommentId(null);
       await loadComments(starFilter);
-    } catch (err) {
-      const msg = err?.response?.data?.message || err?.message || '';
-      if (err?.response?.status === 401 || msg.includes('hết hạn') || msg.includes('jwt')) {
-        useAuthStore.getState().clearAuth();
-        toast.error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
-      } else {
-        toast.error(msg || 'Không thể cập nhật cảm xúc.');
-      }
+    } catch {
+      toast.error('Không thể cập nhật cảm xúc.');
     }
   };
 
+  const handleDeleteComment = async (commentId) => {
+    if (!isAuthenticated()) return;
+    const isConfirmed = await confirm({
+      title: 'Xóa bình luận?',
+      description: 'Bạn có chắc chắn muốn xóa bình luận này? Thao tác này không thể hoàn tác.',
+      confirmText: 'Xóa bình luận',
+      cancelText: 'Hủy bỏ',
+      variant: 'destructive',
+    });
+    if (!isConfirmed) return;
+
+    try {
+      await commentService.deleteComment({ commentId, token: accessToken });
+      toast.success('Đã xóa bình luận.');
+      await loadComments(starFilter);
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Không thể xóa bình luận.');
+    }
+  };
+
+  // Merge pending root items
+  const mergedComments = useMemo(() => {
+    const list = [...(data.comments || [])];
+    const pendingRoots = pendingItems.filter((i) => !i.parentId);
+    return [...pendingRoots, ...list];
+  }, [data.comments, pendingItems]);
+
+  const totalDisplayCount = (stats.totalComments || 0) + pendingItems.length;
+
   return (
-    <Card className="rounded-[6px] border border-slate-200 bg-white mb-6">
-      <CardHeader className="border-b border-slate-100 pb-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div>
-            <CardTitle className="text-base sm:text-lg font-bold text-slate-900 uppercase tracking-tight">
-              ĐÁNH GIÁ & BÌNH LUẬN SẢN PHẨM
-            </CardTitle>
-            <span className="text-xs text-slate-500">
-              Nhận xét thực tế từ khách hàng đã trải nghiệm sản phẩm {productName ? `"${productName}"` : ''}
+    <Card className="rounded-[6px] border border-slate-200 bg-white shadow-xs" id="product-reviews">
+      {/* HEADER CARD */}
+      <CardHeader className="border-b border-slate-100 pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-base sm:text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
+            <span>Đánh giá & Bình luận</span>
+            <span className="font-mono text-slate-500 font-medium tabular-nums">
+              {totalDisplayCount}
             </span>
-          </div>
-          {totalReviews > 0 && (
-            <Badge variant="secondary" className="rounded-[6px] self-start sm:self-auto font-bold text-slate-700">
-              {totalReviews} đánh giá đã xác thực
+          </CardTitle>
+
+          {mounted && isAuthenticated() && (
+            <Badge
+              variant={hasPurchased ? 'default' : 'outline'}
+              className={`text-[10px] rounded-[6px] ${
+                hasPurchased
+                  ? 'bg-emerald-600 text-white hover:bg-emerald-600'
+                  : 'bg-slate-50 text-slate-600 border-slate-200'
+              }`}
+            >
+              {hasPurchased ? '✓ ĐÃ MUA HÀNG' : 'CHƯA CÓ ĐƠN HÀNG'}
             </Badge>
           )}
         </div>
@@ -235,12 +398,12 @@ export default function ProductReviewsAndComments({ productId, productName }) {
 
       <CardContent className="p-4 sm:p-6 flex flex-col gap-6">
         {/* ==================================================================== */}
-        {/* PHẦN 1: BẢNG TỔNG QUAN RATINGS OVERVIEW (CHUẨN ẢNH 1) */}
+        {/* PHẦN 1: TỔNG QUAN XẾP HẠNG & PHÂN BỔ SAO (SHADCN FLAT)                */}
         {/* ==================================================================== */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 p-4 rounded-[6px] bg-slate-50/70 border border-slate-200">
-          {/* CỘT ĐIỂM SỐ TRUNG BÌNH */}
-          <div className="md:col-span-4 flex flex-col items-center justify-center p-3 text-center border-b md:border-b-0 md:border-r border-slate-200">
-            <span className="text-4xl sm:text-5xl font-black text-amber-500 tracking-tight">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 bg-slate-50/70 p-4 sm:p-5 rounded-[6px] border border-slate-200">
+          {/* CỘT ĐIỂM TRUNG BÌNH */}
+          <div className="md:col-span-4 flex flex-col items-center justify-center border-b md:border-b-0 md:border-r border-slate-200 pb-4 md:pb-0 pr-0 md:pr-4">
+            <span className="text-4xl font-extrabold text-slate-900 font-mono tracking-tight tabular-nums">
               {averageRating > 0 ? averageRating.toFixed(1) : '0.0'}
             </span>
             <div className="flex items-center gap-1 my-2">
@@ -255,12 +418,12 @@ export default function ProductReviewsAndComments({ productId, productName }) {
                 </span>
               ))}
             </div>
-            <span className="text-xs font-semibold text-slate-600">
+            <span className="text-xs font-medium text-slate-500">
               {totalReviews > 0 ? `Dựa trên ${totalReviews} đánh giá thực tế` : 'Chưa có lượt đánh giá nào'}
             </span>
           </div>
 
-          {/* CỘT THANH TIẾN ĐỘ PHÂN BỔ 5 CẤP SAO (SHADCN PROGRESS) */}
+          {/* CỘT THANH TIẾN ĐỘ PHÂN BỔ 5 CẤP SAO */}
           <div className="md:col-span-8 flex flex-col justify-center gap-2">
             {[5, 4, 3, 2, 1].map((s) => (
               <div key={s} className="flex items-center gap-3 text-xs">
@@ -268,7 +431,7 @@ export default function ProductReviewsAndComments({ productId, productName }) {
                   {s} <span className="text-amber-500">★</span>
                 </span>
                 <Progress value={starPercentages[s] || 0} className="h-2 flex-1 bg-slate-200" />
-                <span className="w-16 text-right text-slate-500 shrink-0 font-mono text-[11px]">
+                <span className="w-16 text-right text-slate-500 shrink-0 font-mono text-[11px] tabular-nums">
                   {starDistribution[s] || 0} ({starPercentages[s] || 0}%)
                 </span>
               </div>
@@ -278,13 +441,13 @@ export default function ProductReviewsAndComments({ productId, productName }) {
 
         {/* BỘ LỌC ĐÁNH GIÁ THEO SAO */}
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-bold text-slate-700 mr-1 uppercase">Lọc theo:</span>
+          <span className="text-xs font-semibold text-slate-600 mr-1">Lọc theo:</span>
           <Button
             type="button"
             size="sm"
             variant={starFilter === null ? 'default' : 'outline'}
             onClick={() => setStarFilter(null)}
-            className="rounded-[6px] text-xs h-7 px-3 active:scale-[0.98]"
+            className="rounded-[6px] text-xs h-7 px-3 active:scale-[0.98] cursor-pointer"
           >
             Tất cả ({totalReviews})
           </Button>
@@ -295,35 +458,23 @@ export default function ProductReviewsAndComments({ productId, productName }) {
               size="sm"
               variant={starFilter === s ? 'default' : 'outline'}
               onClick={() => setStarFilter(starFilter === s ? null : s)}
-              className="rounded-[6px] text-xs h-7 px-2.5 active:scale-[0.98]"
+              className="rounded-[6px] text-xs h-7 px-2.5 active:scale-[0.98] cursor-pointer"
             >
               {s} ★ ({starDistribution[s] || 0})
             </Button>
           ))}
         </div>
 
-        <Separator />
+        <Separator className="bg-slate-100" />
 
         {/* ==================================================================== */}
-        {/* PHẦN 2: FORM VIẾT ĐÁNH GIÁ (LUÔN HIỂN THỊ, THAO TÁC CÓ TOAST RÕ RÀNG) */}
+        {/* PHẦN 2: FORM VIẾT ĐÁNH GIÁ GỐC                                       */}
         {/* ==================================================================== */}
-        <div className="rounded-[6px] border border-slate-200 bg-white p-4">
-          <div className="border-b border-slate-100 pb-2.5 mb-3 flex items-center justify-between">
-            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wide">
-              GỬI ĐÁNH GIÁ CỦA BẠN
-            </h3>
-            {isAuthenticated() && (
-              <Badge
-                variant={hasPurchased ? 'default' : 'outline'}
-                className={`text-[10px] rounded-[6px] ${
-                  hasPurchased
-                    ? 'bg-emerald-600 text-white hover:bg-emerald-600'
-                    : 'bg-amber-50 text-amber-800 border-amber-300'
-                }`}
-              >
-                {hasPurchased ? 'ĐÃ MUA HÀNG (ĐỦ ĐIỀU KIỆN)' : 'CHƯA CÓ LỊCH SỬ ĐƠN HÀNG'}
-              </Badge>
-            )}
+        <div className="rounded-[6px] border border-slate-200 bg-white p-4 sm:p-5 flex flex-col gap-3">
+          <div className="border-b border-slate-100 pb-2.5 mb-1 flex items-center justify-between">
+            <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wide">
+              Gửi đánh giá của bạn
+            </h4>
           </div>
 
           <form onSubmit={handleSubmitReview} className="flex flex-col gap-3">
@@ -363,17 +514,24 @@ export default function ProductReviewsAndComments({ productId, productName }) {
               className="text-xs sm:text-sm rounded-[6px] border-slate-200 focus:border-slate-400 focus:ring-1 focus:ring-slate-300 bg-white"
             />
 
-            {/* THANH HÀNH ĐỘNG DƯỚI FORM */}
-            <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-100">
-              <span className="text-[11px] text-slate-500 hidden sm:inline">
-                * Nhận xét thực tế sẽ được hiển thị công khai để hỗ trợ cộng đồng mua sắm.
+            <div className="flex items-center justify-between min-h-[32px]">
+              <span className="text-[11px] text-slate-400" suppressHydrationWarning>
+                {mounted ? (
+                  !isAuthenticated()
+                    ? 'Vui lòng đăng nhập để gửi đánh giá.'
+                    : !hasPurchased && user?.role !== 'admin'
+                    ? 'Chỉ khách hàng đã mua sản phẩm mới có quyền đánh giá.'
+                    : 'Đánh giá của bạn sẽ được hiển thị công khai.'
+                ) : (
+                  'Đánh giá của bạn sẽ được hiển thị công khai.'
+                )}
               </span>
 
               <Button
                 type="submit"
-                size="sm"
-                disabled={submitting}
-                className="rounded-[6px] px-6 font-bold text-xs h-8 bg-red-600 hover:bg-red-700 cursor-pointer active:scale-[0.98] transition-all ml-auto"
+                variant="default"
+                disabled={!mounted || submitting || !content.trim() || (!hasPurchased && user?.role !== 'admin')}
+                className="rounded-[6px] px-5 h-8 text-xs font-bold cursor-pointer"
               >
                 {submitting ? 'ĐANG GỬI...' : 'GỬI ĐÁNH GIÁ'}
               </Button>
@@ -381,44 +539,51 @@ export default function ProductReviewsAndComments({ productId, productName }) {
           </form>
         </div>
 
+        <Separator className="bg-slate-100" />
+
         {/* ==================================================================== */}
-        {/* PHẦN 3: FEED BÌNH LUẬN & THẢO LUẬN LỒNG NHAU 3 CẤP (CHUẨN ẢNH 2, 3) */}
+        {/* PHẦN 3: DANH SÁCH BÌNH LUẬN & ĐÁNH GIÁ LỒNG NHAU (3 CẤP SCREENSHOT 4) */}
         {/* ==================================================================== */}
         <div className="flex flex-col gap-4">
-          <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-            <span className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-              TẤT CẢ BÌNH LUẬN & PHẢN HỒI ({data.comments?.length || 0})
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">
+              Tất cả nhận xét & thảo luận
             </span>
           </div>
 
-          {loading ? (
-            <div className="py-8 text-center text-xs text-slate-500">
-              Đang tải danh sách bình luận...
+          {loading && mergedComments.length === 0 ? (
+            <div className="py-8 text-center text-xs text-slate-500 flex items-center justify-center gap-2">
+              <Loader2 className="size-4 animate-spin text-slate-400" />
+              <span>Đang tải danh sách bình luận...</span>
             </div>
-          ) : data.comments.length === 0 ? (
-            <div className="py-8 text-center text-xs text-slate-500 border border-dashed border-slate-200 rounded-[6px]">
+          ) : mergedComments.length === 0 ? (
+            <div className="py-8 text-center text-xs text-slate-400 border border-dashed border-slate-200 rounded-[6px] bg-slate-50/50">
               Chưa có bình luận nào cho sản phẩm này. Hãy là người đầu tiên để lại đánh giá!
             </div>
           ) : (
-            <div className="flex flex-col gap-4">
-              {data.comments.map((root) => (
-                <CommentItem
-                  key={root._id}
-                  comment={root}
-                  level={0}
-                  currentUser={user}
-                  replyingToId={replyingToId}
-                  setReplyingToId={setReplyingToId}
-                  replyContent={replyContent}
-                  setReplyContent={setReplyContent}
-                  replySubmitting={replySubmitting}
-                  onSubmitReply={handleSubmitReply}
-                  hoveredReactionCommentId={hoveredReactionCommentId}
-                  setHoveredReactionCommentId={setHoveredReactionCommentId}
-                  onReactionMouseEnter={handleReactionMouseEnter}
-                  onReactionMouseLeave={handleReactionMouseLeave}
-                  onReaction={handleReaction}
-                />
+            <div className="flex flex-col gap-5 divide-y divide-slate-100">
+              {mergedComments.map((root) => (
+                <div key={root._id || root.tempId} className="pt-5 first:pt-0">
+                  <ProductCommentNode
+                    comment={root}
+                    depth={0}
+                    currentUser={user}
+                    replyingToId={replyingToId}
+                    setReplyingToId={setReplyingToId}
+                    replyContent={replyContent}
+                    setReplyContent={setReplyContent}
+                    replySubmitting={replySubmitting}
+                    onSubmitReply={handleSubmitReply}
+                    onReaction={handleReaction}
+                    onDelete={handleDeleteComment}
+                    onRetry={handleRetryItem}
+                    onCancelFailed={handleCancelFailed}
+                    pendingReplies={pendingItems.filter((i) => String(i.parentId) === String(root._id))}
+                    hoveredReactionCommentId={hoveredReactionCommentId}
+                    onReactionMouseEnter={handleReactionMouseEnter}
+                    onReactionMouseLeave={handleReactionMouseLeave}
+                  />
+                </div>
               ))}
             </div>
           )}
@@ -429,11 +594,11 @@ export default function ProductReviewsAndComments({ productId, productName }) {
 }
 
 // -----------------------------------------------------------------------------
-// COMPONENT ĐỆ QUY RENDER COMMENT CÂY LỒNG NHAU TỐI ĐA 3 CẤP (DEPTH 0 -> 1 -> 2)
+// COMPONENT RENDER TỪNG NODE ĐÁNH GIÁ SẢN PHẨM (CHUẨN 3 TẦNG SCREENSHOT 4)
 // -----------------------------------------------------------------------------
-function CommentItem({
+function ProductCommentNode({
   comment,
-  level = 0,
+  depth = 0,
   currentUser,
   replyingToId,
   setReplyingToId,
@@ -441,22 +606,34 @@ function CommentItem({
   setReplyContent,
   replySubmitting,
   onSubmitReply,
+  onReaction,
+  onDelete,
+  onRetry,
+  onCancelFailed,
+  pendingReplies = [],
   hoveredReactionCommentId,
-  setHoveredReactionCommentId,
   onReactionMouseEnter,
   onReactionMouseLeave,
-  onReaction,
 }) {
+  const [menuOpen, setMenuOpen] = useState(false);
   const isReplying = replyingToId === comment._id;
-  const isPurchased = comment.isPurchased;
+  const isDeleted = Boolean(comment.isDeleted);
+  const isSending = comment.status === 'sending';
+  const isFailed = comment.status === 'failed';
+
+  const authorName = isDeleted ? 'Bình luận đã bị xoá' : comment.authorInfo?.name || 'Khách hàng';
+  const authorAvatar = comment.authorInfo?.avatar;
   const isAdmin = comment.authorInfo?.role === 'admin';
-  const authorName = comment.authorInfo?.name || 'Khách hàng';
-  const avatarUrl = comment.authorInfo?.avatar;
+  const isPurchased = Boolean(comment.isPurchased);
+  const timeAgo = formatTimeAgo(comment.createdAt);
+
+  const currentUserId = currentUser?._id || currentUser?.id;
+  const isAuthor = !isDeleted && currentUserId && String(comment.authorId) === String(currentUserId);
+  const canDelete = isAuthor || (currentUser?.role === 'admin');
+
   const reactions = comment.reactionCounts || {};
   const totalReactions = reactions.total || 0;
 
-  // Lấy reaction của user hiện tại trên bình luận này
-  const currentUserId = currentUser?._id || currentUser?.id;
   const myReactionType = useMemo(() => {
     if (!currentUserId || !Array.isArray(comment.reactions)) return null;
     const found = comment.reactions.find((r) => String(r.userId) === String(currentUserId));
@@ -464,57 +641,126 @@ function CommentItem({
   }, [comment.reactions, currentUserId]);
   const myReactionCfg = myReactionType ? REACTION_CONFIG[myReactionType] : null;
 
-  // Top các reactions có count > 0 để hiển thị badge tổng hợp góc dưới (chuẩn Facebook/F8)
   const topReactions = useMemo(() => {
     const list = [];
     ['like', 'love', 'haha', 'wow', 'sad', 'angry'].forEach((type) => {
       if (reactions[type] > 0) {
-        list.push({ type, count: reactions[type], emoji: REACTION_CONFIG[type].emoji });
+        list.push({ type, count: reactions[type] });
       }
     });
     return list.sort((a, b) => b.count - a.count).slice(0, 3);
   }, [reactions]);
 
-  // Lề thụt vào theo cấp (Level 0: 0, Level 1: ml-6 sm:ml-10, Level 2: ml-10 sm:ml-16)
-  const indentClass =
-    level === 0 ? '' : level === 1 ? 'ml-6 sm:ml-10' : 'ml-10 sm:ml-16';
+  const initialLetter = authorName.charAt(0).toUpperCase() || 'U';
+  const avatarPalette = getAvatarPalette(authorName);
 
-  const timeAgo = formatTimeAgo(comment.createdAt);
+  // Indentation for 3-level tree
+  const indentClass = depth === 0 ? '' : depth === 1 ? 'ml-6 sm:ml-8 border-l-2 border-slate-200 pl-4 mt-3.5' : 'ml-6 sm:ml-8 border-l-2 border-slate-200 pl-4 mt-3.5';
 
   return (
     <div className={`flex flex-col gap-2.5 transition-all ${indentClass}`}>
-      <div className="flex items-start gap-3">
-        {/* AVATAR SHADCN */}
-        <Avatar className="h-8 w-8 sm:h-9 sm:w-9 border border-slate-200 shrink-0">
-          <AvatarImage src={avatarUrl} alt={authorName} />
-          <AvatarFallback className={isAdmin ? 'bg-red-600 text-white' : 'bg-slate-200 text-slate-700'}>
-            {authorName.slice(0, 2).toUpperCase()}
-          </AvatarFallback>
-        </Avatar>
+      {/* TRƯỜNG HỢP 1: BÌNH LUẬN ĐÃ BỊ XOÁ (GIỮ CHỖ CHO REPLIES DƯỚI) - SCREENSHOT 4 */}
+      {isDeleted ? (
+        <div className="flex items-center gap-2 py-1 text-slate-400 text-xs sm:text-sm italic">
+          <Trash2 size={15} className="shrink-0 text-slate-400" />
+          <span>Bình luận đã bị xoá</span>
+          <span className="text-[11px] text-slate-400 not-italic ml-1" suppressHydrationWarning>{timeAgo}</span>
+        </div>
+      ) : (
+        /* TRƯỜNG HỢP 2: BÌNH LUẬN HOẠT ĐỘNG */
+        <div className={`flex items-start gap-3 ${isSending ? 'opacity-70' : ''}`}>
+          {/* Avatar pastel với initial hoặc ảnh */}
+          <div className="shrink-0">
+            {authorAvatar ? (
+              <Avatar className="h-8 w-8 sm:h-9 sm:w-9 border border-slate-200">
+                <AvatarImage src={authorAvatar} alt={authorName} />
+                <AvatarFallback className={`${avatarPalette} font-bold text-xs`}>
+                  {initialLetter}
+                </AvatarFallback>
+              </Avatar>
+            ) : (
+              <div
+                className={`h-8 w-8 sm:h-9 sm:w-9 rounded-full flex items-center justify-center font-bold text-xs sm:text-sm select-none ${avatarPalette}`}
+              >
+                {initialLetter}
+              </div>
+            )}
+          </div>
 
-        {/* NỘI DUNG BÌNH LUẬN */}
-        <div className="flex-1 flex flex-col gap-1 min-w-0">
-          <div className="p-3 rounded-[6px] bg-slate-50 border border-slate-200 relative group">
-            {/* TÊN TÁC GIẢ & BADGES */}
-            <div className="flex flex-wrap items-center gap-1.5 mb-1">
-              <span className="font-bold text-xs text-slate-900">
-                {authorName}
-              </span>
-              {isAdmin && (
-                <Badge className="bg-red-600 hover:bg-red-600 text-[10px] h-4 px-1.5 font-bold rounded-[6px]">
-                  QUẢN TRỊ VIÊN
-                </Badge>
-              )}
-              {isPurchased && !isAdmin && (
-                <Badge variant="outline" className="border-emerald-500 text-emerald-700 text-[10px] h-4 px-1.5 font-semibold rounded-[6px]">
-                  ĐÃ MUA HÀNG
-                </Badge>
+          {/* Khối nội dung comment */}
+          <div className="flex-1 flex flex-col gap-1 min-w-0">
+            {/* Header: Tên người + sao + badges + relative time */}
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="font-bold text-xs sm:text-sm text-slate-900">
+                  {authorName}
+                </span>
+
+                {isAdmin && (
+                  <Badge className="bg-slate-900 text-white text-[10px] h-4 px-1.5 font-bold rounded-[6px]">
+                    Quản trị viên
+                  </Badge>
+                )}
+
+                {isPurchased && !isAdmin && (
+                  <Badge variant="outline" className="border-emerald-500 text-emerald-700 text-[10px] h-4 px-1.5 font-semibold rounded-[6px] bg-emerald-50/60">
+                    Đã mua hàng
+                  </Badge>
+                )}
+
+                <span className="text-[11px] text-slate-400 font-normal" suppressHydrationWarning>
+                  {timeAgo}
+                </span>
+
+                {isSending && (
+                  <span className="inline-flex items-center gap-1 text-[11px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-[4px]">
+                    <Loader2 size={11} className="animate-spin" /> Đang gửi...
+                  </span>
+                )}
+
+                {isFailed && (
+                  <span className="inline-flex items-center gap-1 text-[11px] text-rose-600 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded-[4px] font-medium">
+                    <AlertCircle size={11} /> Gửi thất bại
+                  </span>
+                )}
+              </div>
+
+              {/* Three dots menu */}
+              {!isSending && !isFailed && canDelete && (
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setMenuOpen(!menuOpen)}
+                    className="p-1 text-slate-400 hover:text-slate-600 rounded-[4px] hover:bg-slate-100 cursor-pointer"
+                    title="Tuỳ chọn"
+                  >
+                    <MoreHorizontal size={14} />
+                  </button>
+
+                  {menuOpen && (
+                    <div
+                      className="absolute right-0 top-full mt-1 w-32 bg-white rounded-[6px] border border-slate-200 shadow-sm py-1 z-30 animate-in fade-in"
+                      onMouseLeave={() => setMenuOpen(false)}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMenuOpen(false);
+                          onDelete(comment._id);
+                        }}
+                        className="w-full text-left px-3 py-1.5 text-xs text-rose-600 hover:bg-rose-50 flex items-center gap-1.5 cursor-pointer font-medium"
+                      >
+                        <Trash2 size={12} /> Xoá bình luận
+                      </button>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
 
-            {/* SỐ SAO (NẾU CÓ Ở ROOT LEVEL 0) */}
-            {comment.rating > 0 && (
-              <div className="flex items-center gap-1 mb-1">
+            {/* Số sao đánh giá (nếu là comment gốc depth === 0) */}
+            {comment.rating > 0 && depth === 0 && (
+              <div className="flex items-center gap-0.5 my-0.5">
                 {[1, 2, 3, 4, 5].map((star) => (
                   <span
                     key={star}
@@ -528,183 +774,167 @@ function CommentItem({
               </div>
             )}
 
-            {/* TEXT BÌNH LUẬN */}
-            <p className="text-xs sm:text-sm text-slate-800 leading-relaxed whitespace-pre-wrap">
+            {/* Nội dung text */}
+            <p className="text-xs sm:text-sm text-slate-800 leading-relaxed whitespace-pre-wrap mt-0.5">
               {comment.content}
             </p>
 
-            {/* HIỂN THỊ ICON REACTION TỔNG HỢP GÓC PHẢI DƯỚI (CHUẨN FACEBOOK/F8) */}
-            {totalReactions > 0 && (
-              <div
-                className="absolute -bottom-2.5 right-3 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-white border border-slate-200 shadow-xs text-[11px] select-none cursor-default"
-                title={topReactions.map((r) => `${r.emoji} ${r.count}`).join(' · ')}
-              >
-                <div className="flex items-center -space-x-1">
-                  {topReactions.map((r) => (
-                    <span key={r.type} className="inline-block text-xs leading-none">
-                      {r.emoji}
-                    </span>
-                  ))}
-                </div>
-                <span className="font-semibold text-slate-700 text-[10px] ml-0.5">
-                  {totalReactions}
-                </span>
+            {/* Khối xử lý gửi hỏng (Screenshot 4) */}
+            {isFailed && (
+              <div className="flex items-center gap-2 mt-1">
+                <button
+                  type="button"
+                  onClick={() => onRetry(comment)}
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-rose-600 hover:underline cursor-pointer"
+                >
+                  <RotateCcw size={12} /> Thử lại
+                </button>
+                <span className="text-slate-300">·</span>
+                <button
+                  type="button"
+                  onClick={() => onCancelFailed(comment.tempId)}
+                  className="text-xs text-slate-400 hover:text-slate-600 cursor-pointer"
+                >
+                  Huỷ bỏ
+                </button>
               </div>
             )}
-          </div>
 
-          {/* THANH HÀNH ĐỘNG DƯỚI BÌNH LUẬN (THÍCH PHONG CÁCH FACEBOOK, PHẢN HỒI, THỜI GIAN) */}
-          <div className="flex items-center gap-4 text-xs font-semibold text-slate-500 px-1 pt-1 relative">
-            {/* NÚT THẢ CẢM XÚC VỚI POPOVER FACEBOOK KHI HOVER */}
-            <div
-              className="relative inline-block"
-              onMouseEnter={() => onReactionMouseEnter?.(comment._id)}
-              onMouseLeave={onReactionMouseLeave}
-            >
-              <button
-                type="button"
-                onClick={() => {
-                  if (myReactionType) {
-                    onReaction(comment._id, myReactionType);
-                  } else {
-                    onReaction(comment._id, 'like');
-                  }
-                }}
-                className={`cursor-pointer active:scale-95 transition-colors flex items-center gap-1.5 py-0.5 ${
-                  myReactionCfg ? `${myReactionCfg.color} font-bold` : 'text-slate-600 hover:text-blue-600'
-                }`}
-              >
-                {myReactionCfg ? (
-                  <>
-                    <span className="text-sm leading-none">{myReactionCfg.activeIcon}</span>
-                    <span>{myReactionCfg.label}</span>
-                  </>
-                ) : (
-                  <>
-                    <span className="text-xs leading-none">👍</span>
-                    <span>Thích</span>
-                  </>
-                )}
-              </button>
-
-              {/* FLYOUT BAR CẢM XÚC FACEBOOK KHI HOVER (CÓ PB-2.5 BRIDGE KHÔNG BỊ MẤT KHI RÊ CHUỘT) */}
-              {hoveredReactionCommentId === comment._id && (
+            {/* Hàng hành động dưới comment: Thích Facebook + Trả lời (Screenshot 4) */}
+            {!isSending && !isFailed && (
+              <div className="flex items-center gap-4 text-xs font-semibold text-slate-500 pt-1 relative">
+                {/* NÚT THẢ CẢM XÚC FACEBOOK KHI HOVER */}
                 <div
-                  className="absolute bottom-full left-0 pb-2.5 z-30"
+                  className="relative inline-block"
                   onMouseEnter={() => onReactionMouseEnter?.(comment._id)}
                   onMouseLeave={onReactionMouseLeave}
                 >
-                  <div className="flex items-center gap-1.5 px-2 py-1.5 bg-white border border-slate-200 rounded-full shadow-md animate-fadeIn">
-                    {Object.entries(REACTION_CONFIG).map(([type, cfg]) => (
-                      <div key={type} className="relative group/emoji">
-                        <span className="absolute -top-7 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] font-medium px-2 py-0.5 rounded-full pointer-events-none opacity-0 group-hover/emoji:opacity-100 transition-opacity whitespace-nowrap z-40">
-                          {cfg.label}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onReaction(comment._id, type);
-                          }}
-                          className="text-xl p-1 hover:scale-130 active:scale-95 transition-transform cursor-pointer origin-bottom flex items-center justify-center leading-none"
-                          title={cfg.label}
-                        >
-                          {cfg.emoji}
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (myReactionType) {
+                        onReaction(comment._id, myReactionType);
+                      } else {
+                        onReaction(comment._id, 'like');
+                      }
+                    }}
+                    className={`cursor-pointer active:scale-95 transition-colors flex items-center gap-1.5 py-0.5 ${
+                      myReactionCfg ? `${myReactionCfg.color} font-bold` : 'text-slate-500 hover:text-blue-600'
+                    }`}
+                  >
+                    {myReactionCfg ? (
+                      <>
+                        <ReactionIcon type={myReactionType} size={15} />
+                        <span>{myReactionCfg.label}</span>
+                      </>
+                    ) : (
+                      <>
+                        <ReactionIcon type="like" size={15} />
+                        <span>Thích</span>
+                      </>
+                    )}
+                  </button>
 
-            {/* NÚT PHẢN HỒI (CHO PHÉP TỐI ĐA LEVEL 2) */}
-            {level < 2 && (
-              <button
-                type="button"
-                onClick={() => {
-                  setReplyingToId(isReplying ? null : comment._id);
-                  setReplyContent('');
-                }}
-                className={`cursor-pointer active:scale-95 transition-colors py-0.5 ${
-                  isReplying ? 'text-red-600 font-bold' : 'hover:text-red-600'
-                }`}
-              >
-                Phản hồi
-              </button>
+                  {/* FLYOUT BAR ANIMATED */}
+                  {hoveredReactionCommentId === comment._id && (
+                    <div
+                      className="absolute bottom-full left-0 pb-2 z-30"
+                      onMouseEnter={() => onReactionMouseEnter?.(comment._id)}
+                      onMouseLeave={onReactionMouseLeave}
+                    >
+                      <ReactionFlyoutBar
+                        onSelect={(type) => {
+                          onReaction(comment._id, type);
+                          onReactionMouseLeave?.();
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* NÚT TRẢ LỜI (↩ Trả lời - chuẩn Screenshot 4) */}
+                {depth < 2 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setReplyingToId(isReplying ? null : comment._id);
+                      setReplyContent('');
+                    }}
+                    className={`inline-flex items-center gap-1 cursor-pointer active:scale-95 transition-colors py-0.5 ${
+                      isReplying ? 'text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-900'
+                    }`}
+                  >
+                    <CornerDownLeft size={13} />
+                    <span>Trả lời</span>
+                  </button>
+                )}
+
+                {/* Badge reaction counter */}
+                {totalReactions > 0 && (
+                  <div className="flex items-center gap-1 text-[11px] text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">
+                    <span className="flex items-center -space-x-1">
+                      {topReactions.map((r) => (
+                        <ReactionIcon key={r.type} type={r.type} size={14} className="border border-white rounded-full" />
+                      ))}
+                    </span>
+                    <span className="font-mono text-[10px] font-bold ml-0.5">{totalReactions}</span>
+                  </div>
+                )}
+              </div>
             )}
 
-            <span className="text-[10px] text-slate-400 font-normal">
-              {timeAgo}
-            </span>
+            {/* FORM SOẠN PHẢN HỒI LỒNG */}
+            {isReplying && (
+              <div className="mt-3 p-3 rounded-[6px] border border-slate-200 bg-slate-50 flex flex-col gap-2.5 animate-in fade-in">
+                <div className="text-xs text-slate-500">
+                  Trả lời <span className="font-semibold text-slate-800">@{authorName}</span>
+                </div>
+                <Textarea
+                  autoFocus
+                  value={replyContent}
+                  onChange={(e) => setReplyContent(e.target.value)}
+                  placeholder="Viết câu trả lời của bạn..."
+                  rows={2}
+                  className="text-xs bg-white rounded-[6px] border-slate-200 focus:border-slate-400 focus:ring-1 focus:ring-slate-300"
+                />
+                <div className="flex items-center justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      setReplyingToId(null);
+                      setReplyContent('');
+                    }}
+                    className="h-7 text-xs px-3 rounded-[6px] cursor-pointer"
+                  >
+                    HỦY
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="default"
+                    size="sm"
+                    disabled={replySubmitting || !replyContent.trim()}
+                    onClick={() => onSubmitReply(comment)}
+                    className="h-7 text-xs px-4 rounded-[6px] cursor-pointer"
+                  >
+                    {replySubmitting ? 'ĐANG GỬI...' : 'TRẢ LỜI'}
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
-
-          {/* FORM SOẠN THẢO PHẢN HỒI CON (TỰA TỰA FACEBOOK & F8, GỌN GÀNG, KHÔNG EMOJI THÔ) */}
-          {isReplying && (
-            <div className="mt-2.5 p-3 rounded-[6px] bg-slate-50 border border-slate-200 flex flex-col gap-2.5 animate-fadeIn">
-              {/* Mention tác giả & Avatar người phản hồi */}
-              <div className="flex items-center gap-2">
-                <Avatar className="h-6 w-6 border border-slate-200 shrink-0">
-                  <AvatarImage src={currentUser?.avatar} alt={currentUser?.name || 'Bạn'} />
-                  <AvatarFallback className="bg-slate-200 text-slate-700 text-[10px] font-bold">
-                    {(currentUser?.name || 'B').slice(0, 2).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <span className="text-xs text-slate-500">
-                  Trả lời{' '}
-                  <span className="font-semibold text-blue-600 bg-blue-50/80 border border-blue-200/60 px-1.5 py-0.5 rounded-[4px]">
-                    @{authorName}
-                  </span>
-                </span>
-              </div>
-
-              {/* Khung nhập phản hồi */}
-              <Textarea
-                value={replyContent}
-                onChange={(e) => setReplyContent(e.target.value)}
-                placeholder="Viết câu trả lời của bạn..."
-                rows={2}
-                className="text-xs bg-white rounded-[6px] border-slate-200 focus:border-slate-400 focus:ring-1 focus:ring-slate-300"
-                autoFocus
-              />
-
-              {/* Nút hành động chuẩn chỉ */}
-              <div className="flex items-center justify-end gap-2 pt-1 border-t border-slate-100">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setReplyingToId(null);
-                    setReplyContent('');
-                  }}
-                  className="h-7 text-xs px-3 rounded-[6px] cursor-pointer active:scale-[0.98] border-slate-200 hover:bg-slate-100"
-                >
-                  HỦY
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  disabled={replySubmitting || !replyContent.trim()}
-                  onClick={() => onSubmitReply(comment)}
-                  className="h-7 text-xs px-4 rounded-[6px] bg-red-600 hover:bg-red-700 font-bold text-white cursor-pointer active:scale-[0.98] transition-all"
-                >
-                  {replySubmitting ? 'ĐANG GỬI...' : 'TRẢ LỜI'}
-                </Button>
-              </div>
-            </div>
-          )}
         </div>
-      </div>
+      )}
 
-      {/* RENDER ĐỆ QUY CÁC REPLIES CON (CẤP TIẾP THEO) */}
-      {Array.isArray(comment.replies) && comment.replies.length > 0 && (
-        <div className="flex flex-col gap-2.5 mt-1 border-l-2 border-slate-100 pl-2 sm:pl-3">
-          {comment.replies.map((child) => (
-            <CommentItem
-              key={child._id}
-              comment={child}
-              level={level + 1}
+      {/* RENDER ĐỆ QUY CÁC CÂU TRẢ LỜI CON (3 CẤP TỐI ĐA) */}
+      {((Array.isArray(comment.replies) && comment.replies.length > 0) || pendingReplies.length > 0) && (
+        <div className="flex flex-col gap-2">
+          {pendingReplies.map((pr) => (
+            <ProductCommentNode
+              key={pr.tempId}
+              comment={pr}
+              depth={depth + 1}
               currentUser={currentUser}
               replyingToId={replyingToId}
               setReplyingToId={setReplyingToId}
@@ -712,11 +942,35 @@ function CommentItem({
               setReplyContent={setReplyContent}
               replySubmitting={replySubmitting}
               onSubmitReply={onSubmitReply}
+              onReaction={onReaction}
+              onDelete={onDelete}
+              onRetry={onRetry}
+              onCancelFailed={onCancelFailed}
               hoveredReactionCommentId={hoveredReactionCommentId}
-              setHoveredReactionCommentId={setHoveredReactionCommentId}
               onReactionMouseEnter={onReactionMouseEnter}
               onReactionMouseLeave={onReactionMouseLeave}
+            />
+          ))}
+
+          {(comment.replies || []).map((child) => (
+            <ProductCommentNode
+              key={child._id}
+              comment={child}
+              depth={depth + 1}
+              currentUser={currentUser}
+              replyingToId={replyingToId}
+              setReplyingToId={setReplyingToId}
+              replyContent={replyContent}
+              setReplyContent={setReplyContent}
+              replySubmitting={replySubmitting}
+              onSubmitReply={onSubmitReply}
               onReaction={onReaction}
+              onDelete={onDelete}
+              onRetry={onRetry}
+              onCancelFailed={onCancelFailed}
+              hoveredReactionCommentId={hoveredReactionCommentId}
+              onReactionMouseEnter={onReactionMouseEnter}
+              onReactionMouseLeave={onReactionMouseLeave}
             />
           ))}
         </div>
@@ -724,21 +978,3 @@ function CommentItem({
     </div>
   );
 }
-
-// Helper tính khoảng thời gian tương đối
-function formatTimeAgo(dateString) {
-  if (!dateString) return '';
-  const now = new Date();
-  const date = new Date(dateString);
-  const diffSec = Math.floor((now - date) / 1000);
-
-  if (diffSec < 60) return 'Vừa xong';
-  const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) return `${diffMin} phút trước`;
-  const diffHour = Math.floor(diffMin / 60);
-  if (diffHour < 24) return `${diffHour} giờ trước`;
-  const diffDay = Math.floor(diffHour / 24);
-  if (diffDay < 30) return `${diffDay} ngày trước`;
-  return date.toLocaleDateString('vi-VN');
-}
-

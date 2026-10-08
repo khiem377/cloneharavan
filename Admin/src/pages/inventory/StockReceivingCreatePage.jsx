@@ -1,12 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  FileCheck, ArrowLeft, Building2, Package, CheckCircle2, Save, Layers, MapPin,
+  FileCheck, ArrowLeft, Building2, Package, CheckCircle2,
 } from '@/components/ui/Icons';
 import { inventoryService } from '@/services/inventory.service';
-import { useSuppliers } from '@/hooks/useSuppliers';
 import { toast } from '@/providers/ToastProvider';
 import SearchableSelect from '@/components/ui/SearchableSelect';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Table, TableHeader, TableBody, TableHead, TableRow, TableCell,
+} from '@/components/ui/table';
 
 export default function StockReceivingCreatePage() {
   const navigate = useNavigate();
@@ -97,7 +102,7 @@ export default function StockReceivingCreatePage() {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     if (!selectedPoId) {
       toast.error('Vui lòng chọn Đơn Mua Hàng (PO) cần nhập kho');
       return;
@@ -134,15 +139,17 @@ export default function StockReceivingCreatePage() {
       {/* Top Bar */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <button
+          <Button
+            variant="outline"
+            size="icon"
             onClick={() => navigate('/stock-receivings')}
-            className="rounded-lg border border-border p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            className="h-9 w-9 rounded-[6px] border-border text-muted-foreground hover:bg-muted hover:text-foreground active:scale-[0.98] transition-all"
           >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-              <FileCheck className="h-7 w-7 text-primary" />
+            <h1 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
+              <FileCheck className="h-6 w-6 text-primary" />
               Lập Phiếu Nhập Kho Thực Tế (PNK)
             </h1>
             <p className="text-xs text-muted-foreground">
@@ -156,155 +163,175 @@ export default function StockReceivingCreatePage() {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           {/* Left Column: Information */}
           <div className="space-y-6 lg:col-span-1">
-            <div className="rounded-2xl border border-border bg-card p-5 shadow-sm space-y-4">
-              <h2 className="text-sm font-bold text-foreground flex items-center gap-2 border-b border-border pb-3">
-                <Building2 className="h-4 w-4 text-primary" /> Thông Tin Chứng Từ Nhập
-              </h2>
+            <Card className="rounded-[6px] border border-border shadow-none">
+              <CardHeader className="pb-3 border-b border-border">
+                <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
+                  <Building2 className="h-4 w-4 text-primary" /> Thông Tin Chứng Từ Nhập
+                </CardTitle>
+              </CardHeader>
 
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1">
-                  Chọn Đơn Mua Hàng Tham Chiếu (PO) <span className="text-destructive">*</span>
-                </label>
-                <SearchableSelect
-                  options={purchaseOrders.map((po) => ({
-                    label: `${po.poNumber} - ${po.supplierId?.name || 'NCC'} [${po.status === 'inspecting' ? 'Đang kiểm hàng' : po.status === 'in_transit' ? 'Đang vận chuyển' : 'Đang thực hiện'}]`,
-                    value: po._id,
-                  }))}
-                  value={selectedPoId}
-                  onChange={(val) => setSelectedPoId(val)}
-                  creatable={false}
-                  placeholder="-- Chọn Đơn Mua Hàng (PO) --"
-                />
-              </div>
-
-              {selectedPo && (
-                <div className="rounded-xl bg-muted/40 p-3 space-y-1.5 text-xs">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Nhà cung cấp:</span>
-                    <span className="font-bold text-foreground">{selectedPo.supplierId?.name}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Trạng thái PO:</span>
-                    <span className="font-semibold text-blue-600">
-                      {selectedPo.status === 'partial_received' ? 'Nhập 1 phần' : 'Mới tạo / Chờ nhận'}
-                    </span>
-                  </div>
+              <CardContent className="pt-4 space-y-4">
+                <div>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                    Chọn Đơn Mua Hàng Tham Chiếu (PO) <span className="text-destructive">*</span>
+                  </label>
+                  <SearchableSelect
+                    options={purchaseOrders.map((po) => ({
+                      label: `${po.poNumber} - ${po.supplierId?.name || 'NCC'} [${po.status === 'inspecting' ? 'Đang kiểm hàng' : po.status === 'in_transit' ? 'Đang vận chuyển' : 'Đang thực hiện'}]`,
+                      value: po._id,
+                    }))}
+                    value={selectedPoId}
+                    onChange={(val) => setSelectedPoId(val)}
+                    creatable={false}
+                    placeholder="-- Chọn Đơn Mua Hàng (PO) --"
+                  />
                 </div>
-              )}
 
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1">Ghi Chú Nhập Kho</label>
-                <textarea
-                  rows={3}
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  placeholder="Ghi chú số xe, số hóa đơn đỏ, người giao hàng..."
-                  className="w-full rounded-xl border border-input bg-background p-3 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-primary/20"
-                />
-              </div>
-            </div>
+                {selectedPo && (
+                  <div className="rounded-[6px] bg-muted/40 p-3 space-y-1.5 text-xs border border-border">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Nhà cung cấp:</span>
+                      <span className="font-semibold text-foreground">{selectedPo.supplierId?.name}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Trạng thái PO:</span>
+                      <span className="font-semibold text-blue-600 dark:text-blue-400">
+                        {selectedPo.status === 'partial_received' ? 'Nhập 1 phần' : 'Mới tạo / Chờ nhận'}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1.5">Ghi Chú Nhập Kho</label>
+                  <textarea
+                    rows={3}
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    placeholder="Ghi chú số xe, số hóa đơn đỏ, người giao hàng..."
+                    className="w-full rounded-[6px] border border-input bg-background p-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Summary */}
-            <div className="rounded-2xl border border-border bg-card p-5 shadow-sm space-y-3">
-              <h2 className="text-sm font-bold text-foreground border-b border-border pb-2">Tổng Cộng Đợt Nhập</h2>
-              <div className="flex justify-between text-xs">
-                <span className="text-muted-foreground">Số mặt hàng:</span>
-                <span className="font-bold">{items.length} mục</span>
-              </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-muted-foreground">Tổng SL thực nhập đợt này:</span>
-                <span className="font-bold font-mono text-emerald-600">{totalRecQty} cái</span>
-              </div>
-              <div className="flex justify-between text-sm font-extrabold border-t border-border pt-3">
-                <span>Giá trị đợt nhập:</span>
-                <span className="font-mono text-primary">{totalAmount.toLocaleString('vi-VN')} đ</span>
-              </div>
+            <Card className="rounded-[6px] border border-border shadow-none">
+              <CardHeader className="pb-3 border-b border-border">
+                <CardTitle className="text-sm font-semibold text-foreground">Tổng Cộng Đợt Nhập</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-4 space-y-3">
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">Số mặt hàng:</span>
+                  <span className="font-semibold font-mono tabular-nums">{items.length} mục</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">Tổng SL thực nhập đợt này:</span>
+                  <span className="font-semibold font-mono text-emerald-600 tabular-nums">{totalRecQty} cái</span>
+                </div>
+                <div className="flex justify-between text-sm font-bold border-t border-border pt-3">
+                  <span>Giá trị đợt nhập:</span>
+                  <span className="font-mono text-primary tabular-nums">{totalAmount.toLocaleString('vi-VN')} đ</span>
+                </div>
 
-              <button
-                type="submit"
-                disabled={isSubmitting || !selectedPoId}
-                className="w-full mt-4 inline-flex items-center justify-center gap-2 rounded-xl bg-primary py-3 text-xs font-bold text-primary-foreground shadow-lg hover:bg-primary/90 transition-all disabled:opacity-50"
-              >
-                <CheckCircle2 className="h-4 w-4" />
-                {isSubmitting ? 'Đang nhập kho...' : 'Xác Nhận & Nhập Kho'}
-              </button>
-            </div>
+                <Button
+                  type="submit"
+                  disabled={isSubmitting || !selectedPoId}
+                  className="w-full h-9 rounded-[6px] bg-primary text-primary-foreground text-xs font-semibold active:scale-[0.98] transition-all disabled:opacity-50"
+                >
+                  <CheckCircle2 className="h-4 w-4 mr-1.5" />
+                  {isSubmitting ? 'Đang nhập kho...' : 'Xác Nhận & Nhập Kho'}
+                </Button>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Right Column: Items Table */}
           <div className="space-y-6 lg:col-span-2">
-            <div className="rounded-2xl border border-border bg-card p-5 shadow-sm space-y-4">
-              <div className="flex items-center justify-between border-b border-border pb-3">
-                <h2 className="text-sm font-bold text-foreground flex items-center gap-2">
+            <Card className="rounded-[6px] border border-border shadow-none">
+              <CardHeader className="pb-3 border-b border-border flex flex-row items-center justify-between space-y-0">
+                <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
                   <Package className="h-4 w-4 text-primary" /> Danh Sách Hàng Hóa Thực Nhập
-                </h2>
+                </CardTitle>
                 {items.length > 0 && (
-                  <button
+                  <Button
                     type="button"
+                    variant="outline"
+                    size="sm"
                     onClick={handleAutoFillAll}
-                    className="inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-600 px-3 py-1 rounded-lg text-xs font-bold hover:bg-emerald-500/20"
+                    className="h-7 text-xs font-semibold rounded-[6px] border-emerald-500/30 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 active:scale-[0.98]"
                   >
-                    <CheckCircle2 className="h-3.5 w-3.5" /> Đánh dấu nhập đủ còn lại
-                  </button>
+                    <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Đánh dấu nhập đủ còn lại
+                  </Button>
                 )}
-              </div>
+              </CardHeader>
 
-              <div className="overflow-x-auto rounded-xl border border-border bg-card">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead className="bg-muted/50 font-bold text-muted-foreground border-b border-border">
-                    <tr>
-                      <th className="p-3">Sản phẩm</th>
-                      <th className="p-3">Vị trí kệ</th>
-                      <th className="p-3 text-center">SL Đặt (PO)</th>
-                      <th className="p-3 text-center">Đã nhận trước</th>
-                      <th className="p-3 text-center w-24">Thực nhập đợt này</th>
-                      <th className="p-3 text-right">Đơn giá</th>
-                      <th className="p-3 text-right">Thành tiền</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border/60">
-                    {items.length === 0 ? (
-                      <tr>
-                        <td colSpan={7} className="py-10 text-center text-muted-foreground">
-                          Chọn Đơn Mua Hàng (PO) ở bên trái để nạp danh sách sản phẩm
-                        </td>
-                      </tr>
-                    ) : (
-                      items.map((item, idx) => (
-                        <tr key={idx} className="hover:bg-muted/30 align-middle">
-                          <td className="p-3">
-                            <div className="font-bold text-foreground">{item.productName}</div>
-                            <div className="text-[11px] font-mono text-muted-foreground">{item.sku}</div>
-                          </td>
-                          <td className="p-3">
-                            <input
-                              type="text"
-                              value={item.location}
-                              onChange={(e) => handleUpdateItem(idx, 'location', e.target.value)}
-                              className="w-28 rounded border border-input bg-background px-2 py-1 text-xs"
-                            />
-                          </td>
-                          <td className="p-3 text-center font-mono font-bold text-muted-foreground">{item.expectedQty}</td>
-                          <td className="p-3 text-center font-mono text-muted-foreground">{item.receivedBefore}</td>
-                          <td className="p-3 text-center">
-                            <input
-                              type="number"
-                              min="0"
-                              max={item.expectedQty - item.receivedBefore}
-                              value={item.receivedQty}
-                              onChange={(e) => handleUpdateItem(idx, 'receivedQty', e.target.value)}
-                              className="w-full rounded-lg border-2 border-primary/40 bg-background px-2 py-1 text-center font-extrabold text-sm text-emerald-600 focus:outline-none"
-                            />
-                          </td>
-                          <td className="p-3 text-right font-mono">{item.importPrice.toLocaleString('vi-VN')} đ</td>
-                          <td className="p-3 text-right font-mono font-bold text-primary">{item.subtotal.toLocaleString('vi-VN')} đ</td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+              <CardContent className="pt-4">
+                <div className="rounded-[6px] border border-border overflow-hidden">
+                  <Table>
+                    <TableHeader className="bg-muted/40">
+                      <TableRow>
+                        <TableHead className="text-xs font-semibold text-muted-foreground py-2.5">Sản phẩm</TableHead>
+                        <TableHead className="text-xs font-semibold text-muted-foreground py-2.5">Vị trí kệ</TableHead>
+                        <TableHead className="text-xs font-semibold text-muted-foreground py-2.5 text-center">SL Đặt (PO)</TableHead>
+                        <TableHead className="text-xs font-semibold text-muted-foreground py-2.5 text-center">Đã nhận trước</TableHead>
+                        <TableHead className="text-xs font-semibold text-muted-foreground py-2.5 text-center w-24">Thực nhập</TableHead>
+                        <TableHead className="text-xs font-semibold text-muted-foreground py-2.5 text-right">Đơn giá</TableHead>
+                        <TableHead className="text-xs font-semibold text-muted-foreground py-2.5 text-right">Thành tiền</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {items.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={7} className="py-10 text-center text-xs text-muted-foreground">
+                            Chọn Đơn Mua Hàng (PO) ở bên trái để nạp danh sách sản phẩm
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        items.map((item, idx) => (
+                          <TableRow key={idx} className="hover:bg-muted/30">
+                            <TableCell className="py-2">
+                              <div className="font-medium text-xs text-foreground">{item.productName}</div>
+                              <div className="text-[11px] font-mono text-muted-foreground tabular-nums">{item.sku}</div>
+                            </TableCell>
+                            <TableCell className="py-2">
+                              <Input
+                                type="text"
+                                value={item.location}
+                                onChange={(e) => handleUpdateItem(idx, 'location', e.target.value)}
+                                className="w-28 h-8 rounded-[6px] text-xs"
+                              />
+                            </TableCell>
+                            <TableCell className="py-2 text-center font-mono font-semibold text-muted-foreground tabular-nums text-xs">
+                              {item.expectedQty}
+                            </TableCell>
+                            <TableCell className="py-2 text-center font-mono font-semibold text-muted-foreground tabular-nums text-xs">
+                              {item.receivedBefore}
+                            </TableCell>
+                            <TableCell className="py-2 text-center">
+                              <Input
+                                type="number"
+                                min="0"
+                                max={item.expectedQty - item.receivedBefore}
+                                value={item.receivedQty}
+                                onChange={(e) => handleUpdateItem(idx, 'receivedQty', e.target.value)}
+                                className="w-20 h-8 rounded-[6px] text-center font-mono font-bold text-xs text-emerald-600 tabular-nums mx-auto"
+                              />
+                            </TableCell>
+                            <TableCell className="py-2 text-right font-mono text-xs tabular-nums">
+                              {item.importPrice.toLocaleString('vi-VN')} đ
+                            </TableCell>
+                            <TableCell className="py-2 text-right font-mono font-semibold text-xs text-primary tabular-nums">
+                              {item.subtotal.toLocaleString('vi-VN')} đ
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </form>

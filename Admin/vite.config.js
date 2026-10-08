@@ -14,4 +14,28 @@ export default defineConfig({
     },
     dedupe: ['react', 'react-dom'],
   },
+  optimizeDeps: {
+    include: [
+      'react',
+      'react-dom',
+      'react-router-dom',
+      '@tanstack/react-query',
+      'axios',
+      'lucide-react',
+      'zustand',
+      'recharts',
+      'xlsx',
+      '@dnd-kit/core',
+      '@dnd-kit/sortable',
+      '@dnd-kit/utilities',
+      '@tinymce/tinymce-react',
+      'react-hook-form',
+      'zod',
+    ],
+  },
+  server: {
+    watch: {
+      usePolling: false,
+    },
+  },
 });

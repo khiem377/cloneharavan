@@ -9,6 +9,8 @@ import { inventoryReportService } from '@/services/inventoryReport.service';
 import { toast } from '@/providers/ToastProvider';
 import SearchableSelect from '@/components/ui/SearchableSelect';
 import DateTimePicker from '@/components/ui/DateTimePicker';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 
 function HelpTooltip({ title, content }) {
   const [show, setShow] = useState(false);
@@ -21,7 +23,7 @@ function HelpTooltip({ title, content }) {
     >
       <HelpCircle className="h-4 w-4 text-muted-foreground hover:text-primary transition-colors shrink-0" />
       {show && (
-        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-64 rounded-xl bg-slate-900 border border-slate-700 p-2.5 text-[11px] font-medium text-slate-100 shadow-2xl z-[99999] leading-relaxed text-left pointer-events-none">
+        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-64 rounded-[6px] bg-slate-900 border border-slate-700 p-2.5 text-[11px] font-medium text-slate-100 shadow-md z-[99999] leading-relaxed text-left pointer-events-none">
           <p className="font-bold text-amber-400 mb-1">{title}:</p>
           <div>{content}</div>
         </div>
@@ -175,65 +177,64 @@ export default function InventoryReportPage() {
   const maxVal = Math.max(1, ...supplierChartData.map((d) => Math.max(d.importAmount, d.returnAmount)));
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6 p-6 antialiased">
       {/* Header Toolbar */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-500/10 text-orange-600 dark:text-orange-400 shadow-sm">
-            <Boxes className="h-6 w-6" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-[6px] bg-orange-500/10 text-orange-600 dark:text-orange-400">
+            <Boxes className="h-5 w-5" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            <h1 className="text-xl font-bold tracking-tight text-foreground">
               Báo Cáo Quản Lý Tồn Kho & Công Nợ NCC
             </h1>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground mt-0.5">
               Bảng tổng hợp Nhập - Xuất - Tồn chuẩn Kế toán & Xuất file Excel đối soát chi tiết
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <button
+          <Button
+            size="sm"
             onClick={handleExportExcel}
             disabled={isExportingExcel}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-amber-600 px-4 py-2 text-xs font-semibold text-white hover:bg-amber-700 transition-colors shadow-md disabled:opacity-50"
+            className="rounded-[6px] text-xs font-semibold shadow-xs active:scale-[0.98]"
           >
-            <FileSpreadsheet className="h-4 w-4" />
+            <FileSpreadsheet className="h-4 w-4 mr-1.5" />
             {isExportingExcel ? 'Đang tạo Excel...' : 'Xuất File Excel N-X-T'}
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
             onClick={handlePrint}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-input bg-background px-3.5 py-2 text-xs font-semibold text-foreground hover:bg-muted transition-colors shadow-xs"
+            className="rounded-[6px] text-xs font-semibold"
           >
-            <Printer className="h-4 w-4" /> In Báo Cáo
-          </button>
+            <Printer className="h-4 w-4 mr-1.5" /> In Báo Cáo
+          </Button>
         </div>
       </div>
 
       {/* Tabs Selection */}
       <div className="flex items-center justify-between border-b border-border pb-2">
         <div className="flex items-center gap-2">
-          <button
+          <Button
+            variant={activeTab === 'nxt' ? 'default' : 'ghost'}
+            size="sm"
             onClick={() => setActiveTab('nxt')}
-            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
-              activeTab === 'nxt'
-                ? 'bg-primary text-primary-foreground shadow-md'
-                : 'text-muted-foreground hover:bg-muted'
-            }`}
+            className="rounded-[6px] text-xs font-bold active:scale-[0.98]"
           >
-            <FileSpreadsheet className="h-4 w-4" /> Bảng Nhập - Xuất - Tồn (Kế Toán)
-          </button>
+            <FileSpreadsheet className="h-4 w-4 mr-1.5" /> Bảng Nhập - Xuất - Tồn (Kế Toán)
+          </Button>
 
-          <button
+          <Button
+            variant={activeTab === 'supplier' ? 'default' : 'ghost'}
+            size="sm"
             onClick={() => setActiveTab('supplier')}
-            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
-              activeTab === 'supplier'
-                ? 'bg-primary text-primary-foreground shadow-md'
-                : 'text-muted-foreground hover:bg-muted'
-            }`}
+            className="rounded-[6px] text-xs font-bold active:scale-[0.98]"
           >
-            <BarChart3 className="h-4 w-4" /> Nhập Trả Hàng Theo NCC
-          </button>
+            <BarChart3 className="h-4 w-4 mr-1.5" /> Nhập Trả Hàng Theo NCC
+          </Button>
         </div>
 
         {/* Date Filter */}
@@ -263,7 +264,7 @@ export default function InventoryReportPage() {
         <div className="space-y-6">
           {/* Summary KPI Cards */}
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            <div className="rounded-2xl border border-border bg-card p-4 shadow-sm relative">
+            <Card className="rounded-[6px] border border-border p-4 shadow-xs relative">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-muted-foreground">Tồn Đầu Kỳ (Tiền)</span>
                 <HelpTooltip
@@ -271,12 +272,12 @@ export default function InventoryReportPage() {
                   content="Tổng giá trị tồn kho tại thời điểm bắt đầu kỳ (00:00:00 ngày đầu kỳ). Là tồn dư cuối ngày trước đó chuyển sang."
                 />
               </div>
-              <p className="mt-2 text-xl font-bold font-mono text-foreground tracking-tight">
+              <p className="mt-2 text-lg font-bold font-mono text-foreground tracking-tight tabular-nums">
                 {(balanceData?.totals?.grandOpeningAmount || 0).toLocaleString('vi-VN')} đ
               </p>
-            </div>
+            </Card>
 
-            <div className="rounded-2xl border border-border bg-card p-4 shadow-sm relative">
+            <Card className="rounded-[6px] border border-border p-4 shadow-xs relative">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-muted-foreground">Nhập Trong Kỳ (Tiền)</span>
                 <HelpTooltip
@@ -284,12 +285,12 @@ export default function InventoryReportPage() {
                   content="Tổng giá trị hàng hóa thực nhập thêm vào kho từ các Phiếu Nhập Kho (PNK) hoàn thành trong kỳ."
                 />
               </div>
-              <p className="mt-2 text-xl font-bold font-mono text-blue-600 dark:text-blue-400 tracking-tight">
+              <p className="mt-2 text-lg font-bold font-mono text-blue-600 dark:text-blue-400 tracking-tight tabular-nums">
                 +{(balanceData?.totals?.grandInAmount || 0).toLocaleString('vi-VN')} đ
               </p>
-            </div>
+            </Card>
 
-            <div className="rounded-2xl border border-border bg-card p-4 shadow-sm relative">
+            <Card className="rounded-[6px] border border-border p-4 shadow-xs relative">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-muted-foreground">Xuất Trong Kỳ (Tiền)</span>
                 <HelpTooltip
@@ -297,12 +298,12 @@ export default function InventoryReportPage() {
                   content="Tổng giá trị hàng hóa thực xuất khỏi kho từ các Lệnh Xuất Kho (EX) đã xuất xưởng trong kỳ."
                 />
               </div>
-              <p className="mt-2 text-xl font-bold font-mono text-amber-600 dark:text-amber-400 tracking-tight">
+              <p className="mt-2 text-lg font-bold font-mono text-amber-600 dark:text-amber-400 tracking-tight tabular-nums">
                 -{(balanceData?.totals?.grandOutAmount || 0).toLocaleString('vi-VN')} đ
               </p>
-            </div>
+            </Card>
 
-            <div className="rounded-2xl border border-border bg-card p-4 shadow-sm relative">
+            <Card className="rounded-[6px] border border-border p-4 shadow-xs relative">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-muted-foreground">Tồn Cuối Kỳ (Tiền)</span>
                 <HelpTooltip
@@ -315,20 +316,20 @@ export default function InventoryReportPage() {
                   }
                 />
               </div>
-              <p className="mt-2 text-xl font-extrabold font-mono text-emerald-600 dark:text-emerald-400 tracking-tight">
+              <p className="mt-2 text-lg font-bold font-mono text-emerald-600 dark:text-emerald-400 tracking-tight tabular-nums">
                 {(balanceData?.totals?.grandClosingAmount || 0).toLocaleString('vi-VN')} đ
               </p>
-            </div>
+            </Card>
           </div>
 
           {/* 8-Column Accounting Table */}
-          <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
+          <Card className="rounded-[6px] border border-border shadow-xs overflow-hidden">
             <div className="p-4 border-b border-border bg-muted/40 flex items-center justify-between">
-              <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+              <h3 className="text-xs font-bold text-foreground flex items-center gap-2">
                 <FileSpreadsheet className="h-4 w-4 text-primary" />
                 Bảng Tổng Hợp Vật Tư Nhập Xuất Tồn Kế Toán
               </h3>
-              <span className="text-xs font-semibold text-muted-foreground bg-muted px-2.5 py-1 rounded-md border border-border">
+              <span className="text-[11px] font-semibold text-muted-foreground bg-muted px-2.5 py-1 rounded-[4px] border border-border font-mono tabular-nums">
                 Tổng số: {balanceData?.items?.length || 0} biến thể vật tư
               </span>
             </div>
@@ -452,7 +453,7 @@ export default function InventoryReportPage() {
                 </tbody>
               </table>
             </div>
-          </div>
+          </Card>
         </div>
       )}
 
@@ -474,7 +475,7 @@ export default function InventoryReportPage() {
             />
           </div>
 
-          <div className="rounded-2xl border border-border bg-card p-6 shadow-sm space-y-4">
+          <div className="rounded-[6px] border border-border bg-card p-6 shadow-2xs space-y-4">
             <h3 className="text-sm font-bold text-foreground">
               Biểu Đồ So Sánh Giá Trị Nhập Hàng Vs Trả Hàng (VND)
             </h3>

@@ -18,6 +18,7 @@ const userInteractionSchema = new mongoose.Schema(
       enum: [
         // Positive
         'view',             // xem danh sách          weight: 1.0
+        'view_deep',        // xem sâu > 15s         weight: 2.5
         'product_detail',   // xem trang chi tiết sp  weight: 1.8
         'search_click',     // click từ kết quả search weight: 2.0
         'filter_apply',     // dùng bộ lọc + xem sp   weight: 1.5
@@ -28,6 +29,7 @@ const userInteractionSchema = new mongoose.Schema(
         'add_to_cart',      // thêm vào giỏ hàng      weight: 5.0
         'purchase',         // đã mua                 weight: 10.0
         // Negative
+        'view_bounce',         // thoát nhanh < 2s    weight: -1.5
         'cart_remove',         // xóa khỏi giỏ        weight: -1.0
         'checkout_abandon',    // bỏ thanh toán        weight: -0.5
         'search_noresult',     // search không ra gì   weight: -0.5
@@ -41,7 +43,7 @@ const userInteractionSchema = new mongoose.Schema(
     // ── Context metadata (chuẩn Lazada/Tiki) ────────────────────────────
     context: {
       device:        { type: String, enum: ['mobile', 'desktop', 'tablet', 'unknown'], default: 'unknown' },
-      source:        { type: String, enum: ['search', 'recommendation', 'category', 'direct', 'trending', 'banner', 'unknown'], default: 'unknown' },
+      source:        { type: String, default: 'unknown' },
       position:      { type: Number, default: null },    // vị trí trong danh sách
       searchKeyword: { type: String, default: '' },       // keyword nếu đến từ search
       categoryId:    { type: mongoose.Schema.Types.ObjectId, ref: 'Category', default: null },
@@ -64,11 +66,17 @@ userInteractionSchema.index({ productId: 1, interactionType: 1 });
 userInteractionSchema.index({ timestamp: -1 }); // for time-based queries
 
 // ── Validate: phải có userId hoặc sessionId ────────────────────────────────
-userInteractionSchema.pre('save', function (next) {
+userInteractionSchema.pre('save', function () {
   if (!this.userId && !this.sessionId) {
-    return next(new Error('UserInteraction phải có userId hoặc sessionId'));
+    throw new Error('UserInteraction phải có userId hoặc sessionId');
   }
-  next();
 });
+
+if (mongoose.models.UserInteraction) {
+  delete mongoose.models.UserInteraction;
+}
+if (mongoose.modelSchemas && mongoose.modelSchemas.UserInteraction) {
+  delete mongoose.modelSchemas.UserInteraction;
+}
 
 module.exports = mongoose.model('UserInteraction', userInteractionSchema);

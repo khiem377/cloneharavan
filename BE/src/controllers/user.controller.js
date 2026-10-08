@@ -19,6 +19,9 @@ const {
   updateUserRole: updateUserRoleService,
   deleteUser: deleteUserService,
   createAdminUser: createAdminUserService,
+  getUserStats: getUserStatsService,
+  bulkToggleUserStatus: bulkToggleUserStatusService,
+  resetUserPassword: resetUserPasswordService,
 } = require('../services/user.service');
 
 // ==========================================
@@ -218,8 +221,8 @@ const toggleUserStatus = async (req, res, next) => {
 
 const updateUserRole = async (req, res, next) => {
   try {
-    const { role } = req.body;
-    const user = await updateUserRoleService(req.user._id, req.params.id, role);
+    const { role, roleId, customPermissions } = req.body;
+    const user = await updateUserRoleService(req.user._id, req.params.id, role, roleId, customPermissions);
     res.json({
       status: 'success',
       statusCode: 200,
@@ -258,6 +261,48 @@ const createAdmin = async (req, res, next) => {
   }
 };
 
+const getUserStats = async (req, res, next) => {
+  try {
+    const stats = await getUserStatsService(req.query.userType || 'customer');
+    res.json({
+      status: 'success',
+      statusCode: 200,
+      data: stats,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const bulkToggleStatus = async (req, res, next) => {
+  try {
+    const { userIds, isActive } = req.body;
+    const result = await bulkToggleUserStatusService(req.user._id, userIds, isActive);
+    res.json({
+      status: 'success',
+      statusCode: 200,
+      message: `Đã cập nhật trạng thái cho ${result.modifiedCount} tài khoản`,
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const resetPassword = async (req, res, next) => {
+  try {
+    const { newPassword } = req.body;
+    const result = await resetUserPasswordService(req.user._id, req.params.id, newPassword);
+    res.json({
+      status: 'success',
+      statusCode: 200,
+      message: result.message,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   // Profile & Avatar
   getProfile,
@@ -278,5 +323,8 @@ module.exports = {
   updateUserRole,
   deleteUser,
   createAdmin,
+  getUserStats,
+  bulkToggleStatus,
+  resetPassword,
 };
 

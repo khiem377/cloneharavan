@@ -16,16 +16,21 @@ const getCart = async (req, res, next) => {
 
 const addToCart = async (req, res, next) => {
   try {
-    const { productId, variantId, sku, quantity } = req.body;
-    const result = await cartService.addToCart(req.cartOwner, {
-      productId,
-      variantId,
-      sku,
-      quantity,
-    });
+    const payload = req.body;
+    let itemsCount = 1;
+
+    if (Array.isArray(payload)) {
+      itemsCount = payload.length;
+    } else if (payload && Array.isArray(payload.items)) {
+      itemsCount = payload.items.length;
+    }
+
+    const result = await cartService.addToCart(req.cartOwner, payload);
     res.status(200).json({
       success: true,
-      message: 'Đã thêm sản phẩm vào giỏ hàng thành công',
+      message: itemsCount > 1
+        ? `Đã thêm ${itemsCount} sản phẩm vào giỏ hàng thành công`
+        : 'Đã thêm sản phẩm vào giỏ hàng thành công',
       data: result,
     });
   } catch (error) {

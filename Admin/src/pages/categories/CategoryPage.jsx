@@ -1,20 +1,30 @@
-import { useState, useEffect, useRef } from 'react';
-import { Plus, Pencil, Trash2, ChevronRight, ChevronDown, ToggleLeft, ToggleRight, Loader2, RefreshCw, Eye } from '@/components/ui/Icons';
+import { useState, useEffect } from 'react';
+import { Loader2 } from '@/components/ui/Icons';
 import { toast } from '@/providers/ToastProvider';
 import {
-  useCategories, useCreateCategory, useUpdateCategory,
-  useToggleCategoryStatus, useDeleteCategory, useDeleteBulkCategories,
+  useCategories,
+  useCreateCategory,
+  useUpdateCategory,
+  useToggleCategoryStatus,
+  useDeleteCategory,
+  useDeleteBulkCategories,
 } from '@/hooks/useCategories';
-import { useBrands, useAllBrands } from '@/hooks/useBrands';
+import { useAllBrands } from '@/hooks/useBrands';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
-import MediaPickerModal from '@/components/ui/MediaPickerModal';
-import { MediaThumbnailHover } from '@/components/ui/MediaFolderBadge';
 import DataTablePagination from '@/components/ui/DataTablePagination';
 import { useSearchParams } from 'react-router-dom';
-import Can from '@/components/auth/Can';
-import SearchableSelect from '@/components/ui/SearchableSelect';
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from '@/components/ui/table';
 
-const CLIENT_STORE_URL = import.meta.env.VITE_STORE_FRONTEND_URL || import.meta.env.VITE_CLIENT_URL || 'http://localhost:3000';
+import CategoryToolbar from './components/CategoryToolbar';
+import CategoryTreeRow from './components/CategoryTreeRow';
+import CategoryFormModal from './components/CategoryFormModal';
 
 const DEFAULT_FORM = {
   name: '',
@@ -33,158 +43,32 @@ const DEFAULT_FORM = {
   metaDescription: '',
 };
 
-const LEVEL_LABELS = ['Cấp 1', 'Cấp 2', 'Cấp 3'];
-const CONNECTORS = ['', '└─', '└──'];
-
-function CategoryRow({ cat, level = 0, selected, onSelect, onEdit, onDelete, onToggle, highlightId }) {
-  const [expanded, setExpanded] = useState(level === 0);
-  const hasChildren = cat.children?.length > 0;
-  const isSelected = selected.includes(cat._id);
-  const isHighlighted = cat._id === highlightId;
-
-  const rowRef = (el) => {
-    if (el && isHighlighted) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+function flattenTree(nodes) {
+  const result = [];
+  const walk = (list) => {
+    list.forEach((node) => {
+      result.push(node);
+      if (node.children?.length) walk(node.children);
+    });
   };
-
-  const levelBadges = [
-    'inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold bg-primary/10 text-primary border border-primary/20',
-    'inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20',
-    'inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20',
-  ];
-
-  return (
-    <>
-      <tr ref={rowRef} className={`border-b border-border/60 transition-colors hover:bg-muted/40 ${isSelected || isHighlighted ? 'bg-primary/8 ring-1 ring-inset ring-primary/30' : ''}`}>
-        <td className="px-3.5 py-3 align-middle w-10">
-          <input
-            type="checkbox"
-            className="size-4 rounded border-input text-primary focus:ring-ring"
-            checked={isSelected}
-            onChange={() => onSelect(cat._id)}
-          />
-        </td>
-        <td className="px-3.5 py-3 align-middle">
-          <div className="flex items-center gap-2 py-0.5" style={{ paddingLeft: level * 24 }}>
-            {level > 0 && <span className="font-mono text-xs text-muted-foreground/70 select-none mr-1">{CONNECTORS[level]}</span>}
-            {hasChildren ? (
-              <button
-                className="inline-flex size-6 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer"
-                onClick={() => setExpanded(!expanded)}
-              >
-                {expanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
-              </button>
-            ) : (
-              <span className="w-6 shrink-0" />
-            )}
-            {cat.icon?.url ? (
-              <img src={cat.icon.url} alt="icon" className="size-8 rounded-md object-cover border border-border bg-muted shrink-0" />
-            ) : cat.image?.url ? (
-              <img src={cat.image.url} alt={cat.name} className="size-8 rounded-md object-cover border border-border bg-muted shrink-0" />
-            ) : (
-              <div className="size-8 rounded-md border border-border bg-muted/60 shrink-0" />
-            )}
-            <div className="flex flex-col min-w-0">
-              <span className="font-semibold text-foreground text-sm truncate">{cat.name}</span>
-              {cat.brandId && <span className="text-[11px] text-muted-foreground truncate">🔗 {cat.brandId.name}</span>}
-              {cat.link && !cat.brandId && <span className="text-[11px] text-muted-foreground truncate">↗ {cat.link}</span>}
-            </div>
-          </div>
-        </td>
-        <td className="px-3.5 py-3 align-middle w-20">
-          <span className={levelBadges[level] || levelBadges[2]}>
-            {LEVEL_LABELS[level] || `Cấp ${level + 1}`}
-          </span>
-        </td>
-        <td className="px-3.5 py-3 align-middle">
-          <code className="inline-flex items-center rounded bg-muted px-2 py-0.5 font-mono text-xs text-muted-foreground border border-border/50">
-            {cat.slug}
-          </code>
-        </td>
-        <td className="px-3.5 py-3 align-middle">
-          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border ${cat.showOnMenu ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20' : 'bg-muted text-muted-foreground border-border'}`}>
-            {cat.showOnMenu ? 'Menu' : 'Ẩn'}
-          </span>
-        </td>
-        <td className="px-3.5 py-3 align-middle">
-          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border ${cat.isActive ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' : 'bg-muted text-muted-foreground border-border'}`}>
-            {cat.isActive ? 'Hoạt động' : 'Ẩn'}
-          </span>
-        </td>
-        <td className="px-3.5 py-3 align-middle text-muted-foreground font-mono text-xs">{cat.order}</td>
-        <td className="px-3.5 py-3 align-middle">
-          <div className="flex items-center gap-1">
-            <button
-              className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer"
-              title="Xem trên Cửa hàng"
-              onClick={() => window.open(`${CLIENT_STORE_URL}/collections/${cat.slug}`, '_blank')}
-            >
-              <Eye size={15} />
-            </button>
-            <Can do="category.manage">
-              <button className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer" title="Sửa" onClick={() => onEdit(cat)}>
-                <Pencil size={15} />
-              </button>
-              <button className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer" title={cat.isActive ? 'Ẩn' : 'Hiện'} onClick={() => onToggle(cat)}>
-                {cat.isActive ? <ToggleRight size={15} className="text-emerald-600 dark:text-emerald-400" /> : <ToggleLeft size={15} />}
-              </button>
-              <button className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors cursor-pointer" title="Xóa" onClick={() => onDelete(cat)}>
-                <Trash2 size={15} />
-              </button>
-            </Can>
-          </div>
-        </td>
-      </tr>
-      {hasChildren && expanded && cat.children.map((child) => (
-        <CategoryRow
-          key={child._id}
-          cat={child}
-          level={level + 1}
-          selected={selected}
-          onSelect={onSelect}
-          onEdit={onEdit}
-          onDelete={onDelete}
-          onToggle={onToggle}
-          highlightId={highlightId}
-        />
-      ))}
-    </>
-  );
+  walk(nodes);
+  return result;
 }
 
 export default function CategoryPage() {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const initialSearch = searchParams.get('search') || '';
-
-  const [keyword, setKeyword] = useState(initialSearch);
   const [selected, setSelected] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
   const [form, setForm] = useState(DEFAULT_FORM);
   const [deleteTarget, setDeleteTarget] = useState(null);
-  const [mediaPickerFor, setMediaPickerFor] = useState(null);
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
-
+  const [keyword, setKeyword] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  const { data: categories = [], isLoading, refetch } = useCategories({ keyword, tree: 'true' });
-  const { data: flatCategories = [] } = useCategories({});
+  const { data: categories = [], isLoading, refetch } = useCategories();
   const { data: brands = [] } = useAllBrands();
-
-  useEffect(() => {
-    setPage(1);
-  }, [keyword]);
-
-  const totalItems = categories.length;
-  const totalPages = Math.ceil(totalItems / pageSize) || 1;
-  const paginatedCategories = categories.slice((page - 1) * pageSize, page * pageSize);
-
-  const highlightId = searchParams.get('highlight');
-  useEffect(() => {
-    if (!highlightId || !categories.length) return;
-    setSelected((prev) => prev.includes(highlightId) ? prev : [...prev, highlightId]);
-    setSearchParams((p) => { p.delete('highlight'); return p; }, { replace: true });
-  }, [highlightId, categories]);
 
   const createMut = useCreateCategory();
   const updateMut = useUpdateCategory();
@@ -192,7 +76,34 @@ export default function CategoryPage() {
   const deleteMut = useDeleteCategory();
   const bulkDeleteMut = useDeleteBulkCategories();
 
-  const flatCats = Array.isArray(flatCategories) ? flatCategories : [];
+  const flatCats = flattenTree(categories);
+
+  const highlightId = searchParams.get('highlight');
+  useEffect(() => {
+    if (!highlightId || !categories.length) return;
+    const found = flatCats.find((c) => c._id === highlightId);
+    if (!found) return;
+    setSelected((prev) => (prev.includes(highlightId) ? prev : [...prev, highlightId]));
+    setSearchParams(
+      (p) => {
+        p.delete('highlight');
+        return p;
+      },
+      { replace: true }
+    );
+  }, [highlightId, categories, setSearchParams]);
+
+  const filteredCategories = categories.filter((c) => {
+    if (!keyword) return true;
+    const matchName = (node) =>
+      node.name.toLowerCase().includes(keyword.toLowerCase()) ||
+      (node.children || []).some(matchName);
+    return matchName(c);
+  });
+
+  const totalItems = filteredCategories.length;
+  const totalPages = Math.ceil(totalItems / pageSize) || 1;
+  const paginatedCategories = filteredCategories.slice((page - 1) * pageSize, page * pageSize);
 
   const openCreate = () => {
     setEditTarget(null);
@@ -222,10 +133,13 @@ export default function CategoryPage() {
   };
 
   const handleToggle = (cat) => {
-    toggleMut.mutate({ id: cat._id, isActive: !cat.isActive }, {
-      onSuccess: () => toast.success(`${cat.isActive ? 'Ẩn' : 'Hiện'} danh mục thành công`),
-      onError: (e) => toast.error(e.response?.data?.message || 'Lỗi'),
-    });
+    toggleMut.mutate(
+      { id: cat._id, isActive: !cat.isActive },
+      {
+        onSuccess: () => toast.success(`${cat.isActive ? 'Ẩn' : 'Hiện'} danh mục thành công`),
+        onError: (e) => toast.error(e.response?.data?.message || 'Lỗi cập nhật'),
+      }
+    );
   };
 
   const handleSubmit = () => {
@@ -250,117 +164,59 @@ export default function CategoryPage() {
         toast.success(editTarget ? 'Cập nhật danh mục thành công' : 'Tạo danh mục thành công');
         setShowForm(false);
       },
-      onError: (e) => toast.error(e.response?.data?.message || 'Lỗi'),
+      onError: (e) => toast.error(e.response?.data?.message || 'Lỗi thao tác'),
     };
 
     if (editTarget) updateMut.mutate({ id: editTarget._id, data: payload }, opts);
     else createMut.mutate(payload, opts);
   };
 
-  const confirmDelete = () => {
-    deleteMut.mutate(deleteTarget._id, {
-      onSuccess: () => { toast.success('Đã xóa danh mục'); setDeleteTarget(null); },
-      onError: (e) => toast.error(e.response?.data?.message || 'Lỗi'),
-    });
-  };
-
-  const handleBulkDelete = () => {
-    bulkDeleteMut.mutate(selected, {
-      onSuccess: () => { toast.success('Đã xóa danh mục'); setSelected([]); setBulkDeleteConfirm(false); },
-      onError: (e) => toast.error(e.response?.data?.message || 'Lỗi'),
-    });
-  };
-
   const toggleSelect = (id) =>
-    setSelected((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
-
-  const handleMediaPick = (media) => {
-    if (mediaPickerFor === 'image') {
-      setForm((f) => ({ ...f, imageMediaId: media._id, imageUrl: media.url }));
-      setPickedMediaMap((m) => ({ ...m, image: media }));
-    } else if (mediaPickerFor === 'icon') {
-      setForm((f) => ({ ...f, iconMediaId: media._id, iconUrl: media.url }));
-      setPickedMediaMap((m) => ({ ...m, icon: media }));
-    }
-    setMediaPickerFor(null);
-  };
-
-  const [pickedMediaMap, setPickedMediaMap] = useState({ image: null, icon: null });
-
-  const isMutating = createMut.isPending || updateMut.isPending;
+    setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
 
   return (
-    <div className="p-3 sm:p-6 flex flex-col gap-4 sm:gap-6 w-full max-w-full overflow-x-hidden min-h-full bg-background text-foreground">
-      <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-border">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Danh mục</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">Quản lý danh mục sản phẩm</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => refetch()}
-            className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-input bg-background px-3 text-sm font-medium text-foreground hover:bg-muted transition-colors cursor-pointer"
-            title="Làm mới dữ liệu"
-          >
-            <RefreshCw size={15} className={isLoading ? 'animate-spin' : ''} />
-            Làm mới
-          </button>
+    <div className="space-y-4 max-w-full overflow-x-hidden pb-12 antialiased">
+      {/* 1. Header Toolbar */}
+      <CategoryToolbar
+        keyword={keyword}
+        setKeyword={setKeyword}
+        selectedCount={selected.length}
+        onRefresh={() => refetch()}
+        isLoading={isLoading}
+        onCreate={openCreate}
+        onBulkDelete={() => setBulkDeleteConfirm(true)}
+      />
 
-          <Can do="category.manage">
-            <button
-              className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground shadow-xs hover:bg-primary/90 transition-colors cursor-pointer"
-              onClick={openCreate}
-            >
-              <Plus size={16} /> Tạo danh mục
-            </button>
-          </Can>
-        </div>
-      </div>
-
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <input
-          className="h-9 w-full sm:w-64 rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring/20 focus:border-ring placeholder:text-muted-foreground transition-colors"
-          placeholder="Tìm danh mục..."
-          value={keyword}
-          onChange={(e) => setKeyword(e.target.value)}
-        />
-        {selected.length > 0 && (
-          <button
-            className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-destructive/30 bg-destructive/10 px-3.5 text-sm font-medium text-destructive hover:bg-destructive/20 transition-colors cursor-pointer"
-            onClick={() => setBulkDeleteConfirm(true)}
-          >
-            <Trash2 size={14} /> Xóa {selected.length} mục
-          </button>
-        )}
-      </div>
-
-      <div className="w-full overflow-x-auto rounded-xl border border-border bg-card shadow-2xs">
+      {/* 2. Hierarchical Category Tree Table */}
+      <div className="rounded-[6px] border border-border bg-card overflow-hidden shadow-2xs">
         {isLoading ? (
           <div className="flex justify-center items-center py-16 text-muted-foreground gap-2">
-            <Loader2 className="animate-spin" size={28} />
+            <Loader2 className="animate-spin size-6" />
           </div>
         ) : (
-          <table className="w-full text-left text-sm border-collapse">
-            <thead>
-              <tr className="border-b border-border bg-muted/50">
-                <th className="px-3.5 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap w-10"></th>
-                <th className="px-3.5 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Tên danh mục</th>
-                <th className="px-3.5 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap w-20">Cấp</th>
-                <th className="px-3.5 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Slug</th>
-                <th className="px-3.5 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Menu</th>
-                <th className="px-3.5 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Trạng thái</th>
-                <th className="px-3.5 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Thứ tự</th>
-                <th className="px-3.5 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody>
-              {categories.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="py-12 text-center text-sm text-muted-foreground">Chưa có danh mục nào</td>
-                </tr>
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-secondary/40 hover:bg-secondary/40">
+                <TableHead className="w-10 text-center"></TableHead>
+                <TableHead>Tên danh mục</TableHead>
+                <TableHead className="w-20">Cấp</TableHead>
+                <TableHead>Slug</TableHead>
+                <TableHead>Menu</TableHead>
+                <TableHead>Trạng thái</TableHead>
+                <TableHead className="text-center w-16">Thứ tự</TableHead>
+                <TableHead className="text-right w-28">Thao tác</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {paginatedCategories.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="py-12 text-center text-xs text-muted-foreground font-mono">
+                    Chưa có danh mục nào
+                  </TableCell>
+                </TableRow>
               ) : (
                 paginatedCategories.map((cat) => (
-                  <CategoryRow
+                  <CategoryTreeRow
                     key={cat._id}
                     cat={cat}
                     level={0}
@@ -373,11 +229,12 @@ export default function CategoryPage() {
                   />
                 ))
               )}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         )}
       </div>
 
+      {/* 3. Pagination */}
       <DataTablePagination
         page={page}
         pageSize={pageSize}
@@ -388,204 +245,61 @@ export default function CategoryPage() {
         pageSizeOptions={[10, 20, 50]}
       />
 
+      {/* 4. Form Modal */}
       {showForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4" onClick={() => setShowForm(false)}>
-          <div className="flex w-full max-w-lg flex-col overflow-hidden rounded-xl border border-border bg-background shadow-xl text-foreground" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between border-b border-border px-5 py-4 font-semibold text-foreground">
-              <h2 className="text-base font-semibold text-foreground">{editTarget ? 'Sửa danh mục' : 'Tạo danh mục'}</h2>
-              <button className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer text-lg font-bold" onClick={() => setShowForm(false)}>×</button>
-            </div>
-            <div className="flex flex-col gap-4 p-5 overflow-y-auto max-h-[75vh]">
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-foreground">Tên danh mục <span className="text-destructive ml-0.5">*</span></label>
-                <input
-                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 placeholder:text-muted-foreground transition-colors"
-                  value={form.name}
-                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                  placeholder="Nhập tên danh mục"
-                />
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-foreground">Danh mục cha</label>
-                <SearchableSelect
-                  options={[
-                    { label: '-- Không có (danh mục gốc) --', value: '' },
-                    ...flatCats.filter((c) => c._id !== editTarget?._id).map((c) => ({ label: c.name, value: c._id })),
-                  ]}
-                  value={form.parentId}
-                  onChange={(val) => setForm((f) => ({ ...f, parentId: val }))}
-                  creatable={false}
-                  placeholder="-- Không có (danh mục gốc) --"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-medium text-foreground">Liên kết Brand</label>
-                  <SearchableSelect
-                    options={[
-                      { label: '-- Không liên kết --', value: '' },
-                      ...brands.map((b) => ({ label: b.name, value: b._id })),
-                    ]}
-                    value={form.brandId}
-                    onChange={(val) => setForm((f) => ({ ...f, brandId: val }))}
-                    creatable={false}
-                    placeholder="-- Không liên kết --"
-                  />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-medium text-foreground">Link tùy chỉnh</label>
-                  <input
-                    className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 placeholder:text-muted-foreground transition-colors"
-                    value={form.link}
-                    onChange={(e) => setForm((f) => ({ ...f, link: e.target.value }))}
-                    placeholder="/tivi-tra-gop hoặc https://..."
-                  />
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-foreground">Mô tả</label>
-                <textarea
-                  className="w-full rounded-md border border-input bg-background p-3 text-sm text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 placeholder:text-muted-foreground transition-colors"
-                  rows={3}
-                  value={form.description}
-                  onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                  placeholder="Mô tả danh mục"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-medium text-foreground">Thứ tự</label>
-                  <input
-                    type="number"
-                    className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 transition-colors"
-                    value={form.order}
-                    onChange={(e) => setForm((f) => ({ ...f, order: e.target.value }))}
-                  />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-medium text-foreground">Trạng thái</label>
-                  <SearchableSelect
-                    options={[
-                      { label: 'Hoạt động', value: 'true' },
-                      { label: 'Ẩn', value: 'false' },
-                    ]}
-                    value={form.isActive ? 'true' : 'false'}
-                    onChange={(val) => setForm((f) => ({ ...f, isActive: val === 'true' }))}
-                    creatable={false}
-                    placeholder="Chọn trạng thái..."
-                  />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-medium text-foreground">Hiện trên menu</label>
-                  <SearchableSelect
-                    options={[
-                      { label: 'Hiện', value: 'true' },
-                      { label: 'Ẩn', value: 'false' },
-                    ]}
-                    value={form.showOnMenu ? 'true' : 'false'}
-                    onChange={(val) => setForm((f) => ({ ...f, showOnMenu: val === 'true' }))}
-                    creatable={false}
-                    placeholder="Chọn..."
-                  />
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-foreground">Hình ảnh danh mục</label>
-                <div className="flex items-center gap-3 mt-1">
-                  {form.imageUrl && (
-                    <MediaThumbnailHover media={pickedMediaMap.image} className="shrink-0">
-                      <img src={form.imageUrl} alt="preview" className="size-12 rounded-md object-cover border border-border bg-muted shrink-0" />
-                    </MediaThumbnailHover>
-                  )}
-                  <button type="button" className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-input bg-background px-3.5 text-sm font-medium text-foreground hover:bg-accent cursor-pointer" onClick={() => setMediaPickerFor('image')}>
-                    Chọn ảnh từ thư viện
-                  </button>
-                  {form.imageUrl && (
-                    <button type="button" className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg px-3.5 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground cursor-pointer" onClick={() => setForm((f) => ({ ...f, imageMediaId: '', imageUrl: '' }))}>
-                      Xóa ảnh
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-foreground">Icon danh mục (hiện sidebar)</label>
-                <div className="flex items-center gap-3 mt-1">
-                  {form.iconUrl && (
-                    <MediaThumbnailHover media={pickedMediaMap.icon} className="shrink-0">
-                      <img src={form.iconUrl} alt="icon" className="size-12 rounded-md object-cover border border-border bg-muted shrink-0" />
-                    </MediaThumbnailHover>
-                  )}
-                  <button type="button" className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-input bg-background px-3.5 text-sm font-medium text-foreground hover:bg-accent cursor-pointer" onClick={() => setMediaPickerFor('icon')}>
-                    Chọn icon từ thư viện
-                  </button>
-                  {form.iconUrl && (
-                    <button type="button" className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg px-3.5 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground cursor-pointer" onClick={() => setForm((f) => ({ ...f, iconMediaId: '', iconUrl: '' }))}>
-                      Xóa icon
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-foreground">Meta Title (SEO)</label>
-                <input
-                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 placeholder:text-muted-foreground transition-colors"
-                  value={form.metaTitle}
-                  onChange={(e) => setForm((f) => ({ ...f, metaTitle: e.target.value }))}
-                  placeholder="Tiêu đề SEO"
-                />
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-foreground">Meta Description (SEO)</label>
-                <textarea
-                  className="w-full rounded-md border border-input bg-background p-3 text-sm text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 placeholder:text-muted-foreground transition-colors"
-                  rows={2}
-                  value={form.metaDescription}
-                  onChange={(e) => setForm((f) => ({ ...f, metaDescription: e.target.value }))}
-                  placeholder="Mô tả SEO"
-                />
-              </div>
-
-            </div>
-            <div className="flex items-center justify-end gap-2 border-t border-border bg-muted/40 px-5 py-3">
-              <button className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg px-3.5 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground cursor-pointer" onClick={() => setShowForm(false)}>Hủy</button>
-              <button className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-primary px-3.5 text-sm font-medium text-primary-foreground shadow-xs hover:bg-primary/90 transition-colors disabled:pointer-events-none disabled:opacity-50 cursor-pointer" onClick={handleSubmit} disabled={isMutating}>
-                {isMutating ? <Loader2 size={15} className="animate-spin" /> : (editTarget ? 'Cập nhật' : 'Tạo mới')}
-              </button>
-            </div>
-          </div>
-        </div>
+        <CategoryFormModal
+          form={form}
+          setForm={setForm}
+          editTarget={editTarget}
+          flatCats={flatCats}
+          brands={brands}
+          onSubmit={handleSubmit}
+          onClose={() => setShowForm(false)}
+          isMutating={createMut.isPending || updateMut.isPending}
+        />
       )}
 
-      {mediaPickerFor && (
-        <MediaPickerModal onSelect={handleMediaPick} onClose={() => setMediaPickerFor(null)} />
+      {/* 5. Delete Confirm */}
+      {deleteTarget && (
+        <ConfirmDialog
+          open={!!deleteTarget}
+          title="Xác nhận xóa danh mục"
+          description={`Bạn có chắc chắn muốn xóa danh mục "${deleteTarget.name}"? Thao tác này sẽ ảnh hưởng đến các danh mục con và sản phẩm liên quan.`}
+          confirmLabel="Xóa danh mục"
+          danger
+          onConfirm={() => {
+            deleteMut.mutate(deleteTarget._id, {
+              onSuccess: () => {
+                toast.success('Đã xóa danh mục');
+                setDeleteTarget(null);
+              },
+              onError: (e) => toast.error(e.response?.data?.message || 'Lỗi'),
+            });
+          }}
+          onClose={() => setDeleteTarget(null)}
+        />
       )}
 
-      <ConfirmDialog
-        open={!!deleteTarget}
-        title="Xóa danh mục"
-        description={`Bạn có chắc muốn xóa "${deleteTarget?.name}" không? Hành động này không thể hoàn tác.`}
-        onConfirm={confirmDelete}
-        onCancel={() => setDeleteTarget(null)}
-        loading={deleteMut.isPending}
-      />
-
-      <ConfirmDialog
-        open={bulkDeleteConfirm}
-        title={`Xóa ${selected.length} danh mục`}
-        description="Hành động này sẽ xóa tất cả danh mục đã chọn và không thể hoàn tác."
-        onConfirm={handleBulkDelete}
-        onCancel={() => setBulkDeleteConfirm(false)}
-        loading={bulkDeleteMut.isPending}
-      />
+      {bulkDeleteConfirm && (
+        <ConfirmDialog
+          open={bulkDeleteConfirm}
+          title={`Xác nhận xóa ${selected.length} danh mục`}
+          description="Hành động này sẽ xóa vĩnh viễn tất cả danh mục đã chọn và không thể khôi phục."
+          confirmLabel={`Xóa ${selected.length} mục`}
+          danger
+          onConfirm={() => {
+            bulkDeleteMut.mutate(selected, {
+              onSuccess: () => {
+                toast.success('Đã xóa danh mục');
+                setSelected([]);
+                setBulkDeleteConfirm(false);
+              },
+              onError: (e) => toast.error(e.response?.data?.message || 'Lỗi'),
+            });
+          }}
+          onClose={() => setBulkDeleteConfirm(false)}
+        />
+      )}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import Icon from '../../../components/common/Icon';
+import { Search, X } from 'lucide-react';
 import { Input } from '../../../components/ui/input';
 import { Button } from '../../../components/ui/button';
 import { Badge } from '../../../components/ui/badge';
@@ -31,22 +31,20 @@ export default function BrandFilterSection({
     <div className="space-y-2.5">
       {brands.length > 6 && (
         <div className="relative">
+          <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <Input
             type="text"
             placeholder="Tìm thương hiệu..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-7 pr-7 h-7 text-xs"
+            className="pl-7 pr-7 h-7 text-xs rounded-[6px]"
           />
-          <div className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400">
-            <Icon name="search" size={12} />
-          </div>
           {searchTerm && (
             <button
               onClick={() => setSearchTerm('')}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
             >
-              <Icon name="close" size={10} />
+              <X size={12} />
             </button>
           )}
         </div>
@@ -64,15 +62,17 @@ export default function BrandFilterSection({
               onClick={() => onSelectBrand(isSelected ? '' : b.slug || b._id)}
               className={
                 isSelected
-                  ? 'h-auto py-1 px-2.5 bg-red-50 hover:bg-red-100 text-red-600 border-red-600 font-bold shadow-xs'
-                  : 'h-auto py-1 px-2.5 font-normal text-gray-700'
+                  ? 'h-7 py-1 px-2.5 bg-[#e30019] hover:bg-[#c40015] text-white font-semibold rounded-[6px] shadow-xs active:scale-[0.98]'
+                  : 'h-7 py-1 px-2.5 font-normal text-slate-700 hover:bg-slate-50 rounded-[6px] border-slate-200 active:scale-[0.98]'
               }
             >
               <span>{b.name}</span>
               {typeof b.count === 'number' && b.count > 0 && (
                 <Badge
-                  variant={isSelected ? 'destructive' : 'secondary'}
-                  className="px-1 py-0 text-[10px] ml-1 rounded-sm"
+                  variant={isSelected ? 'outline' : 'secondary'}
+                  className={`px-1 py-0 text-[10px] ml-1 rounded-[4px] font-mono tabular-nums ${
+                    isSelected ? 'bg-white/20 text-white border-transparent' : 'bg-slate-100 text-slate-600'
+                  }`}
                 >
                   {b.count}
                 </Badge>
@@ -88,14 +88,14 @@ export default function BrandFilterSection({
           variant="link"
           size="sm"
           onClick={() => setIsExpanded(!isExpanded)}
-          className="h-auto p-0 text-xs text-red-600 font-medium mt-1"
+          className="h-auto p-0 text-xs text-[#e30019] font-medium hover:underline mt-1"
         >
           {isExpanded ? 'Thu gọn' : `+ Xem thêm (${remainingCount} thương hiệu)`}
         </Button>
       )}
 
       {filteredBrands.length === 0 && (
-        <p className="text-xs text-gray-400 italic py-1">Không tìm thấy thương hiệu phù hợp</p>
+        <p className="text-xs text-slate-400 italic py-1">Không tìm thấy thương hiệu phù hợp</p>
       )}
     </div>
   );

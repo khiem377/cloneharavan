@@ -57,7 +57,7 @@ export const BlogFilterBar = ({
           type="button"
           onClick={() => handleSortChange('newest')}
           className={cn(
-            'px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all shrink-0 cursor-pointer shadow-2xs',
+            'px-3.5 py-1.5 rounded-[6px] text-xs font-semibold transition-all shrink-0 cursor-pointer shadow-2xs active:scale-[0.98]',
             currentSort === 'newest'
               ? 'bg-[#284ea1] text-white shadow-xs ring-2 ring-[#284ea1]/20'
               : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
@@ -69,7 +69,7 @@ export const BlogFilterBar = ({
           type="button"
           onClick={() => handleSortChange('views')}
           className={cn(
-            'px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all shrink-0 cursor-pointer shadow-2xs',
+            'px-3.5 py-1.5 rounded-[6px] text-xs font-semibold transition-all shrink-0 cursor-pointer shadow-2xs active:scale-[0.98]',
             currentSort === 'views'
               ? 'bg-[#284ea1] text-white shadow-xs ring-2 ring-[#284ea1]/20'
               : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
@@ -86,11 +86,11 @@ export const BlogFilterBar = ({
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Tìm kiếm bài viết..."
-            className="h-9 text-xs pr-8 rounded-xl border-slate-200 bg-white focus-visible:border-[#284ea1] focus-visible:ring-2 focus-visible:ring-[#284ea1]/20 shadow-2xs"
+            className="h-9 text-xs pr-8 rounded-[6px] border-slate-200 bg-white focus-visible:border-[#284ea1] focus-visible:ring-2 focus-visible:ring-[#284ea1]/20 shadow-2xs"
           />
           <button
             type="submit"
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#284ea1] transition-colors"
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#284ea1] transition-colors cursor-pointer"
             aria-label="Tìm kiếm"
           >
             <Search className="w-4 h-4" />
@@ -98,12 +98,12 @@ export const BlogFilterBar = ({
         </form>
 
         {onViewModeChange && (
-          <div className="flex items-center border border-slate-200 rounded-xl p-0.5 bg-white shrink-0 shadow-2xs">
+          <div className="flex items-center border border-slate-200 rounded-[6px] p-0.5 bg-white shrink-0 shadow-2xs">
             <button
               type="button"
               onClick={() => onViewModeChange('grid')}
               className={cn(
-                'p-1.5 rounded-lg transition-colors cursor-pointer',
+                'p-1.5 rounded-[4px] transition-colors cursor-pointer',
                 viewMode === 'grid'
                   ? 'bg-[#edf2fa] text-[#284ea1]'
                   : 'text-slate-400 hover:text-slate-700'
@@ -116,7 +116,7 @@ export const BlogFilterBar = ({
               type="button"
               onClick={() => onViewModeChange('horizontal')}
               className={cn(
-                'p-1.5 rounded-lg transition-colors cursor-pointer',
+                'p-1.5 rounded-[4px] transition-colors cursor-pointer',
                 viewMode === 'horizontal'
                   ? 'bg-[#edf2fa] text-[#284ea1]'
                   : 'text-slate-400 hover:text-slate-700'

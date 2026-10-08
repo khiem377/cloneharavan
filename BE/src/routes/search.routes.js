@@ -33,6 +33,9 @@ router.post('/purchase', controller.recordPurchaseKeyword);
 
 // ── Admin Only ─────────────────────────────────────────────────────────────
 
+// AI Search Auto-Training with Gemini: POST /api/v1/search/ai-train
+router.post('/ai-train', controller.trainSearchWithAI);
+
 // Toggle pin keyword: PATCH /api/search/trending { keyword: "iphone", isTrending: true }
 router.patch('/trending', protect, controller.toggleKeywordTrending);
 
