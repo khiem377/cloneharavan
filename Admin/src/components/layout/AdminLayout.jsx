@@ -1,8 +1,9 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef, Suspense } from 'react';
-import { Bell, X, Eye, EyeOff, Loader2, ShieldCheck, KeyRound, User as UserIcon, Sun, Moon } from 'lucide-react';
+import { Bell, X, Eye, EyeOff, Loader2, ShieldCheck, KeyRound, User as UserIcon } from 'lucide-react';
 import AppSidebar from './Sidebar';
 import SessionStreamListener from '@/components/common/SessionStreamListener';
+import ThemeToggle from '@/components/ui/ThemeToggle';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -171,21 +172,6 @@ function ChangePasswordModal({ onClose }) {
 
 // ── Topbar (Clean, Flat, Border-b 1px, 6px controls) ──────────────────────────
 function Topbar({ title }) {
-  const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
-
-  const toggleTheme = () => {
-    const root = document.documentElement;
-    if (root.classList.contains('dark')) {
-      root.classList.remove('dark');
-      setIsDark(false);
-      localStorage.setItem('admin-theme', 'light');
-    } else {
-      root.classList.add('dark');
-      setIsDark(true);
-      localStorage.setItem('admin-theme', 'dark');
-    }
-  };
-
   return (
     <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-background px-4">
       <div className="flex items-center gap-2.5">
@@ -207,15 +193,8 @@ function Topbar({ title }) {
       </div>
 
       <div className="flex items-center gap-2">
-        {/* Theme Toggle Button */}
-        <button
-          type="button"
-          onClick={toggleTheme}
-          className="size-8 flex items-center justify-center rounded-[6px] border border-border bg-card text-muted-foreground hover:text-foreground hover:bg-accent transition-colors active:scale-[0.98] cursor-pointer"
-          title={isDark ? 'Chuyển sang giao diện sáng' : 'Chuyển sang giao diện tối'}
-        >
-          {isDark ? <Sun size={15} /> : <Moon size={15} />}
-        </button>
+        {/* Studio-grade Smooth Theme Toggle Button */}
+        <ThemeToggle />
 
         {/* Notification Bell */}
         <button

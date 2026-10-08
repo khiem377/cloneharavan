@@ -15,6 +15,26 @@ export default function GoogleAdminLoginButton() {
     import.meta.env.VITE_GOOGLE_CLIENT_ID ||
     '157603556653-7m14fg5988tq3rp7fprk3e7gastt8iv7.apps.googleusercontent.com';
 
+  // Auto-reset loading state when returning via Back button (BFCache), switching tabs, or window focus
+  useEffect(() => {
+    const handleReset = () => setLoading(false);
+
+    window.addEventListener('pageshow', handleReset);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        handleReset();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleReset);
+
+    return () => {
+      window.removeEventListener('pageshow', handleReset);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleReset);
+    };
+  }, []);
+
   const handleCredentialResponse = async (response) => {
     if (!response?.credential) {
       toast.error('Không nhận được mã xác thực từ Google');
@@ -22,6 +42,10 @@ export default function GoogleAdminLoginButton() {
     }
 
     setLoading(true);
+    const safetyTimer = setTimeout(() => {
+      setLoading(false);
+    }, 6000);
+
     try {
       const { data } = await authService.googleLogin(response.credential);
       const user = data.data.user;
@@ -47,6 +71,7 @@ export default function GoogleAdminLoginButton() {
         'Đăng nhập Google thất bại. Vui lòng kiểm tra lại quyền quản trị!';
       toast.error(msg);
     } finally {
+      clearTimeout(safetyTimer);
       setLoading(false);
     }
   };

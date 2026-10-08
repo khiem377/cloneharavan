@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -42,6 +42,21 @@ export default function TrangDangKy() {
   const [hienXacNhan, setHienXacNhan] = useState(false);
   const [dangGui, setDangGui] = useState(false);
   const [loi, setLoi] = useState('');
+
+  useEffect(() => {
+    const handleReset = () => setDangGui(false);
+    window.addEventListener('pageshow', handleReset);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') handleReset();
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleReset);
+    return () => {
+      window.removeEventListener('pageshow', handleReset);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleReset);
+    };
+  }, []);
 
   const matKhauHopLe =
     duLieu.password.length >= 8 &&
@@ -109,7 +124,7 @@ export default function TrangDangKy() {
     } catch (err) {
       setLoi(
         err.response?.data?.message ||
-          'Đã có lỗi xảy ra trong quá trình đăng ký. Vui lòng kiểm tra lại thông tin.'
+        'Đã có lỗi xảy ra trong quá trình đăng ký. Vui lòng kiểm tra lại thông tin.'
       );
     } finally {
       setDangGui(false);
@@ -233,13 +248,12 @@ export default function TrangDangKy() {
                     value={duLieu.password}
                     onChange={handleThayDoi}
                     placeholder="Tối thiểu 8 ký tự"
-                    className={`pl-9 pr-9 h-10 text-xs rounded-[6px] ${
-                      matKhauSai
+                    className={`pl-9 pr-9 h-10 text-xs rounded-[6px] ${matKhauSai
                         ? 'border-red-400 focus:border-red-500'
                         : matKhauHopLe
-                        ? 'border-emerald-400 focus:border-emerald-500'
-                        : ''
-                    }`}
+                          ? 'border-emerald-400 focus:border-emerald-500'
+                          : ''
+                      }`}
                   />
                   <Lock size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                   <button
@@ -270,13 +284,12 @@ export default function TrangDangKy() {
                     value={duLieu.confirmPassword}
                     onChange={handleThayDoi}
                     placeholder="Nhập lại mật khẩu"
-                    className={`pl-9 pr-9 h-10 text-xs rounded-[6px] ${
-                      xacNhanSai
+                    className={`pl-9 pr-9 h-10 text-xs rounded-[6px] ${xacNhanSai
                         ? 'border-red-400 focus:border-red-500'
                         : daBatDauXacNhan && !xacNhanSai
-                        ? 'border-emerald-400 focus:border-emerald-500'
-                        : ''
-                    }`}
+                          ? 'border-emerald-400 focus:border-emerald-500'
+                          : ''
+                      }`}
                   />
                   <Lock size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                   <button

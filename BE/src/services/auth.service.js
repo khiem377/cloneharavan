@@ -14,6 +14,13 @@ const {
 } = require('./email.service');
 const { parseDeviceInfo, lookupGeoLocation } = require('../utils/deviceParser');
 const sseService = require('./sse.service');
+const {
+  generateRegistrationOptions,
+  verifyRegistrationResponse,
+  generateAuthenticationOptions,
+  verifyAuthenticationResponse,
+} = require('@simplewebauthn/server');
+const { isoBase64URL } = require('@simplewebauthn/server/helpers');
 
 const COOKIE_OPTIONS_PERSISTENT = {
   httpOnly: true,
@@ -1461,9 +1468,40 @@ const verifyAdminLoginOtp = async (email, otp) => {
 };
 
 /**
- * Admin: Tạo Challenge cho Passkey Login
+ * Helper: Trích xuất RP ID và Allowed Origins chuẩn FIDO2
  */
-const generatePasskeyLoginOptions = async (email) => {
+const getWebAuthnRpConfig = (req) => {
+  const host = req?.headers?.['x-forwarded-host'] || req?.headers?.host || 'localhost';
+  const rawHostname = host.split(':')[0];
+  const rpID = process.env.RP_ID || (rawHostname === '127.0.0.1' ? '127.0.0.1' : rawHostname === 'localhost' ? 'localhost' : rawHostname);
+
+  const originHeader = req?.headers?.origin || req?.headers?.referer;
+  let parsedOrigin = '';
+  if (originHeader) {
+    try {
+      const u = new URL(originHeader);
+      parsedOrigin = u.origin;
+    } catch (_) {}
+  }
+
+  const allowedOrigins = [
+    process.env.ADMIN_URL || 'http://localhost:5173',
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+  ];
+  if (parsedOrigin && !allowedOrigins.includes(parsedOrigin)) {
+    allowedOrigins.push(parsedOrigin);
+  }
+
+  return { rpID, allowedOrigins, rpName: 'Haravan OMS' };
+};
+
+/**
+ * Admin: Tạo Challenge cho Passkey Login chuẩn FIDO2
+ */
+const generatePasskeyLoginOptions = async (email, req) => {
   if (!email || !email.trim()) {
     throw new AppError('Vui lòng cung cấp email quản trị!', 400);
   }
@@ -1479,30 +1517,38 @@ const generatePasskeyLoginOptions = async (email) => {
     throw new AppError('Tài khoản không có quyền truy cập trang quản trị!', 403);
   }
 
-  const challenge = crypto.randomBytes(32).toString('base64url');
-  user.passkeyChallenge = challenge;
+  // Lọc các khóa hợp lệ chuẩn FIDO2 (loại bỏ dữ liệu mô phỏng cũ)
+  const validPasskeys = (user.passkeys || []).filter((pk) => pk.publicKey && pk.publicKey !== pk.credentialId && pk.publicKey.length >= 30);
+  if (validPasskeys.length === 0) {
+    throw new AppError('Tài khoản chưa có khóa Passkey chuẩn FIDO2 nào. Vui lòng đăng nhập bằng Mật khẩu hoặc OTP để thiết lập Passkey trong Cài đặt Hồ sơ!', 400);
+  }
+
+  const { rpID } = getWebAuthnRpConfig(req);
+
+  const allowCredentials = validPasskeys.map((pk) => ({
+    id: pk.credentialId,
+    type: 'public-key',
+    transports: pk.transports && pk.transports.length > 0 ? pk.transports : ['internal', 'hybrid', 'usb', 'nfc', 'ble'],
+  }));
+
+  const options = await generateAuthenticationOptions({
+    rpID,
+    allowCredentials,
+    userVerification: 'preferred',
+    timeout: 60000,
+  });
+
+  user.passkeyChallenge = options.challenge;
   user.passkeyChallengeExpires = new Date(Date.now() + 2 * 60 * 1000);
   await user.save({ validateBeforeSave: false });
 
-  const allowCredentials = (user.passkeys || []).map((pk) => ({
-    id: pk.credentialId,
-    type: 'public-key',
-    transports: pk.transports || ['internal', 'hybrid', 'usb', 'nfc', 'ble'],
-  }));
-
-  return {
-    challenge,
-    timeout: 60000,
-    rpId: process.env.RP_ID || undefined,
-    allowCredentials,
-    userVerification: 'preferred',
-  };
+  return options;
 };
 
 /**
- * Admin: Xác thực Passkey Login
+ * Admin: Xác thực Passkey Login chuẩn FIDO2 Cryptographic Verification
  */
-const verifyPasskeyLogin = async ({ email, credentialId, clientDataJSON, authenticatorData, signature }) => {
+const verifyPasskeyLogin = async ({ email, response, credentialId, clientDataJSON, authenticatorData, signature, req }) => {
   if (!email) {
     throw new AppError('Email không hợp lệ!', 400);
   }
@@ -1521,31 +1567,63 @@ const verifyPasskeyLogin = async ({ email, credentialId, clientDataJSON, authent
     throw new AppError('Yêu cầu xác thực Passkey đã hết hạn. Vui lòng thử lại!', 400);
   }
 
-  if (clientDataJSON) {
-    try {
-      const rawClientData = Buffer.from(clientDataJSON, 'base64url').toString('utf8');
-      const parsedClientData = JSON.parse(rawClientData);
-      if (parsedClientData.challenge !== user.passkeyChallenge) {
-        throw new AppError('Challenge xác thực Passkey không khớp!', 400);
-      }
-    } catch (e) {
-      if (e instanceof AppError) throw e;
-      throw new AppError('Dữ liệu Passkey không hợp lệ!', 400);
-    }
+  // Chuẩn hóa client response payload
+  const clientResponse = response || {
+    id: credentialId,
+    rawId: credentialId,
+    response: {
+      clientDataJSON,
+      authenticatorData,
+      signature,
+    },
+    type: 'public-key',
+  };
+
+  const matchedPasskey = (user.passkeys || []).find((pk) => pk.credentialId === clientResponse.id);
+  if (!matchedPasskey) {
+    throw new AppError('Khóa bảo mật Passkey không khớp với tài khoản này!', 400);
   }
 
-  // Khớp credential
-  const registeredKey = (user.passkeys || []).find((pk) => pk.credentialId === credentialId);
-  if (!registeredKey && (!user.passkeys || user.passkeys.length === 0)) {
-    // Tự động liên kết khóa đầu tiên nếu passkey hợp lệ
-    user.passkeys = user.passkeys || [];
-    user.passkeys.push({
-      credentialId,
-      publicKey: credentialId,
-      deviceName: 'Thiết bị Quản trị viên (Passkey)',
+  if (!matchedPasskey.publicKey || matchedPasskey.publicKey === matchedPasskey.credentialId || matchedPasskey.publicKey.length < 30) {
+    throw new AppError('Khóa Passkey này thuộc phiên bản thử nghiệm cũ. Vui lòng đăng nhập bằng Mật khẩu hoặc OTP và đăng ký lại Passkey mới trong Cài đặt Hồ sơ!', 400);
+  }
+
+  const { rpID, allowedOrigins } = getWebAuthnRpConfig(req);
+
+  let verification;
+  try {
+    let publicKeyBuffer;
+    try {
+      publicKeyBuffer = isoBase64URL.toBuffer(matchedPasskey.publicKey);
+    } catch {
+      publicKeyBuffer = Buffer.from(matchedPasskey.publicKey, 'base64url');
+    }
+
+    verification = await verifyAuthenticationResponse({
+      response: clientResponse,
+      expectedChallenge: user.passkeyChallenge,
+      expectedOrigin: allowedOrigins,
+      expectedRPID: rpID,
+      credential: {
+        id: matchedPasskey.credentialId,
+        publicKey: publicKeyBuffer,
+        counter: matchedPasskey.counter || 0,
+        transports: matchedPasskey.transports && matchedPasskey.transports.length > 0 ? matchedPasskey.transports : undefined,
+      },
+      requireUserVerification: false,
     });
-  } else if (!registeredKey) {
-    throw new AppError('Khóa bảo mật Passkey không khớp với tài khoản này!', 400);
+  } catch (err) {
+    console.error('[WebAuthn Login Error]', err);
+    throw new AppError(err.message || 'Xác thực chữ ký Passkey thất bại!', 400);
+  }
+
+  if (!verification || !verification.verified) {
+    throw new AppError('Xác thực chữ ký Passkey không thành công!', 400);
+  }
+
+  // Cập nhật Counter chống Replay / Cloned Authenticator
+  if (verification.authenticationInfo?.newCounter !== undefined) {
+    matchedPasskey.counter = verification.authenticationInfo.newCounter;
   }
 
   user.passkeyChallenge = undefined;
@@ -1556,52 +1634,46 @@ const verifyPasskeyLogin = async ({ email, credentialId, clientDataJSON, authent
 };
 
 /**
- * Admin: Tạo Challenge để đăng ký Passkey mới
+ * Admin: Tạo Challenge để đăng ký Passkey mới chuẩn FIDO2
  */
-const generatePasskeyRegisterOptions = async (userId) => {
+const generatePasskeyRegisterOptions = async (userId, req) => {
   const user = await User.findById(userId);
   if (!user) throw new AppError('Không tìm thấy người dùng', 404);
 
-  const challenge = crypto.randomBytes(32).toString('base64url');
-  user.passkeyChallenge = challenge;
-  user.passkeyChallengeExpires = new Date(Date.now() + 5 * 60 * 1000);
-  await user.save({ validateBeforeSave: false });
+  const { rpID, rpName } = getWebAuthnRpConfig(req);
 
   const excludeCredentials = (user.passkeys || []).map((pk) => ({
     id: pk.credentialId,
     type: 'public-key',
+    transports: pk.transports && pk.transports.length > 0 ? pk.transports : undefined,
   }));
 
-  return {
-    challenge,
-    rp: {
-      name: 'Haravan OMS',
-      id: process.env.RP_ID || undefined,
-    },
-    user: {
-      id: Buffer.from(user._id.toString()).toString('base64url'),
-      name: user.email,
-      displayName: user.fullName || user.email,
-    },
-    pubKeyCredParams: [
-      { alg: -7, type: 'public-key' },
-      { alg: -257, type: 'public-key' },
-    ],
-    timeout: 60000,
-    attestation: 'none',
+  const options = await generateRegistrationOptions({
+    rpName,
+    rpID,
+    userID: new Uint8Array(Buffer.from(user._id.toString())),
+    userName: user.email,
+    userDisplayName: user.fullName || user.email,
+    attestationType: 'none',
     excludeCredentials,
     authenticatorSelection: {
-      authenticatorAttachment: 'platform',
       userVerification: 'preferred',
       residentKey: 'preferred',
     },
-  };
+    timeout: 60000,
+  });
+
+  user.passkeyChallenge = options.challenge;
+  user.passkeyChallengeExpires = new Date(Date.now() + 5 * 60 * 1000);
+  await user.save({ validateBeforeSave: false });
+
+  return options;
 };
 
 /**
- * Admin: Xác thực lưu Passkey mới
+ * Admin: Xác thực lưu Passkey mới chuẩn FIDO2 Cryptographic Verification
  */
-const verifyPasskeyRegister = async (userId, { credentialId, deviceName, rawId, clientDataJSON, attestationObject }) => {
+const verifyPasskeyRegister = async (userId, { response, deviceName, credentialId, rawId, clientDataJSON, attestationObject, req }) => {
   const user = await User.findById(userId).select('+passkeyChallenge +passkeyChallengeExpires');
   if (!user) throw new AppError('Không tìm thấy người dùng', 404);
 
@@ -1609,16 +1681,50 @@ const verifyPasskeyRegister = async (userId, { credentialId, deviceName, rawId, 
     throw new AppError('Yêu cầu đăng ký Passkey đã hết hạn. Vui lòng thử lại!', 400);
   }
 
+  const clientResponse = response || {
+    id: credentialId,
+    rawId: rawId || credentialId,
+    response: {
+      clientDataJSON,
+      attestationObject,
+    },
+    type: 'public-key',
+  };
+
+  const { rpID, allowedOrigins } = getWebAuthnRpConfig(req);
+
+  let verification;
+  try {
+    verification = await verifyRegistrationResponse({
+      response: clientResponse,
+      expectedChallenge: user.passkeyChallenge,
+      expectedOrigin: allowedOrigins,
+      expectedRPID: rpID,
+      requireUserVerification: false,
+    });
+  } catch (err) {
+    console.error('[WebAuthn Registration Error]', err);
+    throw new AppError(err.message || 'Xác thực đăng ký Passkey thất bại!', 400);
+  }
+
+  if (!verification || !verification.verified || !verification.registrationInfo) {
+    throw new AppError('Xác thực đăng ký Passkey không thành công!', 400);
+  }
+
+  const { credential } = verification.registrationInfo;
+
   user.passkeys = user.passkeys || [];
-  const existing = user.passkeys.find((pk) => pk.credentialId === credentialId);
+  const existing = user.passkeys.find((pk) => pk.credentialId === credential.id);
   if (existing) {
     throw new AppError('Thiết bị Passkey này đã được đăng ký!', 400);
   }
 
   user.passkeys.push({
-    credentialId,
-    publicKey: rawId || credentialId,
-    deviceName: deviceName || 'Passkey Platform Device',
+    credentialId: credential.id,
+    publicKey: isoBase64URL.fromBuffer(credential.publicKey),
+    counter: credential.counter || 0,
+    transports: credential.transports || [],
+    deviceName: deviceName || 'Thiết bị Quản trị viên (Passkey)',
     createdAt: new Date(),
   });
 
@@ -1648,6 +1754,7 @@ const deletePasskey = async (userId, credentialId = null) => {
 
   return { message: 'Đã xóa khóa Passkey thành công!', passkeys: user.passkeys };
 };
+
 
 
 module.exports = {

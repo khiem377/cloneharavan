@@ -15,6 +15,26 @@ export default function GoogleLoginButton({ text = 'signin_with', redirectUrl = 
 
   const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '157603556653-7m14fg5988tq3rp7fprk3e7gastt8iv7.apps.googleusercontent.com';
 
+  // Auto-reset loading state when user returns via Back button (BFCache), switches tabs, or regains window focus
+  useEffect(() => {
+    const handleReset = () => setLoading(false);
+
+    window.addEventListener('pageshow', handleReset);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        handleReset();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleReset);
+
+    return () => {
+      window.removeEventListener('pageshow', handleReset);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleReset);
+    };
+  }, []);
+
   const handleCredentialResponse = async (response) => {
     if (!response?.credential) {
       toast.error('Không nhận được thông tin xác thực từ Google');
@@ -22,6 +42,10 @@ export default function GoogleLoginButton({ text = 'signin_with', redirectUrl = 
     }
 
     setLoading(true);
+    const safetyTimer = setTimeout(() => {
+      setLoading(false);
+    }, 6000);
+
     try {
       const sessionId = anonymousId || getOrCreateAnonymousId();
       const res = await authService.googleLogin({
@@ -46,6 +70,7 @@ export default function GoogleLoginButton({ text = 'signin_with', redirectUrl = 
           'Đăng nhập Google thất bại. Vui lòng thử lại!'
       );
     } finally {
+      clearTimeout(safetyTimer);
       setLoading(false);
     }
   };

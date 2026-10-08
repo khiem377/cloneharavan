@@ -1,14 +1,40 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { toast } from '../ui/toast';
 import { authService } from '../../services/auth.service';
 
 export default function TikTokLoginButton({ text = 'Tiếp tục với TikTok', redirectUrl = '/' }) {
   const [loading, setLoading] = useState(false);
 
+  // Auto-reset loading state when user returns via Back button (BFCache), switches tabs, or regains window focus
+  useEffect(() => {
+    const handleReset = () => setLoading(false);
+
+    window.addEventListener('pageshow', handleReset);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        handleReset();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleReset);
+
+    return () => {
+      window.removeEventListener('pageshow', handleReset);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleReset);
+    };
+  }, []);
+
   const handleTikTokLogin = async () => {
     setLoading(true);
+
+    // Safety fallback timeout to prevent infinite spinner if navigation is cancelled or blocked
+    const safetyTimer = setTimeout(() => {
+      setLoading(false);
+    }, 4500);
+
     try {
       // Lưu redirectUrl vào sessionStorage để trang callback chuyển hướng sau khi login thành công
       if (typeof window !== 'undefined') {
@@ -67,6 +93,7 @@ export default function TikTokLoginButton({ text = 'Tiếp tục với TikTok', 
 
       window.location.href = authUrl;
     } catch (err) {
+      clearTimeout(safetyTimer);
       toast.error('Không thể kết nối đến máy chủ TikTok. Vui lòng thử lại!');
       setLoading(false);
     }

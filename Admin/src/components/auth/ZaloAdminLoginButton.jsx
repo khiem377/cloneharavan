@@ -1,12 +1,39 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { toast } from '@/providers/ToastProvider';
 import { authService } from '@/services/auth.service';
+import ZaloIcon from '@/components/ui/ZaloIcon';
 
 export default function ZaloAdminLoginButton() {
   const [loading, setLoading] = useState(false);
 
+  // Auto-reset loading state when returning via Back button (BFCache), switching tabs, or window focus
+  useEffect(() => {
+    const handleReset = () => setLoading(false);
+
+    window.addEventListener('pageshow', handleReset);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        handleReset();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleReset);
+
+    return () => {
+      window.removeEventListener('pageshow', handleReset);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleReset);
+    };
+  }, []);
+
   const handleZaloAdminLogin = async () => {
     setLoading(true);
+
+    // Safety fallback timeout to prevent infinite spinner if navigation is cancelled or blocked
+    const safetyTimer = setTimeout(() => {
+      setLoading(false);
+    }, 4500);
+
     try {
       // Đánh dấu state với tiền tố admin_ để khi callback tại client biết đường redirect về admin
       const stateToken = `admin_zalo_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
@@ -34,6 +61,7 @@ export default function ZaloAdminLoginButton() {
       }
 
       if (!appId) {
+        clearTimeout(safetyTimer);
         toast.error('Cấu hình VITE_ZALO_APP_ID chưa được thiết lập.');
         setLoading(false);
         return;
@@ -59,6 +87,7 @@ export default function ZaloAdminLoginButton() {
 
       window.location.href = authUrl;
     } catch (err) {
+      clearTimeout(safetyTimer);
       toast.error('Không thể kết nối đến máy chủ Zalo. Vui lòng thử lại!');
       setLoading(false);
     }
@@ -69,7 +98,7 @@ export default function ZaloAdminLoginButton() {
       type="button"
       onClick={handleZaloAdminLogin}
       disabled={loading}
-      className="w-full h-10 px-4 flex items-center justify-center gap-2.5 rounded-[6px] bg-[#0068ff] hover:bg-[#0057d9] text-white text-xs font-semibold border border-[#0068ff] shadow-xs transition-all active:scale-[0.98] cursor-pointer disabled:opacity-60 select-none"
+      className="w-full h-10 px-4 flex items-center justify-center gap-2 rounded-[6px] bg-[#0068ff] hover:bg-[#0057d9] text-white text-xs font-semibold border border-[#0068ff] shadow-xs transition-all active:scale-[0.98] cursor-pointer disabled:opacity-60 select-none"
     >
       {loading ? (
         <>
@@ -81,12 +110,8 @@ export default function ZaloAdminLoginButton() {
         </>
       ) : (
         <>
-          {/* Authentic Official Zalo Logo */}
-          <img
-            src="/images/logo-zalo.webp"
-            alt="Zalo"
-            className="w-5 h-5 object-contain shrink-0 rounded-[4px] bg-white p-0.5"
-          />
+          {/* Authentic Vector Zalo Logo with Transparent Background */}
+          <ZaloIcon className="h-4.5 w-auto shrink-0" color="white" />
           <span>Đăng nhập với Zalo</span>
         </>
       )}

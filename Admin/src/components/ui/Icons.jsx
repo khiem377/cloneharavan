@@ -878,105 +878,192 @@ export { FileTextIcon, FileTextIcon as FileText };
 //  HANDCRAFTED DETAILED DASHBOARD ICONS WITH ACCENTS & LAYERS
 // ═══════════════════════════════════════════════════════════════
 
-/** Product & Box 3D Layered Icon */
-export const DashProductIcon = ({ size = 24, className = '', ...p }) => (
+// ═══════════════════════════════════════════════════════════════
+//  BESPOKE ULTRA-MODERN STYLIZED DASHBOARD ICONS (KHÔNG ĐỤNG HÀNG)
+//  Architecture: Multi-layer isometric facets, two-tone depth,
+//  precision cutouts, orbital badges & high-tech accents.
+// ═══════════════════════════════════════════════════════════════
+
+/** 
+ * 1. DashProductIcon — Isometric Origami Tech Capsule / Modular Supply Cube
+ * Faceted top plane + internal glowing gem + floating orbital tag
+ */
+export const DashProductIcon = ({ size = 26, className = '', ...p }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} {...p}>
-    <path d="M12 2.5L20 6.8V17.2L12 21.5L4 17.2V6.8L12 2.5Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
-    <path d="M12 2.5V11.5M12 11.5L20 6.8M12 11.5L4 6.8" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-    <path d="M7.5 4.8L15.5 9.2" stroke="currentColor" strokeWidth="1.3" opacity="0.6" strokeDasharray="1.5 1.5" />
-    <path d="M16 11.8L12 14L8 11.8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-    <circle cx="12" cy="17" r="1.5" fill="currentColor" opacity="0.8" />
+    {/* Top faceted surface — solid highlight */}
+    <path d="M12 2L20.5 6.5L12 11L3.5 6.5L12 2Z" fill="currentColor" opacity="0.25" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+    {/* Left isometric wall */}
+    <path d="M3.5 6.5V16.5L12 21.5V11L3.5 6.5Z" fill="currentColor" opacity="0.12" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+    {/* Right isometric wall */}
+    <path d="M20.5 6.5V16.5L12 21.5V11L20.5 6.5Z" fill="currentColor" opacity="0.32" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+    {/* Structural origami seam & internal core */}
+    <path d="M12 11V21.5" stroke="currentColor" strokeWidth="1.6" />
+    <path d="M7.8 8.8L12 11L16.2 8.8" stroke="currentColor" strokeWidth="1.3" opacity="0.7" />
+    {/* Floating diamond tag badge */}
+    <path d="M12 4.2L14.2 5.5L12 6.8L9.8 5.5L12 4.2Z" fill="currentColor" />
+    <circle cx="12" cy="16.2" r="1.5" fill="currentColor" />
+    <line x1="8" y1="13.8" x2="8" y2="17.2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" opacity="0.5" />
+    <line x1="16" y1="13.8" x2="16" y2="17.2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" opacity="0.5" />
   </svg>
 );
 
-/** Category Tree Hierarchy Icon */
-export const DashCategoryIcon = ({ size = 24, className = '', ...p }) => (
+/** 
+ * 2. DashUserIcon — Biometric Hexagonal Identity Crest / Multi-tier Hologram Avatar
+ * Layered geometric torso + biometric halo ring + verified starburst
+ */
+export const DashUserIcon = ({ size = 26, className = '', ...p }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} {...p}>
-    <rect x="3" y="3.5" width="8" height="6" rx="1.8" stroke="currentColor" strokeWidth="1.8" />
-    <rect x="13" y="3.5" width="8" height="6" rx="1.8" stroke="currentColor" strokeWidth="1.8" />
-    <rect x="8" y="14.5" width="8" height="6" rx="1.8" stroke="currentColor" strokeWidth="1.8" />
-    <path d="M7 9.5V11.5C7 12.6 7.9 13.5 9 13.5H12M17 9.5V11.5C17 12.6 16.1 13.5 15 13.5H12M12 13.5V14.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-    <circle cx="7" cy="6.5" r="1" fill="currentColor" />
-    <circle cx="17" cy="6.5" r="1" fill="currentColor" />
-    <circle cx="12" cy="17.5" r="1" fill="currentColor" />
+    {/* Outer biometric hex shield aura */}
+    <path d="M12 2L20 6.5V14.5L12 22L4 14.5V6.5L12 2Z" fill="currentColor" opacity="0.08" stroke="currentColor" strokeWidth="1.4" strokeDasharray="3 2" opacity="0.4" strokeLinejoin="round" />
+    {/* Secondary member avatar background */}
+    <circle cx="16.8" cy="7.2" r="2.4" fill="currentColor" opacity="0.25" stroke="currentColor" strokeWidth="1.2" />
+    <path d="M15.5 13.5C17.2 13.5 19.5 14.5 20.2 16.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" opacity="0.5" />
+    {/* Main central avatar head */}
+    <circle cx="9.5" cy="8" r="3.6" fill="currentColor" opacity="0.2" stroke="currentColor" strokeWidth="1.7" />
+    <circle cx="9.5" cy="8" r="1.4" fill="currentColor" />
+    {/* Torso architectural jacket / shield */}
+    <path d="M3 19.5C3 15.2 6 13.2 9.5 13.2C13 13.2 16 15.2 16 19.5" fill="currentColor" opacity="0.18" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    <path d="M9.5 13.2V19.5" stroke="currentColor" strokeWidth="1.4" opacity="0.6" />
+    {/* Verified 4-point star badge */}
+    <path d="M19 8.5L19.8 10L21.5 10.2L20.2 11.4L20.6 13L19 12.1L17.4 13L17.8 11.4L16.5 10.2L18.2 10L19 8.5Z" fill="currentColor" strokeWidth="0" />
   </svg>
 );
 
-/** Luxury Gem & Diamond Brand Icon */
-export const DashBrandIcon = ({ size = 24, className = '', ...p }) => (
+/** 
+ * 3. DashBlogIcon — Architectural Editorial Dossier & Floating Prism Stylus
+ * Stepped manuscript pages + gold-leaf header + floating stylus pen + laser lines
+ */
+export const DashBlogIcon = ({ size = 26, className = '', ...p }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} {...p}>
-    <path d="M6 3.5H18L21.5 8.5L12 20.5L2.5 8.5L6 3.5Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
-    <path d="M2.5 8.5H21.5" stroke="currentColor" strokeWidth="1.6" />
-    <path d="M9 3.5L6.5 8.5L12 20.5L17.5 8.5L15 3.5" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
-    <path d="M12 3.5V8.5" stroke="currentColor" strokeWidth="1.4" />
-    <circle cx="12" cy="12" r="1" fill="currentColor" opacity="0.7" />
+    {/* Back under-layer sheet */}
+    <rect x="5.5" y="2" width="14" height="18" rx="2.5" fill="currentColor" opacity="0.1" stroke="currentColor" strokeWidth="1.3" />
+    {/* Main front editorial page */}
+    <rect x="2.5" y="4.5" width="14" height="17.5" rx="2.5" fill="currentColor" opacity="0.18" stroke="currentColor" strokeWidth="1.7" />
+    {/* Bold editorial masthead banner */}
+    <rect x="4.8" y="7" width="9.4" height="3" rx="1" fill="currentColor" strokeWidth="0" />
+    {/* Precision article typography bars */}
+    <line x1="4.8" y1="12.5" x2="11.5" y2="12.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    <line x1="4.8" y1="15.5" x2="10" y2="15.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.6" />
+    <line x1="4.8" y1="18.5" x2="8.5" y2="18.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.4" />
+    {/* Floating digital stylus / feather quill with ink tip */}
+    <path d="M16 14L21.5 8.5C22.2 7.8 22.2 6.7 21.5 6C20.8 5.3 19.7 5.3 19 6L13.5 11.5L13 14.5L16 14Z" fill="currentColor" opacity="0.4" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+    <circle cx="21" cy="4.5" r="1.2" fill="currentColor" />
   </svg>
 );
 
-/** Editorial Article & Blog Icon */
-export const DashBlogIcon = ({ size = 24, className = '', ...p }) => (
+/** 
+ * 4. DashMediaIcon — Quantum Cine Vault / Isometric Camera & Asset Hologram
+ * Nested shutter aperture + isometric asset prism + luminous play node
+ */
+export const DashMediaIcon = ({ size = 26, className = '', ...p }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} {...p}>
-    <rect x="3.5" y="3" width="17" height="18" rx="2.5" stroke="currentColor" strokeWidth="1.8" />
-    <path d="M7 7.5H17" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-    <path d="M7 11.5H14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-    <path d="M7 15.5H12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-    <path d="M16 14.5L18.5 17L16.5 19" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-    <circle cx="16.5" cy="11.5" r="1.2" fill="currentColor" />
+    {/* Main vault frame */}
+    <rect x="2" y="3.5" width="20" height="15" rx="3" fill="currentColor" opacity="0.14" stroke="currentColor" strokeWidth="1.7" />
+    {/* Top cinema film strip notches */}
+    <rect x="4.5" y="5.2" width="2.2" height="2" rx="0.5" fill="currentColor" strokeWidth="0" />
+    <rect x="8.5" y="5.2" width="2.2" height="2" rx="0.5" fill="currentColor" strokeWidth="0" />
+    <rect x="13.2" y="5.2" width="2.2" height="2" rx="0.5" fill="currentColor" strokeWidth="0" />
+    <rect x="17.2" y="5.2" width="2.2" height="2" rx="0.5" fill="currentColor" strokeWidth="0" />
+    {/* Isometric landscape mountain facets */}
+    <path d="M2.5 15.5L7.5 10L12 14.5L16 11L21.5 16.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M7.5 10L12 14.5L10 18H2.5V15.5L7.5 10Z" fill="currentColor" opacity="0.25" strokeWidth="0" />
+    <path d="M16 11L21.5 16.5V18H13L16 11Z" fill="currentColor" opacity="0.4" strokeWidth="0" />
+    {/* Floating sun/aperture beacon */}
+    <circle cx="16.5" cy="8.5" r="2.2" fill="currentColor" strokeWidth="0" />
+    {/* Stand / Dock connector */}
+    <path d="M7 21.5H17" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    <path d="M12 18.5V21.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
   </svg>
 );
 
-/** Media Storage & Cloud Drive Icon */
-export const DashMediaIcon = ({ size = 24, className = '', ...p }) => (
+/** 
+ * 5. DashCategoryIcon — Futuristic Radial Matrix Node / Tiered Isometric Tree
+ * Center isometric root hub + directional quantum conduits + floating satellite nodes
+ */
+export const DashCategoryIcon = ({ size = 26, className = '', ...p }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} {...p}>
-    <rect x="2.5" y="4" width="19" height="13.5" rx="2.5" stroke="currentColor" strokeWidth="1.8" />
-    <circle cx="8" cy="9" r="2" stroke="currentColor" strokeWidth="1.5" />
-    <path d="M3 15L8 10.5L12.5 15L16 11.5L21 16.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-    <path d="M6 20.5H18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-    <path d="M12 17.5V20.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    {/* Top Master Category Node */}
+    <rect x="8" y="2.5" width="8" height="6.5" rx="2" fill="currentColor" opacity="0.25" stroke="currentColor" strokeWidth="1.7" />
+    <rect x="10" y="4.5" width="4" height="2.5" rx="0.8" fill="currentColor" strokeWidth="0" />
+    {/* Multi-tier Branching Conduits */}
+    <path d="M12 9V13.5M12 13.5H5.5C4.4 13.5 3.5 14.4 3.5 15.5V17M12 13.5H18.5C19.6 13.5 20.5 14.4 20.5 15.5V17M12 13.5V17" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    {/* Left Leaf Node */}
+    <rect x="1.5" y="17" width="5.5" height="5" rx="1.5" fill="currentColor" opacity="0.15" stroke="currentColor" strokeWidth="1.5" />
+    <circle cx="4.2" cy="19.5" r="1" fill="currentColor" strokeWidth="0" />
+    {/* Middle Leaf Node */}
+    <rect x="9.2" y="17" width="5.5" height="5" rx="1.5" fill="currentColor" opacity="0.3" stroke="currentColor" strokeWidth="1.5" />
+    <circle cx="12" cy="19.5" r="1" fill="currentColor" strokeWidth="0" />
+    {/* Right Leaf Node */}
+    <rect x="17" y="17" width="5.5" height="5" rx="1.5" fill="currentColor" opacity="0.15" stroke="currentColor" strokeWidth="1.5" />
+    <circle cx="19.8" cy="19.5" r="1" fill="currentColor" strokeWidth="0" />
   </svg>
 );
 
-/** Multi-User & Customer Team Icon */
-export const DashUserIcon = ({ size = 24, className = '', ...p }) => (
+/** 
+ * 6. DashBrandIcon — Avant-Garde Royal Pavilion Diamond / Sovereign Star Seal
+ * Brilliant cut gemstone facets + royal crown crest + optic sparkle flares
+ */
+export const DashBrandIcon = ({ size = 26, className = '', ...p }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} {...p}>
-    <circle cx="9" cy="7.5" r="3.5" stroke="currentColor" strokeWidth="1.8" />
-    <path d="M2.5 19C2.5 15.4 5.4 12.5 9 12.5C12.6 12.5 15.5 15.4 15.5 19" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-    <path d="M15.5 5.5A3 3 0 0 1 15.5 11.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-    <path d="M18 19C18 16.5 19.5 14.5 21.5 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-    <circle cx="9" cy="7.5" r="1" fill="currentColor" />
+    {/* Upper crown / table pavilion facet */}
+    <path d="M6 3.5H18L22 9L12 21.5L2 9L6 3.5Z" fill="currentColor" opacity="0.14" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+    {/* Table cut top facet */}
+    <polygon points="6 3.5 18 3.5 15 9 9 9" fill="currentColor" opacity="0.35" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+    {/* Central kite facet */}
+    <polygon points="12 21.5 9 9 15 9" fill="currentColor" opacity="0.45" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+    {/* Left triangular flank */}
+    <polygon points="2 9 6 3.5 9 9" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+    {/* Right triangular flank */}
+    <polygon points="22 9 18 3.5 15 9" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+    {/* Sovereign crown stars */}
+    <circle cx="12" cy="13.5" r="1.3" fill="currentColor" />
+    <circle cx="6" cy="3.5" r="1" fill="currentColor" strokeWidth="0" />
+    <circle cx="18" cy="3.5" r="1" fill="currentColor" strokeWidth="0" />
   </svg>
 );
 
-/** Dynamic 3D Flash Sale Lightning Bolt Icon */
-export const DashFlashIcon = ({ size = 24, className = '', ...p }) => (
+/** 
+ * 7. DashCouponIcon — Cryptographic Voucher Ticket & Geometric Percentage Glyph
+ * Security cut notches + laser barcode ribs + floating diamond % glyph
+ */
+export const DashCouponIcon = ({ size = 26, className = '', ...p }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} {...p}>
-    <path d="M13.5 2L3.5 13H12L10.5 22L20.5 11H12L13.5 2Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
-    <path d="M12 6L8 11.5H12.5L11.5 17" stroke="currentColor" strokeWidth="1.2" opacity="0.6" strokeLinecap="round" />
-    <circle cx="18" cy="4" r="1" fill="currentColor" />
-    <circle cx="6" cy="19" r="1" fill="currentColor" />
+    {/* Ticket outer perimeter with dual semi-circle optical security notches */}
+    <path d="M2.5 7.5C2.5 6.4 3.4 5.5 4.5 5.5H19.5C20.6 5.5 21.5 6.4 21.5 7.5V9.5C20.1 9.5 19 10.6 19 12C19 13.4 20.1 14.5 21.5 14.5V16.5C21.5 17.6 20.6 18.5 19.5 18.5H4.5C3.4 18.5 2.5 17.6 2.5 16.5V14.5C3.9 14.5 5 13.4 5 12C5 10.6 3.9 9.5 2.5 9.5V7.5Z" fill="currentColor" opacity="0.14" stroke="currentColor" strokeWidth="1.7" />
+    {/* Laser security perforation seam */}
+    <line x1="8.5" y1="6" x2="8.5" y2="18" stroke="currentColor" strokeWidth="1.5" strokeDasharray="2 2" />
+    {/* Left stub bar codes */}
+    <rect x="4.8" y="8.5" width="1.6" height="7" rx="0.5" fill="currentColor" strokeWidth="0" opacity="0.6" />
+    {/* Right coupon percentage diagonal cut */}
+    <line x1="12" y1="15.5" x2="17.5" y2="8.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    {/* Upper percentage star */}
+    <circle cx="13" cy="9.5" r="1.6" fill="currentColor" strokeWidth="0" />
+    {/* Lower percentage star */}
+    <circle cx="16.5" cy="14.5" r="1.6" fill="currentColor" strokeWidth="0" />
   </svg>
 );
 
-/** Coupon & Perforated Voucher Ticket Icon */
-export const DashCouponIcon = ({ size = 24, className = '', ...p }) => (
+/** 
+ * 8. DashStockAlertIcon — Hazardous Cargo Pod & Floating Holographic Warning Beacon
+ * Isometric reinforced crate + diagonal warning stripes + floating danger beacon
+ */
+export const DashStockAlertIcon = ({ size = 26, className = '', ...p }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} {...p}>
-    <path d="M3 8V6A2 2 0 0 1 5 4H19A2 2 0 0 1 21 6V8A2.5 2.5 0 0 0 21 13V18A2 2 0 0 1 19 20H5A2 2 0 0 1 3 18V13A2.5 2.5 0 0 0 3 8Z" stroke="currentColor" strokeWidth="1.8" />
-    <line x1="9" y1="4.5" x2="9" y2="19.5" stroke="currentColor" strokeWidth="1.4" strokeDasharray="2 2" />
-    <circle cx="14" cy="9.5" r="1.5" stroke="currentColor" strokeWidth="1.4" />
-    <circle cx="17" cy="14.5" r="1.5" stroke="currentColor" strokeWidth="1.4" />
-    <line x1="13.5" y1="15" x2="17.5" y2="9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-  </svg>
-);
-
-/** Gift Box with Ribbon Bow Icon */
-export const DashGiftIcon = ({ size = 24, className = '', ...p }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} {...p}>
-    <rect x="3.5" y="10.5" width="17" height="10.5" rx="2" stroke="currentColor" strokeWidth="1.8" />
-    <rect x="2.5" y="7" width="19" height="3.5" rx="1.2" stroke="currentColor" strokeWidth="1.8" />
-    <line x1="12" y1="7" x2="12" y2="21" stroke="currentColor" strokeWidth="1.8" />
-    <path d="M12 7C10.2 4.5 6 3 6 5.8C6 8.5 10.5 7.5 12 7Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
-    <path d="M12 7C13.8 4.5 18 3 18 5.8C18 8.5 13.5 7.5 12 7Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
-    <circle cx="12" cy="7" r="1" fill="currentColor" />
+    {/* Main reinforced cargo crate container */}
+    <path d="M21 7.5L12 2.5L3 7.5V16.5L12 21.5L21 16.5V7.5Z" fill="currentColor" opacity="0.12" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+    {/* Isometric top facet */}
+    <polygon points="12 2.5 21 7.5 12 12.5 3 7.5" fill="currentColor" opacity="0.22" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+    {/* Center vertical seam */}
+    <line x1="12" y1="12.5" x2="12" y2="21.5" stroke="currentColor" strokeWidth="1.6" />
+    {/* Hazard chevron warning cuts on left wall */}
+    <path d="M6 11.5L9.5 13.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" opacity="0.7" />
+    <path d="M6 14.5L9.5 16.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" opacity="0.7" />
+    {/* Floating holographic alert beacon triangle with glowing core */}
+    <g transform="translate(4, -1)">
+      <circle cx="15.5" cy="7.5" r="5" fill="currentColor" />
+      <path d="M15.5 4.5V7.5" stroke="hsl(var(--card,#fff))" strokeWidth="1.6" strokeLinecap="round" />
+      <circle cx="15.5" cy="9.5" r="0.75" fill="hsl(var(--card,#fff))" strokeWidth="0" />
+    </g>
   </svg>
 );
 

@@ -771,3 +771,91 @@ textarea.form-input {
   from { width: 100%; }
   to   { width: 0%; }
 }
+
+/* ─── View Transitions API Theme Circular Reveal ─────────────────────────── */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+::view-transition-old(root) {
+  z-index: 1;
+}
+::view-transition-new(root) {
+  z-index: 999999;
+}
+
+/* Global Smooth Color Flow during Theme Transition */
+html.theme-transitioning,
+html.theme-transitioning body,
+html.theme-transitioning header,
+html.theme-transitioning aside,
+html.theme-transitioning main,
+html.theme-transitioning div,
+html.theme-transitioning span,
+html.theme-transitioning p,
+html.theme-transitioning svg,
+html.theme-transitioning button,
+html.theme-transitioning input {
+  transition: background-color 450ms cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 450ms cubic-bezier(0.16, 1, 0.3, 1),
+              color 300ms cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+/* ─── Mascot Micro-Animations ────────────────────────────────────────────── */
+@keyframes miniMascotFloat {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-3px) rotate(1.5deg);
+  }
+}
+
+@keyframes miniMascotHandWave {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(-18deg);
+  }
+}
+
+@keyframes miniMascotBlink {
+  0%, 90%, 100% {
+    transform: scaleY(1);
+  }
+  95% {
+    transform: scaleY(0.1);
+  }
+}
+
+@keyframes miniSparklePulse {
+  0%, 100% {
+    transform: scale(0.8);
+    opacity: 0.4;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+}
+
+.animate-mini-float {
+  animation: miniMascotFloat 3s ease-in-out infinite;
+}
+
+.animate-mini-blink {
+  transform-origin: center;
+  animation: miniMascotBlink 4s infinite;
+}
+
+.animate-mini-wave {
+  transform-origin: bottom left;
+  animation: miniMascotHandWave 1.8s ease-in-out infinite;
+}
+
+.animate-mini-sparkle {
+  transform-origin: center;
+  animation: miniSparklePulse 2.2s ease-in-out infinite;
+}

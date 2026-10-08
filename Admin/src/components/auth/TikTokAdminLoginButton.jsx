@@ -96,7 +96,7 @@ export default function TikTokAdminLoginButton() {
               fill="#FFFFFF"
             />
           </svg>
-          <span>Quản trị viên đăng nhập với TikTok</span>
+          <span>Đăng nhập với TikTok</span>
         </>
       )}
     </button>

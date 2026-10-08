@@ -1042,7 +1042,7 @@ const resendAdminOtp = async (req, res, next) => {
 const getPasskeyLoginOptions = async (req, res, next) => {
   try {
     const { email } = req.body;
-    const options = await generatePasskeyLoginOptions(email);
+    const options = await generatePasskeyLoginOptions(email, req);
     res.json({
       status: 'success',
       statusCode: 200,
@@ -1055,13 +1055,15 @@ const getPasskeyLoginOptions = async (req, res, next) => {
 
 const verifyPasskeyLoginController = async (req, res, next) => {
   try {
-    const { email, credentialId, clientDataJSON, authenticatorData, signature, rememberMe, sessionId } = req.body;
+    const { email, response, credentialId, clientDataJSON, authenticatorData, signature, rememberMe, sessionId } = req.body;
     const user = await verifyPasskeyLogin({
       email,
+      response,
       credentialId,
       clientDataJSON,
       authenticatorData,
       signature,
+      req,
     });
     const authData = await populateAdminAndBuildResponse(user, req, res, rememberMe, sessionId);
 
@@ -1078,7 +1080,7 @@ const verifyPasskeyLoginController = async (req, res, next) => {
 
 const getPasskeyRegisterOptions = async (req, res, next) => {
   try {
-    const options = await generatePasskeyRegisterOptions(req.user._id);
+    const options = await generatePasskeyRegisterOptions(req.user._id, req);
     res.json({
       status: 'success',
       statusCode: 200,
@@ -1091,7 +1093,16 @@ const getPasskeyRegisterOptions = async (req, res, next) => {
 
 const verifyPasskeyRegisterController = async (req, res, next) => {
   try {
-    const result = await verifyPasskeyRegister(req.user._id, req.body);
+    const { response, deviceName, credentialId, rawId, clientDataJSON, attestationObject } = req.body;
+    const result = await verifyPasskeyRegister(req.user._id, {
+      response,
+      deviceName,
+      credentialId,
+      rawId,
+      clientDataJSON,
+      attestationObject,
+      req,
+    });
     res.json({
       status: 'success',
       statusCode: 200,
