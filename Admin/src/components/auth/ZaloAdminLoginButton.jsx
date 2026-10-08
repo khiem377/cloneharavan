@@ -68,9 +68,13 @@ export default function ZaloAdminLoginButton() {
       }
 
       // Fallback: Direct PKCE OAuth URL builder
-      const array = new Uint8Array(32);
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+      const array = new Uint8Array(43);
       window.crypto.getRandomValues(array);
-      const codeVerifier = Array.from(array, (dec) => dec.toString(16).padStart(2, '0')).join('');
+      let codeVerifier = '';
+      for (let i = 0; i < 43; i++) {
+        codeVerifier += chars[array[i] % chars.length];
+      }
       sessionStorage.setItem('zalo_code_verifier', codeVerifier);
 
       const encoder = new TextEncoder();

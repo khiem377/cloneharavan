@@ -4,12 +4,16 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { X, Check, ArrowLeftRight, Plus, Minus, ShieldCheck, Flame, Star } from 'lucide-react';
 import { api } from '@/lib/axios';
+import { useRouter } from 'next/navigation';
 import useQuickViewStore from '@/store/quickViewStore';
 import useCompareStore from '@/store/compareStore';
+import useCartStore from '@/store/cartStore';
 
 export const QuickViewModal = () => {
+  const router = useRouter();
   const { isOpen, product, closeQuickView } = useQuickViewStore();
   const { addProduct, isCompared } = useCompareStore();
+  const { addToCart } = useCartStore();
 
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   const [quantity, setQuantity] = useState(1);
@@ -142,9 +146,28 @@ export const QuickViewModal = () => {
   const brandSlug = product.brand?.slug || (product.brand?.name ? product.brand.name.toLowerCase() : '');
   const sku = selectedVariant?.sku || product.sku || product.productCode || product._id?.slice(-8)?.toUpperCase();
 
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
+    const payload = {
+      productId: product._id || product.id,
+      variantId: selectedVariant?._id || selectedVariant?.id,
+      sku: selectedVariant?.sku,
+      quantity,
+    };
+    await addToCart(payload);
     setAddedToCartToast(true);
     setTimeout(() => setAddedToCartToast(false), 2500);
+  };
+
+  const handleBuyNow = async () => {
+    const payload = {
+      productId: product._id || product.id,
+      variantId: selectedVariant?._id || selectedVariant?.id,
+      sku: selectedVariant?.sku,
+      quantity,
+    };
+    await addToCart(payload);
+    closeQuickView();
+    router.push('/cart');
   };
 
   const handleCompareClick = () => {
@@ -466,12 +489,13 @@ export const QuickViewModal = () => {
                 </button>
 
                 <div className="grid grid-cols-2 gap-2">
-                  <Link
-                    href={`/checkout?productId=${product._id}&quantity=${quantity}`}
-                    className="py-2 border border-[#e30019] text-[#e30019] hover:bg-red-50 text-center font-bold text-xs rounded-[6px] transition active:scale-[0.98]"
+                  <button
+                    type="button"
+                    onClick={handleBuyNow}
+                    className="py-2 border border-[#e30019] text-[#e30019] hover:bg-red-50 text-center font-bold text-xs rounded-[6px] transition active:scale-[0.98] cursor-pointer"
                   >
                     Mua ngay
-                  </Link>
+                  </button>
                   <button
                     type="button"
                     onClick={handleAddToCart}

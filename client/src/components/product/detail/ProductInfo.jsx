@@ -2,8 +2,11 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { Loader2, CheckCircle2, AlertTriangle, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import useCartStore from '@/store/cartStore';
 
 // Inline trust strip — compact, ngang, ngay trước CTA
 function TrustStrip() {
@@ -313,6 +316,10 @@ export default function ProductInfo({
       ? 'Sản phẩm cùng loại'
       : primaryGift?.giftProducts?.map((p) => p.productId?.name || 'Quà tặng kèm').join(', ') || 'Quà tặng kèm';
 
+  const router = useRouter();
+  const { addToCart } = useCartStore();
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
+
   const handleQtyChange = (type) => {
     if (type === 'inc') {
       setQuantity((prev) => Math.min(prev + 1, currentStock || 99));
@@ -321,11 +328,38 @@ export default function ProductInfo({
     }
   };
 
-  const handlePlaceholderAction = (actionName) => {
-    setActionNotice(`Tính năng "${actionName}" đang được chuẩn bị và sẽ ra mắt cùng giỏ hàng.`);
-    setTimeout(() => {
-      setActionNotice(null);
-    }, 3000);
+  const handleAddToCart = async (isBuyNow = false) => {
+    if (isOutOfStock || isAddingToCart) return;
+    setIsAddingToCart(true);
+    setActionNotice(null);
+
+    const payload = {
+      productId: product._id || product.id,
+      variantId: selectedVariant?._id || selectedVariant?.id,
+      sku: selectedVariant?.sku,
+      quantity,
+    };
+
+    const res = await addToCart(payload);
+    setIsAddingToCart(false);
+
+    if (res?.success) {
+      if (isBuyNow) {
+        router.push('/cart');
+      } else {
+        setActionNotice({
+          type: 'success',
+          message: `Đã thêm ${quantity} sản phẩm vào giỏ hàng thành công!`,
+        });
+        setTimeout(() => setActionNotice(null), 4000);
+      }
+    } else {
+      setActionNotice({
+        type: 'error',
+        message: res?.message || 'Không thể thêm sản phẩm vào giỏ hàng',
+      });
+      setTimeout(() => setActionNotice(null), 4000);
+    }
   };
 
   return (
@@ -575,19 +609,26 @@ export default function ProductInfo({
         <Button
           type="button"
           variant="outline"
-          onClick={() => handlePlaceholderAction('Thêm vào giỏ hàng')}
-          disabled={isOutOfStock}
-          className="border-2 border-red-600 bg-white text-red-600 hover:bg-red-50 hover:text-red-700 font-bold text-xs sm:text-sm tracking-wide h-12"
+          onClick={() => handleAddToCart(false)}
+          disabled={isOutOfStock || isAddingToCart}
+          className="border-2 border-red-600 bg-white text-red-600 hover:bg-red-50 hover:text-red-700 font-bold text-xs sm:text-sm tracking-wide h-12 flex items-center justify-center gap-2 cursor-pointer"
         >
-          THÊM VÀO GIỎ HÀNG
+          {isAddingToCart ? (
+            <>
+              <Loader2 size={16} className="animate-spin text-red-600" />
+              <span>ĐANG THÊM...</span>
+            </>
+          ) : (
+            <span>THÊM VÀO GIỎ HÀNG</span>
+          )}
         </Button>
 
         <Button
           type="button"
           variant="default"
-          onClick={() => handlePlaceholderAction('Mua ngay')}
-          disabled={isOutOfStock}
-          className="flex flex-col items-center justify-center bg-red-600 hover:bg-red-700 text-white font-bold text-xs sm:text-sm tracking-wide h-12 py-1 leading-tight"
+          onClick={() => handleAddToCart(true)}
+          disabled={isOutOfStock || isAddingToCart}
+          className="flex flex-col items-center justify-center bg-red-600 hover:bg-red-700 text-white font-bold text-xs sm:text-sm tracking-wide h-12 py-1 leading-tight cursor-pointer"
         >
           <span>MUA NGAY VỚI GIÁ NÀY</span>
           <span className="text-[11px] font-normal opacity-90 font-mono">
@@ -598,15 +639,30 @@ export default function ProductInfo({
 
       {/* Action notice */}
       {actionNotice && (
-        <div className="p-2.5 rounded-[6px] border border-amber-200 bg-amber-50 text-amber-900 text-xs flex items-center justify-between">
-          <span>{actionNotice}</span>
-          <button
-            type="button"
-            onClick={() => setActionNotice(null)}
-            className="text-amber-800 hover:text-amber-950 font-bold ml-2 text-xs"
-          >
-            ✕
-          </button>
+        <div
+          className={`p-3 rounded-lg text-xs font-semibold flex items-center justify-between gap-2 animate-fadeIn ${
+            actionNotice.type === 'error'
+              ? 'bg-red-50 border border-red-200 text-red-700'
+              : 'bg-emerald-50 border border-emerald-200 text-emerald-800'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            {actionNotice.type === 'error' ? (
+              <AlertTriangle size={15} className="shrink-0 text-red-600" />
+            ) : (
+              <CheckCircle2 size={15} className="shrink-0 text-emerald-600" />
+            )}
+            <span>{actionNotice.message}</span>
+          </div>
+          {actionNotice.type === 'success' && (
+            <Link
+              href="/cart"
+              className="text-xs font-bold text-red-600 hover:text-red-700 underline shrink-0 flex items-center gap-0.5"
+            >
+              <span>Xem giỏ hàng</span>
+              <ArrowRight size={13} />
+            </Link>
+          )}
         </div>
       )}
 

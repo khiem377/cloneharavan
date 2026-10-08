@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, Suspense } from 'react';
+import React, { useEffect, useState, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Loader2, AlertCircle, ArrowLeft, CheckCircle2 } from 'lucide-react';
@@ -17,18 +17,23 @@ function ZaloCallbackContent() {
 
   const [status, setStatus] = useState('processing'); // 'processing' | 'success' | 'error'
   const [errorMessage, setErrorMessage] = useState('');
+  const hasProcessedRef = useRef(false);
 
   useEffect(() => {
     const processZaloCallback = async () => {
+      if (hasProcessedRef.current) return;
+      hasProcessedRef.current = true;
+
       const code = searchParams.get('code');
       const state = searchParams.get('state');
       const error = searchParams.get('error');
-      const errorDescription = searchParams.get('error_description');
-
-      const action =
-        searchParams.get('action') ||
-        (typeof window !== 'undefined' ? sessionStorage.getItem('zalo_action') : null);
-      const isLinkAction = action === 'link' || state?.includes('link');
+      const actionParam = searchParams.get('action');
+      const savedAction =
+        typeof window !== 'undefined' ? sessionStorage.getItem('zalo_action') : null;
+      const isLinkAction =
+        actionParam === 'link' ||
+        state?.startsWith('link_') ||
+        (savedAction === 'link' && !state?.startsWith('zalo_'));
       const isAdminState = state?.startsWith('admin_') || state?.includes('admin');
 
       if (error) {
@@ -52,8 +57,6 @@ function ZaloCallbackContent() {
         let codeVerifier = null;
         if (typeof window !== 'undefined') {
           codeVerifier = sessionStorage.getItem('zalo_code_verifier');
-          sessionStorage.removeItem('zalo_code_verifier');
-          sessionStorage.removeItem('zalo_action');
         }
 
         if (isLinkAction) {
@@ -98,6 +101,10 @@ function ZaloCallbackContent() {
         });
 
         if ((res.success || res.status === 'success') && res.data) {
+          if (typeof window !== 'undefined') {
+            sessionStorage.removeItem('zalo_code_verifier');
+            sessionStorage.removeItem('zalo_action');
+          }
           setStatus('success');
           toast.success('Đăng nhập Zalo thành công!');
 
@@ -141,6 +148,10 @@ function ZaloCallbackContent() {
           err.message ||
           'Đăng nhập Zalo thất bại. Vui lòng thử lại sau!';
         setErrorMessage(msg);
+      } finally {
+        if (typeof window !== 'undefined') {
+          sessionStorage.removeItem('zalo_action');
+        }
       }
     };
 

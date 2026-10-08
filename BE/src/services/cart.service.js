@@ -22,64 +22,87 @@ const getAvailableStock = (variant) => {
 };
 
 /**
- * Phân giải sản phẩm & biến thể theo logic SKU:
- * - Nếu truyền SKU: Tìm theo SKU
- * - Nếu truyền productId + variantId: Tìm theo cả 2
- * - Nếu chỉ truyền productId:
- *    + Nếu không có biến thể thực: Lấy Default Variant (isDefault: true)
- *    + Nếu có nhiều biến thể thực: Báo lỗi yêu cầu chọn biến thể cụ thể
+ * Phân giải sản phẩm & biến thể cho Giỏ hàng:
+ * 1. ƯU TIÊN SỐ 1: variantId (Đơn vị lưu kho & bán hàng chuẩn nhất)
+ *    - Tìm trực tiếp ProductVariant theo variantId và populate('productId').
+ *    - Hoàn toàn KHÔNG cần client truyền productId vì biến thể đã liên kết chặt chẽ với sản phẩm cha.
+ * 2. ƯU TIÊN SỐ 2: sku
+ *    - Tìm trực tiếp ProductVariant theo mã SKU và populate('productId').
+ * 3. FALLBACK LINH HOẠT: productId
+ *    - Nếu ID truyền vào thực chất là ID của một variant (client gửi nhầm tên trường):
+ *      Tự động nhận diện luôn là variant!
+ *    - Nếu đúng là ID của Product cha:
+ *      + Tự động chọn Default Variant (isDefault: true) đại diện của sản phẩm đó.
+ *      + Nếu default variant hết hàng, tự động tìm biến thể đầu tiên còn hàng khả dụng.
+ *      + Cho phép thêm ngay vào giỏ hàng mà không bị chặn lỗi 400.
  */
 const resolveVariantAndProduct = async ({ productId, variantId, sku }) => {
   let targetProduct = null;
   let targetVariant = null;
 
-  // 1. Trường hợp tìm theo SKU
+  // 1. Trường hợp 1: Có variantId (Ưu tiên hàng đầu)
+  if (variantId) {
+    if (!mongoose.isValidObjectId(variantId)) {
+      throw new AppError(`ID biến thể "${variantId}" không đúng định dạng ObjectId`, 400);
+    }
+
+    targetVariant = await ProductVariant.findById(variantId).populate('productId');
+    if (!targetVariant) {
+      throw new AppError(`Không tìm thấy biến thể sản phẩm với ID: "${variantId}"`, 404);
+    }
+
+    targetProduct = targetVariant.productId;
+    if (!targetProduct) {
+      throw new AppError(`Sản phẩm cha của biến thể "${variantId}" không tồn tại hoặc đã bị xóa`, 404);
+    }
+
+    return { product: targetProduct, variant: targetVariant };
+  }
+
+  // 2. Trường hợp 2: Có mã SKU
   if (sku && typeof sku === 'string' && sku.trim()) {
     const cleanSku = sku.trim().toUpperCase();
     targetVariant = await ProductVariant.findOne({ sku: cleanSku }).populate('productId');
     if (!targetVariant) {
       throw new AppError(`Không tìm thấy biến thể sản phẩm với mã SKU: "${cleanSku}"`, 404);
     }
+
     targetProduct = targetVariant.productId;
     if (!targetProduct) {
       throw new AppError(`Sản phẩm cha của SKU "${cleanSku}" không tồn tại hoặc đã bị xóa`, 404);
     }
+
     return { product: targetProduct, variant: targetVariant };
   }
 
-  // 2. Trường hợp tìm theo productId
+  // 3. Trường hợp 3: Client chỉ truyền productId (hoặc gửi nhầm variantId vào trường productId)
   if (!productId) {
-    throw new AppError('Vui lòng cung cấp productId hoặc sku của sản phẩm', 400);
+    throw new AppError('Vui lòng cung cấp variantId, sku hoặc productId của sản phẩm', 400);
   }
 
+  // Nếu chuỗi không phải ObjectId -> thử tìm xem có phải mã SKU không
   if (!mongoose.isValidObjectId(productId)) {
+    const maybeSku = String(productId).trim().toUpperCase();
+    targetVariant = await ProductVariant.findOne({ sku: maybeSku }).populate('productId');
+    if (targetVariant && targetVariant.productId) {
+      return { product: targetVariant.productId, variant: targetVariant };
+    }
     throw new AppError(`ID sản phẩm "${productId}" không đúng định dạng ObjectId`, 400);
   }
 
+  // Kiểm tra trước: Liệu ID này có phải chính là ID của một ProductVariant không (do client gửi nhầm tên trường)?
+  const variantById = await ProductVariant.findById(productId).populate('productId');
+  if (variantById && variantById.productId) {
+    return { product: variantById.productId, variant: variantById };
+  }
+
+  // Tìm Product cha
   targetProduct = await Product.findById(productId);
   if (!targetProduct) {
     throw new AppError(`Không tìm thấy sản phẩm với ID: "${productId}"`, 404);
   }
 
-  // Nếu client có truyền variantId cụ thể
-  if (variantId) {
-    if (!mongoose.isValidObjectId(variantId)) {
-      throw new AppError(`ID biến thể "${variantId}" không đúng định dạng ObjectId`, 400);
-    }
-    targetVariant = await ProductVariant.findOne({
-      _id: variantId,
-      productId: targetProduct._id,
-    });
-    if (!targetVariant) {
-      throw new AppError(
-        `Không tìm thấy biến thể (ID: ${variantId}) tương ứng thuộc sản phẩm "${targetProduct.name}"`,
-        404
-      );
-    }
-    return { product: targetProduct, variant: targetVariant };
-  }
-
-  // Nếu client KHÔNG truyền variantId -> Tự động xác định theo biến thể của sản phẩm
+  // Lấy tất cả biến thể của sản phẩm
   const allVariants = await ProductVariant.find({ productId: targetProduct._id }).sort({
     isDefault: -1,
     position: 1,
@@ -92,46 +115,137 @@ const resolveVariantAndProduct = async ({ productId, variantId, sku }) => {
     );
   }
 
-  const customVariants = allVariants.filter(
-    (v) => !v.isDefault && Array.isArray(v.attributes) && v.attributes.length > 0
-  );
-
-  // Nếu sản phẩm có nhiều biến thể thực tế (Màu sắc, Size...) -> Bắt buộc chọn biến thể
-  if (customVariants.length > 0) {
-    throw new AppError(
-      `Sản phẩm "${targetProduct.name}" có ${customVariants.length} biến thể tùy chọn. Vui lòng chọn một biến thể cụ thể (màu sắc/dung lượng/kích thước) trước khi thêm vào giỏ hàng`,
-      400
-    );
+  // Tự động phân giải biến thể khi chỉ có productId:
+  // - Ưu tiên A: Biến thể mặc định (isDefault: true) còn hàng khả dụng
+  // - Ưu tiên B: Biến thể đầu tiên còn hàng khả dụng
+  // - Ưu tiên C: Biến thể mặc định hoặc biến thể đầu tiên
+  let selectedVariant = allVariants.find((v) => v.isDefault && getAvailableStock(v) > 0);
+  if (!selectedVariant) {
+    selectedVariant = allVariants.find((v) => getAvailableStock(v) > 0);
+  }
+  if (!selectedVariant) {
+    selectedVariant = allVariants.find((v) => v.isDefault) || allVariants[0];
   }
 
-  // Sản phẩm ĐƠN (không biến thể thực) -> Lấy Default Variant đại diện
-  const defaultVariant = allVariants.find((v) => v.isDefault) || allVariants[0];
-  return { product: targetProduct, variant: defaultVariant };
+  return { product: targetProduct, variant: selectedVariant };
+};
+
+/**
+ * Tìm giỏ hàng của khách vãng lai theo sessionId (linh hoạt nhận diện có hoặc không có tiền tố 'guest_')
+ */
+const findGuestCart = async (sessionId) => {
+  if (!sessionId || typeof sessionId !== 'string') return null;
+  const cleanId = sessionId.trim();
+  const altId = cleanId.startsWith('guest_')
+    ? cleanId.replace(/^guest_/, '')
+    : `guest_${cleanId}`;
+  return Cart.findOne({
+    sessionId: { $in: [cleanId, altId] },
+  });
 };
 
 /**
  * Tìm hoặc tạo mới giỏ hàng theo chủ sở hữu (User hoặc Guest)
+ * Tự động hợp nhất (Auto-merge) giỏ hàng Guest vào User khi có cả userId và sessionId
  */
 const getOrCreateCart = async (cartOwner) => {
-  let query = null;
-  if (cartOwner.userId) {
-    query = { userId: cartOwner.userId };
-  } else if (cartOwner.sessionId) {
-    query = { sessionId: cartOwner.sessionId };
-  } else {
+  const { userId, sessionId } = cartOwner || {};
+
+  if (!userId && !sessionId) {
     throw new AppError('Không thể xác định chủ sở hữu giỏ hàng (Thiếu userId hoặc sessionId)', 400);
   }
 
-  let cart = await Cart.findOne(query);
-  if (!cart) {
-    cart = await Cart.create({
-      ...query,
+  // 1. Trường hợp người dùng ĐÃ ĐĂNG NHẬP (có userId)
+  if (userId) {
+    let userCart = await Cart.findOne({ userId });
+
+    // TỰ ĐỘNG GỘP GIỎ HÀNG: Nếu có sessionId gửi lên kèm theo (từ local/guest)
+    if (sessionId) {
+      const guestCart = await findGuestCart(sessionId);
+
+      // Nếu tìm thấy giỏ guest và giỏ guest có sản phẩm, và không phải chính userCart
+      if (
+        guestCart &&
+        Array.isArray(guestCart.items) &&
+        guestCart.items.length > 0 &&
+        guestCart._id.toString() !== userCart?._id?.toString()
+      ) {
+        if (!userCart) {
+          // User chưa có giỏ -> Chuyển thẳng giỏ guest thành giỏ user
+          guestCart.userId = userId;
+          guestCart.sessionId = null;
+          await guestCart.save();
+          return guestCart;
+        }
+
+        // User đã có giỏ -> Gộp từng sản phẩm từ guestCart vào userCart
+        for (const guestItem of guestCart.items) {
+          const existingIndex = userCart.items.findIndex(
+            (it) => it.variantId.toString() === guestItem.variantId.toString()
+          );
+
+          const variant = await ProductVariant.findById(guestItem.variantId);
+          const availableStock = getAvailableStock(variant);
+
+          if (availableStock <= 0) continue; // Hết hàng thì bỏ qua không merge
+
+          if (existingIndex > -1) {
+            const mergedQty = Math.min(
+              userCart.items[existingIndex].quantity + guestItem.quantity,
+              availableStock
+            );
+            userCart.items[existingIndex].quantity = mergedQty;
+            userCart.items[existingIndex].priceAtAdded = getSellingPrice(variant);
+          } else {
+            userCart.items.push({
+              productId: guestItem.productId,
+              variantId: guestItem.variantId,
+              sku: guestItem.sku,
+              quantity: Math.min(guestItem.quantity, availableStock),
+              priceAtAdded: guestItem.priceAtAdded || getSellingPrice(variant),
+              selectedAttributes: guestItem.selectedAttributes || [],
+            });
+          }
+        }
+
+        // Chuyển mã giảm giá nếu giỏ user chưa có
+        if (guestCart.couponCode && !userCart.couponCode) {
+          userCart.couponCode = guestCart.couponCode;
+        }
+
+        userCart.lastValidatedAt = new Date();
+        await userCart.save();
+
+        // Xóa giỏ guest sau khi đã gộp thành công để tránh gộp lại
+        await Cart.findByIdAndDelete(guestCart._id);
+
+        return userCart;
+      }
+    }
+
+    // Nếu không có giỏ guest cần gộp, trả về userCart hoặc tạo mới nếu chưa có
+    if (!userCart) {
+      userCart = await Cart.create({
+        userId,
+        items: [],
+        couponCode: null,
+      });
+    }
+
+    return userCart;
+  }
+
+  // 2. Trường hợp KHÁCH VÃNG LAI (chỉ có sessionId)
+  let guestCart = await findGuestCart(sessionId);
+  if (!guestCart) {
+    guestCart = await Cart.create({
+      sessionId,
       items: [],
       couponCode: null,
     });
   }
 
-  return cart;
+  return guestCart;
 };
 
 /**
@@ -382,78 +496,113 @@ const formatAndValidateCart = async (cartDoc) => {
 };
 
 /**
- * Thêm sản phẩm vào giỏ hàng (Check tồn kho khả dụng)
+ * Thêm một hoặc nhiều sản phẩm vào giỏ hàng (Check tồn kho khả dụng)
+ * Hỗ trợ các định dạng:
+ * - 1 item: { productId, variantId, sku, quantity }
+ * - Mảng các items: [{ variantId, quantity }, { sku, quantity }]
+ * - Object chứa items: { items: [...] }
  */
-const addToCart = async (cartOwner, { productId, variantId, sku, quantity = 1 }) => {
-  const qty = parseInt(quantity, 10);
-  if (isNaN(qty) || qty < 1) {
-    throw new AppError('Số lượng sản phẩm thêm vào giỏ phải là số nguyên dương lớn hơn 0', 400);
+const addToCart = async (cartOwner, payload) => {
+  let itemsList = [];
+  if (Array.isArray(payload)) {
+    itemsList = payload;
+  } else if (payload && Array.isArray(payload.items)) {
+    itemsList = payload.items;
+  } else if (payload && typeof payload === 'object') {
+    itemsList = [payload];
   }
 
-  // 1. Phân giải đúng Product và Variant theo SKU / variantId / productId
-  const { product, variant } = await resolveVariantAndProduct({ productId, variantId, sku });
-
-  if (product.isActive === false) {
-    throw new AppError(`Sản phẩm "${product.name}" hiện đang tạm ngừng kinh doanh, không thể thêm vào giỏ`, 400);
+  if (!itemsList || itemsList.length === 0) {
+    throw new AppError('Vui lòng cung cấp ít nhất một sản phẩm để thêm vào giỏ hàng', 400);
   }
 
-  // 2. Kiểm tra tồn kho khả dụng
-  const availableStock = getAvailableStock(variant);
-  const variantTitle = `${product.name} ${!variant.isDefault ? `(${variant.displayName || variant.sku})` : ''}`.trim();
-
-  if (availableStock <= 0) {
-    throw new AppError(
-      `Sản phẩm "${variantTitle}" (Mã SKU: ${variant.sku || 'N/A'}) hiện đã hết hàng trong kho`,
-      400
-    );
-  }
-
-  // 3. Lấy hoặc tạo giỏ hàng
+  // 1. Lấy hoặc tạo giỏ hàng
   const cart = await getOrCreateCart(cartOwner);
 
-  // 4. Kiểm tra item đã tồn tại trong giỏ chưa
-  const existingItemIndex = cart.items.findIndex(
-    (item) => item.variantId.toString() === variant._id.toString()
-  );
+  // 2. Lặp qua từng item để phân giải và kiểm tra tồn kho
+  for (let i = 0; i < itemsList.length; i++) {
+    const item = itemsList[i];
+    if (!item || typeof item !== 'object') {
+      throw new AppError(`Dữ liệu sản phẩm tại vị trí #${i + 1} không hợp lệ`, 400);
+    }
 
-  const currentPrice = getSellingPrice(variant);
-
-  if (existingItemIndex > -1) {
-    const existingItem = cart.items[existingItemIndex];
-    const newQty = existingItem.quantity + qty;
-
-    if (newQty > availableStock) {
-      const remainingCanAdd = Math.max(0, availableStock - existingItem.quantity);
+    const { productId, variantId, sku, quantity = 1 } = item;
+    const qty = parseInt(quantity, 10);
+    if (isNaN(qty) || qty < 1) {
       throw new AppError(
-        `Bạn đã có ${existingItem.quantity} sản phẩm trong giỏ. Tồn kho khả dụng của "${variantTitle}" chỉ còn ${availableStock} cái (bạn chỉ có thể thêm tối đa ${remainingCanAdd} cái nữa)`,
+        itemsList.length > 1
+          ? `Số lượng sản phẩm tại vị trí #${i + 1} phải là số nguyên dương lớn hơn 0`
+          : 'Số lượng sản phẩm thêm vào giỏ phải là số nguyên dương lớn hơn 0',
         400
       );
     }
 
-    existingItem.quantity = newQty;
-    existingItem.priceAtAdded = currentPrice;
-  } else {
-    if (qty > availableStock) {
+    // Phân giải đúng Product và Variant theo SKU / variantId / productId
+    const { product, variant } = await resolveVariantAndProduct({ productId, variantId, sku });
+
+    if (product.isActive === false) {
+      throw new AppError(`Sản phẩm "${product.name}" hiện đang tạm ngừng kinh doanh, không thể thêm vào giỏ`, 400);
+    }
+
+    // Kiểm tra tồn kho khả dụng
+    const availableStock = getAvailableStock(variant);
+    const variantTitle = `${product.name} ${!variant.isDefault ? `(${variant.displayName || variant.sku})` : ''}`.trim();
+
+    if (availableStock <= 0) {
       throw new AppError(
-        `Số lượng yêu cầu (${qty}) vượt quá tồn kho khả dụng hiện có (${availableStock}) của sản phẩm "${variantTitle}"`,
+        `Sản phẩm "${variantTitle}" (Mã SKU: ${variant.sku || 'N/A'}) hiện đã hết hàng trong kho`,
         400
       );
     }
 
-    cart.items.push({
-      productId: product._id,
-      variantId: variant._id,
-      sku: variant.sku || '',
-      quantity: qty,
-      priceAtAdded: currentPrice,
-      selectedAttributes: variant.attributes || [],
-    });
+    // Kiểm tra item đã tồn tại trong giỏ chưa (hoặc đã thêm ở vòng lặp trước đó trong cùng batch)
+    const existingItemIndex = cart.items.findIndex(
+      (cartItem) => cartItem.variantId.toString() === variant._id.toString()
+    );
+
+    const currentPrice = getSellingPrice(variant);
+
+    if (existingItemIndex > -1) {
+      const existingItem = cart.items[existingItemIndex];
+      const newQty = existingItem.quantity + qty;
+
+      if (newQty > availableStock) {
+        const remainingCanAdd = Math.max(0, availableStock - existingItem.quantity);
+        throw new AppError(
+          `Bạn đã có ${existingItem.quantity} sản phẩm trong giỏ. Tồn kho khả dụng của "${variantTitle}" chỉ còn ${availableStock} cái (bạn chỉ có thể thêm tối đa ${remainingCanAdd} cái nữa)`,
+          400
+        );
+      }
+
+      existingItem.quantity = newQty;
+      existingItem.priceAtAdded = currentPrice;
+    } else {
+      if (qty > availableStock) {
+        throw new AppError(
+          `Số lượng yêu cầu (${qty}) vượt quá tồn kho khả dụng hiện có (${availableStock}) của sản phẩm "${variantTitle}"`,
+          400
+        );
+      }
+
+      cart.items.push({
+        productId: product._id,
+        variantId: variant._id,
+        sku: variant.sku || '',
+        quantity: qty,
+        priceAtAdded: currentPrice,
+        selectedAttributes: variant.attributes || [],
+      });
+    }
   }
 
   cart.lastValidatedAt = new Date();
   await cart.save();
 
   return formatAndValidateCart(cart);
+};
+
+const addMultipleToCart = async (cartOwner, items) => {
+  return addToCart(cartOwner, items);
 };
 
 /**
@@ -582,63 +731,10 @@ const removeCoupon = async (cartOwner) => {
  * Hợp nhất giỏ hàng của khách vãng lai (Guest) vào giỏ hàng người dùng khi Đăng nhập
  */
 const mergeGuestCart = async (userId, sessionId) => {
-  if (!userId || !sessionId) {
+  if (!userId) {
     return null;
   }
-
-  const guestCart = await Cart.findOne({ sessionId });
-  if (!guestCart || !guestCart.items || guestCart.items.length === 0) {
-    // Không có giỏ guest cần merge
-    let userCart = await Cart.findOne({ userId });
-    if (!userCart) userCart = await Cart.create({ userId, items: [] });
-    return formatAndValidateCart(userCart);
-  }
-
-  let userCart = await Cart.findOne({ userId });
-  if (!userCart) {
-    // Nếu user chưa có giỏ -> Chuyển quyền sở hữu giỏ guest sang user
-    guestCart.userId = userId;
-    guestCart.sessionId = null;
-    await guestCart.save();
-    return formatAndValidateCart(guestCart);
-  }
-
-  // Nếu user đã có giỏ -> Gộp từng item của guest vào userCart
-  for (const guestItem of guestCart.items) {
-    const existingIndex = userCart.items.findIndex(
-      (it) => it.variantId.toString() === guestItem.variantId.toString()
-    );
-
-    const variant = await ProductVariant.findById(guestItem.variantId);
-    const availableStock = getAvailableStock(variant);
-
-    if (availableStock <= 0) continue; // Hết hàng thì bỏ qua không merge
-
-    if (existingIndex > -1) {
-      const mergedQty = Math.min(
-        userCart.items[existingIndex].quantity + guestItem.quantity,
-        availableStock
-      );
-      userCart.items[existingIndex].quantity = mergedQty;
-    } else {
-      userCart.items.push({
-        productId: guestItem.productId,
-        variantId: guestItem.variantId,
-        sku: guestItem.sku,
-        quantity: Math.min(guestItem.quantity, availableStock),
-        priceAtAdded: guestItem.priceAtAdded,
-        selectedAttributes: guestItem.selectedAttributes,
-      });
-    }
-  }
-
-  if (guestCart.couponCode && !userCart.couponCode) {
-    userCart.couponCode = guestCart.couponCode;
-  }
-
-  await userCart.save();
-  await Cart.findByIdAndDelete(guestCart._id);
-
+  const userCart = await getOrCreateCart({ userId, sessionId });
   return formatAndValidateCart(userCart);
 };
 
@@ -673,6 +769,7 @@ module.exports = {
   getOrCreateCart,
   formatAndValidateCart,
   addToCart,
+  addMultipleToCart,
   updateCartItemQuantity,
   removeCartItem,
   clearCart,

@@ -29,7 +29,6 @@ const userSchema = new mongoose.Schema(
       type: String,
       sparse: true,
       trim: true,
-      default: null,
     },
 
     gender: {
@@ -42,21 +41,18 @@ const userSchema = new mongoose.Schema(
       type: String,
       sparse: true,
       unique: true,
-      default: null,
     },
 
     tiktokId: {
       type: String,
       sparse: true,
       unique: true,
-      default: null,
     },
 
     zaloId: {
       type: String,
       sparse: true,
       unique: true,
-      default: null,
     },
 
     authProvider: {

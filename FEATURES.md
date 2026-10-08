@@ -172,7 +172,7 @@ sequenceDiagram
 | Phương thức | Endpoint | Middleware | Mô tả chức năng |
 |---|---|---|---|
 | `GET` | `/api/v1/cart` | `cartSession` | Lấy chi tiết giỏ hàng hiện tại, tự động re-validate tồn kho và tính lại giá 4 cấp |
-| `POST` | `/api/v1/cart/items` | `cartSession` | Thêm sản phẩm vào giỏ (nhận `productId`, `variantId` hoặc `sku`, `quantity`) |
+| `POST` | `/api/v1/cart/items` | `cartSession` | Thêm sản phẩm vào giỏ (hỗ trợ đơn lẻ hoặc mảng nhiều sản phẩm `[{ variantId, quantity }]` / `{ items: [...] }`) |
 | `PATCH` | `/api/v1/cart/items/:itemId` | `cartSession` | Cập nhật số lượng của 1 dòng sản phẩm trong giỏ |
 | `DELETE` | `/api/v1/cart/items/:itemId` | `cartSession` | Xóa 1 sản phẩm khỏi giỏ |
 | `DELETE` | `/api/v1/cart` | `cartSession` | Xóa toàn bộ sản phẩm trong giỏ (Clear Cart) |
