@@ -20,17 +20,46 @@ const SEARCH_SCOPES = [
 export const SearchBar = () => {
   const router = useRouter();
   const { trendingKeywords = [] } = useStoreData();
+  const [liveTrending, setLiveTrending] = useState(trendingKeywords);
   const [query, setQuery] = useState('');
   const [selectedScope, setSelectedScope] = useState('products');
   const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
-  const [suggestData, setSuggestData] = useState({ categories: [], products: [], blogs: [], brands: [] });
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const [suggestData, setSuggestData] = useState({
+    prediction: null,
+    didYouMean: null,
+    isTypo: false,
+    suggestedKeywords: [],
+    categories: [],
+    products: [],
+    blogs: [],
+    brands: [],
+  });
   const [loading, setLoading] = useState(false);
   const [isVisualModalOpen, setIsVisualModalOpen] = useState(false);
 
   const containerRef = useRef(null);
   const categoryRef = useRef(null);
   const debounceRef = useRef(null);
+
+  useEffect(() => {
+    if (trendingKeywords && trendingKeywords.length > 0) {
+      setLiveTrending(trendingKeywords);
+    }
+  }, [trendingKeywords]);
+
+  const handleFocus = async () => {
+    setIsOpen(true);
+    try {
+      const fresh = await searchService.getTrending(10, 'all');
+      if (Array.isArray(fresh) && fresh.length > 0) {
+        setLiveTrending(fresh);
+      }
+    } catch {
+      // Keep existing trending
+    }
+  };
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -49,11 +78,21 @@ export const SearchBar = () => {
     const val = e.target.value;
     setQuery(val);
     setIsOpen(true);
+    setActiveIndex(-1);
 
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
     if (!val.trim()) {
-      setSuggestData({ categories: [], products: [], blogs: [], brands: [] });
+      setSuggestData({
+        prediction: null,
+        didYouMean: null,
+        isTypo: false,
+        suggestedKeywords: [],
+        categories: [],
+        products: [],
+        blogs: [],
+        brands: [],
+      });
       return;
     }
 
@@ -62,6 +101,10 @@ export const SearchBar = () => {
       try {
         const res = await searchService.getSuggestions(val);
         setSuggestData({
+          prediction: res.prediction || null,
+          didYouMean: res.didYouMean || null,
+          isTypo: !!res.isTypo,
+          suggestedKeywords: res.suggestedKeywords || [],
           categories: res.categories || [],
           products: res.products || [],
           blogs: res.blogs || [],
@@ -72,14 +115,14 @@ export const SearchBar = () => {
       } finally {
         setLoading(false);
       }
-    }, 250);
+    }, 180);
   };
 
   const handleSubmit = (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     if (!query.trim()) return;
-    setIsOpen(false);
     const trimmed = query.trim();
+    setIsOpen(false);
 
     if (selectedScope === 'blogs') {
       router.push(`/blogs?keyword=${encodeURIComponent(trimmed)}`);
@@ -100,15 +143,34 @@ export const SearchBar = () => {
     }
   };
 
+  const handleKeyDown = (e) => {
+    const list = suggestData.suggestedKeywords || [];
+    if (!isOpen || list.length === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setActiveIndex((prev) => (prev < list.length - 1 ? prev + 1 : 0));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActiveIndex((prev) => (prev > 0 ? prev - 1 : list.length - 1));
+    } else if (e.key === 'Enter' && activeIndex >= 0 && list[activeIndex]) {
+      e.preventDefault();
+      const text = typeof list[activeIndex] === 'string' ? list[activeIndex] : list[activeIndex].text;
+      handleKeywordClick(text);
+    } else if (e.key === 'Escape') {
+      setIsOpen(false);
+    }
+  };
+
   const hasSuggestions =
-    suggestData.categories?.length > 0 ||
+    suggestData.suggestedKeywords?.length > 0 ||
     suggestData.products?.length > 0 ||
     suggestData.blogs?.length > 0;
 
   const getPlaceholder = () => {
-    if (selectedScope === 'blogs') return 'Tìm theo bài viết, tin tức...';
-    if (selectedScope === 'brands') return 'Tìm theo thương hiệu (Samsung, Sony...)...';
-    return 'Tìm theo tên sản phẩm...';
+    if (selectedScope === 'blogs') return 'Tìm kiếm bài viết...';
+    if (selectedScope === 'brands') return 'Tìm kiếm thương hiệu...';
+    return 'Tìm kiếm sản phẩm...';
   };
 
   return (
@@ -135,8 +197,10 @@ export const SearchBar = () => {
           type="text"
           value={query}
           onChange={handleChange}
-          onFocus={() => setIsOpen(true)}
+          onFocus={handleFocus}
+          onKeyDown={handleKeyDown}
           placeholder={getPlaceholder()}
+          aria-label="Tìm kiếm sản phẩm, tin tức hoặc thương hiệu"
           className="flex-1 px-3 py-2 text-xs sm:text-sm text-slate-800 placeholder-slate-400 bg-transparent focus:outline-none min-w-0"
         />
 
@@ -145,12 +209,14 @@ export const SearchBar = () => {
           onClick={() => setIsVisualModalOpen(true)}
           className="p-1.5 text-slate-400 hover:text-[#284ea1] transition cursor-pointer shrink-0"
           title="Tìm kiếm bằng hình ảnh"
+          aria-label="Tìm kiếm bằng hình ảnh"
         >
           <Icon name="camera" size={18} color="#64748b" />
         </button>
 
         <button
           type="submit"
+          aria-label="Thực hiện tìm kiếm"
           className="w-12 sm:w-14 h-full rounded-r-full flex items-center justify-center text-white transition cursor-pointer hover:opacity-90 shrink-0"
           style={{ backgroundColor: PALETTE.primary }}
         >
@@ -163,10 +229,10 @@ export const SearchBar = () => {
       </form>
 
       {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden z-50 max-h-[75vh] overflow-y-auto animate-fadeIn">
+        <div className="absolute top-full left-0 right-0 mt-1.5 bg-white rounded-[6px] shadow-lg border border-slate-200 overflow-hidden z-50 max-h-[75vh] overflow-y-auto animate-fadeIn">
           {!query.trim() && (
             <SearchTrendingPills
-              trendingKeywords={trendingKeywords}
+              trendingKeywords={liveTrending}
               onKeywordClick={handleKeywordClick}
             />
           )}
@@ -180,6 +246,7 @@ export const SearchBar = () => {
               hasSuggestions={hasSuggestions}
               onKeywordClick={handleKeywordClick}
               onClose={() => setIsOpen(false)}
+              activeIndex={activeIndex}
             />
           )}
         </div>

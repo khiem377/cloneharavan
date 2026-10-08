@@ -26,6 +26,8 @@ export default function SortableGalleryItem({ id, url, idx, onRemove, size = 'md
     touchAction: 'none',
   };
 
+  const displayUrl = typeof url === 'string' ? url : url?.url || '';
+
   if (size === 'sm') {
     return (
       <div
@@ -36,7 +38,7 @@ export default function SortableGalleryItem({ id, url, idx, onRemove, size = 'md
         className="relative size-20 rounded-lg overflow-hidden border border-border group bg-muted select-none cursor-grab active:cursor-grabbing hover:ring-2 hover:ring-primary/40 transition-all"
       >
         <MediaThumbnailHover media={media} className="size-full">
-          <img src={url} alt="" className="size-full object-cover pointer-events-none" />
+          <img src={displayUrl} alt="" className="size-full object-cover pointer-events-none" />
         </MediaThumbnailHover>
         <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
           <button
@@ -63,7 +65,7 @@ export default function SortableGalleryItem({ id, url, idx, onRemove, size = 'md
       className="relative aspect-square rounded-md border border-border overflow-hidden bg-muted group select-none hover:ring-2 hover:ring-primary/40 transition-all cursor-grab active:cursor-grabbing"
     >
       <MediaThumbnailHover media={media} className="size-full">
-        <img src={url} alt={`gallery-${idx}`} className="size-full object-cover pointer-events-none" />
+        <img src={displayUrl} alt={`gallery-${idx}`} className="size-full object-cover pointer-events-none" />
       </MediaThumbnailHover>
       <button
         type="button"

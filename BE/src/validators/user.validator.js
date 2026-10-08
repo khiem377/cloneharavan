@@ -37,8 +37,11 @@ const addressSchema = z.object({
     .regex(/^0\d{9}$/, 'Số điện thoại phải có 10 chữ số và bắt đầu bằng 0'),
 
   province: z.string().min(1, 'Tỉnh/Thành phố là bắt buộc'),
+  provinceId: z.number().nullable().optional(),
   district: z.string().min(1, 'Quận/Huyện là bắt buộc'),
+  districtId: z.number().nullable().optional(),
   ward: z.string().min(1, 'Phường/Xã là bắt buộc'),
+  wardCode: z.string().nullable().optional(),
   detailAddress: z.string().min(1, 'Địa chỉ chi tiết là bắt buộc'),
   isDefault: z.boolean().optional(),
 });
@@ -50,23 +53,24 @@ const updateStatusSchema = z.object({
 });
 
 const updateRoleSchema = z.object({
-  role: z.enum(['user', 'admin'], {
-    errorMap: () => ({ message: 'Role phải là user hoặc admin' }),
-  }),
+  role: z.string({ required_error: 'Role là bắt buộc' }),
+  roleId: z.string().nullable().optional(),
+  customPermissions: z.array(z.string()).optional(),
 });
 
 const passwordRule = z
   .string()
   .min(8, 'Mật khẩu phải có ít nhất 8 ký tự')
   .regex(/[A-Z]/, 'Mật khẩu phải chứa ít nhất 1 chữ hoa')
-  .regex(/[0-9]/, 'Mật khẩu phải chứa ít nhất 1 chữ số');
+  .regex(/[a-z]/, 'Mật khẩu phải chứa ít nhất 1 chữ thường')
+  .regex(/[0-9]/, 'Mật khẩu phải chứa ít nhất 1 chữ số')
+  .regex(/[^A-Za-z0-9]/, 'Mật khẩu phải chứa ít nhất 1 ký tự đặc biệt');
 
 const createAdminSchema = z.object({
   fullName: z
     .string({ required_error: 'Họ và tên là bắt buộc' })
     .min(2, 'Họ và tên phải có ít nhất 2 ký tự')
-    .max(100, 'Họ và tên không được vượt quá 100 ký tự')
-    .regex(/^[\p{L}\s]+$/u, 'Họ và tên chỉ được chứa chữ cái và khoảng trắng'),
+    .max(100, 'Họ và tên không được vượt quá 100 ký tự'),
 
   email: z
     .string({ required_error: 'Email là bắt buộc' })
@@ -75,12 +79,14 @@ const createAdminSchema = z.object({
   password: passwordRule,
 
   phone: z
-    .string({ required_error: 'Số điện thoại là bắt buộc' })
-    .regex(/^0\d{9}$/, 'Số điện thoại phải có 10 chữ số và bắt đầu bằng 0'),
+    .string()
+    .optional()
+    .or(z.literal('')),
 
-  gender: z.enum(['male', 'female', 'other'], {
-    errorMap: () => ({ message: 'Giới tính phải là male, female hoặc other' }),
-  }),
+  gender: z.enum(['male', 'female', 'other']).optional(),
+
+  role: z.string().optional(),
+  roleId: z.string().nullable().optional(),
 
   dateOfBirth: z
     .string()

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import ProductBreadcrumbs from './ProductBreadcrumbs';
 import ProductGallery from './ProductGallery';
 import ProductInfo from './ProductInfo';
@@ -11,6 +11,8 @@ import ProductDescription from './ProductDescription';
 import ProductRecommendationsSection from './ProductRecommendationsSection';
 import ProductReviewsAndComments from './ProductReviewsAndComments';
 import StickyPurchaseBar from './StickyPurchaseBar';
+import ProductViewTracker from '@/components/common/ProductViewTracker';
+import { recommendationService } from '@/services/recommendation.service';
 
 export default function ProductDetailClient({
   product,
@@ -21,6 +23,30 @@ export default function ProductDetailClient({
   personalizedProducts = [],
   frequentlyBought = [],
 }) {
+  const [clientPersonalized, setClientPersonalized] = useState(personalizedProducts);
+
+  // Tự động tải gợi ý cá nhân hóa dựa trên Session ID & User ID thực tế của Client
+  useEffect(() => {
+    let isMounted = true;
+    const fetchPersonalized = async () => {
+      try {
+        const recs = await recommendationService.getPersonalized(12);
+        if (isMounted && Array.isArray(recs) && recs.length > 0) {
+          const currentId = (product._id || product.id)?.toString();
+          const filtered = recs.filter((p) => (p._id || p.id)?.toString() !== currentId);
+          if (filtered.length > 0) {
+            setClientPersonalized(filtered);
+          }
+        }
+      } catch (err) {
+        // Fallback giữ nguyên SSR recommendations nếu có lỗi mạng
+      }
+    };
+    fetchPersonalized();
+    return () => {
+      isMounted = false;
+    };
+  }, [product._id, product.id]);
   const initialVariant = useMemo(() => {
     if (!Array.isArray(variants) || variants.length === 0) return null;
     // Ưu tiên variant thực có attributes hoặc displayName khác 'Mặc định'
@@ -35,17 +61,17 @@ export default function ProductDetailClient({
 
   const [selectedVariant, setSelectedVariant] = useState(initialVariant);
 
-  const isFlashSale = Boolean(
-    product.isFlashSale && (product.flashSale?.flashSalePrice || product.flashSalePrice)
-  );
+  const flashSaleDeal = deals?.flashSale || null;
+  const isFlashSale = Boolean(deals?.isFlashSale && flashSaleDeal?.price > 0);
+
   const activeSalePrice = isFlashSale
-    ? (product.flashSale?.flashSalePrice || product.flashSalePrice)
+    ? flashSaleDeal.price
     : selectedVariant?.salePrice !== undefined && selectedVariant?.salePrice !== null && selectedVariant.salePrice > 0
     ? selectedVariant.salePrice
     : product.salePrice || product.cachedSalePrice || 0;
 
-  const activeRegularPrice = isFlashSale && (product.flashSale?.originalPrice || product.flashSaleOriginalPrice)
-    ? (product.flashSale?.originalPrice || product.flashSaleOriginalPrice)
+  const activeRegularPrice = isFlashSale && flashSaleDeal?.originalPrice
+    ? flashSaleDeal.originalPrice
     : selectedVariant?.price !== undefined && selectedVariant?.price !== null && selectedVariant.price > 0
     ? selectedVariant.price
     : product.price || product.cachedPrice || 0;
@@ -57,8 +83,10 @@ export default function ProductDetailClient({
 
   const currentDisplayPrice = activeSalePrice > 0 ? activeSalePrice : activeRegularPrice;
 
+
   return (
     <div className="min-h-[100dvh] bg-slate-50/60 pb-16">
+      <ProductViewTracker product={product} />
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6">
         {/* BREADCRUMB */}
         <ProductBreadcrumbs product={product} />
@@ -69,7 +97,9 @@ export default function ProductDetailClient({
           <div className="lg:col-span-6 flex flex-col gap-5">
             <ProductGallery
               product={product}
+              variants={variants}
               selectedVariant={selectedVariant}
+              onSelectVariant={setSelectedVariant}
               discountPercent={discountPercent}
               isFlashSale={isFlashSale}
             />
@@ -90,6 +120,7 @@ export default function ProductDetailClient({
             {/* KHUYẾN MÃI THẬT & COUPONS THỰC TẾ CHO SẢN PHẨM NÀY */}
             <ProductPromotions
               deals={deals}
+              product={product}
               currentPrice={currentDisplayPrice}
             />
           </div>
@@ -120,7 +151,7 @@ export default function ProductDetailClient({
         {/* CỤM GỢI Ý ĐA TẦNG (CÁ NHÂN HÓA SVD + CÙNG LOẠI + MUA KÈM) */}
         <ProductRecommendationsSection
           similarProducts={similarProducts}
-          personalizedProducts={personalizedProducts}
+          personalizedProducts={clientPersonalized}
           frequentlyBought={frequentlyBought}
         />
       </div>

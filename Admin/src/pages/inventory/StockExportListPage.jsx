@@ -10,6 +10,9 @@ import DataTablePagination from '@/components/ui/DataTablePagination';
 import { toast } from '@/providers/ToastProvider';
 import ExcelPreviewModal from '@/components/common/ExcelPreviewModal';
 import SearchableSelect from '@/components/ui/SearchableSelect';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card } from '@/components/ui/card';
 
 export default function StockExportListPage() {
   const [keyword, setKeyword] = useState('');
@@ -187,32 +190,32 @@ export default function StockExportListPage() {
   };
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6 p-6 antialiased">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-            <FileText className="h-7 w-7 text-primary" />
+          <h1 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
+            <FileText className="h-6 w-6 text-primary" />
             Lệnh Xuất Kho 4 Bước (Outbound Workflow)
           </h1>
-          <p className="text-xs text-muted-foreground">
-            Quy trình xuất kho MISA AMIS: Chờ soạn hàng ➔ Đang lấy hàng ➔ Đã đóng gói ➔ Hoàn thành xuất kho
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Quy trình xuất kho MISA AMIS: Chờ soạn hàng -&gt; Đang lấy hàng -&gt; Đã đóng gói -&gt; Hoàn thành xuất kho
           </p>
         </div>
-        <button
+        <Button
           onClick={handleOpenCreate}
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground shadow-md hover:bg-primary/90 transition-colors"
+          className="rounded-[6px] text-xs font-semibold shadow-xs active:scale-[0.98]"
         >
-          <Plus className="h-4 w-4" />
+          <Plus className="h-4 w-4 mr-1.5" />
           Tạo Lệnh Xuất Kho Mới
-        </button>
+        </Button>
       </div>
 
       {/* Toolbar */}
-      <div className="flex items-center gap-4 rounded-xl border border-border bg-card p-4 shadow-sm">
-        <div className="relative flex-1">
+      <Card className="rounded-[6px] border border-border p-4 shadow-xs">
+        <div className="relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <input
+          <Input
             type="text"
             placeholder="Tìm mã Lệnh xuất EX, người nhận..."
             value={keyword}
@@ -220,45 +223,45 @@ export default function StockExportListPage() {
               setKeyword(e.target.value);
               setPage(1);
             }}
-            className="w-full rounded-lg border border-input bg-background pl-9 pr-4 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="pl-9 h-9 text-xs rounded-[6px]"
           />
         </div>
-      </div>
+      </Card>
 
       {/* Table */}
-      <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
+      <Card className="rounded-[6px] border border-border shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="border-b border-border bg-muted/40 font-semibold text-muted-foreground">
-                <th className="px-4 py-3.5">Mã Lệnh Xuất</th>
-                <th className="px-4 py-3.5">Loại Xuất</th>
-                <th className="px-4 py-3.5">Trạng Thái Thực Hiện</th>
-                <th className="px-4 py-3.5">Người Nhận / Địa Chỉ</th>
-                <th className="px-4 py-3.5 text-center">Tổng SL</th>
-                <th className="px-4 py-3.5 text-right">Tổng Giá Trị</th>
-                <th className="px-4 py-3.5 text-center">Ngày Lập</th>
-                <th className="px-4 py-3.5 text-right">Xem & Thao Tác</th>
+              <tr className="border-b border-border bg-muted/60 font-bold text-foreground text-[11px]">
+                <th className="px-4 py-3.5 whitespace-nowrap">Mã Lệnh Xuất</th>
+                <th className="px-4 py-3.5 whitespace-nowrap">Loại Xuất</th>
+                <th className="px-4 py-3.5 whitespace-nowrap">Trạng Thái Thực Hiện</th>
+                <th className="px-4 py-3.5 whitespace-nowrap">Người Nhận / Địa Chỉ</th>
+                <th className="px-4 py-3.5 text-center whitespace-nowrap">Tổng SL</th>
+                <th className="px-4 py-3.5 text-right whitespace-nowrap">Tổng Giá Trị</th>
+                <th className="px-4 py-3.5 text-center whitespace-nowrap">Ngày Lập</th>
+                <th className="px-4 py-3.5 text-right whitespace-nowrap">Xem & Thao Tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {isLoading ? (
                 <tr>
-                  <td colSpan={8} className="py-8 text-center text-muted-foreground">
+                  <td colSpan={8} className="py-12 text-center text-xs text-muted-foreground">
                     Đang tải danh sách lệnh xuất kho...
                   </td>
                 </tr>
               ) : exportsList.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-8 text-center text-muted-foreground">
+                  <td colSpan={8} className="py-12 text-center text-xs text-muted-foreground">
                     Chưa có lệnh xuất kho nào trong hệ thống
                   </td>
                 </tr>
               ) : (
                 exportsList.map((item) => (
                   <tr key={item._id} className="hover:bg-muted/30 transition-colors align-middle">
-                    <td className="px-4 py-3 font-semibold text-primary font-mono">{item.exportNumber}</td>
-                    <td className="px-4 py-3 font-medium text-foreground">
+                    <td className="px-4 py-3 font-semibold text-primary font-mono whitespace-nowrap text-xs">{item.exportNumber}</td>
+                    <td className="px-4 py-3 font-medium text-foreground whitespace-nowrap text-xs">
                       {item.type === 'sale'
                         ? 'Bán hàng'
                         : item.type === 'transfer'
@@ -267,29 +270,29 @@ export default function StockExportListPage() {
                         ? 'Trả NCC'
                         : 'Xuất khác'}
                     </td>
-                    <td className="px-4 py-3">{renderStatusBadge(item.status)}</td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 whitespace-nowrap">{renderStatusBadge(item.status)}</td>
+                    <td className="px-4 py-3 text-xs">
                       <div className="font-medium text-foreground">{item.recipientName || 'Khách lẻ'}</div>
-                      <div className="text-[11px] text-muted-foreground">{item.recipientPhone || item.recipientAddress || '-'}</div>
+                      <div className="text-[11px] text-muted-foreground font-mono">{item.recipientPhone || item.recipientAddress || '-'}</div>
                     </td>
-                    <td className="px-4 py-3 text-center font-bold text-foreground">{item.totalQuantity || 0}</td>
-                    <td className="px-4 py-3 text-right font-mono font-bold text-emerald-600">
+                    <td className="px-4 py-3 text-center font-bold text-foreground font-mono tabular-nums text-xs">{item.totalQuantity || 0}</td>
+                    <td className="px-4 py-3 text-right font-mono font-bold text-emerald-600 tabular-nums whitespace-nowrap text-xs">
                       {(item.totalAmount || 0).toLocaleString('vi-VN')} đ
                     </td>
-                    <td className="px-4 py-3 text-center text-muted-foreground font-mono">
+                    <td className="px-4 py-3 text-center text-muted-foreground font-mono tabular-nums whitespace-nowrap text-xs">
                       {new Date(item.createdAt).toLocaleDateString('vi-VN')}
                     </td>
                     <td className="px-4 py-3 text-right whitespace-nowrap">
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="flex items-center justify-end gap-1.5">
                         <button
                           onClick={() => handleOpenDetail(item)}
-                          className="inline-flex items-center gap-1 rounded-lg border border-input bg-background px-2.5 py-1 text-xs font-semibold hover:bg-muted"
+                          className="inline-flex items-center gap-1 rounded-[6px] border border-input bg-background px-2.5 py-1 text-xs font-semibold hover:bg-muted transition-colors h-7"
                         >
-                          <Eye className="h-3.5 w-3.5" /> Tiến Trình
+                          <Eye className="h-3.5 w-3.5 text-primary" /> Tiến Trình
                         </button>
                         <button
                           onClick={() => handlePreviewExcelOnWeb(item)}
-                          className="inline-flex items-center gap-1 rounded-lg border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary hover:bg-primary/20"
+                          className="inline-flex items-center gap-1 rounded-[6px] border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary hover:bg-primary/20 transition-colors h-7"
                         >
                           <FileSpreadsheet className="h-3.5 w-3.5" /> Preview Excel
                         </button>
@@ -313,7 +316,7 @@ export default function StockExportListPage() {
             setPage(1);
           }}
         />
-      </div>
+      </Card>
 
       {/* DETAIL & TIMELINE SIDEBAR DRAWER (Matching AMIS Screenshot 1) */}
       {detailOpen && selectedExport && (
@@ -326,15 +329,15 @@ export default function StockExportListPage() {
                 </h2>
                 <p className="text-xs text-muted-foreground">Chi tiết mặt hàng xuất và Lịch sử tiến trình hoạt động</p>
               </div>
-              <button onClick={() => setDetailOpen(false)} className="rounded-lg p-1.5 hover:bg-muted">
-                <X className="h-5 w-5" />
+              <button onClick={() => setDetailOpen(false)} className="rounded-[4px] p-1.5 hover:bg-muted cursor-pointer">
+                <X className="size-4" />
               </button>
             </div>
 
             <div className="flex flex-1 overflow-hidden">
               {/* Left Content Area */}
               <div className="flex-1 p-6 space-y-4 overflow-y-auto border-r border-border">
-                <div className="grid grid-cols-2 gap-4 rounded-xl border border-border bg-card p-4 text-xs">
+                <div className="grid grid-cols-2 gap-4 rounded-[6px] border border-border bg-card p-4 text-xs shadow-2xs">
                   <div>
                     <span className="text-muted-foreground">Người nhận:</span>
                     <p className="font-bold text-foreground">{selectedExport.recipientName || 'Khách lẻ'}</p>
@@ -353,7 +356,7 @@ export default function StockExportListPage() {
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-border bg-card overflow-hidden">
+                <div className="rounded-[6px] border border-border bg-card overflow-hidden shadow-2xs">
                   <table className="w-full text-left text-xs border-collapse">
                     <thead className="bg-muted/50 font-bold border-b border-border">
                       <tr>
@@ -368,12 +371,12 @@ export default function StockExportListPage() {
                     <tbody className="divide-y divide-border/60">
                       {selectedExport.items?.map((it, idx) => (
                         <tr key={idx}>
-                          <td className="p-3 text-muted-foreground">{idx + 1}</td>
+                          <td className="p-3 text-muted-foreground font-mono tabular-nums">{idx + 1}</td>
                           <td className="p-3 font-mono font-semibold text-primary">{it.sku}</td>
                           <td className="p-3 font-medium text-foreground">{it.productName}</td>
                           <td className="p-3">{it.unit}</td>
-                          <td className="p-3 text-center font-bold">{it.quantity}</td>
-                          <td className="p-3 text-center font-bold text-emerald-600">{it.quantity}</td>
+                          <td className="p-3 text-center font-bold font-mono tabular-nums">{it.quantity}</td>
+                          <td className="p-3 text-center font-bold font-mono tabular-nums text-emerald-600">{it.quantity}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -381,31 +384,31 @@ export default function StockExportListPage() {
                 </div>
 
                 {/* Status Action Workflow Buttons */}
-                <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+                <div className="rounded-[6px] border border-border bg-card p-4 space-y-3 shadow-2xs">
                   <h3 className="text-xs font-bold text-foreground">Chuyển Bước Tiến Trình Xuất Kho</h3>
                   <div className="flex items-center gap-2 flex-wrap">
                     {selectedExport.status === 'pending_pick' && (
                       <button
                         onClick={() => handleUpdateStatus(selectedExport._id, 'picking')}
-                        className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3.5 py-2 text-xs font-bold text-white shadow-md hover:bg-blue-700"
+                        className="inline-flex items-center gap-1.5 rounded-[6px] bg-blue-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-blue-700 active:scale-[0.98] cursor-pointer"
                       >
-                        <ArrowRight className="h-4 w-4" /> Chuyển sang "Đang Lấy Hàng"
+                        <ArrowRight className="size-3.5" /> Chuyển sang "Đang Lấy Hàng"
                       </button>
                     )}
                     {selectedExport.status === 'picking' && (
                       <button
                         onClick={() => handleUpdateStatus(selectedExport._id, 'packed')}
-                        className="inline-flex items-center gap-1.5 rounded-lg bg-purple-600 px-3.5 py-2 text-xs font-bold text-white shadow-md hover:bg-purple-700"
+                        className="inline-flex items-center gap-1.5 rounded-[6px] bg-purple-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-purple-700 active:scale-[0.98] cursor-pointer"
                       >
-                        <PackageCheck className="h-4 w-4" /> Chuyển sang "Đã Đóng Gói"
+                        <PackageCheck className="size-3.5" /> Chuyển sang "Đã Đóng Gói"
                       </button>
                     )}
                     {selectedExport.status === 'packed' && (
                       <button
                         onClick={() => handleUpdateStatus(selectedExport._id, 'completed')}
-                        className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white shadow-lg hover:bg-emerald-700"
+                        className="inline-flex items-center gap-1.5 rounded-[6px] bg-emerald-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-emerald-700 active:scale-[0.98] cursor-pointer"
                       >
-                        <CheckCircle2 className="h-4 w-4" /> Hoàn Thành & Trừ Tồn Kho DB
+                        <CheckCircle2 className="size-3.5" /> Hoàn Thành & Trừ Tồn Kho DB
                       </button>
                     )}
                   </div>
@@ -438,13 +441,13 @@ export default function StockExportListPage() {
       {/* Modal CREATE Stock Export */}
       {createModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 overflow-y-auto">
-          <div className="w-full max-w-3xl rounded-xl border border-border bg-card p-6 shadow-xl space-y-4 my-8">
+          <div className="w-full max-w-3xl rounded-[6px] border border-border bg-card p-6 shadow-xs space-y-4 my-8">
             <div className="flex items-center justify-between border-b border-border pb-3">
-              <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
-                <FileText className="h-5 w-5 text-primary" /> Tạo Lệnh Xuất Kho Mới
+              <h2 className="text-base font-bold text-foreground flex items-center gap-2">
+                <FileText className="size-4 text-primary" /> Tạo Lệnh Xuất Kho Mới
               </h2>
-              <button onClick={() => setCreateModalOpen(false)} className="rounded-lg p-1 text-muted-foreground hover:bg-muted">
-                <X className="h-5 w-5" />
+              <button onClick={() => setCreateModalOpen(false)} className="rounded-[4px] p-1 text-muted-foreground hover:bg-muted cursor-pointer">
+                <X className="size-4" />
               </button>
             </div>
 
@@ -470,7 +473,7 @@ export default function StockExportListPage() {
                     type="text"
                     value={formData.recipientName}
                     onChange={(e) => setFormData({ ...formData, recipientName: e.target.value })}
-                    className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none"
+                    className="w-full rounded-[6px] border border-input bg-background px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
                   />
                 </div>
                 <div>
@@ -479,7 +482,7 @@ export default function StockExportListPage() {
                     type="text"
                     value={formData.recipientPhone}
                     onChange={(e) => setFormData({ ...formData, recipientPhone: e.target.value })}
-                    className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none"
+                    className="w-full rounded-[6px] border border-input bg-background px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
                   />
                 </div>
               </div>
@@ -490,37 +493,37 @@ export default function StockExportListPage() {
                   type="text"
                   value={formData.note}
                   onChange={(e) => setFormData({ ...formData, note: e.target.value })}
-                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none"
+                  className="w-full rounded-[6px] border border-input bg-background px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
                 />
               </div>
 
               {/* Product Autocomplete */}
-              <div className="relative pt-2">
+              <div className="relative pt-1">
                 <label className="block text-xs font-semibold text-muted-foreground mb-1">Tìm sản phẩm / biến thể</label>
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground pointer-events-none" />
                   <input
                     type="text"
                     placeholder="Gõ tên hoặc mã SKU sản phẩm..."
                     value={productSearch}
                     onChange={(e) => setProductSearch(e.target.value)}
-                    className="w-full rounded-lg border border-input bg-background pl-9 pr-4 py-2 text-sm focus:outline-none"
+                    className="w-full rounded-[6px] border border-input bg-background pl-9 pr-4 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
                   />
                 </div>
 
                 {productSearch.trim() && (
-                  <div className="absolute z-20 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-border bg-card shadow-lg divide-y divide-border/60">
+                  <div className="absolute z-20 mt-1 max-h-48 w-full overflow-y-auto rounded-[6px] border border-border bg-card shadow-md divide-y divide-border/60">
                     {searchProducts.map((prod, idx) => (
                       <div
                         key={idx}
                         onClick={() => handleAddProduct(prod)}
-                        className="flex items-center justify-between p-3 hover:bg-muted cursor-pointer"
+                        className="flex items-center justify-between p-2.5 hover:bg-muted cursor-pointer transition-colors"
                       >
                         <div>
-                          <div className="font-semibold text-sm text-foreground">{prod.name}</div>
-                          <div className="text-xs text-muted-foreground">SKU: {prod.sku || '-'} | Tồn: <span className="font-bold text-emerald-600">{prod.stock || 0}</span></div>
+                          <div className="font-semibold text-xs text-foreground">{prod.name}</div>
+                          <div className="text-[11px] text-muted-foreground font-mono tabular-nums">SKU: {prod.sku || '-'} | Tồn: <span className="font-bold text-emerald-600">{prod.stock || 0}</span></div>
                         </div>
-                        <span className="text-xs font-semibold text-primary">Thêm</span>
+                        <span className="text-xs font-semibold text-primary font-mono">Thêm</span>
                       </div>
                     ))}
                   </div>
@@ -528,43 +531,43 @@ export default function StockExportListPage() {
               </div>
 
               {/* Table */}
-              <div className="overflow-x-auto rounded-lg border border-border">
+              <div className="overflow-x-auto rounded-[6px] border border-border shadow-2xs">
                 <table className="w-full text-left text-xs">
                   <thead className="bg-muted/50 font-semibold text-muted-foreground">
                     <tr>
-                      <th className="p-3">Sản Phẩm</th>
-                      <th className="p-3 w-24">Số Lượng</th>
-                      <th className="p-3 w-32">Đơn Giá</th>
-                      <th className="p-3 w-32">Thành Tiền</th>
-                      <th className="p-3 w-10"></th>
+                      <th className="p-2.5">Sản Phẩm</th>
+                      <th className="p-2.5 w-24">Số Lượng</th>
+                      <th className="p-2.5 w-32">Đơn Giá</th>
+                      <th className="p-2.5 w-32">Thành Tiền</th>
+                      <th className="p-2.5 w-10"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/60">
                     {formData.items.map((item, idx) => (
                       <tr key={idx}>
-                        <td className="p-3 font-medium text-foreground">{item.productName}</td>
-                        <td className="p-3">
+                        <td className="p-2.5 font-medium text-foreground">{item.productName}</td>
+                        <td className="p-2.5">
                           <input
                             type="number"
                             min="1"
                             value={item.quantity}
                             onChange={(e) => handleUpdateItem(idx, 'quantity', Number(e.target.value))}
-                            className="w-full rounded border border-input bg-background px-2 py-1 text-xs"
+                            className="w-full rounded-[4px] border border-input bg-background px-2 py-1 text-xs font-mono tabular-nums"
                           />
                         </td>
-                        <td className="p-3">
+                        <td className="p-2.5">
                           <input
                             type="number"
                             min="0"
                             value={item.exportPrice}
                             onChange={(e) => handleUpdateItem(idx, 'exportPrice', Number(e.target.value))}
-                            className="w-full rounded border border-input bg-background px-2 py-1 text-xs"
+                            className="w-full rounded-[4px] border border-input bg-background px-2 py-1 text-xs font-mono tabular-nums"
                           />
                         </td>
-                        <td className="p-3 font-semibold text-emerald-600 font-mono">{item.subtotal.toLocaleString('vi-VN')} đ</td>
-                        <td className="p-3 text-right">
-                          <button type="button" onClick={() => handleRemoveItem(idx)} className="rounded p-1 text-destructive hover:bg-destructive/10">
-                            <Trash2 className="h-4 w-4" />
+                        <td className="p-2.5 font-semibold text-emerald-600 font-mono tabular-nums">{item.subtotal.toLocaleString('vi-VN')} đ</td>
+                        <td className="p-2.5 text-right">
+                          <button type="button" onClick={() => handleRemoveItem(idx)} className="rounded-[4px] p-1 text-destructive hover:bg-destructive/10 cursor-pointer">
+                            <Trash2 className="size-3.5" />
                           </button>
                         </td>
                       </tr>
@@ -573,9 +576,9 @@ export default function StockExportListPage() {
                 </table>
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-border">
-                <button type="button" onClick={() => setCreateModalOpen(false)} className="rounded-lg border border-input px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted">Hủy</button>
-                <button type="submit" disabled={createMutation.isPending} className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90">
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-border">
+                <button type="button" onClick={() => setCreateModalOpen(false)} className="rounded-[6px] border border-input px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:bg-muted active:scale-[0.98] cursor-pointer">Hủy</button>
+                <button type="submit" disabled={createMutation.isPending} className="rounded-[6px] bg-primary px-3.5 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90 active:scale-[0.98] cursor-pointer">
                   {createMutation.isPending ? 'Đang tạo...' : 'Tạo Lệnh Xuất Kho'}
                 </button>
               </div>

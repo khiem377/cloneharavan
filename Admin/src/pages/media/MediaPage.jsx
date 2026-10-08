@@ -13,6 +13,10 @@ import UploadZone from './UploadZone';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import DataTablePagination from '@/components/ui/DataTablePagination';
 import MediaUsageModal from '@/components/media/MediaUsageModal';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 function formatSize(bytes) {
   if (!bytes) return '—';
@@ -75,7 +79,6 @@ function BreadcrumbPath({ folders, selectedFolder, onSelect }) {
   );
 }
 
-/** ── Global Search Results Modal (opens on Enter) ── */
 function GlobalSearchModal({ query, onClose }) {
   const [page, setPage] = useState(1);
   const [preview, setPreview] = useState(null);
@@ -86,37 +89,30 @@ function GlobalSearchModal({ query, onClose }) {
   const fmtSize = (b) => !b ? '' : b < 1024*1024 ? (b/1024).toFixed(0)+' KB' : (b/1024/1024).toFixed(1)+' MB';
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={onClose}>
-      <div
-        className="flex w-full max-w-4xl rounded-xl border border-border bg-background shadow-2xl overflow-hidden"
-        style={{ maxHeight: '85vh', height: '85vh' }}
-        onClick={e => e.stopPropagation()}
-      >
+    <Dialog open={true} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="max-w-4xl max-h-[85vh] h-[85vh] flex p-0 rounded-[6px] border border-border overflow-hidden">
         {/* Left: results */}
         <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-3.5 border-b border-border shrink-0 bg-muted/20">
+          <DialogHeader className="px-5 py-3.5 border-b border-border shrink-0 bg-muted/20 flex flex-row items-center justify-between">
             <div className="flex items-center gap-2 flex-wrap">
               <Search size={15} className="text-muted-foreground" />
-              <span className="text-sm font-semibold text-foreground">Kết quả tìm kiếm:</span>
-              <span className="text-sm font-bold text-primary">{total}</span>
-              <span className="text-sm text-muted-foreground">ảnh khớp với</span>
-              <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-xs font-bold">"{query}"</span>
+              <DialogTitle className="text-sm font-semibold text-foreground">Kết quả tìm kiếm:</DialogTitle>
+              <span className="text-sm font-bold font-mono text-primary tabular-nums">{total}</span>
+              <span className="text-xs text-muted-foreground">ảnh khớp với</span>
+              <Badge variant="secondary" className="rounded-[4px] text-xs font-semibold px-2 py-0">"{query}"</Badge>
             </div>
-            <button onClick={onClose} className="size-7 flex items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer ml-3 shrink-0">
-              <X size={15} />
-            </button>
-          </div>
+          </DialogHeader>
 
           <div className="flex-1 overflow-y-auto p-4">
             {isLoading ? (
               <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))' }}>
                 {Array.from({ length: 16 }).map((_, i) => (
-                  <div key={i} className="rounded-lg bg-muted animate-pulse border border-border" style={{ aspectRatio: '1' }} />
+                  <div key={i} className="rounded-[4px] bg-muted animate-pulse border border-border" style={{ aspectRatio: '1' }} />
                 ))}
               </div>
             ) : items.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-                <p className="text-sm font-medium">Không tìm thấy kết quả nào</p>
+                <p className="text-xs font-mono">Không tìm thấy kết quả nào</p>
               </div>
             ) : (
               <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))' }}>
@@ -147,19 +143,19 @@ function GlobalSearchModal({ query, onClose }) {
             <>
               <div className="flex items-center justify-between px-3 py-2.5 border-b border-border shrink-0">
                 <span className="text-[11px] font-semibold text-foreground">Preview</span>
-                <button onClick={() => setPreview(null)} className="size-5 flex items-center justify-center rounded text-muted-foreground hover:bg-accent cursor-pointer">
+                <Button variant="ghost" size="icon" onClick={() => setPreview(null)} className="size-5 rounded-[4px]">
                   <X size={10} />
-                </button>
+                </Button>
               </div>
               <div className="flex items-center justify-center border-b border-border bg-[repeating-conic-gradient(#80808015_0%_25%,transparent_0%_50%)] bg-[length:12px_12px]" style={{ height: 180 }}>
                 {preview.mimetype?.startsWith('image/')
                   ? <img src={preview.url} alt={preview.filename} className="max-h-[176px] max-w-full object-contain" />
-                  : <span className="text-4xl font-extrabold text-muted-foreground/20">{preview.filename?.split('.').pop()?.toUpperCase()}</span>
+                  : <span className="text-3xl font-extrabold text-muted-foreground/20 font-mono">{preview.filename?.split('.').pop()?.toUpperCase()}</span>
                 }
               </div>
-              <div className="flex-1 overflow-y-auto px-3 py-3 flex flex-col gap-3">
+              <div className="flex-1 overflow-y-auto px-3 py-3 flex flex-col gap-3 text-xs">
                 <p className="text-[11px] font-semibold text-foreground break-all leading-relaxed">{preview.filename}</p>
-                <div className="rounded-md border border-border overflow-hidden">
+                <div className="rounded-[4px] border border-border overflow-hidden font-mono tabular-nums">
                   {[['Loại', preview.mimeType], ['Size', fmtSize(preview.size)], ['Ngày', preview.createdAt ? new Date(preview.createdAt).toLocaleDateString('vi-VN') : '—'], ['Folder', preview.folderId?.name || 'Gốc']].map(([l, v]) => (
                     <div key={l} className="flex gap-2 px-2.5 py-1.5 border-b border-border last:border-0">
                       <span className="text-[10px] text-muted-foreground w-12 shrink-0">{l}</span>
@@ -167,17 +163,18 @@ function GlobalSearchModal({ query, onClose }) {
                     </div>
                   ))}
                 </div>
-                <div className="rounded-md bg-muted/60 border border-border px-2 py-1.5">
-                  <p className="text-[9px] text-muted-foreground break-all font-mono leading-relaxed">{preview.url}</p>
+                <div className="rounded-[4px] bg-muted/60 border border-border px-2 py-1.5 font-mono">
+                  <p className="text-[9px] text-muted-foreground break-all leading-relaxed">{preview.url}</p>
                 </div>
-                <button onClick={() => { navigator.clipboard.writeText(preview.url); toast.success('Đã copy!'); }}
-                  className="inline-flex h-7 w-full items-center justify-center gap-1 rounded-md border border-border text-[10px] font-medium hover:bg-accent cursor-pointer">
-                  <Copy size={11} /> Copy URL
-                </button>
-                <a href={preview.url} target="_blank" rel="noreferrer"
-                  className="inline-flex h-7 w-full items-center justify-center gap-1 rounded-md bg-primary text-primary-foreground text-[10px] font-medium hover:bg-primary/90">
-                  <ExternalLink size={11} /> Mở ảnh
-                </a>
+                <Button variant="outline" size="sm" onClick={() => { navigator.clipboard.writeText(preview.url); toast.success('Đã copy!'); }}
+                  className="h-7 w-full rounded-[4px] text-[10px]">
+                  <Copy size={11} className="mr-1" /> Copy URL
+                </Button>
+                <Button size="sm" asChild className="h-7 w-full rounded-[4px] text-[10px]">
+                  <a href={preview.url} target="_blank" rel="noreferrer">
+                    <ExternalLink size={11} className="mr-1" /> Mở ảnh
+                  </a>
+                </Button>
               </div>
             </>
           ) : (
@@ -187,8 +184,8 @@ function GlobalSearchModal({ query, onClose }) {
             </div>
           )}
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -196,7 +193,7 @@ function SearchResultCard({ item, isActive, onClick, animDelay }) {
   const [imgErr, setImgErr] = useState(false);
   return (
     <div
-      className={`group relative flex flex-col rounded-lg border cursor-pointer overflow-hidden transition-all bg-card media-wave-in ${isActive ? 'border-primary ring-2 ring-primary/20 shadow-md' : 'border-border hover:border-primary/40 hover:shadow-sm'}`}
+      className={`group relative flex flex-col rounded-[6px] border cursor-pointer overflow-hidden transition-all bg-card media-wave-in ${isActive ? 'border-primary ring-2 ring-primary/20 shadow-md' : 'border-border hover:border-primary/40'}`}
       style={{ animationDelay: `${animDelay}ms` }}
       onClick={onClick}
     >
@@ -212,9 +209,7 @@ function SearchResultCard({ item, isActive, onClick, animDelay }) {
   );
 }
 
-/** Right-side preview panel */
 function PreviewPanel({ item, onClose }) {
-  // BE stores field as `mimeType` (camelCase). Fallback to extension check.
   const mime = item.mimeType || item.mimetype || '';
   const isImage = mime.startsWith('image/') || /\.(jpe?g|png|gif|webp|svg|bmp|avif|ico)$/i.test(item.filename || '');
   const ext = item.filename?.split('.').pop()?.toUpperCase() || '—';
@@ -229,9 +224,9 @@ function PreviewPanel({ item, onClose }) {
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
         <span className="text-xs font-semibold text-foreground">Preview</span>
-        <button onClick={onClose} className="size-6 flex items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer">
+        <Button variant="ghost" size="icon" onClick={onClose} className="size-6 rounded-[4px] text-muted-foreground hover:text-foreground">
           <X size={13} />
-        </button>
+        </Button>
       </div>
 
       {/* Image preview area */}
@@ -239,17 +234,17 @@ function PreviewPanel({ item, onClose }) {
         {isImage ? (
           <img src={item.url} alt={item.filename} className="max-h-[196px] max-w-full object-contain" />
         ) : (
-          <div className="flex flex-col items-center gap-2 text-muted-foreground">
+          <div className="flex flex-col items-center gap-2 text-muted-foreground font-mono">
             <span className="text-4xl font-extrabold text-muted-foreground/20">{ext}</span>
           </div>
         )}
       </div>
 
       {/* Meta info */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4">
+      <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4 text-xs">
         <p className="text-xs font-semibold text-foreground break-all leading-relaxed">{item.filename}</p>
 
-        <div className="flex flex-col gap-0 rounded-lg border border-border overflow-hidden">
+        <div className="flex flex-col gap-0 rounded-[6px] border border-border overflow-hidden font-mono tabular-nums">
           {[
             ['Loại file', item.mimetype || ext],
             ['Kích thước', formatSize(item.size)],
@@ -266,22 +261,22 @@ function PreviewPanel({ item, onClose }) {
         {/* URL box */}
         <div className="flex flex-col gap-1.5">
           <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">Đường dẫn</span>
-          <div className="rounded-md bg-muted/50 border border-border px-2.5 py-2">
-            <p className="text-[10px] text-muted-foreground break-all leading-relaxed font-mono">{item.url}</p>
+          <div className="rounded-[4px] bg-muted/50 border border-border px-2.5 py-2 font-mono">
+            <p className="text-[10px] text-muted-foreground break-all leading-relaxed">{item.url}</p>
           </div>
         </div>
       </div>
 
       {/* Actions */}
       <div className="flex flex-col gap-2 px-4 py-3 border-t border-border shrink-0">
-        <button onClick={handleCopyUrl}
-          className="inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-md border border-border text-xs font-medium text-foreground hover:bg-accent transition-colors cursor-pointer">
-          <Copy size={13} /> Copy URL
-        </button>
-        <a href={item.url} target="_blank" rel="noopener noreferrer"
-          className="inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors">
-          <ExternalLink size={13} /> Mở ảnh
-        </a>
+        <Button variant="outline" size="sm" onClick={handleCopyUrl} className="h-8 w-full rounded-[6px] text-xs">
+          <Copy size={13} className="mr-1.5" /> Copy URL
+        </Button>
+        <Button size="sm" asChild className="h-8 w-full rounded-[6px] text-xs active:scale-[0.98] transition-transform">
+          <a href={item.url} target="_blank" rel="noopener noreferrer">
+            <ExternalLink size={13} className="mr-1.5" /> Mở ảnh
+          </a>
+        </Button>
       </div>
     </div>
   );
@@ -327,7 +322,6 @@ export default function MediaPage() {
 
   const invalidateAll = () => qc.invalidateQueries({ predicate: (q) => q.queryKey[0] === 'media' });
 
-  // Dùng stable string key thay vì array reference để tránh vòng lặp vô tận
   const mediaItemIds = mediaItems.map((m) => m._id).join(',');
 
   useEffect(() => {
@@ -339,7 +333,6 @@ export default function MediaPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mediaItemIds]);
 
-  // Auto-select + mo preview khi mediaId co trong URL
   useEffect(() => {
     if (!targetMediaId || !mediaItems.length) return;
     const found = mediaItems.find((m) => m._id === targetMediaId);
@@ -368,7 +361,6 @@ export default function MediaPage() {
     onError: (err) => toast.error(err.response?.data?.message || 'Xóa thất bại'),
   });
 
-  // Drag & drop single file vào folder card
   const { mutate: dropMove } = useMutation({
     mutationFn: ({ mediaId, folderId }) => mediaService.move(mediaId, folderId),
     onSuccess: () => { toast.success('Đã di chuyển file'); invalidateAll(); },
@@ -444,17 +436,18 @@ export default function MediaPage() {
 
   return (
     <div className="p-3 sm:p-6 w-full max-w-[1600px] mx-auto flex flex-col gap-5">
-      <div className="rounded-xl border border-border bg-card shadow-2xs text-foreground overflow-hidden">
+      <Card className="rounded-[6px] border border-border shadow-none text-foreground overflow-hidden">
 
         {/* Header */}
         <div className="flex items-center justify-between gap-4 px-4 sm:px-6 py-4 border-b border-border">
           <h1 className="text-xl font-bold tracking-tight text-foreground">Thư viện ảnh</h1>
-          <button
-            className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground shadow-xs hover:bg-primary/90 transition-colors cursor-pointer"
+          <Button
+            size="sm"
             onClick={() => setShowUpload(true)}
+            className="h-9 px-4 rounded-[6px] text-xs font-medium active:scale-[0.98] transition-transform"
           >
-            <Upload size={15} /> Thêm file
-          </button>
+            <Upload size={15} className="mr-1.5" /> Thêm file
+          </Button>
         </div>
 
         {/* Mobile Folder Selector Bar */}
@@ -463,18 +456,20 @@ export default function MediaPage() {
             <Folder size={14} className="text-primary shrink-0" />
             <span>Thư mục: <strong className="text-foreground">{currentFolderName}</strong></span>
           </div>
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => setShowMobileFolders(!showMobileFolders)}
-            className="inline-flex items-center gap-1 text-xs font-medium text-foreground px-2.5 py-1 rounded-md border border-border bg-background hover:bg-accent transition-colors cursor-pointer shrink-0"
+            className="h-7 px-2.5 rounded-[4px] text-xs"
           >
             <span>Đổi thư mục</span>
-            <ChevronDown size={13} className={`transition-transform ${showMobileFolders ? 'rotate-180' : ''}`} />
-          </button>
+            <ChevronDown size={13} className={`ml-1 transition-transform ${showMobileFolders ? 'rotate-180' : ''}`} />
+          </Button>
         </div>
 
         {/* Mobile Collapsible Folder Tree */}
         {showMobileFolders && (
-          <div className="md:hidden border-b border-border p-3 bg-card max-h-64 overflow-y-auto shadow-inner">
+          <div className="md:hidden border-b border-border p-3 bg-card max-h-64 overflow-y-auto">
             <FolderTree
               selectedId={selectedFolder}
               onSelect={(id) => {
@@ -485,17 +480,17 @@ export default function MediaPage() {
           </div>
         )}
 
-        {/* Body — fixed height flex so each column scrolls independently */}
+        {/* Body */}
         <div className="flex flex-col md:flex-row overflow-hidden" style={{ minHeight: 480 }}>
 
-          {/* Desktop Col 1: Folder Tree — independently scrollable */}
+          {/* Desktop Col 1: Folder Tree */}
           <div className="hidden md:block w-52 shrink-0 border-r border-border overflow-y-auto p-2.5 bg-muted/10">
             <FolderTree selectedId={selectedFolder} onSelect={handleFolderSelect} />
           </div>
 
           {/* Col 2: Toolbar + Grid + Pagination */}
           <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-            {/* Toolbar row — fixed, doesn't scroll */}
+            {/* Toolbar row */}
             <div className="shrink-0 border-b border-border px-4 py-2">
               <MediaToolbar
                 search={searchQuery}
@@ -512,14 +507,14 @@ export default function MediaPage() {
               />
             </div>
 
-            {/* Breadcrumb — fixed */}
+            {/* Breadcrumb */}
             <div className="shrink-0 px-4 py-1.5 border-b border-border bg-muted/20">
               <BreadcrumbPath folders={allFolders} selectedFolder={selectedFolder} onSelect={handleFolderSelect} />
             </div>
 
-            {/* Media grid — the only scrollable part */}
+            {/* Media grid */}
             <div className="flex-1 overflow-y-auto p-4">
-            <MediaGrid
+              <MediaGrid
                 items={mediaItems}
                 folders={isSearching ? (searchData?.folders || []) : (browseData?.type === 'parent' ? (browseData?.subFolders || []) : [])}
                 onFolderClick={handleFolderSelect}
@@ -538,7 +533,7 @@ export default function MediaPage() {
               />
             </div>
 
-            {/* Pagination — fixed at bottom */}
+            {/* Pagination */}
             <div className="shrink-0 px-4 py-2 border-t border-border bg-background">
               <DataTablePagination
                 page={page}
@@ -554,14 +549,14 @@ export default function MediaPage() {
             </div>
           </div>
 
-          {/* Col 3: Preview Panel — independently scrollable, always same height */}
+          {/* Col 3: Preview Panel */}
           {showPreview && (
             <div className="w-64 shrink-0 border-l border-border overflow-y-auto bg-muted/5">
               <PreviewPanel item={previewItem} onClose={() => setPreviewItem(null)} />
             </div>
           )}
         </div>
-      </div>
+      </Card>
 
       {showUpload && (
         <UploadZone folderId={selectedFolder} onClose={() => setShowUpload(false)} />
@@ -569,8 +564,9 @@ export default function MediaPage() {
 
       {showBulkConfirm && (
         <ConfirmDialog
+          open={true}
           title="Xóa ảnh"
-          message={`Xóa ${selectedIds.size} ảnh đã chọn? Hành động này không thể hoàn tác.`}
+          description={`Xóa ${selectedIds.size} ảnh đã chọn? Hành động này không thể hoàn tác.`}
           confirmText="Xóa tất cả"
           variant="danger"
           onConfirm={() => bulkDelete([...selectedIds])}
@@ -582,7 +578,7 @@ export default function MediaPage() {
         <ConfirmDialog
           open={true}
           title="Xóa ảnh"
-          message={`Xóa ảnh "${confirmDeleteItem.filename}"? Hành động này không thể hoàn tác.`}
+          description={`Xóa ảnh "${confirmDeleteItem.filename}"? Hành động này không thể hoàn tác.`}
           confirmText="Xóa"
           variant="danger"
           onConfirm={() => { deleteOne(confirmDeleteItem._id); setConfirmDeleteItem(null); }}
@@ -610,4 +606,3 @@ export default function MediaPage() {
     </div>
   );
 }
-

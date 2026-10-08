@@ -2,6 +2,34 @@ const API_SERVER_URL = process.env.API_SERVER_URL || process.env.NEXT_PUBLIC_API
 
 export const productServerService = {
   /**
+   * Lấy danh sách sản phẩm với các bộ lọc (category, brand, sort, limit, ...)
+   * @param {Object} params
+   */
+  async getProducts(params = {}) {
+    try {
+      const query = new URLSearchParams();
+      Object.entries(params).forEach(([key, val]) => {
+        if (val !== undefined && val !== null && val !== '') {
+          query.append(key, String(val));
+        }
+      });
+      const queryString = query.toString() ? `?${query.toString()}` : '';
+      const res = await fetch(`${API_SERVER_URL}/products${queryString}`, {
+        next: { revalidate: 60 },
+      });
+      if (!res.ok) {
+        console.error(`SSR getProducts failed: ${res.status} ${res.statusText}`);
+        return [];
+      }
+      const json = await res.json();
+      return json?.data || [];
+    } catch (err) {
+      console.error('SSR getProducts error:', err?.message);
+      return [];
+    }
+  },
+
+  /**
    * Lấy chi tiết sản phẩm theo slug hoặc ObjectId
    * @param {string} slugOrId 
    */
@@ -9,7 +37,7 @@ export const productServerService = {
     if (!slugOrId) return null;
     try {
       const res = await fetch(`${API_SERVER_URL}/products/${encodeURIComponent(slugOrId)}`, {
-        cache: 'no-store',
+        next: { revalidate: 60 },
       });
       if (!res.ok) {
         if (res.status === 404) return null;
@@ -32,7 +60,7 @@ export const productServerService = {
     if (!productId) return [];
     try {
       const res = await fetch(`${API_SERVER_URL}/products/${productId}/variants`, {
-        cache: 'no-store',
+        next: { revalidate: 60 },
       });
       if (!res.ok) return [];
       const json = await res.json();
@@ -51,7 +79,7 @@ export const productServerService = {
     if (!slugOrId) return null;
     try {
       const res = await fetch(`${API_SERVER_URL}/products/${encodeURIComponent(slugOrId)}/deals`, {
-        cache: 'no-store',
+        next: { revalidate: 60 },
       });
       if (!res.ok) return null;
       const json = await res.json();
@@ -70,7 +98,7 @@ export const productServerService = {
     if (!productId) return null;
     try {
       const res = await fetch(`${API_SERVER_URL}/upsell/product/${productId}`, {
-        cache: 'no-store',
+        next: { revalidate: 60 },
       });
       if (!res.ok) return null;
       const json = await res.json();
@@ -92,7 +120,7 @@ export const productServerService = {
     try {
       // 1. Thử lấy từ Recommendation API
       const res = await fetch(`${API_SERVER_URL}/recommendations/similar/${productId}?limit=${limit}`, {
-        cache: 'no-store',
+        next: { revalidate: 60 },
       });
       if (res.ok) {
         const json = await res.json();
@@ -103,7 +131,7 @@ export const productServerService = {
       // 2. Fallback sang Category nếu recommendation trống
       if (categoryId) {
         const catRes = await fetch(`${API_SERVER_URL}/products?category=${categoryId}&limit=${limit}`, {
-          cache: 'no-store',
+          next: { revalidate: 60 },
         });
         if (catRes.ok) {
           const catJson = await catRes.json();
@@ -126,7 +154,7 @@ export const productServerService = {
   async getPersonalizedRecommendations(limit = 6) {
     try {
       const res = await fetch(`${API_SERVER_URL}/recommendations/personalized?limit=${limit}`, {
-        cache: 'no-store',
+        next: { revalidate: 60 },
       });
       if (res.ok) {
         const json = await res.json();
@@ -136,7 +164,7 @@ export const productServerService = {
 
       // Fallback sang trending
       const trendRes = await fetch(`${API_SERVER_URL}/recommendations/trending?limit=${limit}`, {
-        cache: 'no-store',
+        next: { revalidate: 60 },
       });
       if (trendRes.ok) {
         const trendJson = await trendRes.json();
@@ -155,7 +183,7 @@ export const productServerService = {
   async getGiftPrograms() {
     try {
       const res = await fetch(`${API_SERVER_URL}/gift-programs`, {
-        cache: 'no-store',
+        next: { revalidate: 60 },
       });
       if (!res.ok) return [];
       const json = await res.json();
@@ -172,7 +200,7 @@ export const productServerService = {
   async getComplementaryProducts(excludeProductId, excludeCategoryIds = [], limit = 6) {
     try {
       const res = await fetch(`${API_SERVER_URL}/products?limit=25`, {
-        cache: 'no-store',
+        next: { revalidate: 60 },
       });
       if (!res.ok) return [];
       const json = await res.json();

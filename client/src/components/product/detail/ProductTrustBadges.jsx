@@ -1,38 +1,61 @@
 import React from 'react';
 
-export default function ProductTrustBadges() {
-  const commitments = [
-    {
-      tag: '01',
-      title: '100% Chính hãng',
-      desc: 'Cam kết xuất xứ rõ ràng, đầy đủ hóa đơn VAT',
-    },
-    {
-      tag: '02',
-      title: 'Bảo hành chu đáo',
-      desc: 'Hỗ trợ kỹ thuật chính hãng tận tâm trọn đời',
-    },
-    {
-      tag: '03',
-      title: '1 Đổi 1 trong 30 ngày',
-      desc: 'Nếu phát sinh lỗi kỹ thuật từ nhà sản xuất',
-    },
-    {
-      tag: '04',
-      title: 'Giao hàng toàn quốc',
-      desc: 'Giao nhanh nội thành, kiểm tra hàng trước khi nhận',
-    },
-  ];
+const commitments = [
+  {
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        <path d="M9 12l2 2 4-4"/>
+      </svg>
+    ),
+    title: '100% Chính hãng',
+    desc: 'Hóa đơn VAT đầy đủ',
+  },
+  {
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 8v4l3 3"/>
+        <circle cx="12" cy="12" r="10"/>
+      </svg>
+    ),
+    title: 'Bảo hành 12 tháng',
+    desc: 'Hỗ trợ kỹ thuật chính hãng',
+  },
+  {
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="23 4 23 10 17 10"/>
+        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+      </svg>
+    ),
+    title: '1 Đổi 1 trong 30 ngày',
+    desc: 'Nếu lỗi từ nhà sản xuất',
+  },
+  {
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="1" y="3" width="15" height="13" rx="1"/>
+        <path d="M16 8h4l3 3v5h-7V8z"/>
+        <circle cx="5.5" cy="18.5" r="2.5"/>
+        <circle cx="18.5" cy="18.5" r="2.5"/>
+      </svg>
+    ),
+    title: 'Giao hàng toàn quốc',
+    desc: 'Kiểm tra hàng trước khi nhận',
+  },
+];
 
+export default function ProductTrustBadges() {
   return (
-    <div className="grid grid-cols-2 gap-2 p-3 rounded-[6px] border border-slate-200 bg-white">
+    <div className="grid grid-cols-2 gap-2">
       {commitments.map((item, idx) => (
-        <div key={idx} className="flex items-start gap-2.5 p-2 rounded-[6px] bg-slate-50/70 border border-slate-100">
-          <span className="inline-flex items-center justify-center w-6 h-6 rounded-[4px] bg-slate-200 text-slate-700 text-[10px] font-bold shrink-0 mt-0.5">
-            {item.tag}
-          </span>
+        <div
+          key={idx}
+          className="flex items-start gap-2.5 p-2.5 rounded-[6px] border border-slate-200 bg-white hover:border-slate-300 transition-colors"
+        >
+          <span className="text-slate-500 shrink-0 mt-0.5">{item.icon}</span>
           <div className="flex flex-col min-w-0">
-            <span className="font-bold text-xs text-slate-900 leading-tight">
+            <span className="font-semibold text-xs text-slate-900 leading-tight">
               {item.title}
             </span>
             <span className="text-[11px] text-slate-500 leading-normal mt-0.5">

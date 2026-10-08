@@ -98,7 +98,7 @@ export const BlogDetailHeader = ({ post }) => {
         setLikesCount(res.likesCount);
       }
       if (nextLiked) {
-        toast.success('Cảm ơn bạn đã yêu thích bài viết! ❤️');
+        toast.success('Cảm ơn bạn đã yêu thích bài viết!');
       } else {
         toast.info('Đã bỏ yêu thích bài viết.');
       }
@@ -198,7 +198,7 @@ export const BlogDetailHeader = ({ post }) => {
                 <span>• {post.minRead} phút đọc</span>
               )}
               {typeof post.viewsCount === 'number' && (
-                <span>• {post.viewsCount.toLocaleString()} lượt xem</span>
+                <span suppressHydrationWarning>• {post.viewsCount.toLocaleString('vi-VN')} lượt xem</span>
               )}
             </div>
           </div>

@@ -7,7 +7,7 @@ import { MediaThumbnailHover } from '@/components/ui/MediaFolderBadge';
 import { toast } from '@/providers/ToastProvider';
 import { BANNER_TYPE_LABELS } from '@/services/banner.service';
 
-const inputCls = 'w-full h-9 px-3 rounded-md border border-input bg-background text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 transition-colors placeholder:text-muted-foreground';
+const inputCls = 'w-full h-9 px-3 rounded-[6px] border border-input bg-background text-sm outline-none focus:border-ring focus:ring-1 focus:ring-ring transition-colors placeholder:text-muted-foreground';
 const labelCls = 'block text-sm font-medium text-foreground mb-1.5';
 
 // Chuyển Date → "YYYY-MM-DDTHH:mm" cho input[type=datetime-local]

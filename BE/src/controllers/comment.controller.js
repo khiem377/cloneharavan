@@ -11,6 +11,8 @@ const getComments = async (req, res, next) => {
       page,
       limit,
     });
+    // Không cache comment — data thay đổi thường xuyên (xóa/thêm bình luận)
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
     return res.status(200).json({ status: 'success', data: result });
   } catch (error) {
     next(error);
@@ -57,9 +59,20 @@ const checkPurchaseStatus = async (req, res, next) => {
   }
 };
 
+const deleteComment = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const result = await commentService.deleteComment(id, req.user);
+    return res.status(200).json({ status: 'success', data: result });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getComments,
   createComment,
   toggleReaction,
   checkPurchaseStatus,
+  deleteComment,
 };

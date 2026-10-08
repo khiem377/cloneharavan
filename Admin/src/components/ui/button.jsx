@@ -1,36 +1,47 @@
+import * as React from "react"
 import { Button as ButtonPrimitive } from "@base-ui/react/button"
-import { cva } from "class-variance-authority";
-
+import { cva } from "class-variance-authority"
+import { Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "group/button inline-flex shrink-0 items-center justify-center rounded-[6px] border border-transparent text-sm font-medium whitespace-nowrap transition-all duration-100 outline-none select-none active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/80",
-        outline:
-          "border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
+        // Nút chính: Hành động chính duy nhất của một khu (Evondev taste - solid dark)
+        default:
+          "bg-slate-900 text-white hover:bg-slate-800 shadow-xs disabled:bg-slate-300 disabled:text-slate-500",
+        primary:
+          "bg-slate-900 text-white hover:bg-slate-800 shadow-xs disabled:bg-slate-300 disabled:text-slate-500",
+
+        // Nút nền xám: Nút phụ đứng cạnh nút chính hoặc rộng hết card
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
+          "bg-slate-100 text-slate-800 hover:bg-slate-200 disabled:bg-slate-50 disabled:text-slate-400",
+
+        // Nút viền: Mặc định cho mọi hành động khác (thêm, sửa, mở, lọc)
+        outline:
+          "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900 disabled:border-slate-200 disabled:text-slate-300",
+
+        // Nút trong suốt: Hành động phụ nằm trong hàng, chữ xám lúc thường, rê vào mới hiện nền
         ghost:
-          "hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50",
+          "text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:text-slate-300",
+
+        // Nút cảnh báo / xóa
         destructive:
-          "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
-        link: "text-primary underline-offset-4 hover:underline",
+          "bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 hover:text-rose-700 disabled:opacity-50",
+
+        link: "text-slate-900 underline-offset-4 hover:underline",
       },
       size: {
-        default:
-          "h-8 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
-        xs: "h-6 gap-1 rounded-[min(var(--radius-md),10px)] px-2 text-xs in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
-        sm: "h-7 gap-1 rounded-[min(var(--radius-md),12px)] px-2.5 text-[0.8rem] in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
-        lg: "h-9 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
-        icon: "size-8",
-        "icon-xs":
-          "size-6 rounded-[min(var(--radius-md),10px)] in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-3",
-        "icon-sm":
-          "size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg",
-        "icon-lg": "size-9",
+        default: "h-9 gap-2 px-3.5 text-sm",
+        xs: "h-6 gap-1 px-2 text-[11px]",
+        sm: "h-8 gap-1.5 px-3 text-xs",
+        lg: "h-10 gap-2 px-5 text-sm",
+        icon: "size-9",
+        "icon-xs": "size-6",
+        "icon-sm": "size-7",
+        "icon-lg": "size-10",
       },
     },
     defaultVariants: {
@@ -44,14 +55,22 @@ function Button({
   className,
   variant = "default",
   size = "default",
+  loading = false,
+  disabled = false,
+  children,
   ...props
 }) {
   return (
     <ButtonPrimitive
       data-slot="button"
+      disabled={disabled || loading}
       className={cn(buttonVariants({ variant, size, className }))}
-      {...props} />
-  );
+      {...props}
+    >
+      {loading && <Loader2 className="size-3.5 animate-spin shrink-0" />}
+      {children}
+    </ButtonPrimitive>
+  )
 }
 
 export { Button, buttonVariants }

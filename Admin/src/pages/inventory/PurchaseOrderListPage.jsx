@@ -22,6 +22,9 @@ import { useModalSet } from '@/hooks/useModalSet';
 
 import useColumnVisibility from '@/hooks/useColumnVisibility';
 import ColumnToggleDropdown from '@/components/ui/ColumnToggleDropdown';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card } from '@/components/ui/card';
 
 const PO_COLUMNS = [
   { id: 'stt', label: 'STT', defaultVisible: true },
@@ -260,58 +263,58 @@ export default function PurchaseOrderListPage() {
         return (
           <button
             onClick={() => handleOpenSendPOModal(po)}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 shadow transition-colors whitespace-nowrap"
+            className="inline-flex items-center gap-1.5 rounded-[6px] bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 shadow-xs transition-transform active:scale-[0.98] whitespace-nowrap cursor-pointer"
           >
-            <Send className="h-3.5 w-3.5" /> Gửi PO Cho NCC
+            <Send className="size-3.5" /> Gửi PO Cho NCC
           </button>
         );
       case 'sent':
         return (
           <button
             onClick={() => handleAdvanceStatus(po, 'in_transit')}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700 shadow transition-colors whitespace-nowrap"
+            className="inline-flex items-center gap-1.5 rounded-[6px] bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700 shadow-xs transition-transform active:scale-[0.98] whitespace-nowrap cursor-pointer"
           >
-            <Truck className="h-3.5 w-3.5" /> Vận Chuyển Hàng
+            <Truck className="size-3.5" /> Vận Chuyển Hàng
           </button>
         );
       case 'in_transit':
         return (
           <button
             onClick={() => handleAdvanceStatus(po, 'arrived')}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-cyan-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-cyan-700 shadow transition-colors whitespace-nowrap"
+            className="inline-flex items-center gap-1.5 rounded-[6px] bg-cyan-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-cyan-700 shadow-xs transition-transform active:scale-[0.98] whitespace-nowrap cursor-pointer"
           >
-            <PackageCheck className="h-3.5 w-3.5" /> Đến Kho Thành Phẩm
+            <PackageCheck className="size-3.5" /> Đến Kho Thành Phẩm
           </button>
         );
       case 'arrived':
         return (
           <button
             onClick={() => handleAdvanceStatus(po, 'inspecting')}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-purple-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-purple-700 shadow transition-colors whitespace-nowrap"
+            className="inline-flex items-center gap-1.5 rounded-[6px] bg-purple-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-purple-700 shadow-xs transition-transform active:scale-[0.98] whitespace-nowrap cursor-pointer"
           >
-            <ClipboardCheck className="h-3.5 w-3.5" /> Bắt Đầu Kiểm Hàng
+            <ClipboardCheck className="size-3.5" /> Bắt Đầu Kiểm Hàng
           </button>
         );
       case 'inspecting':
         return (
           <button
             onClick={() => handleAdvanceStatus(po, 'completed')}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 shadow-md transition-colors whitespace-nowrap"
+            className="inline-flex items-center gap-1.5 rounded-[6px] bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 shadow-xs transition-transform active:scale-[0.98] whitespace-nowrap cursor-pointer"
           >
-            <CheckCircle2 className="h-3.5 w-3.5" /> Xác Nhận & Nhập Kho
+            <CheckCircle2 className="size-3.5" /> Xác Nhận & Nhập Kho
           </button>
         );
       case 'completed':
         return (
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 inline-flex items-center gap-1 whitespace-nowrap">
-              <CheckCircle2 className="h-4 w-4" /> Đã Khóa Tồn Kho
+              <CheckCircle2 className="size-3.5" /> Đã Khóa Tồn Kho
             </span>
             <button
               onClick={() => navigate(`/purchase-returns/create?poId=${po._id}`)}
-              className="inline-flex items-center gap-1 rounded-lg border border-destructive/30 bg-destructive/10 px-2.5 py-1 text-xs font-bold text-destructive hover:bg-destructive/20 transition-colors whitespace-nowrap"
+              className="inline-flex items-center gap-1 rounded-[6px] border border-destructive/30 bg-destructive/10 px-2.5 py-1 text-xs font-bold text-destructive hover:bg-destructive/20 transition-transform active:scale-[0.98] whitespace-nowrap cursor-pointer"
             >
-              <RotateCcw className="h-3.5 w-3.5" /> Trả Hàng
+              <RotateCcw className="size-3.5" /> Trả Hàng
             </button>
           </div>
         );
@@ -323,85 +326,90 @@ export default function PurchaseOrderListPage() {
   return (
     <div className="space-y-6 p-6">
       {/* Top Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-            <FileCheck className="h-7 w-7 text-primary" />
+          <h1 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
+            <FileCheck className="h-6 w-6 text-primary" />
             Đơn Mua Hàng & Nhập Kho (Inbound Management)
           </h1>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-muted-foreground mt-0.5">
             Quản lý Đơn Mua Hàng với Nhà Cung Cấp và các đợt Phiếu Nhập Kho thực tế
           </p>
         </div>
-        <button
+        <Button
           onClick={() => navigate('/purchase-orders/create')}
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground shadow-md hover:bg-primary/90 transition-colors"
+          className="rounded-[6px] text-xs font-semibold shadow-xs active:scale-[0.98]"
         >
-          <Plus className="h-4 w-4" />
+          <Plus className="h-4 w-4 mr-1.5" />
           Tạo Đơn Mua Hàng Mới (PO)
-        </button>
+        </Button>
       </div>
 
       {/* QUICK SWITCH HEADER TABS (PO vs PNK) */}
       <div className="flex items-center gap-2 border-b border-border pb-2">
-        <button
+        <Button
+          size="sm"
           onClick={() => navigate('/purchase-orders')}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-primary text-primary-foreground shadow-md transition-all"
+          className="rounded-[6px] text-xs font-bold shadow-xs active:scale-[0.98]"
         >
-          <Building2 className="h-4 w-4" /> Đơn Mua Hàng (PO)
-        </button>
-        <button
+          <Building2 className="h-4 w-4 mr-1.5" /> Đơn Mua Hàng (PO)
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
           onClick={() => navigate('/stock-receivings')}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold text-muted-foreground hover:bg-muted transition-colors"
+          className="rounded-[6px] text-xs font-semibold text-muted-foreground hover:bg-muted"
         >
-          <FileCheck className="h-4 w-4" /> Phiếu Nhập Kho (PNK)
-        </button>
+          <FileCheck className="h-4 w-4 mr-1.5" /> Phiếu Nhập Kho (PNK)
+        </Button>
       </div>
 
       {/* Toolbar & Filter */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center justify-between rounded-xl border border-border bg-card p-4 shadow-sm">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Tìm mã đơn nhập PO, ghi chú..."
-            value={keyword}
-            onChange={(e) => {
-              setKeyword(e.target.value);
-              setPage(1);
-            }}
-            className="w-full rounded-lg border border-input bg-background pl-9 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-          />
-        </div>
-
-        <div className="flex items-center gap-2">
-          <div className="w-64">
-            <SearchableSelect
-              options={[
-                { label: 'Tất cả trạng thái quy trình', value: '' },
-                { label: 'Bản nháp (Đã tạo đơn)', value: 'draft' },
-                { label: 'Đã gửi NCC', value: 'sent' },
-                { label: 'Đang vận chuyển', value: 'in_transit' },
-                { label: 'Đã đến kho thành phẩm', value: 'arrived' },
-                { label: 'Đang kiểm tra hàng hóa', value: 'inspecting' },
-                { label: 'Đã xác nhận & Nhập kho', value: 'completed' },
-                { label: 'Đã hủy đơn', value: 'cancelled' },
-              ]}
-              value={statusFilter}
-              onChange={(val) => {
-                setStatusFilter(val);
+      <Card className="rounded-[6px] border border-border p-4 shadow-xs">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center justify-between">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Tìm mã đơn nhập PO, ghi chú..."
+              value={keyword}
+              onChange={(e) => {
+                setKeyword(e.target.value);
                 setPage(1);
               }}
-              creatable={false}
-              placeholder="Tất cả trạng thái quy trình"
+              className="pl-9 h-9 text-xs rounded-[6px]"
             />
           </div>
-          <ColumnToggleDropdown columnVisibility={columnVisibility} />
+
+          <div className="flex items-center gap-2">
+            <div className="w-64">
+              <SearchableSelect
+                options={[
+                  { label: 'Tất cả trạng thái quy trình', value: '' },
+                  { label: 'Bản nháp (Đã tạo đơn)', value: 'draft' },
+                  { label: 'Đã gửi NCC', value: 'sent' },
+                  { label: 'Đang vận chuyển', value: 'in_transit' },
+                  { label: 'Đã đến kho thành phẩm', value: 'arrived' },
+                  { label: 'Đang kiểm tra hàng hóa', value: 'inspecting' },
+                  { label: 'Đã xác nhận & Nhập kho', value: 'completed' },
+                  { label: 'Đã hủy đơn', value: 'cancelled' },
+                ]}
+                value={statusFilter}
+                onChange={(val) => {
+                  setStatusFilter(val);
+                  setPage(1);
+                }}
+                creatable={false}
+                placeholder="Tất cả trạng thái quy trình"
+              />
+            </div>
+            <ColumnToggleDropdown columnVisibility={columnVisibility} />
+          </div>
         </div>
-      </div>
+      </Card>
 
       {/* Table */}
-      <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+      <Card className="rounded-[6px] border border-border shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm border-collapse">
             <thead className="bg-muted/50 text-xs font-semibold uppercase text-muted-foreground border-b border-border">
@@ -492,19 +500,19 @@ export default function PurchaseOrderListPage() {
                         <div className="flex items-center justify-end gap-2">
                           <button
                             onClick={() => handlePreviewExcelOnWeb(po)}
-                            className="inline-flex items-center gap-1 rounded-lg border border-primary/30 bg-primary/10 px-2.5 py-1.5 text-xs font-semibold text-primary hover:bg-primary/20 transition-colors"
+                            className="inline-flex items-center gap-1 rounded-[6px] border border-primary/30 bg-primary/10 px-2.5 py-1.5 text-xs font-semibold text-primary hover:bg-primary/20 transition-transform active:scale-[0.98] cursor-pointer"
                             title="Xem trước file Excel (.xlsx) trực tiếp trên Web"
                           >
-                            <FileSpreadsheet className="h-3.5 w-3.5" /> Preview Excel
+                            <FileSpreadsheet className="size-3.5" /> Preview Excel
                           </button>
 
                           <button
                             onClick={() => handleDownloadExcel(po)}
                             disabled={downloadingId === po._id}
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-input bg-background px-3 py-1.5 text-xs font-semibold text-foreground shadow-sm hover:bg-muted transition-colors disabled:opacity-50"
+                            className="inline-flex items-center gap-1.5 rounded-[6px] border border-input bg-background px-3 py-1.5 text-xs font-semibold text-foreground shadow-2xs hover:bg-muted transition-transform active:scale-[0.98] disabled:opacity-50 cursor-pointer"
                             title="Tải phiếu nhập kho điền sẵn dữ liệu theo Mẫu Excel"
                           >
-                            <Download className="h-3.5 w-3.5 text-primary" />
+                            <Download className="size-3.5 text-primary" />
                             {downloadingId === po._id ? 'Đang xuất...' : 'Tải Excel'}
                           </button>
                         </div>
@@ -528,7 +536,7 @@ export default function PurchaseOrderListPage() {
             setPage(1);
           }}
         />
-      </div>
+      </Card>
 
       {/* Real Web XLSX Preview Modal */}
       <ExcelPreviewModal
@@ -577,15 +585,15 @@ export default function PurchaseOrderListPage() {
                 </h2>
                 <p className="text-xs text-muted-foreground">Chi tiết thỏa thuận mua hàng với Nhà cung cấp & Đối soát nhập thực tế</p>
               </div>
-              <button onClick={() => modal.close('detail')} className="rounded-lg p-1.5 hover:bg-muted">
-                <X className="h-5 w-5" />
+              <button onClick={() => modal.close('detail')} className="rounded-[4px] p-1.5 hover:bg-muted cursor-pointer">
+                <X className="size-4" />
               </button>
             </div>
 
             {/* Content */}
             <div className="p-6 space-y-6 overflow-y-auto flex-1">
               {/* Info Grid */}
-              <div className="grid grid-cols-2 gap-4 rounded-xl border border-border bg-card p-4 text-xs sm:grid-cols-4">
+              <div className="grid grid-cols-2 gap-4 rounded-[6px] border border-border bg-card p-4 text-xs sm:grid-cols-4 shadow-2xs">
                 <div>
                   <span className="text-muted-foreground">Mã nhà cung cấp:</span>
                   <p className="font-mono font-bold text-foreground">{selectedPoDetail.supplierId?.code || 'NCC-01'}</p>
@@ -596,7 +604,7 @@ export default function PurchaseOrderListPage() {
                 </div>
                 <div>
                   <span className="text-muted-foreground">Ngày đơn hàng:</span>
-                  <p className="font-mono font-semibold">{new Date(selectedPoDetail.createdAt).toLocaleDateString('vi-VN')}</p>
+                  <p className="font-mono font-semibold tabular-nums">{new Date(selectedPoDetail.createdAt).toLocaleDateString('vi-VN')}</p>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Trạng thái:</span>
@@ -607,7 +615,7 @@ export default function PurchaseOrderListPage() {
               {/* Items Table (Matching AMIS Screenshot 3 columns) */}
               <div className="space-y-3">
                 <h3 className="text-xs font-bold text-foreground">Danh Sách Hàng Hóa Mua</h3>
-                <div className="rounded-xl border border-border bg-card overflow-hidden">
+                <div className="rounded-[6px] border border-border bg-card overflow-hidden shadow-2xs">
                   <table className="w-full text-left text-xs border-collapse">
                     <thead className="bg-muted/50 font-bold border-b border-border text-muted-foreground">
                       <tr>
@@ -624,14 +632,14 @@ export default function PurchaseOrderListPage() {
                     <tbody className="divide-y divide-border/60">
                       {selectedPoDetail.items?.map((it, idx) => (
                         <tr key={idx} className="hover:bg-muted/30">
-                          <td className="p-3 text-muted-foreground font-mono">{idx + 1}</td>
+                          <td className="p-3 text-muted-foreground font-mono tabular-nums">{idx + 1}</td>
                           <td className="p-3 font-mono font-bold text-primary">{it.sku || 'SKU-001'}</td>
                           <td className="p-3 font-medium text-foreground">{it.productName}</td>
                           <td className="p-3 text-center text-muted-foreground">{it.unit || 'Cái'}</td>
-                          <td className="p-3 text-center font-bold text-foreground">{it.expectedQty}</td>
-                          <td className="p-3 text-center font-bold text-emerald-600 font-mono">{it.receivedQty || 0}</td>
-                          <td className="p-3 text-right font-mono">{(it.importPrice || 0).toLocaleString('vi-VN')} đ</td>
-                          <td className="p-3 text-right font-mono font-bold text-primary">{(it.subtotal || 0).toLocaleString('vi-VN')} đ</td>
+                          <td className="p-3 text-center font-bold text-foreground font-mono tabular-nums">{it.expectedQty}</td>
+                          <td className="p-3 text-center font-bold text-emerald-600 font-mono tabular-nums">{it.receivedQty || 0}</td>
+                          <td className="p-3 text-right font-mono tabular-nums">{(it.importPrice || 0).toLocaleString('vi-VN')} đ</td>
+                          <td className="p-3 text-right font-mono font-bold tabular-nums text-primary">{(it.subtotal || 0).toLocaleString('vi-VN')} đ</td>
                         </tr>
                       ))}
                     </tbody>
@@ -644,7 +652,7 @@ export default function PurchaseOrderListPage() {
             <div className="border-t border-border bg-muted/40 p-4 flex items-center justify-between">
               <div className="text-xs">
                 <span className="text-muted-foreground">Tổng cộng: </span>
-                <span className="font-extrabold text-sm text-primary font-mono">
+                <span className="font-extrabold text-sm text-primary font-mono tabular-nums">
                   {(selectedPoDetail.totalAmount || 0).toLocaleString('vi-VN')} đ
                 </span>
               </div>
@@ -652,15 +660,15 @@ export default function PurchaseOrderListPage() {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => handlePreviewExcelOnWeb(selectedPoDetail)}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-xs font-bold text-primary hover:bg-primary/20"
+                  className="inline-flex items-center gap-1.5 rounded-[6px] border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary/20 active:scale-[0.98] cursor-pointer"
                 >
-                  <FileSpreadsheet className="h-4 w-4" /> Preview Mẫu Đơn Đặt Hàng Excel
+                  <FileSpreadsheet className="size-3.5" /> Preview Mẫu Đơn Đặt Hàng Excel
                 </button>
                 <button
                   onClick={() => navigate(`/stock-receivings/create?poId=${selectedPoDetail._id}`)}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white shadow-md hover:bg-emerald-700"
+                  className="inline-flex items-center gap-1.5 rounded-[6px] bg-emerald-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-emerald-700 active:scale-[0.98] cursor-pointer"
                 >
-                  <FileCheck className="h-4 w-4" /> Lập Phiếu Nhập Kho (PNK)
+                  <FileCheck className="size-3.5" /> Lập Phiếu Nhập Kho (PNK)
                 </button>
               </div>
             </div>

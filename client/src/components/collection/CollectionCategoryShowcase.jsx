@@ -61,11 +61,11 @@ export default function CollectionCategoryShowcase() {
             className="flex flex-col items-center group cursor-pointer"
           >
             {/* Elegant Rounded Image Card Container with real photo */}
-            <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-white p-2 border border-slate-200 shadow-2xs group-hover:shadow-md group-hover:border-[#e30019]/60 group-hover:-translate-y-1 transition-all duration-300 flex items-center justify-center overflow-hidden">
+            <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-[6px] bg-white p-2 border border-slate-200 shadow-2xs group-hover:shadow-xs group-hover:border-[#e30019]/60 group-hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-center overflow-hidden">
               <img
                 src={cat.image}
                 alt={cat.title}
-                className="w-full h-full object-contain rounded-xl group-hover:scale-108 transition-transform duration-300"
+                className="w-full h-full object-contain rounded-[4px] group-hover:scale-105 transition-transform duration-300"
                 loading="lazy"
               />
             </div>

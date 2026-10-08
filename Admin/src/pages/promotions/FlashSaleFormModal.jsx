@@ -7,6 +7,24 @@ import { toast } from '@/providers/ToastProvider';
 import MediaPickerModal from '@/components/ui/MediaPickerModal';
 import { MediaThumbnailHover } from '@/components/ui/MediaFolderBadge';
 import DateTimePicker from '@/components/ui/DateTimePicker';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 
 export default function FlashSaleFormModal({ flashSale, onClose, onSuccess }) {
   const isEdit = !!flashSale;
@@ -48,7 +66,7 @@ export default function FlashSaleFormModal({ flashSale, onClose, onSuccess }) {
       return {
         productId: typeof item.productId === 'object' ? item.productId._id : item.productId,
         productName: typeof item.productId === 'object' ? item.productId.name : 'Sản phẩm',
-        productImage: typeof item.productId === 'object' ? item.productId.thumbnail?.url : '',
+        productImage: typeof item.productId === 'object' ? (typeof item.productId.thumbnail === 'string' ? item.productId.thumbnail : item.productId.thumbnail?.url || '') : '',
         variantId: item.variantId ? (typeof item.variantId === 'object' ? item.variantId._id : item.variantId) : null,
         variantName: vName,
         inventoryStock: invStock,
@@ -133,7 +151,7 @@ export default function FlashSaleFormModal({ flashSale, onClose, onSuccess }) {
     const newItem = {
       productId: product._id,
       productName: product.name,
-      productImage: product.thumbnail?.url || '',
+      productImage: (typeof product.thumbnail === 'string' ? product.thumbnail : product.thumbnail?.url) || '',
       variantId: null,
       variantName: '',
       inventoryStock: product.stock ?? 0,
@@ -164,10 +182,13 @@ export default function FlashSaleFormModal({ flashSale, onClose, onSuccess }) {
 
     const attrString = variant.attributes?.map((a) => `${a.name}: ${a.value}`).join(', ') || variant.sku || 'Biến thể';
 
+    const vImg = typeof variant.image === 'string' ? variant.image : variant.image?.url;
+    const pImg = typeof product.thumbnail === 'string' ? product.thumbnail : product.thumbnail?.url;
+
     const newItem = {
       productId: product._id,
       productName: product.name,
-      productImage: variant.image?.url || product.thumbnail?.url || '',
+      productImage: vImg || pImg || '',
       variantId: variant._id,
       variantName: attrString,
       inventoryStock: variant.stock ?? product.stock ?? 0,
@@ -184,7 +205,6 @@ export default function FlashSaleFormModal({ flashSale, onClose, onSuccess }) {
     setProductSearch('');
     setShowProductDropdown(false);
   };
-
 
   const handleDiscountTypeChange = (index, type) => {
     setItems((prev) => {
@@ -298,25 +318,22 @@ export default function FlashSaleFormModal({ flashSale, onClose, onSuccess }) {
 
   return (
     <>
-      <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-        <div className="bg-card border border-border rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
-          <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-            <h2 className="text-base font-semibold text-foreground">
+      <Dialog open={true} onOpenChange={(open) => { if (!open) onClose(); }}>
+        <DialogContent className="max-w-4xl max-h-[92vh] flex flex-col p-0 rounded-[6px] border border-border">
+          <DialogHeader className="px-6 py-4 border-b border-border">
+            <DialogTitle className="text-base font-semibold">
               {isEdit ? 'Chỉnh sửa Flash Sale' : 'Tạo chương trình Flash Sale mới'}
-            </h2>
-            <button onClick={onClose} className="p-1 rounded-lg hover:bg-muted text-muted-foreground transition-colors cursor-pointer">
-              <X className="size-4" />
-            </button>
-          </div>
+            </DialogTitle>
+          </DialogHeader>
 
           <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5 md:col-span-2">
-                <label className="text-sm font-medium text-foreground">
+                <label className="text-xs font-medium text-foreground">
                   Tên chương trình <span className="text-destructive">*</span>
                 </label>
-                <input
-                  className="w-full h-9 px-3 rounded-md border border-input bg-background text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 transition-colors"
+                <Input
+                  className="h-9 rounded-[6px]"
                   placeholder="VD: Flash Sale Giờ Vàng 12h - 14h..."
                   value={name}
                   onChange={(e) => setName(e.target.value)}
@@ -324,7 +341,7 @@ export default function FlashSaleFormModal({ flashSale, onClose, onSuccess }) {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-sm font-medium text-foreground">
+                <label className="text-xs font-medium text-foreground">
                   Thời gian bắt đầu <span className="text-destructive">*</span>
                 </label>
                 <DateTimePicker
@@ -335,7 +352,7 @@ export default function FlashSaleFormModal({ flashSale, onClose, onSuccess }) {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-sm font-medium text-foreground">
+                <label className="text-xs font-medium text-foreground">
                   Thời gian kết thúc <span className="text-destructive">*</span>
                 </label>
                 <DateTimePicker
@@ -346,10 +363,10 @@ export default function FlashSaleFormModal({ flashSale, onClose, onSuccess }) {
               </div>
 
               <div className="space-y-1.5 md:col-span-2">
-                <label className="text-sm font-medium text-foreground">Mô tả chương trình</label>
+                <label className="text-xs font-medium text-foreground">Mô tả chương trình</label>
                 <textarea
                   rows={2}
-                  className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm outline-none focus:border-ring resize-none"
+                  className="w-full px-3 py-2 rounded-[6px] border border-input bg-background text-xs outline-none focus:border-ring resize-none placeholder:text-muted-foreground"
                   placeholder="Mô tả chi tiết ưu đãi Flash Sale..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
@@ -357,29 +374,31 @@ export default function FlashSaleFormModal({ flashSale, onClose, onSuccess }) {
               </div>
 
               <div className="space-y-1.5 md:col-span-2">
-                <label className="text-sm font-medium text-foreground">Banner chương trình</label>
+                <label className="text-xs font-medium text-foreground">Banner chương trình</label>
                 {banner?.url ? (
-                  <div className="relative h-32 rounded-lg border border-border overflow-hidden group">
-                  <MediaThumbnailHover media={banner}>
+                  <div className="relative h-32 rounded-[6px] border border-border overflow-hidden group">
+                    <MediaThumbnailHover media={banner}>
                       <img src={banner.url} alt="banner" className="size-full object-cover" />
                     </MediaThumbnailHover>
-                    <button
+                    <Button
                       type="button"
+                      size="sm"
                       onClick={() => setShowMediaPicker(true)}
-                      className="absolute bottom-2 right-2 px-3 py-1.5 bg-black/70 text-white text-xs font-medium rounded-md backdrop-blur-xs hover:bg-black transition-colors cursor-pointer"
+                      className="absolute bottom-2 right-2 h-7 px-2.5 bg-black/75 text-white text-xs font-medium rounded-[4px] hover:bg-black"
                     >
                       Đổi banner
-                    </button>
+                    </Button>
                   </div>
                 ) : (
-                  <button
+                  <Button
                     type="button"
+                    variant="outline"
                     onClick={() => setShowMediaPicker(true)}
-                    className="w-full h-24 border-2 border-dashed border-border hover:border-primary/50 rounded-lg flex flex-col items-center justify-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                    className="w-full h-20 border-dashed border-border hover:border-primary/50 rounded-[6px] flex flex-col items-center justify-center gap-1.5 text-muted-foreground hover:text-foreground"
                   >
                     <Image className="size-5" />
-                    <span className="text-xs">Chọn ảnh banner từ thư viện media</span>
-                  </button>
+                    <span className="text-xs font-normal">Chọn ảnh banner từ thư viện media</span>
+                  </Button>
                 )}
               </div>
 
@@ -389,9 +408,9 @@ export default function FlashSaleFormModal({ flashSale, onClose, onSuccess }) {
                   id="isActiveToggle"
                   checked={isActive}
                   onChange={(e) => setIsActive(e.target.checked)}
-                  className="size-4 rounded border-input text-primary focus:ring-primary cursor-pointer"
+                  className="size-4 rounded-[4px] border-input text-primary focus:ring-primary cursor-pointer"
                 />
-                <label htmlFor="isActiveToggle" className="text-sm font-medium text-foreground cursor-pointer">
+                <label htmlFor="isActiveToggle" className="text-xs font-medium text-foreground cursor-pointer select-none">
                   Kích hoạt chương trình Flash Sale này
                 </label>
               </div>
@@ -399,15 +418,15 @@ export default function FlashSaleFormModal({ flashSale, onClose, onSuccess }) {
 
             <div className="border-t border-border pt-5 space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <h3 className="text-sm font-semibold text-foreground">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                   Danh sách sản phẩm Flash Sale ({items.length})
                 </h3>
 
                 {items.length > 0 && (
-                  <div className="flex items-center gap-2 bg-muted/60 p-2 rounded-lg border border-border flex-wrap">
-                    <span className="text-xs text-muted-foreground font-medium">Áp dụng nhanh tất cả:</span>
+                  <div className="flex items-center gap-2 bg-muted/40 p-2 rounded-[6px] border border-border flex-wrap">
+                    <span className="text-xs text-muted-foreground font-medium">Áp dụng nhanh:</span>
                     <select
-                      className="h-8 px-2 rounded border border-input bg-background text-xs font-medium outline-none focus:border-ring cursor-pointer"
+                      className="h-8 px-2 rounded-[4px] border border-input bg-background text-xs font-medium outline-none focus:border-ring cursor-pointer"
                       value={bulkDiscountType}
                       onChange={(e) => setBulkDiscountType(e.target.value)}
                     >
@@ -415,20 +434,21 @@ export default function FlashSaleFormModal({ flashSale, onClose, onSuccess }) {
                       <option value="fixed_discount">Giảm bớt số tiền (đ)</option>
                       <option value="fixed_price">Set giá Flash Sale cố định (đ)</option>
                     </select>
-                    <input
+                    <Input
                       type="number"
-                      className="w-28 h-8 px-2 rounded border border-input bg-background font-mono text-xs font-semibold outline-none focus:border-ring"
+                      className="w-28 h-8 px-2 rounded-[4px] font-mono text-xs font-semibold"
                       placeholder="Nhập giá trị..."
                       value={bulkDiscountValue}
                       onChange={(e) => setBulkDiscountValue(Number(e.target.value))}
                     />
-                    <button
+                    <Button
                       type="button"
+                      size="sm"
                       onClick={handleApplyBulkDiscount}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-md text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+                      className="h-8 px-3 rounded-[4px] text-xs font-semibold bg-amber-600 hover:bg-amber-700 text-white"
                     >
-                      <Sparkles className="size-3.5" /> Áp dụng
-                    </button>
+                      <Sparkles className="size-3.5 mr-1" /> Áp dụng
+                    </Button>
                   </div>
                 )}
               </div>
@@ -436,8 +456,8 @@ export default function FlashSaleFormModal({ flashSale, onClose, onSuccess }) {
               <div className="relative">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                  <input
-                    className="w-full pl-9 pr-3 h-9 rounded-md border border-input bg-background text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 transition-colors"
+                  <Input
+                    className="h-9 pl-9 pr-3 rounded-[6px]"
                     placeholder="Tìm kiếm và chọn sản phẩm thêm vào Flash Sale..."
                     value={productSearch}
                     onChange={(e) => {
@@ -450,23 +470,26 @@ export default function FlashSaleFormModal({ flashSale, onClose, onSuccess }) {
                 </div>
 
                 {showProductDropdown && searchResults.length > 0 && (
-                  <div className="absolute top-full left-0 right-0 z-30 mt-1 max-h-72 overflow-y-auto rounded-md border border-border bg-popover shadow-lg py-1">
+                  <div className="absolute top-full left-0 right-0 z-30 mt-1 max-h-72 overflow-y-auto rounded-[6px] border border-border bg-popover shadow-sm py-1">
                     {searchResults.map((prod) => (
                       <div key={prod._id} className="border-b border-border/40 last:border-0">
                         <div
                           onClick={() => handleSelectProduct(prod)}
                           className="flex items-center gap-3 px-3 py-2 hover:bg-accent transition-colors cursor-pointer"
                         >
-                          {prod.thumbnail?.url ? (
-                            <img src={prod.thumbnail.url} alt="" className="size-8 object-cover rounded border border-border shrink-0" />
-                          ) : (
-                            <div className="size-8 rounded bg-muted flex items-center justify-center text-xs shrink-0">SP</div>
-                          )}
+                          {(() => {
+                            const thumbSrc = typeof prod.thumbnail === 'string' ? prod.thumbnail : prod.thumbnail?.url;
+                            return thumbSrc ? (
+                              <img src={thumbSrc} alt="" className="size-8 object-cover rounded-[4px] border border-border shrink-0" />
+                            ) : (
+                              <div className="size-8 rounded-[4px] bg-muted flex items-center justify-center text-xs shrink-0">SP</div>
+                            );
+                          })()}
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-foreground truncate">
-                              {prod.name} {prod.variants?.length > 0 && <span className="text-xs text-muted-foreground font-normal">(SP Gốc)</span>}
+                            <p className="text-xs font-medium text-foreground truncate">
+                              {prod.name} {prod.variants?.length > 0 && <span className="text-[11px] text-muted-foreground font-normal">(SP Gốc)</span>}
                             </p>
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-[11px] text-muted-foreground font-mono tabular-nums">
                               Giá gốc: {(prod.salePrice || prod.price || 0).toLocaleString('vi-VN')}đ | Tồn: {prod.stock || 0}
                             </p>
                           </div>
@@ -482,8 +505,8 @@ export default function FlashSaleFormModal({ flashSale, onClose, onSuccess }) {
                               className="flex items-center gap-3 pl-8 pr-3 py-1.5 hover:bg-primary/10 transition-colors cursor-pointer bg-muted/20 border-t border-border/30 text-xs"
                             >
                               <div className="flex-1 min-w-0">
-                                <p className="font-semibold text-foreground truncate">↳ Biến thể: {attrStr}</p>
-                                <p className="text-[11px] font-mono text-muted-foreground">
+                                <p className="font-semibold text-foreground truncate text-xs">↳ Biến thể: {attrStr}</p>
+                                <p className="text-[11px] font-mono text-muted-foreground tabular-nums">
                                   SKU: {v.sku || '—'} | Giá: {(v.price || prod.price || 0).toLocaleString('vi-VN')}đ | Tồn: {v.stock ?? 0}
                                 </p>
                               </div>
@@ -498,56 +521,56 @@ export default function FlashSaleFormModal({ flashSale, onClose, onSuccess }) {
               </div>
 
               {items.length === 0 ? (
-                <div className="p-8 text-center border border-dashed border-border rounded-lg text-muted-foreground text-xs">
+                <div className="p-8 text-center border border-dashed border-border rounded-[6px] text-muted-foreground text-xs">
                   Chưa có sản phẩm nào. Hãy gõ tên sản phẩm ở trên để thêm vào Flash Sale.
                 </div>
               ) : (
-                <div className="border border-border rounded-lg overflow-x-auto">
-                  <table className="w-full text-left text-xs border-collapse">
-                    <thead>
-                      <tr className="border-b border-border bg-muted/40 font-semibold text-muted-foreground uppercase tracking-wider">
-                        <th className="px-3 py-2.5">Sản phẩm</th>
-                        <th className="px-3 py-2.5 w-24">Giá gốc</th>
-                        <th className="px-3 py-2.5 w-32">Loại giảm</th>
-                        <th className="px-3 py-2.5 w-24">Mức giảm</th>
-                        <th className="px-3 py-2.5 w-28 font-semibold text-emerald-600">Giá FS</th>
-                        <th className="px-3 py-2.5 w-20 text-center">Tồn kho</th>
-                        <th className="px-3 py-2.5 w-24 text-center">Suất FS</th>
-                        <th className="px-3 py-2.5 w-20 text-center">Đã bán FS</th>
-                        <th className="px-3 py-2.5 w-24 text-center">Còn lại FS</th>
-                        <th className="px-3 py-2.5 w-10"></th>
-                      </tr>
-                    </thead>
-                    <tbody>
+                <div className="border border-border rounded-[6px] overflow-x-auto">
+                  <Table>
+                    <TableHeader className="bg-muted/40">
+                      <TableRow className="border-b border-border">
+                        <TableHead className="px-3 py-2 text-xs">Sản phẩm</TableHead>
+                        <TableHead className="px-3 py-2 text-xs w-24">Giá gốc</TableHead>
+                        <TableHead className="px-3 py-2 text-xs w-32">Loại giảm</TableHead>
+                        <TableHead className="px-3 py-2 text-xs w-24">Mức giảm</TableHead>
+                        <TableHead className="px-3 py-2 text-xs w-28 text-emerald-600 font-semibold">Giá FS</TableHead>
+                        <TableHead className="px-3 py-2 text-xs w-20 text-center">Tồn kho</TableHead>
+                        <TableHead className="px-3 py-2 text-xs w-24 text-center">Suất FS</TableHead>
+                        <TableHead className="px-3 py-2 text-xs w-20 text-center">Đã bán FS</TableHead>
+                        <TableHead className="px-3 py-2 text-xs w-24 text-center">Còn lại FS</TableHead>
+                        <TableHead className="px-3 py-2 text-xs w-10"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
                       {items.map((item, idx) => {
                         const fsRemaining = Math.max(0, (item.stockLimit || 0) - (item.soldCount || 0));
                         const isOverStock = item.inventoryStock !== null && item.inventoryStock !== undefined && item.stockLimit > item.inventoryStock;
                         return (
-                          <tr key={idx} className="border-b border-border/50 hover:bg-muted/30">
-                            <td className="px-3 py-2">
+                          <TableRow key={idx} className="border-b border-border/50">
+                            <TableCell className="px-3 py-2">
                               <div className="flex items-center gap-2">
                                 {item.productImage ? (
-                                  <img src={item.productImage} alt="" className="size-8 object-cover rounded border border-border shrink-0" />
+                                  <img src={item.productImage} alt="" className="size-8 object-cover rounded-[4px] border border-border shrink-0" />
                                 ) : (
-                                  <div className="size-8 rounded bg-muted shrink-0" />
+                                  <div className="size-8 rounded-[4px] bg-muted shrink-0" />
                                 )}
                                 <div className="truncate max-w-xs">
-                                  <p className="font-medium text-foreground truncate">{item.productName}</p>
+                                  <p className="font-medium text-foreground text-xs truncate">{item.productName}</p>
                                   {item.variantName && (
                                     <p className="text-[11px] font-semibold text-primary truncate">↳ Biến thể: {item.variantName}</p>
                                   )}
-                                  <p className="text-[10px] text-muted-foreground">Tổng bán shop: <span className="font-medium text-foreground">{item.totalSold ?? 0}</span></p>
+                                  <p className="text-[10px] text-muted-foreground font-mono tabular-nums">Tổng bán shop: <span className="font-medium text-foreground">{item.totalSold ?? 0}</span></p>
                                 </div>
                               </div>
-                            </td>
+                            </TableCell>
 
-                            <td className="px-3 py-2 font-mono font-medium text-muted-foreground whitespace-nowrap">
+                            <TableCell className="px-3 py-2 font-mono font-medium text-muted-foreground tabular-nums whitespace-nowrap text-xs">
                               {item.originalPrice.toLocaleString('vi-VN')}đ
-                            </td>
+                            </TableCell>
 
-                            <td className="px-3 py-2">
+                            <TableCell className="px-3 py-2">
                               <select
-                                className="w-full h-7 px-1.5 rounded border border-input bg-background text-xs font-medium outline-none focus:border-ring cursor-pointer"
+                                className="w-full h-7 px-1.5 rounded-[4px] border border-input bg-background text-xs font-medium outline-none focus:border-ring cursor-pointer"
                                 value={item.discountType}
                                 onChange={(e) => handleDiscountTypeChange(idx, e.target.value)}
                               >
@@ -555,34 +578,34 @@ export default function FlashSaleFormModal({ flashSale, onClose, onSuccess }) {
                                 <option value="fixed_discount">Giảm bớt (đ)</option>
                                 <option value="fixed_price">Giá cố định (đ)</option>
                               </select>
-                            </td>
+                            </TableCell>
 
-                            <td className="px-3 py-2">
-                              <input
+                            <TableCell className="px-3 py-2">
+                              <Input
                                 type="number"
                                 min={0}
-                                className="w-full h-7 px-2 rounded border border-input bg-background font-mono font-semibold text-xs text-foreground outline-none focus:border-ring"
+                                className="w-full h-7 px-2 rounded-[4px] font-mono font-semibold text-xs"
                                 value={item.discountValue}
                                 onChange={(e) => handleDiscountValueChange(idx, e.target.value)}
                               />
-                            </td>
+                            </TableCell>
 
-                            <td className="px-3 py-2 font-mono font-bold text-emerald-600 whitespace-nowrap">
+                            <TableCell className="px-3 py-2 font-mono font-bold text-emerald-600 tabular-nums whitespace-nowrap text-xs">
                               {item.flashSalePrice.toLocaleString('vi-VN')}đ
-                            </td>
+                            </TableCell>
 
-                            <td className="px-3 py-2 text-center font-mono">
+                            <TableCell className="px-3 py-2 text-center font-mono tabular-nums text-xs">
                               <span className="font-semibold text-foreground">
                                 {item.inventoryStock !== null && item.inventoryStock !== undefined ? item.inventoryStock : '—'}
                               </span>
-                            </td>
+                            </TableCell>
 
-                            <td className="px-3 py-2 text-center">
+                            <TableCell className="px-3 py-2 text-center">
                               <div className="flex flex-col items-center gap-0.5">
-                                <input
+                                <Input
                                   type="number"
                                   min={1}
-                                  className={`w-16 h-7 px-1.5 rounded border font-mono text-xs outline-none text-center ${isOverStock ? 'border-amber-500 bg-amber-50 text-amber-900 font-bold' : 'border-input bg-background'}`}
+                                  className={`w-16 h-7 px-1.5 rounded-[4px] font-mono text-xs text-center ${isOverStock ? 'border-amber-500 bg-amber-50 text-amber-900 font-bold' : ''}`}
                                   value={item.stockLimit}
                                   onChange={(e) => handleStockChange(idx, e.target.value)}
                                 />
@@ -592,59 +615,64 @@ export default function FlashSaleFormModal({ flashSale, onClose, onSuccess }) {
                                   </span>
                                 )}
                               </div>
-                            </td>
+                            </TableCell>
 
-                            <td className="px-3 py-2 text-center font-mono">
-                              <span className="inline-flex px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 font-medium text-[11px]">
+                            <TableCell className="px-3 py-2 text-center font-mono tabular-nums text-xs">
+                              <Badge variant="outline" className="rounded-[4px] px-1.5 py-0 font-medium text-[11px] bg-blue-500/10 text-blue-600 border-blue-500/20">
                                 {item.soldCount || 0}
-                              </span>
-                            </td>
+                              </Badge>
+                            </TableCell>
 
-                            <td className="px-3 py-2 text-center font-mono">
-                              <span className={`inline-flex px-1.5 py-0.5 rounded font-medium text-[11px] ${fsRemaining === 0 ? 'bg-destructive/10 text-destructive' : 'bg-emerald-50 text-emerald-700'}`}>
+                            <TableCell className="px-3 py-2 text-center font-mono tabular-nums text-xs">
+                              <Badge variant="outline" className={`rounded-[4px] px-1.5 py-0 font-medium text-[11px] ${fsRemaining === 0 ? 'bg-destructive/10 text-destructive border-destructive/20' : 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'}`}>
                                 {fsRemaining}
-                              </span>
-                            </td>
+                              </Badge>
+                            </TableCell>
 
-                            <td className="px-3 py-2 text-center">
-                              <button
+                            <TableCell className="px-3 py-2 text-center">
+                              <Button
                                 type="button"
+                                variant="ghost"
+                                size="icon"
                                 onClick={() => handleRemoveItem(idx)}
-                                className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors cursor-pointer"
+                                className="size-7 rounded-[4px] text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                               >
                                 <Trash2 className="size-3.5" />
-                              </button>
-                            </td>
-                          </tr>
+                              </Button>
+                            </TableCell>
+                          </TableRow>
                         );
                       })}
-                    </tbody>
-                  </table>
+                    </TableBody>
+                  </Table>
                 </div>
               )}
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-4 border-t border-border">
-              <button
+            <DialogFooter className="pt-4 border-t border-border flex items-center justify-end gap-2 bg-transparent">
+              <Button
                 type="button"
+                variant="outline"
+                size="sm"
                 onClick={onClose}
                 disabled={saving}
-                className="px-4 py-2 rounded-lg border border-border text-sm font-medium hover:bg-muted transition-colors cursor-pointer disabled:opacity-50"
+                className="h-9 rounded-[6px]"
               >
                 Hủy
-              </button>
-              <button
+              </Button>
+              <Button
                 type="submit"
+                size="sm"
                 disabled={saving}
-                className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors cursor-pointer disabled:opacity-50"
+                className="h-9 rounded-[6px] active:scale-[0.98] transition-transform"
               >
-                {saving && <Loader2 className="size-4 animate-spin" />}
+                {saving && <Loader2 className="size-4 mr-1.5 animate-spin" />}
                 {isEdit ? 'Cập nhật Flash Sale' : 'Tạo Flash Sale'}
-              </button>
-            </div>
+              </Button>
+            </DialogFooter>
           </form>
-        </div>
-      </div>
+        </DialogContent>
+      </Dialog>
 
       {showMediaPicker && (
         <MediaPickerModal

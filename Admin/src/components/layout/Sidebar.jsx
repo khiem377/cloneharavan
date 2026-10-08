@@ -12,12 +12,11 @@ import {
   BrandsIcon,
   ChevronsUpDownIcon,
   UserIcon,
-  SparklesIcon,
+  StoreFrontIcon,
   CouponsIcon,
   GiftIcon,
   DiscountIcon,
   MenuNavIcon,
-  // Custom unique sidebar SVG icons
   WarehouseNavIcon,
   StockDocNavIcon,
   SupplierNavIcon,
@@ -39,6 +38,8 @@ import {
   BlogTagNavIcon,
   RolePermissionNavIcon,
   KeyIcon,
+  Users,
+  ShieldCheck,
 } from '@/components/ui/Icons';
 import useAuthStore from '@/store/authStore';
 import { authService } from '@/services/auth.service';
@@ -59,102 +60,103 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
   SidebarRail,
-  SidebarTrigger,
   useSidebar,
 } from '@/components/ui/sidebar';
 
 const NAV_GROUPS = [
   {
-    label: 'Quản lý',
+    label: 'Tổng quan & Media',
     items: [
-      { to: '/dashboard', icon: DashboardIcon, label: 'Dashboard' },
-      { to: '/media', icon: MediaIcon, label: 'Media', permission: 'media.manage' },
-      { to: '/media/unused', icon: BannersIcon, label: 'Dọn dẹp ảnh', permission: 'media.manage' },
-      { to: '/banners', icon: BannersIcon, label: 'Banners', permission: 'media.manage' },
+      { to: '/dashboard', icon: DashboardIcon, label: 'Bảng điều khiển' },
+      { to: '/media', icon: MediaIcon, label: 'Thư viện Media', permission: 'media.manage' },
+      { to: '/media/unused', icon: BannersIcon, label: 'Dọn dẹp ảnh thừa', permission: 'media.manage' },
+      { to: '/banners', icon: BannersIcon, label: 'Banner', permission: 'media.manage' },
     ],
   },
   {
-    label: 'Sản phẩm',
+    label: 'Sản phẩm & Danh mục',
     items: [
       {
         icon: ProductsIcon,
-        label: 'Sản phẩm',
+        label: 'Quản lý Sản phẩm',
         permission: 'product.view',
         children: [
-          { to: '/products', icon: ProductListNavIcon, label: 'Danh sách', permission: 'product.view' },
-          { to: '/products/new', icon: ProductAddNavIcon, label: 'Tạo mới', permission: 'product.create' },
-          { to: '/products/import', icon: ProductImportNavIcon, label: 'Import / Export', permission: 'product.create' },
-          { to: '/categories', icon: CategoriesIcon, label: 'Danh mục', permission: 'category.manage' },
+          { to: '/products', icon: ProductListNavIcon, label: 'Danh sách sản phẩm', permission: 'product.view' },
+          { to: '/products/new', icon: ProductAddNavIcon, label: 'Thêm sản phẩm mới', permission: 'product.create' },
+          { to: '/products/import', icon: ProductImportNavIcon, label: 'Nhập / Xuất Excel', permission: 'product.create' },
+          { to: '/categories', icon: CategoriesIcon, label: 'Danh mục sản phẩm', permission: 'category.manage' },
           { to: '/brands', icon: BrandsIcon, label: 'Thương hiệu', permission: 'brand.manage' },
-          { to: '/products?view=variants', icon: VariantsNavIcon, label: 'Biến thể', permission: 'product.view' },
+          { to: '/products?view=variants', icon: VariantsNavIcon, label: 'Quản lý biến thể', permission: 'product.view' },
         ],
       },
     ],
   },
   {
-    label: 'Kho & Cung ứng',
+    label: 'Kho hàng & Cung ứng',
     items: [
       {
         icon: WarehouseNavIcon,
-        label: 'Quản lý Kho',
+        label: 'Quản lý Kho hàng',
+        permission: 'purchase_order.view',
         children: [
-          { to: '/stock-documents', icon: StockDocNavIcon, label: 'Quản lý Đơn & Phiếu' },
-          { to: '/suppliers', icon: SupplierNavIcon, label: 'Nhà cung cấp' },
-          { to: '/purchase-orders', icon: PurchaseOrderNavIcon, label: 'Đơn mua hàng (PO)' },
-          { to: '/stock-receivings', icon: StockDocNavIcon, label: 'Phiếu nhập kho (PNK)' },
-          { to: '/purchase-returns', icon: PurchaseReturnNavIcon, label: 'Trả hàng nhập' },
-          { to: '/stock-exports', icon: StockExportNavIcon, label: 'Phiếu xuất kho' },
-          { to: '/stock-audits', icon: StockAuditNavIcon, label: 'Kiểm kê & Cân bằng' },
-          { to: '/stock-alerts', icon: StockAlertNavIcon, label: 'Chi tiết & Sắp hết hàng' },
-          { to: '/inventory-report', icon: InventoryReportNavIcon, label: 'Báo cáo Tồn kho & NCC' },
-          { to: '/stock-movements', icon: StockHistoryNavIcon, label: 'Nhật ký tồn kho' },
+          { to: '/stock-documents', icon: StockDocNavIcon, label: 'Đơn & Phiếu kho', permission: 'purchase_order.view' },
+          { to: '/suppliers', icon: SupplierNavIcon, label: 'Nhà cung cấp', permission: 'supplier.view' },
+          { to: '/purchase-orders', icon: PurchaseOrderNavIcon, label: 'Đơn mua hàng (PO)', permission: 'purchase_order.view' },
+          { to: '/stock-receivings', icon: StockDocNavIcon, label: 'Phiếu nhập kho (PNK)', permission: 'purchase_order.view' },
+          { to: '/purchase-returns', icon: PurchaseReturnNavIcon, label: 'Trả hàng nhập', permission: 'purchase_order.view' },
+          { to: '/stock-exports', icon: StockExportNavIcon, label: 'Phiếu xuất kho', permission: 'stock_export.view' },
+          { to: '/stock-audits', icon: StockAuditNavIcon, label: 'Kiểm kê & Cân bằng', permission: 'stock_audit.view' },
+          { to: '/stock-alerts', icon: StockAlertNavIcon, label: 'Cảnh báo sắp hết hàng', permission: 'stock_movement.view' },
+          { to: '/inventory-report', icon: InventoryReportNavIcon, label: 'Báo cáo tồn kho', permission: 'stock_audit.view' },
+          { to: '/stock-movements', icon: StockHistoryNavIcon, label: 'Nhật ký biến động', permission: 'stock_movement.view' },
         ],
       },
     ],
   },
   {
-    label: 'Khuyến mãi',
+    label: 'Marketing & Khuyến mãi',
     items: [
       {
         icon: CouponsIcon,
-        label: 'Khuyến mãi',
+        label: 'Khuyến mãi & Giảm giá',
         permission: 'promotion.view',
         children: [
-          { to: '/promotions/coupons', icon: CouponsIcon, label: 'Mã giảm giá', permission: 'promotion.view' },
-          { to: '/promotions/discounts', icon: DiscountIcon, label: 'Chương trình khuyến mãi', permission: 'promotion.manage' },
-          { to: '/promotions/gifts', icon: GiftIcon, label: 'Chương trình tặng kèm', permission: 'promotion.manage' },
-          { to: '/promotions/flash-sales', icon: FlashSaleNavIcon, label: 'Flash Sale', permission: 'promotion.manage' },
+          { to: '/promotions/coupons', icon: CouponsIcon, label: 'Mã giảm giá (Coupon)', permission: 'promotion.view' },
+          { to: '/promotions/discounts', icon: DiscountIcon, label: 'Chương trình ưu đãi', permission: 'promotion.manage' },
+          { to: '/promotions/gifts', icon: GiftIcon, label: 'Quà tặng kèm', permission: 'promotion.manage' },
+          { to: '/promotions/flash-sales', icon: FlashSaleNavIcon, label: 'Flash Sale giờ vàng', permission: 'promotion.manage' },
         ],
       },
     ],
   },
   {
-    label: 'Blog',
+    label: 'Nội dung & Khách hàng',
     items: [
       {
         icon: BlogPostNavIcon,
-        label: 'Blog',
+        label: 'Tin tức',
         permission: 'blog.view',
         children: [
-          { to: '/blog/posts', icon: BlogPostNavIcon, label: 'Bài viết', permission: 'blog.view' },
-          { to: '/blog/posts/new', icon: BlogCreateNavIcon, label: 'Tạo bài mới', permission: 'blog.create' },
-          { to: '/blog/categories', icon: BlogCategoryNavIcon, label: 'Danh mục', permission: 'blog.edit' },
-          { to: '/blog/tags', icon: BlogTagNavIcon, label: 'Tags', permission: 'blog.edit' },
+          { to: '/blog/posts', icon: BlogPostNavIcon, label: 'Danh sách bài viết', permission: 'blog.view' },
+          { to: '/blog/posts/new', icon: BlogCreateNavIcon, label: 'Viết bài mới', permission: 'blog.create' },
+          { to: '/blog/categories', icon: BlogCategoryNavIcon, label: 'Chuyên mục bài viết', permission: 'blog.edit' },
+          { to: '/blog/tags', icon: BlogTagNavIcon, label: 'Thẻ tag phân loại', permission: 'blog.edit' },
         ],
       },
+      { to: '/customers', icon: Users, label: 'Khách hàng', permission: 'user.view' },
     ],
   },
   {
-    label: 'Hệ thống',
+    label: 'Hệ thống & Cài đặt',
     items: [
-      { to: '/menus', icon: MenuNavIcon, label: 'Điều hướng', permission: 'menu.manage' },
-      { to: '/roles', icon: RolePermissionNavIcon, label: 'Vai trò & Quyền', permission: 'role.manage' },
-      { to: '/audit-logs', icon: StockHistoryNavIcon, label: 'Nhật ký thao tác' },
-      { to: '/settings', icon: SettingsIcon, label: 'Cài đặt', permission: 'role.manage' },
+      { to: '/staffs', icon: ShieldCheck, label: 'Nhân viên & Quản trị', permission: 'role.assign' },
+      { to: '/roles', icon: RolePermissionNavIcon, label: 'Vai trò & Phân quyền', permission: 'role.manage' },
+      { to: '/menus', icon: MenuNavIcon, label: 'Cấu hình Menu', permission: 'menu.manage' },
+      { to: '/audit-logs', icon: StockHistoryNavIcon, label: 'Nhật ký thao tác', permission: 'audit_log.view' },
+      { to: '/settings', icon: SettingsIcon, label: 'Cài đặt hệ thống', permission: 'role.manage' },
     ],
   },
 ];
-
 
 function NavGroupItem({ item }) {
   const location = useLocation();
@@ -163,13 +165,11 @@ function NavGroupItem({ item }) {
   const isCollapsed = state === 'collapsed';
   const hasPermission = useAuthStore((s) => s.hasPermission);
 
-  // Kiểm tra quyền item cha
   if (item.permission && !hasPermission(item.permission)) {
     return null;
   }
 
   if (item.children) {
-    // Lọc các children mà user có quyền
     const validChildren = item.children.filter((c) => !c.permission || hasPermission(c.permission));
     if (validChildren.length === 0) return null;
 
@@ -186,6 +186,10 @@ function NavGroupItem({ item }) {
             isActive={isAnyActive}
             onClick={() => navigate(firstChild)}
             title={item.label}
+            className={cn(
+              "rounded-[6px] transition-colors active:scale-[0.98]",
+              isAnyActive && "bg-primary/10 text-primary font-medium"
+            )}
           >
             <Icon className="size-4 shrink-0" />
             <span>{item.label}</span>
@@ -198,19 +202,23 @@ function NavGroupItem({ item }) {
       <SidebarMenuItem>
         <SidebarMenuButton
           isActive={isAnyActive}
-          onClick={() => setOpen(o => !o)}
+          onClick={() => setOpen((o) => !o)}
+          className={cn(
+            "rounded-[6px] transition-colors active:scale-[0.98] font-normal text-sidebar-foreground",
+            isAnyActive && "bg-primary/10 text-primary font-medium"
+          )}
         >
-          <Icon className="size-4 shrink-0" />
-          <span className="flex-1 text-left">{item.label}</span>
+          <Icon className={cn("size-4 shrink-0 transition-colors", isAnyActive ? "text-primary" : "text-muted-foreground")} />
+          <span className="flex-1 text-left truncate">{item.label}</span>
           <ChevronRightIcon
-            size={15}
-            className={cn('text-sidebar-foreground/50 transition-transform duration-200', open && 'rotate-90')}
+            size={14}
+            className={cn('text-muted-foreground transition-transform duration-200 shrink-0', open && 'rotate-90 text-primary')}
           />
         </SidebarMenuButton>
 
         {open && (
-          <SidebarMenuSub>
-            {validChildren.map(child => {
+          <SidebarMenuSub className="border-l border-border/60 ml-4 pl-2 my-1 space-y-0.5">
+            {validChildren.map((child) => {
               const CIcon = child.icon;
               const isActive = location.pathname.startsWith(child.to);
               return (
@@ -218,9 +226,15 @@ function NavGroupItem({ item }) {
                   <SidebarMenuSubButton
                     isActive={isActive}
                     onClick={() => navigate(child.to)}
+                    className={cn(
+                      "rounded-[6px] text-xs transition-colors py-1.5 active:scale-[0.98]",
+                      isActive
+                        ? "bg-primary text-primary-foreground font-medium shadow-xs"
+                        : "text-muted-foreground hover:text-foreground hover:bg-accent/60"
+                    )}
                   >
-                    <CIcon className="size-3.5 shrink-0" />
-                    <span>{child.label}</span>
+                    <CIcon className={cn("size-3.5 shrink-0", isActive ? "text-primary-foreground" : "text-muted-foreground")} />
+                    <span className="truncate">{child.label}</span>
                   </SidebarMenuSubButton>
                 </SidebarMenuSubItem>
               );
@@ -242,9 +256,15 @@ function NavGroupItem({ item }) {
         isActive={isActive}
         onClick={() => navigate(item.to)}
         title={isCollapsed ? item.label : undefined}
+        className={cn(
+          "rounded-[6px] transition-colors active:scale-[0.98] text-sidebar-foreground",
+          isActive
+            ? "bg-primary text-primary-foreground font-medium shadow-xs"
+            : "hover:bg-accent/60 hover:text-foreground"
+        )}
       >
-        <Icon className="size-4 shrink-0" />
-        <span>{item.label}</span>
+        <Icon className={cn("size-4 shrink-0", isActive ? "text-primary-foreground" : "text-muted-foreground")} />
+        <span className="truncate">{item.label}</span>
       </SidebarMenuButton>
     </SidebarMenuItem>
   );
@@ -252,14 +272,15 @@ function NavGroupItem({ item }) {
 
 function UserFooterMenu({ onProfile, onChangePass }) {
   const navigate = useNavigate();
-  const clearAuth = useAuthStore(s => s.clearAuth);
-  const user = useAuthStore(s => s.user);
+  const clearAuth = useAuthStore((s) => s.clearAuth);
+  const user = useAuthStore((s) => s.user);
   const [open, setOpen] = useState(false);
   const initials = (user?.fullName?.[0] || user?.email?.[0] || 'A').toUpperCase();
-  // icons used inline below come from Icons.jsx via named imports above
 
   const handleLogout = async () => {
-    try { await authService.logout(); } catch { }
+    try {
+      await authService.logout();
+    } catch { }
     clearAuth();
     navigate('/login');
     toast.info('Đã đăng xuất');
@@ -268,57 +289,92 @@ function UserFooterMenu({ onProfile, onChangePass }) {
   return (
     <div className="relative w-full">
       <SidebarMenuButton
-        onClick={() => setOpen(o => !o)}
-        className="w-full justify-between"
+        onClick={() => setOpen((o) => !o)}
+        className="w-full justify-between rounded-[6px] border border-border/60 bg-surface/50 hover:bg-accent/60 p-2 h-auto active:scale-[0.98] transition-all"
       >
-        <div className="flex items-center gap-2 overflow-hidden">
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-semibold">
-            {initials}
-          </div>
-          <div className="flex flex-col text-left overflow-hidden">
-            <span className="truncate text-xs font-medium text-sidebar-foreground">{user?.fullName || 'Admin'}</span>
-            <span className="truncate text-[10px] text-sidebar-foreground/60">{user?.email || ''}</span>
+        <div className="flex items-center gap-2.5 overflow-hidden">
+          {user?.avatar?.url ? (
+            <img
+              src={user.avatar.url}
+              alt={user.fullName || 'Avatar'}
+              referrerPolicy="no-referrer"
+              className="size-8 shrink-0 rounded-[6px] object-cover border border-border"
+            />
+          ) : (
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[6px] bg-primary text-primary-foreground text-xs font-bold font-mono">
+              {initials}
+            </div>
+          )}
+          <div className="flex flex-col text-left overflow-hidden min-w-0">
+            <span className="truncate text-xs font-semibold text-foreground">{user?.fullName || 'Quản trị viên'}</span>
+            <span className="truncate text-[10px] text-muted-foreground font-mono">{user?.email || 'admin@haravan.vn'}</span>
           </div>
         </div>
-        <ChevronsUpDownIcon size={14} className="shrink-0 text-sidebar-foreground/40" />
+        <ChevronsUpDownIcon size={14} className="shrink-0 text-muted-foreground ml-1" />
       </SidebarMenuButton>
 
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute bottom-full left-0 z-50 mb-1.5 w-56 rounded-lg border border-border bg-popover text-popover-foreground shadow-md py-1">
-            <div className="flex items-center gap-2.5 px-3 py-2">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-semibold">
-                {initials}
-              </div>
-              <div className="flex-1 overflow-hidden">
-                <p className="truncate text-sm font-medium">{user?.fullName || 'Admin'}</p>
-                <p className="truncate text-xs text-muted-foreground">{user?.email || ''}</p>
+          <div className="absolute bottom-full left-0 z-50 mb-2 w-60 rounded-[6px] border border-border bg-card text-card-foreground shadow-sm py-1 divide-y divide-border">
+            <div className="flex items-center gap-2.5 px-3 py-2.5">
+              {user?.avatar?.url ? (
+                <img
+                  src={user.avatar.url}
+                  alt={user.fullName || 'Avatar'}
+                  referrerPolicy="no-referrer"
+                  className="size-8 shrink-0 rounded-[6px] object-cover border border-border"
+                />
+              ) : (
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[6px] bg-primary text-primary-foreground text-xs font-bold font-mono">
+                  {initials}
+                </div>
+              )}
+              <div className="flex-1 overflow-hidden min-w-0">
+                <p className="truncate text-xs font-semibold text-foreground">{user?.fullName || 'Quản trị viên'}</p>
+                <span className="inline-flex items-center gap-1 text-[10px] font-mono text-emerald-600 font-medium">
+                  <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  Đang hoạt động
+                </span>
               </div>
             </div>
-            <div className="h-px bg-border my-1" />
-            <button
-              onClick={() => { setOpen(false); onProfile(); }}
-              className="flex w-full items-center gap-2 px-3 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
-            >
-              <UserIcon size={15} className="text-muted-foreground shrink-0" />
-              Thông tin tài khoản
-            </button>
-            <button
-              onClick={() => { setOpen(false); onChangePass(); }}
-              className="flex w-full items-center gap-2 px-3 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
-            >
-              <KeyIcon size={15} className="text-muted-foreground shrink-0" />
-              Đổi mật khẩu
-            </button>
-            <div className="h-px bg-border my-1" />
-            <button
-              onClick={() => { setOpen(false); handleLogout(); }}
-              className="flex w-full items-center gap-2 px-3 py-1.5 text-sm text-destructive hover:bg-destructive/10 transition-colors"
-            >
-              <LogOutIcon size={15} className="shrink-0" />
-              Đăng xuất
-            </button>
+
+            <div className="py-1">
+              <button
+                onClick={() => {
+                  setOpen(false);
+                  navigate('/profile');
+                }}
+                className="flex w-full items-center gap-2.5 px-3 py-2 text-xs font-medium text-foreground hover:bg-accent transition-colors cursor-pointer"
+              >
+                <UserIcon size={14} className="text-muted-foreground shrink-0" />
+                Hồ sơ & Tài khoản
+              </button>
+              <button
+                onClick={() => {
+                  setOpen(false);
+                  navigate('/profile');
+                }}
+                className="flex w-full items-center gap-2.5 px-3 py-2 text-xs font-medium text-foreground hover:bg-accent transition-colors cursor-pointer"
+              >
+                <KeyIcon size={14} className="text-muted-foreground shrink-0" />
+                Đổi mật khẩu & Bảo mật
+              </button>
+            </div>
+
+
+            <div className="py-1">
+              <button
+                onClick={() => {
+                  setOpen(false);
+                  handleLogout();
+                }}
+                className="flex w-full items-center gap-2.5 px-3 py-2 text-xs font-medium text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+              >
+                <LogOutIcon size={14} className="shrink-0" />
+                Đăng xuất hệ thống
+              </button>
+            </div>
           </div>
         </>
       )}
@@ -328,35 +384,59 @@ function UserFooterMenu({ onProfile, onChangePass }) {
 
 export default function AppSidebar({ onProfile, onChangePass }) {
   return (
-    <Sidebar collapsible="icon">
-      <SidebarHeader className="flex flex-row items-center justify-between">
+    <Sidebar collapsible="icon" className="border-r border-border bg-background">
+      <SidebarHeader className="flex flex-row items-center justify-between border-b border-border px-3 py-3">
         <div className="flex items-center gap-2.5 overflow-hidden">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <SparklesIcon size={16} />
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[6px] bg-primary text-primary-foreground shadow-xs">
+            <StoreFrontIcon size={16} />
           </div>
           <div className="flex flex-col text-left overflow-hidden group-data-[collapsible=icon]:hidden">
-            <span className="truncate text-sm font-semibold text-sidebar-foreground"> Admin Panel</span>
-            <span className="truncate text-[11px] text-sidebar-foreground/60">Quản trị hệ thống</span>
+            <div className="flex items-center gap-1.5">
+              <span className="truncate text-xs font-bold tracking-tight text-foreground">Admin panel</span>
+              <span className="inline-flex items-center px-1.5 py-0.2 rounded-[4px] bg-primary/10 text-primary text-[9px] font-mono font-semibold">
+                PRO
+              </span>
+            </div>
+            <span className="truncate text-[10px] text-muted-foreground">Trung tâm Quản trị</span>
           </div>
         </div>
       </SidebarHeader>
 
-      <SidebarContent>
-        {NAV_GROUPS.map((group) => (
-          <SidebarGroup key={group.label}>
-            <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {group.items.map((item, i) => (
-                  <NavGroupItem key={item.to ?? i} item={item} />
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        ))}
+      <SidebarContent className="px-2 py-2 space-y-4">
+        {NAV_GROUPS.map((group) => {
+          const hasItemPermission = (item) => {
+            if (item.permission && !useAuthStore.getState().hasPermission(item.permission)) {
+              return false;
+            }
+            if (item.children) {
+              return item.children.some(
+                (c) => !c.permission || useAuthStore.getState().hasPermission(c.permission)
+              );
+            }
+            return true;
+          };
+
+          const visibleItems = group.items.filter(hasItemPermission);
+          if (visibleItems.length === 0) return null;
+
+          return (
+            <SidebarGroup key={group.label} className="p-0">
+              <SidebarGroupLabel className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 font-mono">
+                {group.label}
+              </SidebarGroupLabel>
+              <SidebarGroupContent className="pt-1">
+                <SidebarMenu className="space-y-0.5">
+                  {visibleItems.map((item, i) => (
+                    <NavGroupItem key={item.to ?? i} item={item} />
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          );
+        })}
       </SidebarContent>
 
-      <SidebarFooter>
+      <SidebarFooter className="border-t border-border p-2">
         <UserFooterMenu onProfile={onProfile} onChangePass={onChangePass} />
       </SidebarFooter>
 

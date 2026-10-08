@@ -19,34 +19,34 @@ const syncFlashSalesToMenu = async () => {
     if (fsItemIndex === -1) return;
 
     const now = new Date();
-    const activeSales = await FlashSale.find({
+    // CHỈ HIỆN SỰ KIỆN ĐANG DIỄN RA (startDate <= now < endDate và isActive = true)
+    const ongoingSales = await FlashSale.find({
       isActive: true,
+      startDate: { $lte: now },
       endDate: { $gt: now },
     })
       .sort({ startDate: 1 })
       .lean();
 
-    const children = activeSales.map((sale, idx) => {
-      const isOngoing = new Date(sale.startDate) <= now && new Date(sale.endDate) > now;
-      return {
-        _id: new mongoose.Types.ObjectId(),
-        label: sale.name,
-        linkType: 'url',
-        linkRef: null,
-        customUrl: `/flash-sale/${sale.slug}`,
-        openInNewTab: false,
-        badge: isOngoing ? 'Hot' : 'Sắp diễn ra',
-        badgeColor: isOngoing ? '#ef4444' : '#3b82f6',
-        megaMenu: false,
-        order: idx,
-        isActive: true,
-        children: [],
-      };
-    });
+    const children = ongoingSales.map((sale, idx) => ({
+      _id: new mongoose.Types.ObjectId(),
+      label: sale.name,
+      linkType: 'url',
+      linkRef: null,
+      customUrl: `/flash-sale/${sale.slug}`,
+      openInNewTab: false,
+      badge: 'Hot',
+      badgeColor: '#ef4444',
+      megaMenu: false,
+      order: idx,
+      isActive: true,
+      children: [],
+    }));
 
     menu.items[fsItemIndex].children = children;
     menu.markModified('items');
     await menu.save();
+    return ongoingSales;
   } catch (err) {
     console.error('Error syncing flash sales to menu:', err.message);
   }
@@ -307,4 +307,5 @@ module.exports = {
   deleteFlashSale,
   toggleFlashSaleStatus,
   locateFlashSale,
+  syncFlashSalesToMenu,
 };

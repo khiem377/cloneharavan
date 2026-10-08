@@ -1,6 +1,9 @@
-import { Search, Trash2, X, ArrowUpDown, LayoutGrid, List } from '@/components/ui/Icons';
+import { Search, Trash2, X, LayoutGrid, List } from '@/components/ui/Icons';
 import { useRef } from 'react';
 import SearchableSelect from '@/components/ui/SearchableSelect';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 
 const SORT_OPTIONS = [
   { value: 'createdAt|desc', label: 'Mới nhất' },
@@ -21,17 +24,17 @@ export default function MediaToolbar({
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 text-foreground">
       <div className="flex items-center gap-2">
-        <div className="relative flex items-center rounded-md border border-input bg-background overflow-hidden">
+        <div className="relative flex items-center rounded-[6px] w-64">
           <Search size={14} className="absolute left-2.5 text-muted-foreground pointer-events-none" />
-          <input
+          <Input
             ref={inputRef}
             value={search}
             onChange={(e) => onSearch(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && onSearchEnter) onSearchEnter(search);
             }}
-            placeholder="Tìm file... (Enter để tìm toàn bộ)"
-            className="h-8 w-64 rounded-md bg-transparent pl-8 pr-7 text-xs text-foreground placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-ring/40"
+            placeholder="Tìm file... (Enter để tìm)"
+            className="h-8 pl-8 pr-7 text-xs rounded-[6px]"
           />
           {search && (
             <button className="absolute right-2 text-muted-foreground hover:text-foreground cursor-pointer" onClick={() => onSearch('')}>
@@ -39,7 +42,7 @@ export default function MediaToolbar({
             </button>
           )}
         </div>
-        <span className="text-[11px] text-muted-foreground whitespace-nowrap">{total} ảnh</span>
+        <span className="text-[11px] text-muted-foreground whitespace-nowrap font-mono tabular-nums">{total} ảnh</span>
       </div>
 
       <div className="flex items-center gap-2">
@@ -56,16 +59,16 @@ export default function MediaToolbar({
           />
         </div>
 
-        <div className="flex items-center rounded-md border border-border bg-muted p-0.5">
+        <div className="flex items-center rounded-[6px] border border-border bg-muted p-0.5">
           <button
-            className={`p-1.5 rounded transition-colors cursor-pointer ${viewMode === 'grid' ? 'bg-background text-foreground shadow-2xs' : 'text-muted-foreground hover:text-foreground'}`}
+            className={`p-1.5 rounded-[4px] transition-colors cursor-pointer ${viewMode === 'grid' ? 'bg-background text-foreground shadow-2xs' : 'text-muted-foreground hover:text-foreground'}`}
             title="Dạng lưới"
             onClick={() => onViewModeChange('grid')}
           >
             <LayoutGrid size={13} />
           </button>
           <button
-            className={`p-1.5 rounded transition-colors cursor-pointer ${viewMode === 'list' ? 'bg-background text-foreground shadow-2xs' : 'text-muted-foreground hover:text-foreground'}`}
+            className={`p-1.5 rounded-[4px] transition-colors cursor-pointer ${viewMode === 'list' ? 'bg-background text-foreground shadow-2xs' : 'text-muted-foreground hover:text-foreground'}`}
             title="Dạng danh sách"
             onClick={() => onViewModeChange('list')}
           >
@@ -74,15 +77,27 @@ export default function MediaToolbar({
         </div>
 
         {selectedCount > 0 && (
-          <>
-            <span className="inline-flex items-center rounded-full bg-accent px-2 py-0.5 text-[10px] font-medium text-accent-foreground">{selectedCount} đã chọn</span>
-            <button className="inline-flex h-7 items-center justify-center gap-1 rounded-md bg-destructive/10 text-destructive px-2.5 text-xs font-medium hover:bg-destructive/20 transition-colors cursor-pointer" onClick={onBulkDelete}>
-              <Trash2 size={12} /> Xóa
-            </button>
-            <button className="inline-flex h-7 items-center justify-center gap-1 rounded-md px-2.5 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer" onClick={onClearSelect}>
-              <X size={12} /> Bỏ chọn
-            </button>
-          </>
+          <div className="flex items-center gap-1.5">
+            <Badge variant="outline" className="rounded-[4px] text-[10px] font-semibold font-mono tabular-nums">
+              {selectedCount} đã chọn
+            </Badge>
+            <Button
+              variant="destructive"
+              size="sm"
+              className="h-7 px-2.5 rounded-[4px] text-xs font-medium"
+              onClick={onBulkDelete}
+            >
+              <Trash2 size={12} className="mr-1" /> Xóa
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 rounded-[4px] text-xs text-muted-foreground"
+              onClick={onClearSelect}
+            >
+              <X size={12} className="mr-0.5" /> Bỏ chọn
+            </Button>
+          </div>
         )}
       </div>
     </div>

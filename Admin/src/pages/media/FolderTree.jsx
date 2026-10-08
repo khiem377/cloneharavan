@@ -16,6 +16,9 @@ import { folderService } from '@/services/folder.service';
 import { mediaService } from '@/services/media.service';
 import { toast } from '@/providers/ToastProvider';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 
 function ContextMenu({ x, y, folder, depth, onClose, onCreateSub, onRename, onDelete }) {
   const ref = useRef(null);
@@ -30,17 +33,17 @@ function ContextMenu({ x, y, folder, depth, onClose, onCreateSub, onRename, onDe
   const style = { position: 'fixed', top: Math.min(y, window.innerHeight - 140), left: Math.min(x, window.innerWidth - 200), zIndex: 1000 };
 
   return (
-    <div ref={ref} style={style} className="fixed z-50 min-w-44 rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-md text-sm">
+    <div ref={ref} style={style} className="fixed z-50 min-w-44 rounded-[6px] border border-border bg-popover p-1 text-popover-foreground shadow-sm text-sm">
       {!isLeaf && (
-        <button className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer text-left" onClick={() => { onCreateSub(folder); onClose(); }}>
+        <button className="flex w-full items-center gap-2 rounded-[4px] px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer text-left" onClick={() => { onCreateSub(folder); onClose(); }}>
           <FolderPlus size={14} /> Tạo thư mục con
         </button>
       )}
-      <button className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer text-left" onClick={() => { onRename(folder); onClose(); }}>
+      <button className="flex w-full items-center gap-2 rounded-[4px] px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer text-left" onClick={() => { onRename(folder); onClose(); }}>
         <Pencil size={14} /> Đổi tên
       </button>
       <div className="my-1 h-px bg-border" />
-      <button className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive transition-colors cursor-pointer text-left" onClick={() => { onDelete(folder); onClose(); }}>
+      <button className="flex w-full items-center gap-2 rounded-[4px] px-2.5 py-1.5 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive transition-colors cursor-pointer text-left" onClick={() => { onDelete(folder); onClose(); }}>
         <Trash2 size={14} /> Xóa thư mục
       </button>
     </div>
@@ -60,26 +63,28 @@ function FolderDialog({ mode, folder, onConfirm, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4" onClick={onClose}>
-      <div className="flex w-full max-w-xs flex-col rounded-xl border border-border bg-background p-5 shadow-xl text-foreground" onClick={(e) => e.stopPropagation()}>
-        <h4 className="text-sm font-semibold text-foreground mb-3">{titles[mode]}</h4>
-        <form onSubmit={(e) => { e.preventDefault(); if (name.trim()) onConfirm(name.trim()); }}>
-          <input
+    <Dialog open={true} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="max-w-xs rounded-[6px] border border-border p-5">
+        <DialogHeader>
+          <DialogTitle className="text-sm font-semibold text-foreground">{titles[mode]}</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={(e) => { e.preventDefault(); if (name.trim()) onConfirm(name.trim()); }} className="space-y-4 pt-1">
+          <Input
             ref={ref}
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Tên thư mục..."
-            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 transition-colors"
+            className="h-9 rounded-[6px] text-xs"
           />
-          <div className="flex items-center justify-end gap-2 mt-4">
-            <button type="button" className="inline-flex h-8 items-center justify-center rounded-md px-3 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer" onClick={onClose}>Huỷ</button>
-            <button type="submit" className="inline-flex h-8 items-center justify-center rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer disabled:opacity-50" disabled={!name.trim()}>
+          <DialogFooter className="flex items-center justify-end gap-2 bg-transparent p-0">
+            <Button type="button" variant="outline" size="sm" className="h-8 rounded-[6px] text-xs" onClick={onClose}>Huỷ</Button>
+            <Button type="submit" size="sm" className="h-8 rounded-[6px] text-xs active:scale-[0.98] transition-transform" disabled={!name.trim()}>
               {mode === 'rename' ? 'Lưu' : 'Tạo'}
-            </button>
-          </div>
+            </Button>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -120,7 +125,7 @@ function FolderNode({ folder, depth = 0, selectedId, onSelect, onContextMenu, on
   return (
     <div>
       <button
-        className={`flex items-center gap-2 w-full rounded-md px-2.5 py-1.5 text-sm transition-colors text-left cursor-pointer select-none ${isSelected ? 'bg-accent font-medium text-foreground' : 'text-muted-foreground hover:bg-accent/60 hover:text-foreground'} ${dragOver ? 'ring-2 ring-primary bg-primary/10' : ''}`}
+        className={`flex items-center gap-2 w-full rounded-[4px] px-2.5 py-1.5 text-sm transition-colors text-left cursor-pointer select-none ${isSelected ? 'bg-accent font-medium text-foreground' : 'text-muted-foreground hover:bg-accent/60 hover:text-foreground'} ${dragOver ? 'ring-2 ring-primary bg-primary/10' : ''}`}
         style={{ paddingLeft: `${10 + depth * 14}px` }}
         onClick={() => { setOpen(!open); onSelect(folder._id); }}
         onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); onContextMenu(e, folder, depth); }}
@@ -231,17 +236,19 @@ export default function FolderTree({ selectedId, onSelect }) {
       <div className="w-full flex flex-col gap-0.5 overflow-y-auto max-h-[600px]">
         <div className="flex items-center justify-between px-2.5 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           <span>THƯ MỤC</span>
-          <button
-            className="inline-flex size-6 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer"
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-6 rounded-[4px] text-muted-foreground hover:text-foreground"
             title="Tạo thư mục gốc"
             onClick={() => setDialog({ mode: 'create', folder: null })}
           >
             <Plus size={13} />
-          </button>
+          </Button>
         </div>
 
         <button
-          className={`flex items-center gap-2 w-full rounded-md px-2.5 py-1.5 text-sm transition-colors text-left cursor-pointer select-none ${!selectedId ? 'bg-accent font-medium text-foreground' : 'text-muted-foreground hover:bg-accent/60 hover:text-foreground'}`}
+          className={`flex items-center gap-2 w-full rounded-[4px] px-2.5 py-1.5 text-sm transition-colors text-left cursor-pointer select-none ${!selectedId ? 'bg-accent font-medium text-foreground' : 'text-muted-foreground hover:bg-accent/60 hover:text-foreground'}`}
           style={{ paddingLeft: 10 }}
           onClick={() => onSelect(null)}
         >
@@ -286,7 +293,7 @@ export default function FolderTree({ selectedId, onSelect }) {
         <ConfirmDialog
           open={true}
           title="Xóa thư mục"
-          message={`Xóa "${confirm.folder.name}"? Hành động này không thể hoàn tác.`}
+          description={`Xóa "${confirm.folder.name}"? Hành động này không thể hoàn tác.`}
           confirmText="Xóa"
           variant="danger"
           onConfirm={() => deleteMut(confirm.folder._id)}

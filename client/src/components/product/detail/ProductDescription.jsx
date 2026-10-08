@@ -29,8 +29,8 @@ export default function ProductDescription({ product }) {
       <div className="relative">
         <div
           ref={contentRef}
-          className={`prose prose-sm sm:prose-base max-w-none text-slate-700 leading-relaxed transition-all duration-300 ${
-            !isExpanded ? 'max-h-[500px] overflow-hidden' : 'max-h-none'
+          className={`product-content text-slate-700 leading-relaxed transition-all duration-300 ${
+            !isExpanded ? 'max-h-[480px] overflow-hidden' : 'max-h-none'
           }`}
           dangerouslySetInnerHTML={{ __html: rawDescription }}
         />

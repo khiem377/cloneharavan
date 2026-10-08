@@ -2,9 +2,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import roleService from '@/services/role.service';
 import { toast } from '@/providers/ToastProvider';
 
+import { authService } from '@/services/auth.service';
+
 // ─── Query Keys ───────────────────────────────────────────────────────────────
 export const ROLES_KEY = ['roles'];
 export const PERMISSIONS_KEY = ['roles', 'permissions'];
+export const MY_PERMISSIONS_KEY = ['auth', 'my-permissions'];
 
 // ─── Queries ──────────────────────────────────────────────────────────────────
 export function useRoles() {
@@ -23,9 +26,20 @@ export function usePermissions() {
     queryKey: PERMISSIONS_KEY,
     queryFn: async () => {
       const res = await roleService.getPermissions();
-      return res.data?.grouped || {};
+      return res.data?.grouped || res.data?.data?.grouped || res.data || {};
     },
     staleTime: 5 * 60_000,
+  });
+}
+
+export function useMyPermissions() {
+  return useQuery({
+    queryKey: MY_PERMISSIONS_KEY,
+    queryFn: async () => {
+      const res = await authService.getMyPermissions();
+      return res.data?.data || res.data || {};
+    },
+    staleTime: 60_000,
   });
 }
 

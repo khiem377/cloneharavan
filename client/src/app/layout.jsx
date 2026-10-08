@@ -4,13 +4,11 @@ import { menuService } from '@/services/menu.service';
 import { categoryService } from '@/services/category.service';
 import { searchService } from '@/services/search.service';
 import StoreProvider from '@/providers/StoreProvider';
-import Header from '@/components/header/Header';
-import Footer from '@/components/layout/Footer';
-import QuickViewModal from '@/components/product/QuickViewModal';
-import CompareBar from '@/components/product/CompareBar';
+import LayoutShell from '@/components/layout/LayoutShell';
 import TopProgressBar from '@/components/common/TopProgressBar';
 import ScrollToTop from '@/components/common/ScrollToTop';
 import { ToastContainer } from '@/components/ui/toast';
+import { ConfirmDialogContainer } from '@/components/ui/confirm-dialog';
 
 const beVietnamPro = Be_Vietnam_Pro({
   subsets: ['latin', 'vietnamese'],
@@ -110,16 +108,15 @@ export default async function RootLayout({ children }) {
         <TopProgressBar />
         <ScrollToTop />
         <ToastContainer />
+        <ConfirmDialogContainer />
         <StoreProvider
           initialMenu={initialMenu}
           initialCategories={initialCategories}
           initialTrending={initialTrending}
         >
-          <Header />
-          <main className="flex-1 w-full max-w-full overflow-x-hidden">{children}</main>
-          <Footer initialMenu={initialFooterMenu} />
-          <QuickViewModal />
-          <CompareBar />
+          <LayoutShell initialFooterMenu={initialFooterMenu}>
+            {children}
+          </LayoutShell>
         </StoreProvider>
       </body>
     </html>

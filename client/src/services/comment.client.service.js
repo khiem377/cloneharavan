@@ -62,6 +62,15 @@ export const commentService = {
     }
   },
 
+  deleteComment: async ({ commentId, token = null } = {}) => {
+    const config = {};
+    if (token) {
+      config.headers = { Authorization: `Bearer ${token}` };
+    }
+    const res = await api.delete(`/comments/${commentId}`, config);
+    return res.data?.data;
+  },
+
 
   getServerComments: async ({ targetType = 'product', productId = null, postId = null, ratingFilter = null, page = 1, limit = 10 } = {}) => {
     try {

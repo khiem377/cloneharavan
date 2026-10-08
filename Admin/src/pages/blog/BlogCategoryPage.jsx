@@ -14,12 +14,19 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Plus, Edit, Trash2, Loader2, X } from '@/components/ui/Icons';
+import { Plus, Edit, Trash2, Loader2, X, GripVertical } from '@/components/ui/Icons';
 import { useBlogCategories } from '@/hooks/useBlog';
 import { blogCategoryService } from '@/services/blog.service';
 import { toast } from '@/providers/ToastProvider';
 import DataTablePagination from '@/components/ui/DataTablePagination';
 import MediaPickerModal from '@/components/ui/MediaPickerModal';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import {
+  Table, TableHeader, TableBody, TableHead, TableRow, TableCell,
+} from '@/components/ui/table';
 
 const EMPTY = {
   name: '', description: '', isActive: true,
@@ -38,45 +45,65 @@ function SortableRow({ cat, selected, onSelect, onEdit, onDelete }) {
   const stopProp = (e) => e.stopPropagation();
 
   return (
-    <tr
+    <TableRow
       ref={setNodeRef}
       style={style}
       {...attributes}
       {...listeners}
-      className={`hover:bg-muted/30 transition-colors select-none ${isDragging ? 'bg-muted/50 shadow-lg ring-1 ring-border rounded' : ''}`}
+      className={`hover:bg-muted/30 transition-colors select-none ${isDragging ? 'bg-muted/50 ring-1 ring-border' : ''}`}
     >
-      <td className="px-3 py-3 w-10" onPointerDown={stopProp} onClick={stopProp}>
-        <input type="checkbox" checked={selected} onChange={onSelect} className="rounded" />
-      </td>
-      <td className="px-4 py-3">
+      <TableCell className="px-3 py-2 w-10 text-center" onPointerDown={stopProp} onClick={stopProp}>
+        <input type="checkbox" checked={selected} onChange={onSelect} className="rounded-[3px] border-border size-3.5" />
+      </TableCell>
+      <TableCell className="px-4 py-2">
         <div className="flex items-center gap-3">
+          <div className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground">
+            <GripVertical className="size-4" />
+          </div>
           {cat.thumbnailUrl
-            ? <img src={cat.thumbnailUrl} alt="" className="size-8 object-cover rounded border border-border" />
-            : <div className="size-8 bg-muted rounded border border-dashed border-border" />
+            ? <img src={cat.thumbnailUrl} alt="" className="size-8 object-cover rounded-[4px] border border-border shrink-0" />
+            : <div className="size-8 bg-muted rounded-[4px] border border-dashed border-border shrink-0" />
           }
           <div>
-            <div className="font-medium text-foreground">{cat.name}</div>
-            <div className="text-xs text-muted-foreground">{cat.slug}</div>
+            <div className="font-medium text-xs text-foreground">{cat.name}</div>
+            <div className="text-[11px] text-muted-foreground font-mono">{cat.slug}</div>
           </div>
         </div>
-      </td>
-      <td className="px-4 py-3 text-muted-foreground text-sm">{cat.order}</td>
-      <td className="px-4 py-3 text-right text-muted-foreground text-sm">{cat.postCount}</td>
-      <td className="px-4 py-3 text-center" onPointerDown={stopProp} onClick={stopProp}>
+      </TableCell>
+      <TableCell className="px-4 py-2 text-muted-foreground text-xs font-mono tabular-nums">{cat.order}</TableCell>
+      <TableCell className="px-4 py-2 text-right text-foreground text-xs font-mono tabular-nums font-semibold">{cat.postCount || 0}</TableCell>
+      <TableCell className="px-4 py-2 text-center" onPointerDown={stopProp} onClick={stopProp}>
         <button
+          type="button"
           onClick={() => blogCategoryService.toggleStatus(cat._id, !cat.isActive).then(() => window.location.reload())}
-          className={`px-2 py-0.5 rounded-full text-xs font-medium ${cat.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}
+          className={`px-2 py-0.5 rounded-[4px] text-[10px] font-semibold transition-colors active:scale-[0.98] ${
+            cat.isActive ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'bg-muted text-muted-foreground border border-border'
+          }`}
         >
           {cat.isActive ? 'Hoạt động' : 'Ẩn'}
         </button>
-      </td>
-      <td className="px-4 py-3" onPointerDown={stopProp} onClick={stopProp}>
+      </TableCell>
+      <TableCell className="px-4 py-2 text-right" onPointerDown={stopProp} onClick={stopProp}>
         <div className="flex items-center justify-end gap-1">
-          <button onClick={() => onEdit(cat)} className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"><Edit className="size-4" /></button>
-          <button onClick={() => onDelete(cat)} className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"><Trash2 className="size-4" /></button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onEdit(cat)}
+            className="h-7 w-7 rounded-[4px] text-muted-foreground hover:text-foreground"
+          >
+            <Edit className="size-3.5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onDelete(cat)}
+            className="h-7 w-7 rounded-[4px] text-destructive/70 hover:text-destructive hover:bg-destructive/10"
+          >
+            <Trash2 className="size-3.5" />
+          </Button>
         </div>
-      </td>
-    </tr>
+      </TableCell>
+    </TableRow>
   );
 }
 
@@ -84,37 +111,37 @@ function InUseDialog({ posts, onClose }) {
   const navigate = useNavigate();
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-      <div className="bg-card border border-border rounded-xl w-full max-w-md shadow-xl">
-        <div className="p-5 border-b border-border flex items-center justify-between">
-          <h2 className="font-semibold text-foreground">Không thể xóa danh mục</h2>
-          <button onClick={onClose} className="p-1 rounded hover:bg-muted text-muted-foreground"><X className="size-4" /></button>
-        </div>
-        <div className="p-5 space-y-3">
-          <p className="text-sm text-muted-foreground">Danh mục này đang được sử dụng bởi các bài viết sau:</p>
-          <ul className="space-y-1.5">
+      <Card className="rounded-[6px] border border-border w-full max-w-md shadow-lg">
+        <CardHeader className="p-4 border-b border-border flex flex-row items-center justify-between space-y-0">
+          <CardTitle className="text-sm font-semibold text-foreground">Không thể xóa danh mục</CardTitle>
+          <Button variant="ghost" size="icon" onClick={onClose} className="h-7 w-7 rounded-[4px]">
+            <X className="size-4" />
+          </Button>
+        </CardHeader>
+        <CardContent className="p-4 space-y-3">
+          <p className="text-xs text-muted-foreground">Danh mục này đang được sử dụng bởi các bài viết sau:</p>
+          <ul className="space-y-1.5 max-h-48 overflow-y-auto">
             {posts.map(p => (
               <li key={p._id}>
                 <button
+                  type="button"
                   onClick={() => { navigate(`/blog/posts/${p._id}/edit`); onClose(); }}
-                  className="text-sm text-primary hover:underline text-left"
+                  className="text-xs text-primary hover:underline text-left line-clamp-1"
                 >
                   {p.title}
                 </button>
               </li>
             ))}
           </ul>
-          <p className="text-xs text-muted-foreground">Vui lòng chuyển bài viết sang danh mục khác trước khi xóa.</p>
-        </div>
-        <div className="p-4 border-t border-border flex justify-end">
-          <button onClick={onClose} className="px-4 py-2 rounded-lg border border-border text-sm hover:bg-muted transition-colors">Đóng</button>
-        </div>
-      </div>
+          <p className="text-[11px] text-muted-foreground italic">Vui lòng chuyển bài viết sang danh mục khác trước khi xóa.</p>
+        </CardContent>
+      </Card>
     </div>
   );
 }
 
 export default function BlogCategoryPage() {
-  const [query]                   = useState({ page: 1, limit: 100 });
+  const [query, setQuery]         = useState({ page: 1, limit: 100 });
   const [modal, setModal]         = useState(null);
   const [form, setForm]           = useState(EMPTY);
   const [saving, setSaving]       = useState(false);
@@ -218,48 +245,66 @@ export default function BlogCategoryPage() {
   const toggleOne = (id) => setSelected(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 max-w-6xl mx-auto p-4 sm:p-6">
+      <div className="flex items-center justify-between pb-3 border-b border-border">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Danh mục Blog</h1>
-          <p className="text-sm text-muted-foreground mt-1">Quản lý danh mục bài viết</p>
+          <h1 className="text-xl font-bold tracking-tight text-foreground">Danh mục Blog</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">Quản lý danh mục bài viết</p>
         </div>
-        <button onClick={openCreate} className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors">
-          <Plus className="size-4" /> Tạo danh mục
-        </button>
+        <Button
+          onClick={openCreate}
+          size="sm"
+          className="h-8 rounded-[6px] text-xs font-semibold active:scale-[0.98]"
+        >
+          <Plus className="size-3.5 mr-1" /> Tạo danh mục
+        </Button>
       </div>
 
       {selected.length > 0 && (
-        <div className="flex items-center gap-3 px-4 py-2.5 bg-primary/5 border border-primary/20 rounded-lg">
-          <span className="text-sm text-foreground font-medium">Đã chọn {selected.length}</span>
-          <button onClick={handleBulkDelete} className="flex items-center gap-1.5 px-3 py-1.5 bg-destructive text-white rounded-md text-xs font-medium hover:bg-destructive/90 transition-colors">
-            <Trash2 className="size-3.5" /> Xóa đã chọn
-          </button>
-          <button onClick={() => setSelected([])} className="text-xs text-muted-foreground hover:text-foreground ml-auto">Bỏ chọn</button>
+        <div className="flex items-center gap-3 px-3 py-2 bg-primary/5 border border-primary/20 rounded-[6px]">
+          <span className="text-xs text-foreground font-medium font-mono tabular-nums">Đã chọn {selected.length}</span>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={handleBulkDelete}
+            className="h-7 px-2.5 rounded-[4px] text-xs"
+          >
+            <Trash2 className="size-3 mr-1" /> Xóa đã chọn
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setSelected([])}
+            className="h-7 text-xs text-muted-foreground hover:text-foreground ml-auto"
+          >
+            Bỏ chọn
+          </Button>
         </div>
       )}
 
-      <div className="bg-card border border-border rounded-xl overflow-hidden">
+      <Card className="rounded-[6px] border border-border shadow-none overflow-hidden">
         {loading ? (
-          <div className="flex items-center justify-center py-16"><Loader2 className="size-6 animate-spin text-muted-foreground" /></div>
+          <div className="flex items-center justify-center py-16">
+            <Loader2 className="size-6 animate-spin text-primary" />
+          </div>
         ) : data.length === 0 ? (
-          <div className="text-center py-16 text-muted-foreground text-sm">Chưa có danh mục nào</div>
+          <div className="text-center py-16 text-muted-foreground text-xs font-mono">Chưa có danh mục nào</div>
         ) : (
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <table className="w-full text-sm">
-              <thead className="bg-muted/40 border-b border-border">
-                <tr>
-                  <th className="px-3 py-3 w-10">
-                    <input type="checkbox" checked={allSelected} onChange={toggleAll} className="rounded" />
-                  </th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Tên</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground w-20">Thứ tự</th>
-                  <th className="px-4 py-3 text-right font-medium text-muted-foreground w-20">Bài viết</th>
-                  <th className="px-4 py-3 text-center font-medium text-muted-foreground w-28">Trạng thái</th>
-                  <th className="px-4 py-3 w-20" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
+            <Table>
+              <TableHeader className="bg-muted/40">
+                <TableRow>
+                  <TableHead className="px-3 py-2 w-10 text-center">
+                    <input type="checkbox" checked={allSelected} onChange={toggleAll} className="rounded-[3px] border-border size-3.5" />
+                  </TableHead>
+                  <TableHead className="text-xs font-semibold py-2">Tên</TableHead>
+                  <TableHead className="text-xs font-semibold py-2 w-20">Thứ tự</TableHead>
+                  <TableHead className="text-xs font-semibold py-2 text-right w-24">Bài viết</TableHead>
+                  <TableHead className="text-xs font-semibold py-2 text-center w-28">Trạng thái</TableHead>
+                  <TableHead className="w-20 py-2" />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 <SortableContext items={data.map(c => String(c._id))} strategy={verticalListSortingStrategy}>
                   {data.map(cat => (
                     <SortableRow
@@ -272,8 +317,8 @@ export default function BlogCategoryPage() {
                     />
                   ))}
                 </SortableContext>
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </DndContext>
         )}
 
@@ -284,57 +329,96 @@ export default function BlogCategoryPage() {
           totalPages={pagination.totalPages || 1}
           onPageChange={p => { setLocalData(null); setQuery(q => ({ ...q, page: p })); }}
           onPageSizeChange={s => { setLocalData(null); setQuery(q => ({ ...q, limit: s, page: 1 })); }}
-          className="px-4"
+          className="px-4 py-2 border-t border-border"
         />
-      </div>
+      </Card>
 
       {modal && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-          <div className="bg-card border border-border rounded-xl w-full max-w-lg shadow-xl">
-            <div className="p-5 border-b border-border flex items-center justify-between">
-              <h2 className="font-semibold text-foreground">{modal === 'create' ? 'Tạo danh mục mới' : 'Chỉnh sửa danh mục'}</h2>
-              <button onClick={() => setModal(null)} className="p-1 rounded hover:bg-muted text-muted-foreground"><X className="size-4" /></button>
-            </div>
-            <form onSubmit={handleSave} className="p-5 space-y-4">
-              <div>
-                <label className="text-sm font-medium block mb-1.5">Tên <span className="text-destructive">*</span></label>
-                <input className="w-full h-9 px-3 rounded-md border border-input bg-background text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/20" value={form.name} onChange={e => set('name', e.target.value)} placeholder="Tên danh mục..." />
-              </div>
-              <div>
-                <label className="text-sm font-medium block mb-1.5">Mô tả</label>
-                <textarea rows={2} className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm outline-none focus:border-ring resize-none" value={form.description} onChange={e => set('description', e.target.value)} placeholder="Mô tả danh mục..." />
-              </div>
-              <div className="grid grid-cols-2 gap-3 items-end">
+          <Card className="rounded-[6px] border border-border w-full max-w-md shadow-lg">
+            <CardHeader className="p-4 border-b border-border flex flex-row items-center justify-between space-y-0">
+              <CardTitle className="text-sm font-semibold text-foreground">
+                {modal === 'create' ? 'Tạo danh mục mới' : 'Chỉnh sửa danh mục'}
+              </CardTitle>
+              <Button variant="ghost" size="icon" onClick={() => setModal(null)} className="h-7 w-7 rounded-[4px]">
+                <X className="size-4" />
+              </Button>
+            </CardHeader>
+            <form onSubmit={handleSave}>
+              <CardContent className="p-4 space-y-3">
                 <div>
-                  <label className="text-xs text-muted-foreground block mb-1">Thứ tự</label>
-                  <input type="number" className="w-full h-9 px-3 rounded-md border border-input bg-background text-sm outline-none focus:border-ring" value={form.order} onChange={e => set('order', Number(e.target.value))} />
+                  <label className="text-xs font-medium text-muted-foreground block mb-1">Tên <span className="text-destructive">*</span></label>
+                  <Input
+                    className="h-8 rounded-[6px] text-xs"
+                    value={form.name}
+                    onChange={e => set('name', e.target.value)}
+                    placeholder="Tên danh mục..."
+                  />
                 </div>
                 <div>
-                  <label className="text-xs text-muted-foreground block mb-1">Thumbnail</label>
-                  <div className="flex items-center gap-2">
-                    {form.thumbnailUrl
-                      ? <img src={form.thumbnailUrl} alt="" className="size-9 object-cover rounded-lg border border-border" />
-                      : <div className="size-9 bg-muted rounded-lg border border-dashed border-border flex items-center justify-center text-muted-foreground text-xs">Ảnh</div>
-                    }
-                    <button type="button" onClick={() => setShowMedia(true)} className="px-3 h-8 rounded-md border border-border text-xs hover:bg-muted transition-colors">
-                      {form.thumbnailUrl ? 'Đổi' : 'Chọn ảnh'}
-                    </button>
-                    {form.thumbnailUrl && <button type="button" onClick={() => { set('thumbnailMediaId', ''); set('thumbnailUrl', ''); }} className="text-xs text-destructive hover:underline">Xóa</button>}
+                  <label className="text-xs font-medium text-muted-foreground block mb-1">Mô tả</label>
+                  <textarea
+                    rows={2}
+                    className="w-full px-3 py-1.5 rounded-[6px] border border-input bg-background text-xs outline-none focus:border-ring resize-none"
+                    value={form.description}
+                    onChange={e => set('description', e.target.value)}
+                    placeholder="Mô tả danh mục..."
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3 items-end">
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground block mb-1">Thứ tự</label>
+                    <Input
+                      type="number"
+                      className="h-8 rounded-[6px] text-xs font-mono tabular-nums"
+                      value={form.order}
+                      onChange={e => set('order', Number(e.target.value))}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground block mb-1">Thumbnail</label>
+                    <div className="flex items-center gap-2">
+                      {form.thumbnailUrl
+                        ? <img src={form.thumbnailUrl} alt="" className="size-8 object-cover rounded-[4px] border border-border shrink-0" />
+                        : <div className="size-8 bg-muted rounded-[4px] border border-dashed border-border flex items-center justify-center text-muted-foreground text-[10px] shrink-0">Ảnh</div>
+                      }
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowMedia(true)}
+                        className="h-8 px-2 text-xs rounded-[4px]"
+                      >
+                        {form.thumbnailUrl ? 'Đổi' : 'Chọn'}
+                      </Button>
+                      {form.thumbnailUrl && (
+                        <button type="button" onClick={() => { set('thumbnailMediaId', ''); set('thumbnailUrl', ''); }} className="text-xs text-destructive hover:underline">
+                          Xóa
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-              <label className="flex items-center gap-2">
-                <input type="checkbox" checked={form.isActive} onChange={e => set('isActive', e.target.checked)} />
-                <span className="text-sm">Hiển thị danh mục</span>
-              </label>
-              <div className="flex justify-end gap-2 pt-2">
-                <button type="button" onClick={() => setModal(null)} className="px-4 py-2 rounded-lg border border-border text-sm hover:bg-muted transition-colors">Hủy</button>
-                <button type="submit" disabled={saving} className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50">
-                  {saving && <Loader2 className="size-4 animate-spin" />} Lưu
-                </button>
-              </div>
+                <label className="flex items-center gap-2 text-xs pt-1 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={form.isActive}
+                    onChange={e => set('isActive', e.target.checked)}
+                    className="rounded-[3px] size-3.5"
+                  />
+                  <span>Hiển thị danh mục</span>
+                </label>
+                <div className="flex justify-end gap-2 pt-2 border-t border-border">
+                  <Button type="button" variant="outline" size="sm" onClick={() => setModal(null)} className="h-8 rounded-[6px] text-xs">
+                    Hủy
+                  </Button>
+                  <Button type="submit" disabled={saving} size="sm" className="h-8 rounded-[6px] text-xs font-semibold active:scale-[0.98]">
+                    {saving && <Loader2 className="size-3 animate-spin mr-1" />} Lưu
+                  </Button>
+                </div>
+              </CardContent>
             </form>
-          </div>
+          </Card>
         </div>
       )}
 

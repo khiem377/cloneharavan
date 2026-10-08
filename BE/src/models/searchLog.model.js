@@ -21,6 +21,9 @@ const searchLogSchema = new mongoose.Schema(
 
     // Shopee/Lazada-style: số lần keyword này dẫn đến purchase — signal mạnh nhất
     purchaseCount:    { type: Number, default: 0 },
+    cartCount:        { type: Number, default: 0 }, // số lần thêm giỏ hàng từ kết quả
+    discussionCount:  { type: Number, default: 0 }, // độ thảo luận (review + comment liên quan)
+    zScore:           { type: Number, default: 0 }, // Google Trends Anomaly Acceleration
 
     // TikTok-style diversity: số session KHÁC NHAU đã search keyword này
     // 100 người khác nhau >> 1 người search 100 lần

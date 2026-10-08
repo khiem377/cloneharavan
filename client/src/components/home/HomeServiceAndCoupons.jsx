@@ -163,8 +163,7 @@ export default function HomeServiceAndCoupons({ initialCoupons = [] }) {
         <div className="relative">
         <div className="flex items-center justify-between mb-2.5 px-1">
           <div>
-            <h2 className="text-sm sm:text-base font-black text-slate-900 tracking-tight flex items-center gap-2">
-              <span className="w-2 h-4 bg-black rounded-full inline-block" />
+            <h2 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight uppercase">
               MÃ GIẢM GIÁ & VOUCHER ĐỘC QUYỀN
             </h2>
             {/* <p className="text-[11px] text-slate-500 font-medium mt-0.5">
@@ -295,7 +294,7 @@ export default function HomeServiceAndCoupons({ initialCoupons = [] }) {
                           if (hasDraggedRef.current) return;
                           handleCopy(coupon.code);
                         }}
-                        className={`px-2.5 py-0.5 rounded-md text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer shadow-2xs ${isCopied
+                        className={`px-2.5 py-0.5 rounded-[4px] text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer shadow-2xs active:scale-[0.98] ${isCopied
                           ? 'bg-emerald-600 text-white'
                           : 'bg-slate-100 hover:bg-black hover:text-white text-slate-800 border border-slate-200'
                           }`}

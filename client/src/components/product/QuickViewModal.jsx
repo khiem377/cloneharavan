@@ -35,7 +35,9 @@ export const QuickViewModal = () => {
       setSelectedVariant(defaultVar);
 
       if (product.options?.[0]?.values?.[0]) {
-        setSelectedOptionVal(product.options[0].values[0]);
+        const firstVal = product.options[0].values[0];
+        const valStr = typeof firstVal === 'object' && firstVal !== null ? (firstVal.value || '') : String(firstVal || '');
+        setSelectedOptionVal(valStr);
       } else {
         setSelectedOptionVal('');
       }
@@ -151,33 +153,53 @@ export const QuickViewModal = () => {
 
   const compared = isCompared(product._id || product.id);
 
-  // Determine variant group title and items to render
-  const realVariants = variantsList.filter((v) => !v.isDefault || (v.attributes && v.attributes.length > 0));
-  const displayVariants = realVariants.length > 0 ? realVariants : variantsList.length > 1 ? variantsList : [];
-
-  const groupTitle =
-    displayVariants[0]?.attributes?.[0]?.name ||
-    product.options?.[0]?.name ||
-    'Kích thước';
+  const isDefaultVariantName = (name) => {
+    if (!name) return true;
+    const lower = String(name).trim().toLowerCase();
+    return (
+      lower === 'mặc định' ||
+      lower === 'mac dinh' ||
+      lower === 'default' ||
+      lower === 'default title' ||
+      lower === 'tiêu chuẩn' ||
+      lower === 'tieu chuan'
+    );
+  };
 
   const getVariantLabel = (v) => {
+    if (!v) return '';
     if (v.attributes && v.attributes.length > 0) {
-      return v.attributes.map((a) => a.value).join(' - ');
+      const validAttrs = v.attributes.filter((a) => !isDefaultVariantName(a.value));
+      if (validAttrs.length > 0) {
+        return validAttrs.map((a) => a.value).join(' - ');
+      }
     }
-    if (v.displayName) {
+    if (v.displayName && !isDefaultVariantName(v.displayName)) {
       if (v.displayName.includes(' - ')) {
         return v.displayName.split(' - ').pop().trim();
       }
       return v.displayName;
     }
-    if (v.title) return v.title;
-    if (v.name) return v.name;
-    return v.sku || 'Tùy chọn';
+    if (v.title && !isDefaultVariantName(v.title)) return v.title;
+    if (v.name && !isDefaultVariantName(v.name)) return v.name;
+    return '';
   };
+
+  // Determine variant group title and items to render
+  const realVariants = variantsList.filter((v) => {
+    const label = getVariantLabel(v);
+    return Boolean(label);
+  });
+  const displayVariants = realVariants.length > 1 ? realVariants : [];
+
+  const groupTitle =
+    displayVariants[0]?.attributes?.[0]?.name ||
+    product.options?.[0]?.name ||
+    'Phiên bản';
 
   return (
     <div
-      className={`fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6 bg-black/60 transition-opacity duration-300 ease-out backdrop-blur-xs ${
+      className={`fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6 bg-black/60 transition-opacity duration-300 ease-out ${
         isVisible ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
       }`}
     >
@@ -199,7 +221,7 @@ export const QuickViewModal = () => {
 
         {/* Modal Card with EGA scale-in animation */}
         <div
-          className={`relative bg-white rounded-xl shadow-2xl w-full max-h-[88vh] overflow-y-auto no-scrollbar ${
+          className={`relative bg-white rounded-[6px] shadow-lg border border-slate-200 w-full max-h-[88vh] overflow-y-auto no-scrollbar ${
             isVisible ? 'animate-ega-scale-in' : 'animate-ega-scale-out'
           }`}
         >
@@ -207,15 +229,15 @@ export const QuickViewModal = () => {
             {/* ============ LEFT: GALLERY ============ */}
             <div className="space-y-3">
               {/* Main Preview */}
-              <div className="relative aspect-4/3 sm:aspect-square w-full bg-white rounded-lg border border-gray-100 flex items-center justify-center overflow-hidden p-3">
+              <div className="relative aspect-4/3 sm:aspect-square w-full bg-white rounded-[6px] border border-slate-200 flex items-center justify-center overflow-hidden p-3">
                 {product.isHot && (
-                  <span className="absolute top-2 left-2 z-10 inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[#e30019] text-white text-[10px] font-bold uppercase tracking-wider shadow-xs">
+                  <span className="absolute top-2 left-2 z-10 inline-flex items-center gap-1 px-2 py-0.5 rounded-[4px] bg-[#e30019] text-white text-[10px] font-bold uppercase tracking-wider shadow-2xs">
                     <Flame size={12} className="fill-current" />
                     SẢN PHẨM HOT
                   </span>
                 )}
                 {product.isFeatured && !product.isHot && (
-                  <span className="absolute top-2 left-2 z-10 inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500 text-white text-[10px] font-bold uppercase tracking-wider shadow-xs">
+                  <span className="absolute top-2 left-2 z-10 inline-flex items-center gap-1 px-2 py-0.5 rounded-[4px] bg-amber-500 text-white text-[10px] font-bold uppercase tracking-wider shadow-2xs">
                     <Star size={12} className="fill-current" />
                     SẢN PHẨM NỔI BẬT
                   </span>
@@ -236,10 +258,10 @@ export const QuickViewModal = () => {
                       key={idx}
                       type="button"
                       onClick={() => setActiveImageIdx(idx)}
-                      className={`w-14 h-14 rounded-md border p-1 bg-white shrink-0 transition cursor-pointer overflow-hidden ${
+                      className={`w-14 h-14 rounded-[6px] border p-1 bg-white shrink-0 transition cursor-pointer overflow-hidden ${
                         activeImageIdx === idx
                           ? 'border-[#e30019] ring-2 ring-[#e30019]/20'
-                          : 'border-gray-200 hover:border-gray-400'
+                          : 'border-slate-200 hover:border-slate-400'
                       }`}
                     >
                       <img src={img} alt="" className="w-full h-full object-contain" />
@@ -309,22 +331,22 @@ export const QuickViewModal = () => {
               </div>
 
               {/* Price Box */}
-              <div className={`p-3 rounded-lg flex items-baseline gap-2.5 flex-wrap ${isFlashSale ? 'bg-red-50/70 border border-red-200' : 'bg-gray-50 border border-gray-100'}`}>
-                <span className="text-2xl font-black text-[#e30019]">
+              <div className={`p-3 rounded-[6px] flex items-baseline gap-2.5 flex-wrap ${isFlashSale ? 'bg-red-50/70 border border-red-200' : 'bg-slate-50 border border-slate-200'}`}>
+                <span className="text-2xl font-black text-[#e30019] font-mono tabular-nums">
                   {displayPrice > 0 ? `${displayPrice.toLocaleString('vi-VN')}₫` : 'Liên hệ'}
                 </span>
                 {originalPrice > 0 && (
-                  <span className="text-sm text-gray-400 line-through">
+                  <span className="text-sm text-slate-400 line-through font-mono tabular-nums">
                     {originalPrice.toLocaleString('vi-VN')}₫
                   </span>
                 )}
                 {hasDiscount && (
-                  <span className="px-1.5 py-0.5 rounded bg-[#e30019] text-white text-xs font-bold">
+                  <span className="px-1.5 py-0.5 rounded-[4px] bg-[#e30019] text-white text-xs font-bold font-mono">
                     -{discountPercent}%
                   </span>
                 )}
                 {isFlashSale && (
-                  <span className="ml-auto px-2 py-0.5 rounded text-[11px] font-black uppercase text-white bg-gradient-to-r from-red-600 to-amber-500 shadow-2xs">
+                  <span className="ml-auto px-2 py-0.5 rounded-[4px] text-[11px] font-black uppercase text-white bg-red-600 shadow-2xs">
                     Giá Flash Sale
                   </span>
                 )}
@@ -333,7 +355,7 @@ export const QuickViewModal = () => {
               {/* Variant Selectors matching EGA */}
               {displayVariants.length > 1 ? (
                 <div className="space-y-1.5 pt-1">
-                  <label className="block text-xs font-semibold text-gray-800">
+                  <label className="block text-xs font-semibold text-slate-800">
                     {groupTitle}
                   </label>
                   <div className="flex flex-wrap gap-2">
@@ -354,10 +376,10 @@ export const QuickViewModal = () => {
                               if (imgIdx >= 0) setActiveImageIdx(imgIdx);
                             }
                           }}
-                          className={`min-w-16 px-3.5 py-1.5 rounded-sm text-xs sm:text-sm font-medium border transition-all cursor-pointer ${
+                          className={`min-w-16 px-3 py-1.5 rounded-[6px] text-xs font-medium border transition-all cursor-pointer active:scale-[0.98] ${
                             isSelected
-                              ? 'border-2 border-blue-600 text-blue-600 bg-white font-semibold shadow-xs'
-                              : 'border border-gray-300 text-gray-800 bg-white hover:border-gray-400 hover:text-black'
+                              ? 'border-2 border-slate-900 text-slate-900 bg-white font-bold shadow-2xs'
+                              : 'border border-slate-200 text-slate-700 bg-white hover:border-slate-300 hover:text-slate-900'
                           }`}
                         >
                           {label}
@@ -368,25 +390,33 @@ export const QuickViewModal = () => {
                 </div>
               ) : product.options?.[0]?.values?.length > 1 ? (
                 <div className="space-y-1.5 pt-1">
-                  <label className="block text-xs font-semibold text-gray-800">
+                  <label className="block text-xs font-semibold text-slate-800">
                     {product.options[0].name || 'Kích thước'}
                   </label>
                   <div className="flex flex-wrap gap-2">
                     {product.options[0].values.map((val, i) => {
+                      const valStr = typeof val === 'object' && val !== null ? (val.value || '') : String(val || '');
+                      const colorCode = typeof val === 'object' && val !== null ? val.colorCode : '';
                       const isSelected =
-                        selectedOptionVal === val || (!selectedOptionVal && i === 0);
+                        selectedOptionVal === valStr || (!selectedOptionVal && i === 0);
                       return (
                         <button
-                          key={i}
+                          key={val?._id || i}
                           type="button"
-                          onClick={() => setSelectedOptionVal(val)}
-                          className={`min-w-16 px-3.5 py-1.5 rounded-sm text-xs sm:text-sm font-medium border transition-all cursor-pointer ${
+                          onClick={() => setSelectedOptionVal(valStr)}
+                          className={`min-w-16 px-3 py-1.5 rounded-[6px] text-xs font-medium border transition-all cursor-pointer active:scale-[0.98] flex items-center gap-1.5 ${
                             isSelected
-                              ? 'border-2 border-blue-600 text-blue-600 bg-white font-semibold shadow-xs'
-                              : 'border border-gray-300 text-gray-800 bg-white hover:border-gray-400 hover:text-black'
+                              ? 'border-2 border-slate-900 text-slate-900 bg-white font-bold shadow-2xs'
+                              : 'border border-slate-200 text-slate-700 bg-white hover:border-slate-300 hover:text-slate-900'
                           }`}
                         >
-                          {val}
+                          {colorCode && (
+                            <span
+                              className="w-3.5 h-3.5 rounded-full border border-slate-300 shrink-0"
+                              style={{ backgroundColor: colorCode }}
+                            />
+                          )}
+                          <span>{valStr}</span>
                         </button>
                       );
                     })}
@@ -397,22 +427,22 @@ export const QuickViewModal = () => {
               {/* Quantity and Stock */}
               <div className="flex items-center justify-between gap-4 pt-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold text-gray-700">Số lượng:</span>
-                  <div className="flex items-center border border-gray-200 rounded-md overflow-hidden bg-white">
+                  <span className="text-xs font-semibold text-slate-700">Số lượng:</span>
+                  <div className="flex items-center border border-slate-200 rounded-[6px] overflow-hidden bg-white">
                     <button
                       type="button"
                       onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                      className="w-7 h-7 flex items-center justify-center text-gray-500 hover:bg-gray-100 transition cursor-pointer"
+                      className="w-7 h-7 flex items-center justify-center text-slate-500 hover:bg-slate-100 transition cursor-pointer active:scale-95"
                     >
                       <Minus size={13} />
                     </button>
-                    <span className="w-9 text-center text-xs font-semibold text-gray-800">
+                    <span className="w-9 text-center text-xs font-bold text-slate-900 font-mono tabular-nums">
                       {quantity}
                     </span>
                     <button
                       type="button"
                       onClick={() => setQuantity((q) => q + 1)}
-                      className="w-7 h-7 flex items-center justify-center text-gray-500 hover:bg-gray-100 transition cursor-pointer"
+                      className="w-7 h-7 flex items-center justify-center text-slate-500 hover:bg-slate-100 transition cursor-pointer active:scale-95"
                     >
                       <Plus size={13} />
                     </button>
@@ -430,22 +460,22 @@ export const QuickViewModal = () => {
                 <button
                   type="button"
                   onClick={handleAddToCart}
-                  className="w-full py-3 bg-[#e30019] hover:bg-[#c40015] text-white font-bold text-sm rounded-md shadow-xs transition active:scale-[0.99] cursor-pointer"
+                  className="w-full py-2.5 bg-[#e30019] hover:bg-[#c40015] text-white font-bold text-xs rounded-[6px] shadow-xs transition active:scale-[0.98] cursor-pointer"
                 >
-                  Thêm vào giỏ
+                  Thêm vào giỏ hàng
                 </button>
 
                 <div className="grid grid-cols-2 gap-2">
                   <Link
                     href={`/checkout?productId=${product._id}&quantity=${quantity}`}
-                    className="py-2.5 border border-[#e30019] text-[#e30019] hover:bg-red-50 text-center font-bold text-xs rounded-md transition"
+                    className="py-2 border border-[#e30019] text-[#e30019] hover:bg-red-50 text-center font-bold text-xs rounded-[6px] transition active:scale-[0.98]"
                   >
                     Mua ngay
                   </Link>
                   <button
                     type="button"
                     onClick={handleAddToCart}
-                    className="py-2.5 border border-blue-600 text-blue-600 hover:bg-blue-50 text-center font-bold text-xs rounded-md transition cursor-pointer"
+                    className="py-2 border border-slate-300 text-slate-700 hover:bg-slate-50 text-center font-bold text-xs rounded-[6px] transition cursor-pointer active:scale-[0.98]"
                   >
                     Trả góp 0%
                   </button>
@@ -453,15 +483,15 @@ export const QuickViewModal = () => {
               </div>
 
               {/* Incentive / Promotion Box */}
-              <div className="p-3 rounded-md bg-amber-50/80 border border-amber-200 text-xs text-amber-900 flex items-start gap-2">
+              <div className="p-3 rounded-[6px] bg-amber-50/80 border border-amber-200 text-xs text-amber-900 flex items-start gap-2">
                 <ShieldCheck size={16} className="text-amber-600 shrink-0 mt-0.5" />
-                <span>
+                <span className="leading-relaxed">
                   <strong>Quà tặng độc quyền:</strong> Tặng gói truyền hình CLIP TV Gia đình 12 tháng trị giá 600.000₫. Miễn phí công lắp đặt tại nhà.
                 </span>
               </div>
 
               {addedToCartToast && (
-                <div className="p-2.5 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold flex items-center gap-2 animate-fadeIn">
+                <div className="p-2.5 rounded-[6px] bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold flex items-center gap-2 animate-fadeIn">
                   <Check size={15} />
                   <span>Đã thêm sản phẩm vào giỏ hàng thành công!</span>
                 </div>

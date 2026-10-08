@@ -1,8 +1,8 @@
 const express = require('express');
 const router  = express.Router();
-const { handleChat, handleStream, clearSession } = require('../controllers/chatbot.controller');
+const { handleChat, handleStream, handleGetHistory, clearSession } = require('../controllers/chatbot.controller');
 
-// ─── Inline Rate Limiter — 15 requests/phút/IP (tránh abuse Gemini API) ───────────────────
+// ─── Inline Rate Limiter — 30 requests/phút/IP ─────────────────────────────
 const _rlStore = new Map();
 setInterval(() => {
   const now = Date.now();
@@ -11,7 +11,7 @@ setInterval(() => {
   }
 }, 5 * 60_000).unref();
 
-const chatRateLimit = (max = 15) => (req, res, next) => {
+const chatRateLimit = (max = 30) => (req, res, next) => {
   const ip  = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown';
   const key = `chat:${ip}`;
   const now = Date.now();
@@ -32,9 +32,10 @@ const chatRateLimit = (max = 15) => (req, res, next) => {
   next();
 };
 
-// Public — không cần auth (customer trên storefront gọi)
-router.post('/',          chatRateLimit(15), handleChat);
-router.post('/stream',    chatRateLimit(15), handleStream);
+// Public
+router.get('/history',    chatRateLimit(60), handleGetHistory);
+router.post('/',          chatRateLimit(30), handleChat);
+router.post('/stream',    chatRateLimit(30), handleStream);
 router.delete('/session', clearSession);
 
 module.exports = router;

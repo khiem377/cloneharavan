@@ -6,6 +6,9 @@ import {
 import { useStockDocuments } from '@/hooks/useInventory';
 import ExcelPreviewModal from '@/components/common/ExcelPreviewModal';
 import DataTablePagination from '@/components/ui/DataTablePagination';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card } from '@/components/ui/card';
 
 export default function StockDocumentListPage() {
   const [docType, setDocType] = useState('ALL');
@@ -57,148 +60,140 @@ export default function StockDocumentListPage() {
   };
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6 p-6 antialiased">
       {/* Top Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary shadow-xs">
-            <FileText className="h-6 w-6" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-[6px] bg-primary/10 text-primary">
+            <FileText className="h-5 w-5" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            <h1 className="text-xl font-bold tracking-tight text-foreground">
               Quản Lý Tất Cả Đơn & Phiếu Kho
             </h1>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground mt-0.5">
               Tổng hợp toàn bộ chứng từ Nhập kho PO, Trả hàng NCC, Xuất bán kho & Kiểm kê đã khởi tạo
             </p>
           </div>
         </div>
 
-        <button
+        <Button
+          variant="outline"
+          size="sm"
           onClick={() => refetch()}
-          className="inline-flex items-center gap-2 rounded-xl border border-input bg-background px-4 py-2.5 text-xs font-semibold text-foreground hover:bg-muted transition-colors shadow-xs"
+          className="rounded-[6px] text-xs font-semibold"
         >
-          <RefreshCw className="h-4 w-4" /> Làm mới
-        </button>
+          <RefreshCw className="h-4 w-4 mr-1.5" /> Làm mới
+        </Button>
       </div>
 
       {/* 4 Summary Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="flex items-center gap-4 rounded-2xl border border-border bg-card p-4 shadow-xs">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
-            <FileText className="h-5 w-5" />
-          </div>
-          <div>
-            <span className="text-xs font-semibold text-muted-foreground">Tổng chứng từ</span>
-            <div className="text-xl font-extrabold text-foreground">
-              {summary.totalDocuments} <span className="text-xs font-normal text-muted-foreground">phiếu</span>
+        <Card className="rounded-[6px] border border-border p-4 shadow-xs">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-[6px] bg-blue-500/10 text-blue-600 dark:text-blue-400">
+              <FileText className="h-5 w-5" />
+            </div>
+            <div>
+              <span className="text-xs font-semibold text-muted-foreground">Tổng chứng từ</span>
+              <div className="text-xl font-bold text-foreground font-mono tabular-nums">
+                {summary.totalDocuments} <span className="text-xs font-normal text-muted-foreground font-sans">phiếu</span>
+              </div>
             </div>
           </div>
-        </div>
+        </Card>
 
-        <div className="flex items-center gap-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4 shadow-xs">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-            <ArrowDownLeft className="h-5 w-5" />
-          </div>
-          <div>
-            <span className="text-xs font-semibold text-muted-foreground">Đơn nhập kho (PO)</span>
-            <div className="text-xl font-extrabold text-emerald-600 dark:text-emerald-400">
-              {summary.totalPO} <span className="text-xs font-normal text-muted-foreground">đơn</span>
+        <Card className="rounded-[6px] border border-border p-4 shadow-xs">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-[6px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+              <ArrowDownLeft className="h-5 w-5" />
+            </div>
+            <div>
+              <span className="text-xs font-semibold text-muted-foreground">Đơn nhập kho (PO)</span>
+              <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400 font-mono tabular-nums">
+                {summary.totalPO} <span className="text-xs font-normal text-muted-foreground font-sans">đơn</span>
+              </div>
             </div>
           </div>
-        </div>
+        </Card>
 
-        <div className="flex items-center gap-4 rounded-2xl border border-destructive/20 bg-destructive/5 p-4 shadow-xs">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-destructive/10 text-destructive">
-            <RotateCcw className="h-5 w-5" />
-          </div>
-          <div>
-            <span className="text-xs font-semibold text-muted-foreground">Trả hàng NCC (PR)</span>
-            <div className="text-xl font-extrabold text-destructive">
-              {summary.totalPR} <span className="text-xs font-normal text-muted-foreground">phiếu</span>
+        <Card className="rounded-[6px] border border-border p-4 shadow-xs">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-[6px] bg-destructive/10 text-destructive">
+              <RotateCcw className="h-5 w-5" />
+            </div>
+            <div>
+              <span className="text-xs font-semibold text-muted-foreground">Trả hàng NCC (PR)</span>
+              <div className="text-xl font-bold text-destructive font-mono tabular-nums">
+                {summary.totalPR} <span className="text-xs font-normal text-muted-foreground font-sans">phiếu</span>
+              </div>
             </div>
           </div>
-        </div>
+        </Card>
 
-        <div className="flex items-center gap-4 rounded-2xl border border-purple-500/20 bg-purple-500/5 p-4 shadow-xs">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400">
-            <Layers className="h-5 w-5" />
-          </div>
-          <div>
-            <span className="text-xs font-semibold text-muted-foreground">Xuất kho & Kiểm kê</span>
-            <div className="text-xl font-extrabold text-purple-600 dark:text-purple-400">
-              {summary.totalExport + summary.totalAudit} <span className="text-xs font-normal text-muted-foreground">phiếu</span>
+        <Card className="rounded-[6px] border border-border p-4 shadow-xs">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-[6px] bg-purple-500/10 text-purple-600 dark:text-purple-400">
+              <Layers className="h-5 w-5" />
+            </div>
+            <div>
+              <span className="text-xs font-semibold text-muted-foreground">Xuất kho & Kiểm kê</span>
+              <div className="text-xl font-bold text-purple-600 dark:text-purple-400 font-mono tabular-nums">
+                {summary.totalExport + summary.totalAudit} <span className="text-xs font-normal text-muted-foreground font-sans">phiếu</span>
+              </div>
             </div>
           </div>
-        </div>
+        </Card>
       </div>
 
       {/* Filter Toolbar */}
-      <div className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Tìm theo mã chứng từ (PO..., PR..., EX...), tên đối tác..."
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-            className="w-full rounded-xl border border-input bg-background pl-10 pr-4 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20"
-          />
-        </div>
+      <Card className="rounded-[6px] border border-border p-4 shadow-xs">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Tìm theo mã chứng từ (PO..., PR..., EX...), tên đối tác..."
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+              className="pl-9 h-9 text-xs rounded-[6px]"
+            />
+          </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          <button
-            onClick={() => { setDocType('ALL'); setPage(1); }}
-            className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
-              docType === 'ALL' ? 'bg-primary text-primary-foreground shadow-xs' : 'bg-muted/50 text-muted-foreground hover:bg-muted'
-            }`}
-          >
-            Tất cả chứng từ
-          </button>
-          <button
-            onClick={() => { setDocType('PO'); setPage(1); }}
-            className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
-              docType === 'PO' ? 'bg-emerald-600 text-white shadow-xs' : 'bg-muted/50 text-muted-foreground hover:bg-muted'
-            }`}
-          >
-            Nhập kho (PO)
-          </button>
-          <button
-            onClick={() => { setDocType('PR'); setPage(1); }}
-            className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
-              docType === 'PR' ? 'bg-destructive text-destructive-foreground shadow-xs' : 'bg-muted/50 text-muted-foreground hover:bg-muted'
-            }`}
-          >
-            Trả hàng (PR)
-          </button>
-          <button
-            onClick={() => { setDocType('EX'); setPage(1); }}
-            className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
-              docType === 'EX' ? 'bg-amber-600 text-white shadow-xs' : 'bg-muted/50 text-muted-foreground hover:bg-muted'
-            }`}
-          >
-            Xuất kho
-          </button>
-          <button
-            onClick={() => { setDocType('AUD'); setPage(1); }}
-            className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
-              docType === 'AUD' ? 'bg-purple-600 text-white shadow-xs' : 'bg-muted/50 text-muted-foreground hover:bg-muted'
-            }`}
-          >
-            Kiểm kê
-          </button>
+          <div className="flex items-center gap-2 flex-wrap">
+            {[
+              { id: 'ALL', label: 'Tất cả chứng từ' },
+              { id: 'PO', label: 'Nhập kho (PO)' },
+              { id: 'PR', label: 'Trả hàng (PR)' },
+              { id: 'EX', label: 'Xuất kho' },
+              { id: 'AUD', label: 'Kiểm kê' },
+            ].map((t) => (
+              <Button
+                key={t.id}
+                variant={docType === t.id ? 'default' : 'outline'}
+                size="xs"
+                onClick={() => {
+                  setDocType(t.id);
+                  setPage(1);
+                }}
+                className="rounded-[6px] text-xs h-7 font-semibold"
+              >
+                {t.label}
+              </Button>
+            ))}
+          </div>
         </div>
-      </div>
+      </Card>
 
       {/* Table */}
-      <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden p-4">
+      <Card className="rounded-[6px] border border-border shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="border-b border-border bg-muted/40 font-semibold text-muted-foreground">
+              <tr className="border-b border-border bg-muted/60 font-bold text-foreground text-[11px]">
                 <th className="px-4 py-3.5 whitespace-nowrap">Mã chứng từ</th>
                 <th className="px-4 py-3.5 whitespace-nowrap">Loại phiếu</th>
                 <th className="px-4 py-3.5 whitespace-nowrap">Thời gian khởi tạo</th>
@@ -212,38 +207,38 @@ export default function StockDocumentListPage() {
             <tbody className="divide-y divide-border">
               {isLoading ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-12 text-center text-muted-foreground">
+                  <td colSpan={8} className="py-12 text-center text-xs text-muted-foreground">
                     <div className="flex items-center justify-center gap-2">
-                      <RefreshCw className="h-5 w-5 animate-spin text-primary" />
+                      <RefreshCw className="h-4 w-4 animate-spin text-primary" />
                       <span>Đang tải danh sách tất cả chứng từ...</span>
                     </div>
                   </td>
                 </tr>
               ) : docs.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-12 text-center text-muted-foreground">
+                  <td colSpan={8} className="py-12 text-center text-xs text-muted-foreground">
                     Không tìm thấy chứng từ nào phù hợp.
                   </td>
                 </tr>
               ) : (
                 docs.map((doc) => (
                   <tr key={doc.id} className="hover:bg-muted/30 transition-colors align-middle">
-                    <td className="px-4 py-3 font-mono font-bold text-primary whitespace-nowrap">
+                    <td className="px-4 py-3 font-mono font-bold text-primary whitespace-nowrap text-xs">
                       {doc.code}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       {getDocBadge(doc.docType)}
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
+                    <td className="px-4 py-3 text-muted-foreground font-mono tabular-nums whitespace-nowrap text-xs">
                       {new Date(doc.createdAt).toLocaleString('vi-VN')}
                     </td>
-                    <td className="px-4 py-3 font-semibold text-foreground whitespace-nowrap">
+                    <td className="px-4 py-3 font-medium text-foreground whitespace-nowrap text-xs">
                       {doc.partnerName}
                     </td>
-                    <td className="px-4 py-3 text-center font-bold whitespace-nowrap">
+                    <td className="px-4 py-3 text-center font-bold whitespace-nowrap font-mono tabular-nums text-xs">
                       {doc.totalQty} cái
                     </td>
-                    <td className="px-4 py-3 text-right font-mono font-bold text-foreground whitespace-nowrap">
+                    <td className="px-4 py-3 text-right font-mono font-bold text-foreground whitespace-nowrap tabular-nums text-xs">
                       {doc.totalAmount > 0 ? `${doc.totalAmount.toLocaleString('vi-VN')} đ` : '---'}
                     </td>
                     <td className="px-4 py-3 text-center whitespace-nowrap">
@@ -254,7 +249,7 @@ export default function StockDocumentListPage() {
                     <td className="px-4 py-3 text-right whitespace-nowrap">
                       <button
                         onClick={() => handleOpenPreview(doc)}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-input bg-background px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted transition-colors cursor-pointer"
+                        className="inline-flex items-center gap-1.5 rounded-[6px] border border-input bg-background px-2.5 py-1 text-xs font-semibold text-foreground hover:bg-muted transition-colors cursor-pointer h-7"
                       >
                         <Eye className="h-3.5 w-3.5 text-primary" /> Xem Excel
                       </button>
@@ -281,7 +276,7 @@ export default function StockDocumentListPage() {
             pageSizeOptions={[10, 20, 50, 100]}
           />
         )}
-      </div>
+      </Card>
 
       {/* Excel Preview Modal (Fix 401 authorized blob download) */}
       <ExcelPreviewModal

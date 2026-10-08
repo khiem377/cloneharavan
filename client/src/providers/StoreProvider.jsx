@@ -4,6 +4,8 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import useAuthStore from '../store/authStore';
 
+import SessionStreamListener from '@/components/common/SessionStreamListener';
+
 const StoreContext = createContext(null);
 
 export const StoreProvider = ({
@@ -45,6 +47,7 @@ export const StoreProvider = ({
           setTrendingKeywords,
         }}
       >
+        <SessionStreamListener />
         {children}
       </StoreContext.Provider>
     </QueryClientProvider>

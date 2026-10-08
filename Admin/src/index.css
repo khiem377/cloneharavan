@@ -1,13 +1,13 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource-variable/geist";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-    --font-heading: var(--font-sans);
-    --font-sans: 'Geist Variable', sans-serif;
+    --font-heading: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-sans: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
     --color-sidebar-ring: var(--sidebar-ring);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -164,7 +164,7 @@
   @apply flex flex-wrap items-center justify-between gap-3 py-1;
 }
 .page-card {
-  @apply rounded-xl border border-border bg-card text-card-foreground shadow-2xs overflow-hidden;
+  @apply rounded-[6px] border border-border bg-card text-card-foreground shadow-2xs overflow-hidden;
 }
 .page-loading {
   @apply flex items-center justify-center py-20 text-sm text-muted-foreground gap-2;
@@ -176,13 +176,13 @@
   @apply flex flex-wrap items-center gap-3 mb-4;
 }
 .filter-select {
-  @apply h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20;
+  @apply h-9 rounded-[6px] border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20;
 }
 .view-toggle {
-  @apply flex items-center rounded-md border border-border bg-muted p-0.5;
+  @apply flex items-center rounded-[6px] border border-border bg-muted p-0.5;
 }
 .view-btn {
-  @apply p-1.5 rounded text-muted-foreground hover:text-foreground transition-colors cursor-pointer;
+  @apply p-1.5 rounded-[4px] text-muted-foreground hover:text-foreground transition-colors cursor-pointer;
 }
 .view-btn.active {
   @apply bg-background text-foreground font-semibold shadow-2xs;
@@ -190,13 +190,13 @@
 
 /* ─── Search & Inputs ─────────────────────────────────────────────────────── */
 .search-box {
-  @apply relative flex items-center w-64 rounded-md border border-input bg-background overflow-hidden;
+  @apply relative flex items-center w-64 rounded-[6px] border border-input bg-background overflow-hidden;
 }
 .search-icon {
   @apply absolute left-2.5 size-4 text-muted-foreground pointer-events-none;
 }
 .search-input {
-  @apply h-9 w-full rounded-md border border-input bg-background pl-9 pr-8 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20;
+  @apply h-9 w-full rounded-[6px] border border-input bg-background pl-9 pr-8 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20;
 }
 .search-clear {
   @apply absolute right-2.5 text-muted-foreground hover:text-foreground;
@@ -208,7 +208,7 @@
   @apply text-xs font-medium text-foreground;
 }
 .form-input {
-  @apply h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 placeholder:text-muted-foreground;
+  @apply h-9 w-full rounded-[6px] border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 placeholder:text-muted-foreground;
 }
 textarea.form-input {
   @apply h-auto py-2;
@@ -223,12 +223,12 @@ textarea.form-input {
   @apply flex items-center gap-3 mt-1;
 }
 .image-preview-sm {
-  @apply size-12 rounded-md object-cover border border-border bg-muted shrink-0;
+  @apply size-12 rounded-[4px] object-cover border border-border bg-muted shrink-0;
 }
 
 /* ─── Data Table ───────────────────────────────────────────────────────────── */
 .table-wrap {
-  @apply w-full overflow-x-auto rounded-xl border border-border bg-card shadow-2xs;
+  @apply w-full overflow-x-auto rounded-[6px] border border-border bg-card shadow-2xs;
 }
 .data-table {
   @apply w-full text-left text-sm border-collapse;
@@ -360,37 +360,37 @@ textarea.form-input {
 
 /* ─── Buttons & Actions ────────────────────────────────────────────────────── */
 .btn-primary {
-  @apply inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-primary px-3.5 text-sm font-medium text-primary-foreground shadow-xs hover:bg-primary/90 transition-colors disabled:pointer-events-none disabled:opacity-50 cursor-pointer;
+  @apply inline-flex h-9 items-center justify-center gap-1.5 rounded-[6px] bg-primary px-3.5 text-sm font-medium text-primary-foreground shadow-xs hover:bg-primary/90 active:scale-[0.98] transition-all disabled:pointer-events-none disabled:opacity-50 cursor-pointer;
 }
 .btn-outline {
-  @apply inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-input bg-background px-3.5 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground transition-colors disabled:pointer-events-none disabled:opacity-50 cursor-pointer;
+  @apply inline-flex h-9 items-center justify-center gap-1.5 rounded-[6px] border border-input bg-background px-3.5 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground active:scale-[0.98] transition-all disabled:pointer-events-none disabled:opacity-50 cursor-pointer;
 }
 .btn-ghost {
-  @apply inline-flex h-9 items-center justify-center gap-1.5 rounded-lg px-3.5 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors disabled:pointer-events-none disabled:opacity-50 cursor-pointer;
+  @apply inline-flex h-9 items-center justify-center gap-1.5 rounded-[6px] px-3.5 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground active:scale-[0.98] transition-all disabled:pointer-events-none disabled:opacity-50 cursor-pointer;
 }
 .btn-danger-outline {
-  @apply inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-destructive/30 bg-destructive/10 px-3.5 text-sm font-medium text-destructive hover:bg-destructive/20 transition-colors cursor-pointer;
+  @apply inline-flex h-9 items-center justify-center gap-1.5 rounded-[6px] border border-destructive/30 bg-destructive/10 px-3.5 text-sm font-medium text-destructive hover:bg-destructive/20 active:scale-[0.98] transition-all cursor-pointer;
 }
 .btn-primary-sm {
-  @apply inline-flex h-8 items-center justify-center gap-1 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer;
+  @apply inline-flex h-8 items-center justify-center gap-1 rounded-[6px] bg-primary px-3 text-xs font-medium text-primary-foreground hover:bg-primary/90 active:scale-[0.98] transition-all cursor-pointer;
 }
 .btn-ghost-sm {
-  @apply inline-flex h-8 items-center justify-center gap-1 rounded-md px-3 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer;
+  @apply inline-flex h-8 items-center justify-center gap-1 rounded-[6px] px-3 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground active:scale-[0.98] transition-all cursor-pointer;
 }
 .btn-danger-sm {
-  @apply inline-flex h-8 items-center justify-center gap-1 rounded-md bg-destructive/10 text-destructive px-3 text-xs font-medium hover:bg-destructive/20 transition-colors cursor-pointer;
+  @apply inline-flex h-8 items-center justify-center gap-1 rounded-[6px] bg-destructive/10 text-destructive px-3 text-xs font-medium hover:bg-destructive/20 active:scale-[0.98] transition-all cursor-pointer;
 }
 .action-btns {
   @apply flex items-center gap-1;
 }
 .btn-icon {
-  @apply inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer;
+  @apply inline-flex size-8 items-center justify-center rounded-[6px] text-muted-foreground hover:bg-accent hover:text-foreground active:scale-[0.98] transition-all cursor-pointer;
 }
 .btn-icon.danger {
   @apply hover:bg-destructive/10 hover:text-destructive;
 }
 .btn-icon-sm {
-  @apply inline-flex size-6 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer;
+  @apply inline-flex size-6 items-center justify-center rounded-[4px] text-muted-foreground hover:bg-accent hover:text-foreground active:scale-[0.98] transition-all cursor-pointer;
 }
 .text-green {
   @apply text-emerald-600 dark:text-emerald-400;
@@ -402,7 +402,7 @@ textarea.form-input {
   @apply flex items-center gap-1;
 }
 .ia-btn {
-  @apply inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors cursor-pointer;
+  @apply inline-flex items-center gap-1 rounded-[4px] px-2 py-1 text-xs font-medium active:scale-[0.98] transition-all cursor-pointer;
 }
 .ia-edit {
   @apply bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 dark:text-blue-400;
@@ -416,10 +416,10 @@ textarea.form-input {
 
 /* ─── Modals ───────────────────────────────────────────────────────────────── */
 .modal-overlay, .custom-modal-overlay {
-  @apply fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4;
+  @apply fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4;
 }
 .modal-box, .custom-modal-box {
-  @apply flex w-full max-w-lg flex-col overflow-hidden rounded-xl border border-border bg-background shadow-xl;
+  @apply flex w-full max-w-lg flex-col overflow-hidden rounded-[6px] border border-border bg-background shadow-lg;
 }
 .modal-header, .custom-modal-header {
   @apply flex items-center justify-between border-b border-border px-5 py-4 text-base font-semibold text-foreground;
@@ -436,7 +436,7 @@ textarea.form-input {
   @apply fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none max-w-sm w-[calc(100vw-32px)];
 }
 .toast-card {
-  @apply pointer-events-auto flex items-center gap-2.5 rounded-lg border border-border bg-background p-3.5 shadow-md text-sm text-foreground;
+  @apply pointer-events-auto flex items-center gap-2.5 rounded-[6px] border border-border bg-background p-3.5 shadow-sm text-sm text-foreground;
 }
 .toast-card.toast-error {
   @apply border-destructive/30 bg-destructive/10 text-destructive;
@@ -450,7 +450,7 @@ textarea.form-input {
 
 /* ─── Media Library Components ─────────────────────────────────────────────── */
 .media-page {
-  @apply flex h-full w-full rounded-xl border border-border bg-card overflow-hidden shadow-2xs min-h-[calc(100vh-80px)];
+  @apply flex h-full w-full rounded-[6px] border border-border bg-card overflow-hidden shadow-2xs min-h-[calc(100vh-80px)];
 }
 .folder-tree {
   @apply w-56 shrink-0 border-r border-border bg-muted/20 p-2 overflow-y-auto flex flex-col gap-0.5;
@@ -459,7 +459,7 @@ textarea.form-input {
   @apply flex items-center justify-between px-2.5 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground;
 }
 .folder-node {
-  @apply flex items-center gap-2 w-full rounded-md px-2.5 py-1.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors text-left cursor-pointer select-none;
+  @apply flex items-center gap-2 w-full rounded-[6px] px-2.5 py-1.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors text-left cursor-pointer select-none;
 }
 .folder-node.active, .picker-folder-node.active {
   @apply bg-accent font-medium text-foreground;
@@ -507,13 +507,13 @@ textarea.form-input {
   @apply flex flex-wrap gap-2 p-3 border-t border-border bg-muted/10;
 }
 .subfolder-chip {
-  @apply inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground hover:bg-accent transition-colors cursor-pointer;
+  @apply inline-flex items-center gap-1.5 rounded-[6px] border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground hover:bg-accent transition-colors cursor-pointer;
 }
 .ctx-menu {
-  @apply fixed z-50 min-w-44 rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-md text-sm;
+  @apply fixed z-50 min-w-44 rounded-[6px] border border-border bg-popover p-1 text-popover-foreground shadow-md text-sm;
 }
 .ctx-item {
-  @apply flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer text-left;
+  @apply flex w-full items-center gap-2 rounded-[4px] px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer text-left;
 }
 .ctx-item.danger {
   @apply text-destructive hover:bg-destructive/10 hover:text-destructive;
@@ -522,7 +522,7 @@ textarea.form-input {
   @apply my-1 h-px bg-border;
 }
 .folder-dialog {
-  @apply flex w-full max-w-xs flex-col rounded-xl border border-border bg-background p-5 shadow-xl;
+  @apply flex w-full max-w-xs flex-col rounded-[6px] border border-border bg-background p-5 shadow-lg;
 }
 .dialog-title {
   @apply text-sm font-semibold text-foreground mb-3;
@@ -543,7 +543,7 @@ textarea.form-input {
   @apply inline-flex items-center rounded-full bg-accent px-2.5 py-0.5 text-xs font-medium text-accent-foreground;
 }
 .sort-select-wrap {
-  @apply relative flex items-center rounded-md border border-input bg-background;
+  @apply relative flex items-center rounded-[6px] border border-input bg-background;
 }
 .sort-icon {
   @apply absolute left-2 size-3.5 text-muted-foreground pointer-events-none;
@@ -555,7 +555,7 @@ textarea.form-input {
   @apply flex-1 overflow-y-auto p-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 content-start;
 }
 .media-card {
-  @apply relative aspect-square rounded-lg border-2 border-border bg-card overflow-hidden cursor-pointer transition-all hover:border-primary/60 hover:shadow-xs;
+  @apply relative aspect-square rounded-[6px] border-2 border-border bg-card overflow-hidden cursor-pointer transition-all hover:border-primary/60 hover:shadow-xs;
 }
 .media-card.selected {
   @apply border-primary ring-2 ring-primary/30;
@@ -567,7 +567,7 @@ textarea.form-input {
   @apply absolute top-2 right-2 size-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-xs z-10;
 }
 .media-badge-used {
-  @apply absolute top-2 left-2 rounded bg-amber-500/90 text-amber-950 px-1.5 py-0.5 text-[9px] font-bold tracking-wider uppercase z-10;
+  @apply absolute top-2 left-2 rounded-[4px] bg-amber-500/90 text-amber-950 px-1.5 py-0.5 text-[9px] font-bold tracking-wider uppercase z-10;
 }
 
 /* ─── Product Form & Grids & Import/Export ─────────────────────────────────── */
@@ -575,7 +575,7 @@ textarea.form-input {
   @apply grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4;
 }
 .product-card, .banner-card {
-  @apply rounded-xl border border-border bg-card text-card-foreground shadow-2xs overflow-hidden transition-all hover:border-primary/50;
+  @apply rounded-[6px] border border-border bg-card text-card-foreground shadow-2xs overflow-hidden transition-all hover:border-primary/50;
 }
 .product-card-img, .banner-card-img {
   @apply aspect-square w-full object-cover bg-muted;
@@ -587,10 +587,10 @@ textarea.form-input {
   @apply font-semibold text-sm text-foreground line-clamp-1;
 }
 .product-card-sku {
-  @apply text-xs text-muted-foreground font-mono;
+  @apply text-xs text-muted-foreground font-mono tabular-nums;
 }
 .product-card-price {
-  @apply font-bold text-sm text-foreground;
+  @apply font-bold text-sm text-foreground font-mono tabular-nums;
 }
 .product-card-actions {
   @apply flex items-center justify-end gap-1 p-2 border-t border-border bg-muted/30;
@@ -614,7 +614,7 @@ textarea.form-input {
   @apply flex flex-col gap-6;
 }
 .form-card {
-  @apply rounded-xl border border-border bg-card p-5 text-card-foreground shadow-2xs flex flex-col gap-4;
+  @apply rounded-[6px] border border-border bg-card p-5 text-card-foreground shadow-2xs flex flex-col gap-4;
 }
 .form-card-title {
   @apply text-base font-semibold text-foreground pb-2 border-b border-border;
@@ -623,10 +623,10 @@ textarea.form-input {
   @apply flex items-center justify-between;
 }
 .discount-mode-toggle {
-  @apply flex items-center rounded-md border border-border bg-muted p-0.5 text-xs;
+  @apply flex items-center rounded-[6px] border border-border bg-muted p-0.5 text-xs;
 }
 .mode-btn {
-  @apply px-2 py-0.5 rounded text-muted-foreground hover:text-foreground transition-colors cursor-pointer;
+  @apply px-2 py-0.5 rounded-[4px] text-muted-foreground hover:text-foreground transition-colors cursor-pointer;
 }
 .mode-btn.active {
   @apply bg-background text-foreground font-semibold shadow-2xs;
@@ -638,7 +638,7 @@ textarea.form-input {
   @apply absolute right-3 text-xs text-muted-foreground font-medium pointer-events-none;
 }
 .discount-badge {
-  @apply mt-1.5 rounded-md bg-emerald-500/10 px-2.5 py-1 text-xs text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-medium;
+  @apply mt-1.5 rounded-[4px] bg-emerald-500/10 px-2.5 py-1 text-xs text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-medium;
 }
 .spec-table {
   @apply w-full text-sm border-collapse;
@@ -647,13 +647,13 @@ textarea.form-input {
   @apply flex items-center gap-2 mb-2;
 }
 .image-picker-box {
-  @apply flex flex-col items-center justify-center gap-2 p-6 rounded-lg border-2 border-dashed border-border bg-muted/20 hover:border-primary/50 transition-colors cursor-pointer text-center;
+  @apply flex flex-col items-center justify-center gap-2 p-6 rounded-[6px] border-2 border-dashed border-border bg-muted/20 hover:border-primary/50 transition-colors cursor-pointer text-center;
 }
 .image-picker-preview {
-  @apply relative aspect-square w-full rounded-lg border border-border overflow-hidden bg-muted;
+  @apply relative aspect-square w-full rounded-[6px] border border-border overflow-hidden bg-muted;
 }
 .image-picker-btn {
-  @apply inline-flex items-center gap-1.5 rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium text-foreground hover:bg-accent cursor-pointer;
+  @apply inline-flex items-center gap-1.5 rounded-[6px] border border-input bg-background px-3 py-1.5 text-xs font-medium text-foreground hover:bg-accent cursor-pointer active:scale-[0.98] transition-all;
 }
 .import-export-page {
   @apply flex flex-col gap-6 p-6 max-w-4xl mx-auto w-full;
@@ -677,7 +677,7 @@ textarea.form-input {
   @apply text-xs text-muted-foreground mb-3;
 }
 .ie-dropzone {
-  @apply flex flex-col items-center justify-center p-8 rounded-xl border-2 border-dashed border-border bg-muted/20 hover:border-primary/50 transition-colors cursor-pointer text-center;
+  @apply flex flex-col items-center justify-center p-8 rounded-[6px] border-2 border-dashed border-border bg-muted/20 hover:border-primary/50 transition-colors cursor-pointer text-center;
 }
 .ie-dropzone.drag-over {
   @apply border-primary bg-primary/5;
@@ -692,7 +692,7 @@ textarea.form-input {
   @apply grid grid-cols-1 sm:grid-cols-3 gap-3 my-3;
 }
 .ie-stat {
-  @apply flex items-center gap-2.5 p-3 rounded-lg border border-border bg-muted/30 text-sm font-medium;
+  @apply flex items-center gap-2.5 p-3 rounded-[6px] border border-border bg-muted/30 text-sm font-medium;
 }
 .ie-stat.success {
   @apply bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-300;
@@ -704,7 +704,7 @@ textarea.form-input {
   @apply bg-amber-500/10 border-amber-500/20 text-amber-700 dark:text-amber-300;
 }
 .ie-errors {
-  @apply mt-3 p-3 rounded-lg border border-destructive/20 bg-destructive/5 text-xs;
+  @apply mt-3 p-3 rounded-[6px] border border-destructive/20 bg-destructive/5 text-xs;
 }
 .ie-errors-title {
   @apply font-semibold text-destructive mb-2;
@@ -719,10 +719,10 @@ textarea.form-input {
   @apply font-mono font-semibold text-foreground;
 }
 .ie-sync-banner {
-  @apply flex flex-wrap items-center gap-3 p-3 mt-3 rounded-lg border border-blue-500/20 bg-blue-500/10 text-xs text-blue-700 dark:text-blue-300;
+  @apply flex flex-wrap items-center gap-3 p-3 mt-3 rounded-[6px] border border-blue-500/20 bg-blue-500/10 text-xs text-blue-700 dark:text-blue-300;
 }
 .btn-outline-sm {
-  @apply inline-flex h-7 items-center justify-center gap-1 rounded-md border border-input bg-background px-2.5 text-xs font-medium text-foreground hover:bg-accent cursor-pointer;
+  @apply inline-flex h-7 items-center justify-center gap-1 rounded-[6px] border border-input bg-background px-2.5 text-xs font-medium text-foreground hover:bg-accent cursor-pointer active:scale-[0.98] transition-all;
 }
 .pagination {
   @apply flex items-center justify-between pt-4 border-t border-border mt-4;
@@ -731,10 +731,10 @@ textarea.form-input {
   @apply relative inline-block;
 }
 .banner-thumb {
-  @apply h-10 w-16 object-cover rounded border border-border bg-muted;
+  @apply h-10 w-16 object-cover rounded-[4px] border border-border bg-muted;
 }
 .thumb-dim {
-  @apply absolute inset-0 rounded bg-background/60;
+  @apply absolute inset-0 rounded-[4px] bg-background/60;
 }
 .banner-title-text {
   @apply text-sm font-medium text-foreground;
@@ -743,7 +743,7 @@ textarea.form-input {
   @apply flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:underline truncate max-w-xs;
 }
 .pos-chip {
-  @apply inline-flex items-center justify-center min-w-6 h-5 px-1.5 bg-muted border border-border rounded text-xs font-mono font-semibold text-muted-foreground;
+  @apply inline-flex items-center justify-center min-w-6 h-5 px-1.5 bg-muted border border-border rounded-[4px] text-xs font-mono font-semibold text-muted-foreground tabular-nums;
 }
 .subtitle-green {
   @apply text-emerald-600 dark:text-emerald-400 font-medium;
@@ -754,3 +754,108 @@ textarea.form-input {
 .tox-promotion, .tox-statusbar__branding {
   display: none !important;
 }
+
+/* ─── Toast Animations ──────────────────────────────────────────────────────── */
+@keyframes toastSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes toastProgress {
+  from { width: 100%; }
+  to   { width: 0%; }
+}
+
+/* ─── View Transitions API Theme Circular Reveal ─────────────────────────── */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+::view-transition-old(root) {
+  z-index: 1;
+}
+::view-transition-new(root) {
+  z-index: 999999;
+}
+
+/* Global Smooth Color Flow during Theme Transition */
+html.theme-transitioning,
+html.theme-transitioning body,
+html.theme-transitioning header,
+html.theme-transitioning aside,
+html.theme-transitioning main,
+html.theme-transitioning div,
+html.theme-transitioning span,
+html.theme-transitioning p,
+html.theme-transitioning svg,
+html.theme-transitioning button,
+html.theme-transitioning input {
+  transition: background-color 450ms cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 450ms cubic-bezier(0.16, 1, 0.3, 1),
+              color 300ms cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+/* ─── Mascot Micro-Animations ────────────────────────────────────────────── */
+@keyframes miniMascotFloat {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-3px) rotate(1.5deg);
+  }
+}
+
+@keyframes miniMascotHandWave {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(-18deg);
+  }
+}
+
+@keyframes miniMascotBlink {
+  0%, 90%, 100% {
+    transform: scaleY(1);
+  }
+  95% {
+    transform: scaleY(0.1);
+  }
+}
+
+@keyframes miniSparklePulse {
+  0%, 100% {
+    transform: scale(0.8);
+    opacity: 0.4;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+}
+
+.animate-mini-float {
+  animation: miniMascotFloat 3s ease-in-out infinite;
+}
+
+.animate-mini-blink {
+  transform-origin: center;
+  animation: miniMascotBlink 4s infinite;
+}
+
+.animate-mini-wave {
+  transform-origin: bottom left;
+  animation: miniMascotHandWave 1.8s ease-in-out infinite;
+}
+
+.animate-mini-sparkle {
+  transform-origin: center;
+  animation: miniSparklePulse 2.2s ease-in-out infinite;
+}

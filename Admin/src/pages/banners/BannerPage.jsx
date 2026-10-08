@@ -1,245 +1,33 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import {
-  DndContext, closestCenter, PointerSensor,
-  useSensor, useSensors, DragOverlay,
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
 } from '@dnd-kit/core';
+import { arrayMove } from '@dnd-kit/sortable';
+import { useSearchParams } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
+
 import {
-  SortableContext, verticalListSortingStrategy,
-  useSortable, arrayMove,
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
-import {
-  Plus, Pencil, Trash2, Eye, EyeOff,
-  LayoutGrid, List, Check, ExternalLink, Image, Calendar, MousePointer2,
-} from '@/components/ui/Icons';
-import { useBanners, useDeleteBanner, useDeleteBulkBanners, useUpdateBanner } from '@/hooks/useBanners';
-import { bannerService, BANNER_TYPE_LABELS } from '@/services/banner.service';
+  useBanners,
+  useDeleteBanner,
+  useDeleteBulkBanners,
+  useUpdateBanner,
+  BANNERS_KEY,
+} from '@/hooks/useBanners';
+import { bannerService } from '@/services/banner.service';
+import { useMediaByIds } from '@/hooks/useMedia';
 import { toast } from '@/providers/ToastProvider';
+
+import BannerToolbar from './components/BannerToolbar';
+import BannerTable from './components/BannerTable';
+import BannerGrid from './components/BannerGrid';
+import BannerBulkBar from './components/BannerBulkBar';
 import BannerFormModal from './BannerFormModal';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
-import { useQueryClient } from '@tanstack/react-query';
-import { BANNERS_KEY } from '@/hooks/useBanners';
 import DataTablePagination from '@/components/ui/DataTablePagination';
-import { useSearchParams } from 'react-router-dom';
-import { MediaThumbnailHover } from '@/components/ui/MediaFolderBadge';
-import { useMediaByIds } from '@/hooks/useMedia';
-
-const TYPE_TABS = [
-  { key: 'all', label: 'Tất cả' },
-  { key: 'hero', label: 'Hero (Slider chính)' },
-  { key: 'popup', label: 'Popup' },
-  { key: 'sidebar', label: 'Sidebar' },
-  { key: 'category-top', label: 'Đầu danh mục' },
-  { key: 'product-top', label: 'Đầu sản phẩm' },
-];
-
-function VisibleBadge({ isVisible }) {
-  return (
-    <span className={`inline-flex items-center gap-1.5 rounded-[6px] px-2.5 py-0.5 text-xs font-medium border ${isVisible ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20' : 'bg-muted text-muted-foreground border-border'}`}>
-      <span className={`size-1.5 rounded-[2px] ${isVisible ? 'bg-emerald-500' : 'bg-muted-foreground'}`} />
-      {isVisible ? 'Hiển thị' : 'Đang ẩn'}
-    </span>
-  );
-}
-
-function TypeBadge({ type }) {
-  const label = BANNER_TYPE_LABELS?.[type] || type || 'hero';
-  const short = label.split(' ')[0]; // chỉ lấy từ đầu
-  return (
-    <span className="inline-flex items-center rounded-[6px] bg-violet-500/10 text-violet-700 dark:text-violet-300 border border-violet-500/20 px-2 py-0.5 text-xs font-medium">
-      {short}
-    </span>
-  );
-}
-
-function ScheduleBadge({ startAt, endAt }) {
-  if (!startAt && !endAt) return <span className="text-muted-foreground text-xs">—</span>;
-  const now = new Date();
-  const start = startAt ? new Date(startAt) : null;
-  const end = endAt ? new Date(endAt) : null;
-  const fmt = (d) => d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: '2-digit' });
-
-  let statusCls = 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20';
-  let label = '';
-  if (end && now > end) { statusCls = 'bg-muted text-muted-foreground border-border'; label = 'Hết hạn'; }
-  else if (start && now < start) { label = `Bắt đầu ${fmt(start)}`; }
-  else if (end) { label = `→ ${fmt(end)}`; }
-
-  return (
-    <span className={`inline-flex items-center gap-1 rounded-[6px] border px-2 py-0.5 text-xs font-medium ${statusCls}`}>
-      <Calendar size={10} />{label}
-    </span>
-  );
-}
-
-function AnalyticsChip({ views = 0, clicks = 0 }) {
-  return (
-    <div className="flex flex-col gap-0.5 text-[10px] text-muted-foreground font-mono">
-      <span className="flex items-center gap-1"><Eye size={9} />{views.toLocaleString()} views</span>
-      <span className="flex items-center gap-1"><MousePointer2 size={9} />{clicks.toLocaleString()} clicks</span>
-    </div>
-  );
-}
-
-function InlineActions({ banner, onEdit, onDelete, onToggleVisible }) {
-  return (
-    <div className="flex items-center gap-1">
-      <button
-        className="inline-flex items-center gap-1 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 px-2 py-1 text-xs font-medium transition-colors cursor-pointer"
-        title="Sửa"
-        onClick={(e) => { e.stopPropagation(); onEdit(); }}
-      >
-        <Pencil size={13} /><span>Sửa</span>
-      </button>
-      <button
-        className="inline-flex items-center gap-1 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400 hover:bg-purple-500/20 px-2 py-1 text-xs font-medium transition-colors cursor-pointer"
-        title={banner.isVisible ? 'Ẩn banner' : 'Hiện banner'}
-        onClick={(e) => { e.stopPropagation(); onToggleVisible(); }}
-      >
-        {banner.isVisible ? <EyeOff size={13} /> : <Eye size={13} />}
-        <span>{banner.isVisible ? 'Ẩn' : 'Hiện'}</span>
-      </button>
-      <button
-        className="inline-flex items-center gap-1 rounded-md bg-destructive/10 text-destructive hover:bg-destructive/20 px-2 py-1 text-xs font-medium transition-colors cursor-pointer"
-        title="Xóa"
-        onClick={(e) => { e.stopPropagation(); onDelete(); }}
-      >
-        <Trash2 size={13} /><span>Xóa</span>
-      </button>
-    </div>
-  );
-}
-
-function SortableBannerRow({ banner, index, selected, onToggle, onEdit, onDelete, onToggleVisible, highlightId }) {
-  const {
-    attributes, listeners, setNodeRef,
-    transform, transition, isDragging,
-  } = useSortable({ id: banner._id });
-
-  const isHighlighted = banner._id === highlightId;
-
-  const setRef = (el) => {
-    setNodeRef(el);
-    if (el && isHighlighted) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  };
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.35 : 1,
-    cursor: isDragging ? 'grabbing' : 'grab',
-  };
-
-  const stopDrag = (e) => e.stopPropagation();
-
-  const displayPosition = banner.position > 0 ? banner.position : index + 1;
-
-  return (
-    <tr
-      ref={setRef}
-      style={style}
-      className={`border-b border-border/60 transition-colors hover:bg-muted/40 ${selected || isHighlighted ? 'bg-primary/8 ring-1 ring-inset ring-primary/30' : ''} ${!banner.isVisible ? 'opacity-60' : ''}`}
-      {...attributes}
-      {...listeners}
-    >
-      <td className="px-3.5 py-3 align-middle w-10" onPointerDown={stopDrag}>
-        <button
-          className={`flex size-4 items-center justify-center rounded border border-input bg-background transition-colors cursor-pointer ${selected ? 'bg-primary border-primary text-primary-foreground' : ''}`}
-          onClick={() => onToggle(banner._id)}
-        >
-          {selected && <Check size={10} />}
-        </button>
-      </td>
-
-      <td className="px-3.5 py-3 align-middle w-24">
-        <div className="relative inline-block">
-          <MediaThumbnailHover media={banner._mediaObj}>
-            <img src={banner.imageUrl} alt={banner.title || 'banner'} className="h-12 w-20 object-cover rounded border border-border bg-muted" />
-          </MediaThumbnailHover>
-          {!banner.isVisible && <div className="absolute inset-0 rounded bg-background/60" />}
-        </div>
-      </td>
-
-      <td className="px-3.5 py-3 align-middle">
-        <span className={`text-sm font-medium text-foreground ${!banner.isVisible ? 'opacity-50' : ''}`}>
-          {banner.title || <span className="text-muted-foreground italic text-xs">Chưa đặt tiêu đề</span>}
-        </span>
-      </td>
-
-      <td className="px-3.5 py-3 align-middle" onPointerDown={stopDrag}>
-        {banner.link ? (() => {
-          const FRONTEND = import.meta.env.VITE_FRONTEND_URL || 'http://localhost:3000';
-          const href = banner.link.startsWith('http') ? banner.link : `${FRONTEND}${banner.link}`;
-          return (
-            <a
-              href={href} target="_blank" rel="noreferrer"
-              className="inline-flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:underline truncate max-w-xs"
-              onClick={e => e.stopPropagation()}
-            >
-              <ExternalLink size={11} />
-              <span>{banner.link.length > 38 ? banner.link.slice(0, 38) + '…' : banner.link}</span>
-            </a>
-          );
-        })() : <span className="text-muted-foreground italic text-xs">—</span>}
-      </td>
-
-      <td className="px-3.5 py-3 align-middle"><VisibleBadge isVisible={banner.isVisible} /></td>
-      <td className="px-3.5 py-3 align-middle"><ScheduleBadge startAt={banner.startAt} endAt={banner.endAt} /></td>
-      <td className="px-3.5 py-3 align-middle"><AnalyticsChip views={banner.viewCount} clicks={banner.clickCount} /></td>
-      <td className="px-3.5 py-3 align-middle text-center">
-        <span className="inline-flex items-center justify-center min-w-6 h-5 px-1.5 bg-muted border border-border rounded text-xs font-mono font-semibold text-muted-foreground">
-          {displayPosition}
-        </span>
-      </td>
-      <td className="px-3.5 py-3 align-middle" onPointerDown={stopDrag}>
-        <InlineActions banner={banner} onEdit={onEdit} onDelete={onDelete} onToggleVisible={onToggleVisible} />
-      </td>
-    </tr>
-  );
-}
-
-function BannerCard({ banner, selected, onToggle, onEdit, onDelete, onToggleVisible }) {
-  return (
-    <div className={`rounded-[6px] border border-border bg-card text-card-foreground overflow-hidden transition-colors hover:border-primary/50 ${selected ? 'border-primary ring-1 ring-primary/40' : ''}`}>
-      <div className="relative aspect-video w-full bg-muted cursor-pointer overflow-hidden" onClick={() => onToggle(banner._id)}>
-        <img src={banner.imageUrl} alt={banner.altText || banner.title || 'banner'} className="size-full object-cover" />
-        {selected && (
-          <div className="absolute top-2 right-2 size-5 rounded-[4px] bg-primary text-primary-foreground flex items-center justify-center shadow-xs z-10">
-            <Check size={12} />
-          </div>
-        )}
-        {!banner.isVisible && (
-          <div className="absolute inset-0 bg-background/80 flex items-center justify-center gap-1.5 text-xs font-medium text-muted-foreground">
-            <EyeOff size={14} /> Đang ẩn
-          </div>
-        )}
-        {/* Schedule badge overlay */}
-        {(banner.startAt || banner.endAt) && (
-          <div className="absolute top-2 left-2">
-            <ScheduleBadge startAt={banner.startAt} endAt={banner.endAt} />
-          </div>
-        )}
-      </div>
-      <div className="p-3 flex flex-col gap-2">
-        <div className="flex items-start justify-between gap-2">
-          <span className="font-semibold text-sm text-foreground line-clamp-1 flex-1">
-            {banner.title || <span className="text-muted-foreground italic text-xs">Chưa đặt tiêu đề</span>}
-          </span>
-          <TypeBadge type={banner.type} />
-        </div>
-        <VisibleBadge isVisible={banner.isVisible} />
-        <AnalyticsChip views={banner.viewCount} clicks={banner.clickCount} />
-        <div className="flex items-center justify-end gap-1 pt-2 border-t border-border">
-          <button className="inline-flex items-center gap-1 rounded-[6px] bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 px-2 py-1 text-xs font-medium transition-colors cursor-pointer" onClick={onEdit}><Pencil size={12} /></button>
-          <button className="inline-flex items-center gap-1 rounded-[6px] bg-purple-500/10 text-purple-600 dark:text-purple-400 hover:bg-purple-500/20 px-2 py-1 text-xs font-medium transition-colors cursor-pointer" onClick={onToggleVisible}>
-            {banner.isVisible ? <EyeOff size={12} /> : <Eye size={12} />}
-          </button>
-          <button className="inline-flex items-center gap-1 rounded-[6px] bg-destructive/10 text-destructive hover:bg-destructive/20 px-2 py-1 text-xs font-medium transition-colors cursor-pointer" onClick={onDelete}><Trash2 size={12} /></button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export default function BannerPage() {
   const qc = useQueryClient();
@@ -251,20 +39,16 @@ export default function BannerPage() {
   const [formTarget, setFormTarget] = useState(undefined);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [showBulkDel, setShowBulkDel] = useState(false);
-  const [activeId, setActiveId] = useState(null);
   const [localOrder, setLocalOrder] = useState(null);
   const [searchParams, setSearchParams] = useSearchParams();
-  const rowRefs = useRef({});
 
   const res = useBanners({ page, limit, type: typeFilter === 'all' ? undefined : typeFilter });
   const bannerData = res.data;
   const remoteBanners = bannerData?.data ?? (Array.isArray(bannerData) ? bannerData : []);
   const pagination = bannerData?.pagination;
-  const isLoading = res.isLoading;
   const banners = localOrder ?? remoteBanners;
 
-  // Batch-fetch media objects de lay folder info cho thumbnail hover
-  // mediaId co the la string hoac populated object
+  // Resolve media objects for preview
   const resolveId = (v) => (v && typeof v === 'object' ? v._id : v);
   const allMediaIds = banners.map((b) => resolveId(b.mediaId)).filter(Boolean);
   const { data: mediaMap = {} } = useMediaByIds(allMediaIds);
@@ -276,8 +60,11 @@ export default function BannerPage() {
   const highlightId = searchParams.get('highlight');
   useEffect(() => {
     if (!highlightId) return;
-    bannerService.locate(highlightId, limit, typeFilter === 'all' ? undefined : typeFilter)
-      .then((res) => { setPage(res.data?.data?.page || 1); })
+    bannerService
+      .locate(highlightId, limit, typeFilter === 'all' ? undefined : typeFilter)
+      .then((r) => {
+        setPage(r.data?.data?.page || 1);
+      })
       .catch(() => {});
   }, [highlightId, typeFilter, limit]);
 
@@ -285,8 +72,11 @@ export default function BannerPage() {
     if (!highlightId || !banners.length) return;
     const found = banners.find((b) => b._id === highlightId);
     if (!found) return;
-    setSelectedIds((prev) => { const n = new Set(prev); n.add(highlightId); return n; });
-    setSearchParams((p) => { p.delete('highlight'); return p; }, { replace: true });
+    setSelectedIds((prev) => new Set(prev).add(highlightId));
+    setSearchParams((p) => {
+      p.delete('highlight');
+      return p;
+    }, { replace: true });
   }, [highlightId, banners, setSearchParams]);
 
   const { mutate: deleteBanner } = useDeleteBanner();
@@ -297,14 +87,11 @@ export default function BannerPage() {
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
   );
 
-  const handleDragStart = ({ active }) => setActiveId(active.id);
-
   const handleDragEnd = async ({ active, over }) => {
-    setActiveId(null);
     if (!over || active.id === over.id) return;
 
-    const oldIndex = banners.findIndex(b => b._id === active.id);
-    const newIndex = banners.findIndex(b => b._id === over.id);
+    const oldIndex = banners.findIndex((b) => b._id === active.id);
+    const newIndex = banners.findIndex((b) => b._id === over.id);
     const startPosition = (page - 1) * limit;
     const reordered = arrayMove(banners, oldIndex, newIndex).map((b, i) => ({
       ...b,
@@ -312,7 +99,6 @@ export default function BannerPage() {
     }));
 
     setLocalOrder(reordered);
-
     const items = reordered.map((b) => ({ id: b._id, position: b.position }));
     try {
       await bannerService.reorder(items);
@@ -324,17 +110,27 @@ export default function BannerPage() {
     }
   };
 
-  const toggleSelect = (id) => setSelectedIds(prev => {
-    const next = new Set(prev);
-    next.has(id) ? next.delete(id) : next.add(id);
-    return next;
-  });
-  const toggleAll = () =>
-    setSelectedIds(prev => prev.size === banners.length ? new Set() : new Set(banners.map(b => b._id)));
+  const toggleSelect = (id) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    setSelectedIds((prev) =>
+      prev.size === banners.length ? new Set() : new Set(banners.map((b) => b._id))
+    );
+  };
 
   const handleDelete = (id) => {
     deleteBanner(id, {
-      onSuccess: () => { toast.success('Đã xóa banner'); setDeleteTarget(null); setLocalOrder(null); },
+      onSuccess: () => {
+        toast.success('Đã xóa banner');
+        setDeleteTarget(null);
+        setLocalOrder(null);
+      },
       onError: (e) => toast.error(e.response?.data?.message || 'Xóa thất bại'),
     });
   };
@@ -343,9 +139,11 @@ export default function BannerPage() {
     deleteBulk([...selectedIds], {
       onSuccess: () => {
         toast.success(`Đã xóa ${selectedIds.size} banner`);
-        setSelectedIds(new Set()); setShowBulkDel(false); setLocalOrder(null);
+        setSelectedIds(new Set());
+        setShowBulkDel(false);
+        setLocalOrder(null);
       },
-      onError: (e) => toast.error(e.response?.data?.message || 'Lỗi'),
+      onError: (e) => toast.error(e.response?.data?.message || 'Lỗi khi xóa hàng loạt'),
     });
   };
 
@@ -353,199 +151,104 @@ export default function BannerPage() {
     updateBanner(
       { id: banner._id, data: { isVisible: !banner.isVisible } },
       {
-        onSuccess: () => { toast.success(banner.isVisible ? 'Đã ẩn banner' : 'Đã hiện banner'); setLocalOrder(null); },
-        onError: () => toast.error('Lỗi cập nhật'),
+        onSuccess: () => {
+          toast.success(banner.isVisible ? 'Đã ẩn banner' : 'Đã hiện banner');
+          setLocalOrder(null);
+        },
+        onError: () => toast.error('Lỗi khi cập nhật trạng thái'),
       }
     );
   };
 
-  const allSelected = banners.length > 0 && selectedIds.size === banners.length;
-  const visibleCount = banners.filter(b => b.isVisible).length;
-  const activeItem = activeId ? banners.find(b => b._id === activeId) : null;
+  const visibleCount = banners.filter((b) => b.isVisible).length;
 
   return (
-    <div className="p-3 sm:p-6 flex flex-col gap-4 sm:gap-6 w-full max-w-full overflow-x-hidden min-h-full bg-background text-foreground">
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-border">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Banners</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {banners.length} banner &nbsp;·&nbsp;
-            <span className="text-emerald-600 dark:text-emerald-400 font-medium">{visibleCount} đang hiển thị</span>
-            {viewMode === 'table' && <span className="text-muted-foreground text-xs"> · Kéo ⠿ để sắp xếp</span>}
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {selectedIds.size > 0 && (
-            <>
-              <span className="inline-flex items-center rounded-[6px] bg-accent px-2.5 py-0.5 text-xs font-medium text-accent-foreground">{selectedIds.size} đã chọn</span>
-              <button className="inline-flex h-8 items-center justify-center gap-1 rounded-[6px] bg-destructive/10 text-destructive px-3 text-xs font-medium hover:bg-destructive/20 transition-colors cursor-pointer" onClick={() => setShowBulkDel(true)}>
-                <Trash2 size={13} /> Xóa
-              </button>
-              <button className="inline-flex h-8 items-center justify-center gap-1 rounded-[6px] px-3 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer" onClick={() => setSelectedIds(new Set())}>Bỏ chọn</button>
-            </>
-          )}
-          <div className="flex items-center rounded-[6px] border border-border bg-muted p-0.5">
-            <button className={`p-1.5 rounded-[4px] transition-colors cursor-pointer ${viewMode === 'table' ? 'bg-background text-foreground font-semibold shadow-xs' : 'text-muted-foreground hover:text-foreground'}`} onClick={() => setViewMode('table')} title="Bảng">
-              <List size={14} />
-            </button>
-            <button className={`p-1.5 rounded-[4px] transition-colors cursor-pointer ${viewMode === 'grid' ? 'bg-background text-foreground font-semibold shadow-xs' : 'text-muted-foreground hover:text-foreground'}`} onClick={() => setViewMode('grid')} title="Lưới">
-              <LayoutGrid size={14} />
-            </button>
-          </div>
-          <button className="inline-flex h-9 items-center justify-center gap-1.5 rounded-[6px] bg-primary px-4 text-sm font-medium text-primary-foreground shadow-xs hover:bg-primary/90 transition-colors cursor-pointer" onClick={() => setFormTarget(null)}>
-            <Plus size={15} /> Tạo mới
-          </button>
-        </div>
-      </div>
-
-      {/* Type Filter Tabs */}
-      <div className="flex items-center gap-1.5 border-b border-border pb-3 overflow-x-auto">
-        {TYPE_TABS.map((tab) => {
-          const active = typeFilter === tab.key;
-          return (
-            <button
-              key={tab.key}
-              type="button"
-              onClick={() => {
-                setTypeFilter(tab.key);
-                setPage(1);
-                setSelectedIds(new Set());
-                setLocalOrder(null);
-              }}
-              className={`px-3 py-1.5 text-xs font-medium rounded-[6px] transition-colors cursor-pointer border ${
-                active
-                  ? 'bg-primary text-primary-foreground border-primary'
-                  : 'bg-muted/40 text-muted-foreground hover:text-foreground hover:bg-muted border-transparent'
-              }`}
-            >
-              {tab.label}
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="rounded-[6px] border border-border bg-card text-card-foreground overflow-hidden">
-        {isLoading ? (
-          <div className="flex justify-center items-center py-20 text-sm text-muted-foreground">Đang tải...</div>
-        ) : banners.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-3 py-20 text-center text-sm text-muted-foreground">
-            <Image size={40} className="text-muted-foreground/60" />
-            <p>Chưa có banner nào{typeFilter !== 'all' ? ` thuộc nhóm ${BANNER_TYPE_LABELS?.[typeFilter] || typeFilter}` : ''}</p>
-            <button className="inline-flex h-9 items-center justify-center gap-1.5 rounded-[6px] bg-primary px-4 text-sm font-medium text-primary-foreground shadow-xs hover:bg-primary/90 transition-colors cursor-pointer" onClick={() => setFormTarget(null)}>
-              <Plus size={14} /> Tạo banner
-            </button>
-          </div>
-        ) : viewMode === 'table' ? (
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
-          >
-            <div className="w-full overflow-x-auto">
-              <table className="w-full text-left text-sm border-collapse">
-                <thead>
-                  <tr className="border-b border-border bg-muted/50 text-xs uppercase font-semibold text-muted-foreground tracking-wider">
-                    <th className="px-3.5 py-3 w-10">
-                      <button className={`flex size-4 items-center justify-center rounded border border-input bg-background transition-colors cursor-pointer ${allSelected ? 'bg-primary border-primary text-primary-foreground' : ''}`} onClick={toggleAll}>
-                        {allSelected && <Check size={10} />}
-                      </button>
-                    </th>
-                    <th className="px-3.5 py-3">Hình</th>
-                    <th className="px-3.5 py-3">Tiêu đề</th>
-                    <th className="px-3.5 py-3">Link</th>
-                    <th className="px-3.5 py-3">Trang thai</th>
-                    <th className="px-3.5 py-3">Lich</th>
-                    <th className="px-3.5 py-3">Analytics</th>
-                    <th className="px-3.5 py-3 text-center">Vị trí</th>
-                    <th className="px-3.5 py-3"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <SortableContext items={bannersWithMedia.map(b => b._id)} strategy={verticalListSortingStrategy}>
-                    {bannersWithMedia.map((b, idx) => (
-                      <SortableBannerRow
-                        key={b._id} banner={b} index={idx}
-                        selected={selectedIds.has(b._id)}
-                        onToggle={toggleSelect}
-                        onEdit={() => setFormTarget(b)}
-                        onDelete={() => setDeleteTarget(b)}
-                        onToggleVisible={() => handleToggleVisible(b)}
-                        highlightId={highlightId}
-                      />
-                    ))}
-                  </SortableContext>
-                </tbody>
-              </table>
-            </div>
-
-            <DragOverlay>
-              {activeItem && (
-                <table className="w-full text-left text-sm border-collapse bg-background shadow-sm rounded-[6px] border border-border">
-                  <tbody>
-                    <tr className="bg-background">
-                      <td className="px-3.5 py-3 w-10" />
-                      <td className="px-3.5 py-3 w-24">
-                        <img src={activeItem.imageUrl} alt="" className="h-12 w-20 object-cover rounded border border-border bg-muted" />
-                      </td>
-                      <td className="px-3.5 py-3">
-                        <span className="text-sm font-medium text-foreground">{activeItem.title || '—'}</span>
-                      </td>
-                      <td colSpan={4} />
-                    </tr>
-                  </tbody>
-                </table>
-              )}
-            </DragOverlay>
-          </DndContext>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4">
-            {bannersWithMedia.map(b => (
-              <BannerCard
-                key={b._id} banner={b}
-                selected={selectedIds.has(b._id)}
-                onToggle={toggleSelect}
-                onEdit={() => setFormTarget(b)}
-                onDelete={() => setDeleteTarget(b)}
-                onToggleVisible={() => handleToggleVisible(b)}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-
-      <DataTablePagination
-        page={page}
-        pageSize={limit}
-        total={pagination?.total ?? 0}
-        totalPages={pagination?.totalPages ?? 1}
-        onPageChange={setPage}
-        onPageSizeChange={setLimit}
+    <div className="space-y-4 max-w-full overflow-x-hidden pb-12 antialiased">
+      {/* 1. Header Toolbar with Filter Tabs */}
+      <BannerToolbar
+        typeFilter={typeFilter}
+        setTypeFilter={(t) => {
+          setTypeFilter(t);
+          setPage(1);
+          setLocalOrder(null);
+        }}
+        viewMode={viewMode}
+        setViewMode={setViewMode}
+        totalCount={pagination?.total ?? banners.length}
+        visibleCount={visibleCount}
+        onCreateNew={() => setFormTarget(null)}
       />
 
-      {formTarget !== undefined && (
-        <BannerFormModal banner={formTarget} onClose={() => { setFormTarget(undefined); setLocalOrder(null); }} />
+      {/* 2. Drag-and-drop Content Body */}
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        {viewMode === 'table' ? (
+          <BannerTable
+            banners={bannersWithMedia}
+            selectedIds={selectedIds}
+            onToggleSelect={toggleSelect}
+            onToggleAll={toggleAll}
+            onEdit={(b) => setFormTarget(b)}
+            onDelete={(b) => setDeleteTarget(b)}
+            onToggleVisible={handleToggleVisible}
+            highlightId={highlightId}
+          />
+        ) : (
+          <BannerGrid
+            banners={bannersWithMedia}
+            selectedIds={selectedIds}
+            onToggleSelect={toggleSelect}
+            onEdit={(b) => setFormTarget(b)}
+            onDelete={(b) => setDeleteTarget(b)}
+            onToggleVisible={handleToggleVisible}
+          />
+        )}
+      </DndContext>
+
+      {/* 3. Pagination */}
+      {pagination && (
+        <DataTablePagination
+          pagination={pagination}
+          onPageChange={setPage}
+          onLimitChange={(l) => {
+            setLimit(l);
+            setPage(1);
+          }}
+        />
       )}
+
+      {/* 4. Floating Bulk Bar */}
+      <BannerBulkBar
+        selectedCount={selectedIds.size}
+        onClear={() => setSelectedIds(new Set())}
+        onDeleteSelected={() => setShowBulkDel(true)}
+      />
+
+      {/* 5. Modals */}
+      {formTarget !== undefined && (
+        <BannerFormModal banner={formTarget} onClose={() => setFormTarget(undefined)} />
+      )}
+
       {deleteTarget && (
         <ConfirmDialog
           open={!!deleteTarget}
-          title="Xóa banner"
-          message={`Xóa banner "${deleteTarget.title || 'nay'}"? Hanh dong khong the hoan tac.`}
-          confirmText="Xóa" variant="danger"
+          title="Xác nhận xóa banner"
+          description={`Bạn có chắc chắn muốn xóa banner "${deleteTarget.title || 'không có tiêu đề'}"? Thao tác này không thể hoàn tác.`}
+          confirmLabel="Xóa banner"
+          danger
           onConfirm={() => handleDelete(deleteTarget._id)}
-          onCancel={() => setDeleteTarget(null)}
+          onClose={() => setDeleteTarget(null)}
         />
       )}
+
       {showBulkDel && (
         <ConfirmDialog
           open={showBulkDel}
-          title="Xóa banner"
-          message={`Xóa ${selectedIds.size} banner da chon? Hanh dong khong the hoan tac.`}
-          confirmText="Xóa tat ca" variant="danger"
+          title={`Xác nhận xóa ${selectedIds.size} banner`}
+          description="Hành động này sẽ xóa vĩnh viễn tất cả các banner đã chọn và không thể khôi phục."
+          confirmLabel={`Xóa ${selectedIds.size} banner`}
+          danger
           onConfirm={handleBulkDelete}
-          onCancel={() => setShowBulkDel(false)}
+          onClose={() => setShowBulkDel(false)}
         />
       )}
     </div>

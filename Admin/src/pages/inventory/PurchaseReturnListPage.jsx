@@ -10,12 +10,19 @@ import { useProducts } from '@/hooks/useProducts';
 import ExcelPreviewModal from '@/components/common/ExcelPreviewModal';
 import SearchableSelect from '@/components/ui/SearchableSelect';
 import { toast } from '@/providers/ToastProvider';
+import { Button } from '@/components/ui/button';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import DataTablePagination from '@/components/ui/DataTablePagination';
 
 export default function PurchaseReturnListPage() {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Excel Preview state
@@ -33,7 +40,7 @@ export default function PurchaseReturnListPage() {
     search,
     status: statusFilter,
     page,
-    limit: 10,
+    limit: pageSize,
   });
 
   const { data: suppliersData } = useSuppliers({ limit: 100 });
@@ -114,15 +121,15 @@ export default function PurchaseReturnListPage() {
   const products = productsData?.products || productsData?.data || [];
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6 p-6 antialiased">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-destructive/10 text-destructive shadow-sm">
-            <RotateCcw className="h-6 w-6" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-[6px] bg-destructive/10 text-destructive">
+            <RotateCcw className="h-5 w-5" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            <h1 className="text-xl font-bold tracking-tight text-foreground">
               Danh sách phiếu trả hàng nhập
             </h1>
             <p className="text-xs text-muted-foreground">
@@ -131,345 +138,155 @@ export default function PurchaseReturnListPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <button
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => refetch()}
-            className="inline-flex items-center gap-2 rounded-xl border border-input bg-background px-4 py-2.5 text-xs font-semibold text-foreground hover:bg-muted transition-colors shadow-xs"
+            className="rounded-[6px] text-xs font-semibold"
           >
-            <RefreshCw className="h-4 w-4" /> Làm mới
-          </button>
-          <button
+            <RefreshCw className="h-4 w-4 mr-1.5" /> Làm mới
+          </Button>
+          <Button
+            size="sm"
             onClick={() => navigate('/purchase-returns/create')}
-            className="inline-flex items-center gap-2 rounded-xl bg-destructive px-4 py-2.5 text-xs font-semibold text-destructive-foreground hover:bg-destructive/90 transition-colors shadow-md"
+            className="rounded-[6px] text-xs font-semibold bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-xs active:scale-[0.98]"
           >
-            <Plus className="h-4 w-4" /> Tạo phiếu trả
-          </button>
+            <Plus className="h-4 w-4 mr-1.5" /> Tạo phiếu trả
+          </Button>
         </div>
       </div>
 
       {/* Filter Bar */}
-      <div className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Nhập mã phiếu (PR...), tên nhà cung cấp..."
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-            className="w-full rounded-xl border border-input bg-background pl-10 pr-4 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20"
-          />
-        </div>
+      <Card className="rounded-[6px] border border-border p-4 shadow-xs">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Nhập mã phiếu (PR...), tên nhà cung cấp..."
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+              className="pl-9 h-9 text-xs rounded-[6px]"
+            />
+          </div>
 
-        <div className="flex items-center gap-3 w-48">
-          <SearchableSelect
-            options={[
-              { label: 'Tất cả trạng thái', value: '' },
-              { label: 'Đã xuất trả', value: 'completed' },
-              { label: 'Bản nháp', value: 'draft' },
-            ]}
-            value={statusFilter}
-            onChange={(val) => {
-              setStatusFilter(val);
-              setPage(1);
-            }}
-            creatable={false}
-            placeholder="Tất cả trạng thái"
-          />
+          <div className="flex items-center gap-3 w-48">
+            <SearchableSelect
+              options={[
+                { label: 'Tất cả trạng thái', value: '' },
+                { label: 'Đã xuất trả', value: 'completed' },
+                { label: 'Bản nháp', value: 'draft' },
+              ]}
+              value={statusFilter}
+              onChange={(val) => {
+                setStatusFilter(val);
+                setPage(1);
+              }}
+              creatable={false}
+              placeholder="Tất cả trạng thái"
+            />
+          </div>
         </div>
-      </div>
+      </Card>
 
       {/* Table */}
-      <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr className="border-b border-border bg-muted/40 font-semibold text-muted-foreground">
-                <th className="px-4 py-3.5 whitespace-nowrap">Mã phiếu</th>
-                <th className="px-4 py-3.5 whitespace-nowrap">Ngày trả hàng</th>
-                <th className="px-4 py-3.5 whitespace-nowrap">Nhà cung cấp</th>
-                <th className="px-4 py-3.5 whitespace-nowrap">Kho xuất</th>
-                <th className="px-4 py-3.5 whitespace-nowrap">Trạng thái</th>
-                <th className="px-4 py-3.5 text-right whitespace-nowrap">NCC phải trả</th>
-                <th className="px-4 py-3.5 text-right whitespace-nowrap">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {isLoading ? (
-                <tr>
-                  <td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">
-                    <div className="flex items-center justify-center gap-2">
-                      <RefreshCw className="h-5 w-5 animate-spin text-primary" />
-                      <span>Đang tải danh sách phiếu trả hàng nhập...</span>
-                    </div>
-                  </td>
-                </tr>
-              ) : returns.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">
-                    Chưa có phiếu xuất trả nhà cung cấp nào được khởi tạo.
-                  </td>
-                </tr>
-              ) : (
-                returns.map((item) => (
-                  <tr key={item._id} className="hover:bg-muted/30 transition-colors align-middle">
-                    <td className="px-4 py-3 font-mono font-bold text-primary whitespace-nowrap">
-                      {item.returnNumber}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
-                      {new Date(item.createdAt).toLocaleString('vi-VN')}
-                    </td>
-                    <td className="px-4 py-3 font-medium text-foreground whitespace-nowrap">
-                      {item.supplierName}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
-                      Kho Thành Phẩm SHOP
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                        <CheckCircle2 className="h-3.5 w-3.5" /> Đã xuất trả
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-right font-bold text-destructive whitespace-nowrap">
-                      {(item.totalAmount || 0).toLocaleString('vi-VN')} đ
-                    </td>
-                    <td className="px-4 py-3 text-right whitespace-nowrap">
-                      <button
-                        onClick={() => handleOpenPreview(item)}
-                        className="inline-flex items-center gap-1 rounded-lg border border-input bg-background px-2.5 py-1.5 text-xs font-semibold text-foreground hover:bg-muted transition-colors"
-                      >
-                        <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600" /> Preview Excel
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+      <Card className="rounded-[6px] border border-border shadow-xs overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow className="border-b border-border bg-muted/60 text-[11px] font-bold text-foreground">
+              <TableHead className="whitespace-nowrap">Mã phiếu</TableHead>
+              <TableHead className="whitespace-nowrap">Ngày trả hàng</TableHead>
+              <TableHead className="whitespace-nowrap">Nhà cung cấp</TableHead>
+              <TableHead className="whitespace-nowrap">Kho xuất</TableHead>
+              <TableHead className="whitespace-nowrap">Trạng thái</TableHead>
+              <TableHead className="text-right whitespace-nowrap">NCC phải trả</TableHead>
+              <TableHead className="text-right whitespace-nowrap">Thao tác</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={7} className="py-12 text-center text-muted-foreground">
+                  <div className="flex items-center justify-center gap-2">
+                    <RefreshCw className="h-4 w-4 animate-spin text-primary" />
+                    <span>Đang tải danh sách phiếu trả hàng nhập...</span>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : returns.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} className="py-12 text-center text-muted-foreground">
+                  Chưa có phiếu xuất trả nhà cung cấp nào được khởi tạo.
+                </TableCell>
+              </TableRow>
+            ) : (
+              returns.map((item) => (
+                <TableRow key={item._id} className="hover:bg-muted/30 transition-colors align-middle">
+                  <TableCell className="font-mono font-bold text-primary whitespace-nowrap text-xs">
+                    {item.returnNumber}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground whitespace-nowrap font-mono tabular-nums text-xs">
+                    {new Date(item.createdAt).toLocaleString('vi-VN')}
+                  </TableCell>
+                  <TableCell className="font-medium text-foreground whitespace-nowrap text-xs">
+                    {item.supplierName}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground whitespace-nowrap text-xs">
+                    Kho Thành Phẩm SHOP
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    <Badge
+                      variant="outline"
+                      className="bg-emerald-500/10 text-emerald-600 border-emerald-300 font-semibold text-xs"
+                    >
+                      <CheckCircle2 className="h-3 w-3 mr-1" /> Đã xuất trả
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right font-mono font-bold text-destructive whitespace-nowrap tabular-nums text-xs">
+                    {(item.totalAmount || 0).toLocaleString('vi-VN')} đ
+                  </TableCell>
+                  <TableCell className="text-right whitespace-nowrap">
+                    <Button
+                      variant="outline"
+                      size="xs"
+                      onClick={() => handleOpenPreview(item)}
+                      className="rounded-[6px] text-xs font-semibold h-7"
+                    >
+                      <FileSpreadsheet className="h-3.5 w-3.5 mr-1 text-emerald-600" /> Preview Excel
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
 
         {/* Pagination */}
-        {pagination && pagination.totalPages > 1 && (
-          <div className="flex items-center justify-between border-t border-border px-4 py-3 bg-muted/20">
-            <span className="text-xs text-muted-foreground">
-              Trang {pagination.page} / {pagination.totalPages} ({pagination.total} bản ghi)
-            </span>
-            <div className="flex items-center gap-2">
-              <button
-                disabled={page <= 1}
-                onClick={() => setPage((p) => p - 1)}
-                className="rounded-lg border border-input px-3 py-1 text-xs font-medium hover:bg-muted disabled:opacity-50"
-              >
-                Trước
-              </button>
-              <button
-                disabled={page >= pagination.totalPages}
-                onClick={() => setPage((p) => p + 1)}
-                className="rounded-lg border border-input px-3 py-1 text-xs font-medium hover:bg-muted disabled:opacity-50"
-              >
-                Sau
-              </button>
-            </div>
-          </div>
+        {pagination && (
+          <DataTablePagination
+            page={page}
+            pageSize={pageSize}
+            total={pagination.total}
+            totalPages={pagination.totalPages}
+            onPageChange={(newPage) => setPage(newPage)}
+            onPageSizeChange={(newPageSize) => {
+              setPageSize(newPageSize);
+              setPage(1);
+            }}
+            pageSizeOptions={[10, 20, 50, 100]}
+          />
         )}
-      </div>
+      </Card>
 
-      {/* Modal Tạo Phiếu Trả Hàng Nhập */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-[99] flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
-          <div className="w-full max-w-3xl max-h-[90vh] flex flex-col rounded-2xl border border-border bg-card shadow-2xl overflow-hidden">
-            <div className="flex items-center justify-between border-b border-border px-6 py-4 bg-muted/30">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-destructive/10 text-destructive">
-                  <RotateCcw className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-foreground">Tạo Phiếu Trả Hàng Nhập Cho NCC</h3>
-                  <p className="text-xs text-muted-foreground">
-                    Xuất trả sản phẩm lỗi & tự động trừ số lượng tồn kho
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted"
-              >
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmitCreate} className="flex-1 overflow-auto p-6 space-y-5">
-              {/* Chọn NCC & Ghi chú */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-foreground mb-1">
-                    Nhà Cung Cấp Trả Hàng <span className="text-destructive">*</span>
-                  </label>
-                  <SearchableSelect
-                    options={suppliers.map((s) => ({
-                      label: `${s.name} (${s.code || 'NCC'})`,
-                      value: s._id,
-                    }))}
-                    value={selectedSupplierId}
-                    onChange={(val) => setSelectedSupplierId(val)}
-                    creatable={false}
-                    placeholder="-- Chọn Nhà Cung Cấp --"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-foreground mb-1">Ghi Chú Đợt Trả Hàng</label>
-                  <input
-                    type="text"
-                    placeholder="Lý do xuất trả NCC (VD: Hàng trầy xước...)"
-                    value={note}
-                    onChange={(e) => setNote(e.target.value)}
-                    className="w-full rounded-xl border border-input bg-background px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  />
-                </div>
-              </div>
-
-              {/* Tìm & Thêm Sản Phẩm */}
-              <div>
-                <label className="block text-xs font-bold text-foreground mb-1">
-                  Tìm Sản Phẩm Xuất Trả
-                </label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <input
-                    type="text"
-                    placeholder="Gõ tên hoặc mã SKU sản phẩm..."
-                    value={productSearch}
-                    onChange={(e) => setProductSearch(e.target.value)}
-                    className="w-full rounded-xl border border-input bg-background pl-9 pr-4 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  />
-                </div>
-
-                {/* List gợi ý tìm kiếm */}
-                {productSearch && products.length > 0 && (
-                  <div className="mt-2 rounded-xl border border-border bg-card p-2 shadow-lg max-h-48 overflow-auto space-y-1">
-                    {products.map((p) => (
-                      <div
-                        key={p._id}
-                        onClick={() => {
-                          handleAddItem(p);
-                          setProductSearch('');
-                        }}
-                        className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 cursor-pointer text-xs"
-                      >
-                        <div>
-                          <span className="font-semibold text-foreground">{p.name}</span>
-                          <span className="ml-2 text-muted-foreground font-mono">({p.productCode || 'No SKU'})</span>
-                        </div>
-                        <span className="text-xs text-primary font-bold">Tồn: {p.stock || 0}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Bảng sản phẩm trả */}
-              <div>
-                <h4 className="text-xs font-bold text-foreground mb-2">Danh sách sản phẩm hoàn trả:</h4>
-                <div className="rounded-xl border border-border overflow-hidden">
-                  <table className="w-full text-xs text-left">
-                    <thead className="bg-muted/40 font-semibold border-b border-border">
-                      <tr>
-                        <th className="p-2.5">Sản phẩm</th>
-                        <th className="p-2.5 w-20">SL Trả</th>
-                        <th className="p-2.5 w-28">Đơn giá trả</th>
-                        <th className="p-2.5 w-32">Lý do lỗi</th>
-                        <th className="p-2.5 w-12 text-center">Xóa</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border">
-                      {returnItems.length === 0 ? (
-                        <tr>
-                          <td colSpan={5} className="p-6 text-center text-muted-foreground">
-                            Chưa chọn sản phẩm nào để xuất trả.
-                          </td>
-                        </tr>
-                      ) : (
-                        returnItems.map((item, idx) => (
-                          <tr key={item.productId}>
-                            <td className="p-2.5 font-medium">{item.productName}</td>
-                            <td className="p-2.5">
-                              <input
-                                type="number"
-                                min="1"
-                                value={item.quantity}
-                                onChange={(e) =>
-                                  handleItemChange(idx, 'quantity', Number(e.target.value))
-                                }
-                                className="w-full rounded border border-input px-2 py-1 text-xs"
-                              />
-                            </td>
-                            <td className="p-2.5">
-                              <input
-                                type="number"
-                                min="0"
-                                value={item.returnPrice}
-                                onChange={(e) =>
-                                  handleItemChange(idx, 'returnPrice', Number(e.target.value))
-                                }
-                                className="w-full rounded border border-input px-2 py-1 text-xs font-mono"
-                              />
-                            </td>
-                            <td className="p-2.5">
-                              <input
-                                type="text"
-                                value={item.reason}
-                                onChange={(e) => handleItemChange(idx, 'reason', e.target.value)}
-                                className="w-full rounded border border-input px-2 py-1 text-xs"
-                              />
-                            </td>
-                            <td className="p-2.5 text-center">
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveItem(idx)}
-                                className="text-destructive hover:opacity-80"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Submit */}
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="rounded-xl border border-input px-4 py-2 text-xs font-semibold text-muted-foreground hover:bg-muted"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  disabled={createMutation.isPending}
-                  className="rounded-xl bg-destructive px-5 py-2 text-xs font-semibold text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50"
-                >
-                  {createMutation.isPending ? 'Đang tạo...' : 'Xác Nhận Xuất Trả NCC'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Excel Web Preview Modal */}
       <ExcelPreviewModal
         isOpen={previewModalOpen}
         onClose={() => setPreviewModalOpen(false)}
-        title={previewTitle}
         downloadUrl={previewUrl}
+        title={previewTitle}
       />
     </div>
   );

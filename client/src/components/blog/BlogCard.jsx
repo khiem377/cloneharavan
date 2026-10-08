@@ -29,9 +29,9 @@ export const BlogCard = ({ post, viewMode = 'grid' }) => {
 
   if (viewMode === 'horizontal') {
     return (
-      <Card className="overflow-hidden border border-slate-200/90 rounded-2xl hover:border-[#284ea1]/50 hover:shadow-lg transition-all duration-300 bg-white group">
+      <Card className="overflow-hidden border border-slate-200 rounded-[6px] hover:border-slate-300 hover:shadow-xs transition-all duration-200 bg-white group shadow-xs">
         <Link href={`/blogs/${post.slug}`} className="flex flex-col sm:flex-row gap-4 p-4">
-          <div className="relative w-full sm:w-56 md:w-64 aspect-[16/10] shrink-0 rounded-xl overflow-hidden bg-slate-100 shadow-2xs">
+          <div className="relative w-full sm:w-56 md:w-64 aspect-[16/10] shrink-0 rounded-[4px] overflow-hidden bg-slate-100 shadow-2xs">
             <img
               src={thumbnail}
               alt={post.title}
@@ -39,7 +39,7 @@ export const BlogCard = ({ post, viewMode = 'grid' }) => {
               loading="lazy"
             />
             <div className="absolute top-2.5 left-2.5">
-              <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-bold bg-[#284ea1] text-white shadow-sm">
+              <span className="inline-flex items-center px-2.5 py-1 rounded-[4px] text-[11px] font-bold bg-[#284ea1] text-white shadow-sm">
                 {category}
               </span>
             </div>
@@ -68,8 +68,8 @@ export const BlogCard = ({ post, viewMode = 'grid' }) => {
                 </>
               )}
               {typeof post.viewsCount === 'number' && (
-                <span className="ml-auto text-slate-400">
-                  {post.viewsCount.toLocaleString()} xem
+                <span className="ml-auto text-slate-400 font-mono tabular-nums" suppressHydrationWarning>
+                  {post.viewsCount.toLocaleString('vi-VN')} xem
                 </span>
               )}
             </div>
@@ -81,16 +81,16 @@ export const BlogCard = ({ post, viewMode = 'grid' }) => {
 
   // Default Grid Card
   return (
-    <Card className="overflow-hidden border border-slate-200/90 rounded-2xl hover:border-[#284ea1]/50 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 bg-white group flex flex-col h-full shadow-[0_2px_10px_rgba(0,0,0,0.03)]">
-      <Link href={`/blogs/${post.slug}`} className="block relative aspect-[16/10] overflow-hidden bg-slate-100 rounded-t-2xl">
+    <Card className="overflow-hidden border border-slate-200 rounded-[6px] hover:border-slate-300 hover:shadow-xs transition-all duration-200 bg-white group flex flex-col h-full shadow-xs">
+      <Link href={`/blogs/${post.slug}`} className="block relative aspect-[16/10] overflow-hidden bg-slate-100 rounded-t-[6px]">
         <img
           src={thumbnail}
           alt={post.title}
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
           loading="lazy"
         />
         <div className="absolute top-3 left-3">
-          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-bold bg-[#284ea1] text-white shadow-sm">
+          <span className="inline-flex items-center px-2 py-0.5 rounded-[4px] text-[11px] font-bold bg-[#284ea1] text-white shadow-xs">
             {category}
           </span>
         </div>
@@ -121,8 +121,8 @@ export const BlogCard = ({ post, viewMode = 'grid' }) => {
             )}
           </div>
           {typeof post.viewsCount === 'number' && (
-            <span className="shrink-0 text-slate-400">
-              {post.viewsCount.toLocaleString()} xem
+            <span className="shrink-0 text-slate-400 font-mono tabular-nums" suppressHydrationWarning>
+              {post.viewsCount.toLocaleString('vi-VN')} xem
             </span>
           )}
         </div>

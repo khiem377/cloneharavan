@@ -2,7 +2,7 @@
 
 import React, { useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import Icon from '../../../components/common/Icon';
+import { SlidersHorizontal, X, RotateCcw } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import { Badge } from '../../../components/ui/badge';
 import { Card } from '../../../components/ui/card';
@@ -70,6 +70,14 @@ export default function SearchSortBar({
     router.push(`/search?${params.toString()}`);
   };
 
+  const handleResetAll = () => {
+    const params = new URLSearchParams();
+    if (currentFilters.q) {
+      params.set('q', currentFilters.q);
+    }
+    router.push(`/search?${params.toString()}`);
+  };
+
   const activeCategory = facets.categories?.find(
     (c) => c._id === currentFilters.category || c.slug === currentFilters.category
   );
@@ -85,9 +93,9 @@ export default function SearchSortBar({
   if (currentFilters.minPrice && currentFilters.maxPrice) {
     priceLabel = `${(Number(currentFilters.minPrice) / 1000000).toFixed(0)}tr - ${(Number(currentFilters.maxPrice) / 1000000).toFixed(0)}tr`;
   } else if (currentFilters.minPrice) {
-    priceLabel = `> ${(Number(currentFilters.minPrice) / 1000000).toFixed(0)}tr`;
+    priceLabel = `Trên ${(Number(currentFilters.minPrice) / 1000000).toFixed(0)}tr`;
   } else if (currentFilters.maxPrice) {
-    priceLabel = `< ${(Number(currentFilters.maxPrice) / 1000000).toFixed(0)}tr`;
+    priceLabel = `Dưới ${(Number(currentFilters.maxPrice) / 1000000).toFixed(0)}tr`;
   }
 
   const activeFilterCount =
@@ -96,148 +104,223 @@ export default function SearchSortBar({
       currentFilters.brand,
       currentFilters.minPrice || currentFilters.maxPrice,
       currentFilters.inStock,
+      currentFilters.onSale,
+      currentFilters.flashSale,
+      currentFilters.rating,
     ].filter(Boolean).length + Object.keys(selectedAttrs).length;
 
   return (
-    <Card className="p-3.5 space-y-2.5 shadow-2xs">
+    <Card className="p-3.5 space-y-3 shadow-xs border-slate-200 animate-fadeIn">
+      {/* Top Toolbar Row */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        {/* Left: Filter Toggle & Total Count */}
         <div className="flex items-center gap-3">
           <Button
             type="button"
             variant="outline"
             size="sm"
             onClick={onOpenMobileFilter}
-            className="lg:hidden flex items-center gap-1.5"
+            className="lg:hidden flex items-center gap-1.5 h-8 text-xs rounded-[6px]"
           >
-            <Icon name="filter" size={13} />
-            <span>Lọc</span>
+            <SlidersHorizontal size={13} className="text-[#e30019]" />
+            <span>Bộ lọc</span>
             {activeFilterCount > 0 && (
-              <Badge variant="default" className="w-4 h-4 p-0 text-[10px] flex items-center justify-center font-bold rounded-full">
+              <Badge
+                variant="default"
+                className="w-4 h-4 p-0 text-[10px] flex items-center justify-center font-bold rounded-full bg-[#e30019] text-white"
+              >
                 {activeFilterCount}
               </Badge>
             )}
           </Button>
 
-          <p className="text-xs sm:text-sm text-gray-600">
-            Tìm thấy <strong className="font-bold text-gray-900">{total}</strong> kết quả
-          </p>
+          <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-600">
+            <span>Tìm thấy</span>
+            <Badge
+              variant="secondary"
+              className="bg-slate-100 text-slate-900 border border-slate-200 font-bold font-mono tabular-nums px-2 py-0.5 rounded-[4px]"
+            >
+              {total}
+            </Badge>
+            <span>kết quả</span>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
-          <span className="text-xs text-gray-400 font-medium whitespace-nowrap hidden sm:inline">
+        {/* Right: Sort Options as Shadcn Buttons */}
+        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
+          <span className="text-xs text-slate-400 font-medium whitespace-nowrap hidden md:inline mr-1">
             Ưu tiên xem:
           </span>
 
-          <nav aria-label="Sắp xếp sản phẩm" className="flex items-center gap-2 text-xs sm:text-sm">
-            {SORT_OPTIONS.map((opt, idx) => {
+          <div className="flex items-center gap-1 bg-slate-100/70 p-0.5 rounded-[6px] border border-slate-200/80">
+            {SORT_OPTIONS.map((opt) => {
               const isActive = (currentSort || 'relevance') === opt.value;
               return (
-                <React.Fragment key={opt.value}>
-                  {idx > 0 && <span className="text-gray-300 select-none">•</span>}
-                  <button
-                    type="button"
-                    onClick={() => handleSortChange(opt.value)}
-                    className={`whitespace-nowrap transition-colors py-0.5 cursor-pointer ${
-                      isActive
-                        ? 'font-bold text-red-600'
-                        : 'font-normal text-gray-600 hover:text-red-600'
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                </React.Fragment>
+                <Button
+                  key={opt.value}
+                  type="button"
+                  variant={isActive ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => handleSortChange(opt.value)}
+                  className={`h-7 px-3 text-xs rounded-[4px] transition whitespace-nowrap active:scale-[0.98] ${
+                    isActive
+                      ? 'bg-white text-slate-900 font-bold shadow-2xs hover:bg-white hover:text-slate-900 border border-slate-200'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                  }`}
+                >
+                  <span>{opt.label}</span>
+                </Button>
               );
             })}
-          </nav>
+          </div>
         </div>
       </div>
 
+      {/* Bottom Row: Active Filter Chips */}
       {activeFilterCount > 0 && (
-        <div className="pt-2 border-t border-gray-100 flex items-center gap-2 flex-wrap">
-          <span className="text-[11px] font-medium text-gray-400">Đang lọc:</span>
+        <div className="pt-2 border-t border-slate-100 flex items-center gap-1.5 flex-wrap text-xs">
+          <span className="text-slate-400 text-[11px] font-medium mr-1">
+            Đang lọc theo:
+          </span>
 
-          {currentFilters.category && (
-            <Badge variant="secondary" className="gap-1 font-normal text-xs py-0.5 px-2">
-              <span>{activeCategory?.name || currentFilters.category}</span>
+          {activeCategory && (
+            <Badge
+              variant="outline"
+              className="inline-flex items-center gap-1 pl-2.5 pr-1.5 py-1 rounded-[4px] bg-slate-50 border-slate-200 text-slate-800 font-medium hover:border-slate-300"
+            >
+              <span>Danh mục: <strong>{activeCategory.name}</strong></span>
               <button
+                type="button"
                 onClick={() => removeFilter('category')}
-                className="text-gray-400 hover:text-gray-700 ml-0.5 cursor-pointer"
-                aria-label="Xóa lọc danh mục"
+                className="text-slate-400 hover:text-slate-700 p-0.5 rounded-full hover:bg-slate-200 transition cursor-pointer"
               >
-                <Icon name="close" size={11} />
+                <X size={11} />
               </button>
             </Badge>
           )}
 
-          {currentFilters.brand && (
-            <Badge variant="secondary" className="gap-1 font-normal text-xs py-0.5 px-2">
-              <span>{activeBrand?.name || currentFilters.brand?.toUpperCase()}</span>
+          {activeBrand && (
+            <Badge
+              variant="outline"
+              className="inline-flex items-center gap-1 pl-2.5 pr-1.5 py-1 rounded-[4px] bg-slate-50 border-slate-200 text-slate-800 font-medium hover:border-slate-300"
+            >
+              <span>Hãng: <strong>{activeBrand.name}</strong></span>
               <button
+                type="button"
                 onClick={() => removeFilter('brand')}
-                className="text-gray-400 hover:text-gray-700 ml-0.5 cursor-pointer"
-                aria-label="Xóa lọc thương hiệu"
+                className="text-slate-400 hover:text-slate-700 p-0.5 rounded-full hover:bg-slate-200 transition cursor-pointer"
               >
-                <Icon name="close" size={11} />
+                <X size={11} />
               </button>
             </Badge>
           )}
 
           {priceLabel && (
-            <Badge variant="secondary" className="gap-1 font-normal text-xs py-0.5 px-2">
-              <span>{priceLabel}</span>
+            <Badge
+              variant="outline"
+              className="inline-flex items-center gap-1 pl-2.5 pr-1.5 py-1 rounded-[4px] bg-slate-50 border-slate-200 text-slate-800 font-medium hover:border-slate-300 font-mono"
+            >
+              <span>Giá: <strong>{priceLabel}</strong></span>
               <button
+                type="button"
                 onClick={() => removeFilter('price')}
-                className="text-gray-400 hover:text-gray-700 ml-0.5 cursor-pointer"
-                aria-label="Xóa lọc giá"
+                className="text-slate-400 hover:text-slate-700 p-0.5 rounded-full hover:bg-slate-200 transition cursor-pointer"
               >
-                <Icon name="close" size={11} />
+                <X size={11} />
               </button>
             </Badge>
           )}
 
-          {currentFilters.inStock && (
-            <Badge variant="secondary" className="gap-1 font-normal text-xs py-0.5 px-2">
+          {currentFilters.inStock === 'true' && (
+            <Badge
+              variant="outline"
+              className="inline-flex items-center gap-1 pl-2.5 pr-1.5 py-1 rounded-[4px] bg-emerald-50 border-emerald-200 text-emerald-800 font-medium"
+            >
               <span>Còn hàng</span>
               <button
+                type="button"
                 onClick={() => removeFilter('inStock')}
-                className="text-gray-400 hover:text-gray-700 ml-0.5 cursor-pointer"
-                aria-label="Xóa lọc còn hàng"
+                className="text-emerald-500 hover:text-emerald-800 p-0.5 rounded-full hover:bg-emerald-100 transition cursor-pointer"
               >
-                <Icon name="close" size={11} />
+                <X size={11} />
               </button>
             </Badge>
           )}
 
-          {Object.entries(selectedAttrs).map(([attrName, attrVal]) => (
+          {currentFilters.onSale === 'true' && (
             <Badge
-              key={attrName}
-              variant="destructive"
-              className="gap-1 font-normal text-xs py-0.5 px-2 bg-red-50 text-red-700 border border-red-100"
+              variant="outline"
+              className="inline-flex items-center gap-1 pl-2.5 pr-1.5 py-1 rounded-[4px] bg-red-50 border-red-200 text-[#e30019] font-medium"
             >
-              <span>{attrName}: <strong className="font-semibold">{attrVal}</strong></span>
+              <span>Đang giảm giá</span>
               <button
-                onClick={() => removeAttr(attrName)}
-                className="text-red-400 hover:text-red-700 ml-0.5 cursor-pointer"
-                aria-label={`Xóa lọc ${attrName}`}
+                type="button"
+                onClick={() => removeFilter('onSale')}
+                className="text-red-400 hover:text-[#e30019] p-0.5 rounded-full hover:bg-red-100 transition cursor-pointer"
               >
-                <Icon name="close" size={11} />
+                <X size={11} />
+              </button>
+            </Badge>
+          )}
+
+          {currentFilters.flashSale === 'true' && (
+            <Badge
+              variant="outline"
+              className="inline-flex items-center gap-1 pl-2.5 pr-1.5 py-1 rounded-[4px] bg-amber-50 border-amber-200 text-amber-800 font-medium"
+            >
+              <span>Flash Sale</span>
+              <button
+                type="button"
+                onClick={() => removeFilter('flashSale')}
+                className="text-amber-500 hover:text-amber-800 p-0.5 rounded-full hover:bg-amber-100 transition cursor-pointer"
+              >
+                <X size={11} />
+              </button>
+            </Badge>
+          )}
+
+          {currentFilters.rating && (
+            <Badge
+              variant="outline"
+              className="inline-flex items-center gap-1 pl-2.5 pr-1.5 py-1 rounded-[4px] bg-amber-50 border-amber-200 text-amber-800 font-medium"
+            >
+              <span>Từ {currentFilters.rating} sao</span>
+              <button
+                type="button"
+                onClick={() => removeFilter('rating')}
+                className="text-amber-500 hover:text-amber-800 p-0.5 rounded-full hover:bg-amber-100 transition cursor-pointer"
+              >
+                <X size={11} />
+              </button>
+            </Badge>
+          )}
+
+          {Object.entries(selectedAttrs).map(([attrKey, attrVal]) => (
+            <Badge
+              key={attrKey}
+              variant="outline"
+              className="inline-flex items-center gap-1 pl-2.5 pr-1.5 py-1 rounded-[4px] bg-slate-50 border-slate-200 text-slate-800 font-medium"
+            >
+              <span>{attrKey}: <strong>{attrVal}</strong></span>
+              <button
+                type="button"
+                onClick={() => removeAttr(attrKey)}
+                className="text-slate-400 hover:text-slate-700 p-0.5 rounded-full hover:bg-slate-200 transition cursor-pointer"
+              >
+                <X size={11} />
               </button>
             </Badge>
           ))}
 
           <Button
             type="button"
-            variant="link"
+            variant="ghost"
             size="sm"
-            onClick={() => {
-              const params = new URLSearchParams();
-              if (currentFilters.q) params.set('q', currentFilters.q);
-              if (currentFilters.sort) params.set('sort', currentFilters.sort);
-              router.push(`/search?${params.toString()}`);
-            }}
-            className="h-auto p-0 text-xs text-red-600 hover:underline font-medium ml-1"
+            onClick={handleResetAll}
+            className="h-6 px-2 text-[11px] text-[#e30019] hover:bg-red-50 hover:text-[#c40015] font-semibold ml-auto"
           >
-            Xóa tất cả
+            <RotateCcw size={10} className="mr-1" />
+            <span>Xóa tất cả lọc</span>
           </Button>
         </div>
       )}

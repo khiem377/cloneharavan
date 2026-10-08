@@ -85,7 +85,7 @@ export default async function BlogDetailPage({ params }) {
           Bài viết bạn đang tìm kiếm không tồn tại hoặc đã được chuyển sang địa chỉ khác.
         </p>
         <Link href="/blogs">
-          <Button className="flex items-center gap-2 bg-[#284ea1] hover:bg-[#1e3b82] text-white rounded-xl shadow-xs">
+          <Button className="flex items-center gap-2 bg-[#284ea1] hover:bg-[#1e3b82] text-white rounded-[6px] shadow-xs active:scale-[0.98]">
             <ArrowLeft className="w-4 h-4" />
             <span>Quay lại trang tin tức</span>
           </Button>
@@ -121,7 +121,7 @@ export default async function BlogDetailPage({ params }) {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
           {/* Main Article Content (8 cols on desktop) */}
-          <div className="lg:col-span-8 bg-white rounded-2xl border border-gray-200/90 p-4 sm:p-7 shadow-2xs">
+          <div className="lg:col-span-8 bg-white rounded-[6px] border border-gray-200/90 p-4 sm:p-7 shadow-2xs">
             {/* Header / Meta */}
             <BlogDetailHeader post={post} />
 

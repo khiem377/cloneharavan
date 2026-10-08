@@ -107,10 +107,10 @@ export const VisualSearchModal = ({ isOpen, onClose }) => {
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onClick={() => fileInputRef.current?.click()}
-            className={`border-2 border-dashed rounded-xl py-10 px-4 text-center cursor-pointer transition flex flex-col items-center justify-center gap-3 ${
+            className={`border-2 border-dashed rounded-[6px] py-10 px-4 text-center cursor-pointer transition flex flex-col items-center justify-center gap-3 ${
               dragActive
                 ? 'border-red-600 bg-red-50/50'
-                : 'border-gray-200 hover:border-red-500 hover:bg-gray-50'
+                : 'border-slate-200 hover:border-red-500 hover:bg-slate-50'
             }`}
           >
             <input

@@ -2,6 +2,19 @@ import { api } from '@/lib/axios';
 
 export const productService = {
   /**
+   * Lấy danh sách sản phẩm với các bộ lọc phía client
+   */
+  async getProducts(params = {}) {
+    try {
+      const res = await api.get('/products', { params });
+      return res.data?.data || [];
+    } catch (err) {
+      console.error('Client getProducts error:', err?.message);
+      return [];
+    }
+  },
+
+  /**
    * Lấy chi tiết sản phẩm phía client
    */
   async getProductBySlug(slugOrId) {

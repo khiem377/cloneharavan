@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Loader2, RefreshCwIcon, ImageIcon, GlobeIcon } from '@/components/ui/Icons';
+import { ArrowLeft, Loader2, RefreshCwIcon, ImageIcon, GlobeIcon, Check } from '@/components/ui/Icons';
 import { useBlogPost, useBlogCategories, useBlogTags } from '@/hooks/useBlog';
 import { blogPostService } from '@/services/blog.service';
 import { toast } from '@/providers/ToastProvider';
@@ -11,6 +11,10 @@ import MultiSelectSearch from '@/components/ui/MultiSelectSearch';
 import SearchableSelect from '@/components/ui/SearchableSelect';
 import DateTimePicker from '@/components/ui/DateTimePicker';
 import useAuthStore from '@/store/authStore';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 
 const decodeHtml = (html) => {
   if (!html) return '';
@@ -56,7 +60,7 @@ export default function BlogPostFormPage() {
   const [form, setForm] = useState(DEFAULT_FORM);
   const [saving, setSaving] = useState(false);
   const [showMedia, setShowMedia] = useState(false);
-  const [pickedMedia, setPickedMedia] = useState(null); // track full media object for folder hover
+  const [pickedMedia, setPickedMedia] = useState(null);
 
   const FRONTEND_URL = import.meta.env.VITE_FRONTEND_URL || 'http://localhost:3000';
 
@@ -93,15 +97,8 @@ export default function BlogPostFormPage() {
 
   const set = (field, value) => setForm(f => ({ ...f, [field]: value }));
 
-  const toggleTag = (tagId) => {
-    setForm(f => ({
-      ...f,
-      tags: f.tags.includes(tagId) ? f.tags.filter(t => t !== tagId) : [...f.tags, tagId],
-    }));
-  };
-
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     if (!form.title.trim()) return toast.error('Vui lòng nhập tiêu đề');
     if (!form.categories?.length) return toast.error('Vui lòng chọn ít nhất một danh mục');
     if (!form.content.trim()) return toast.error('Vui lòng nhập nội dung');
@@ -135,305 +132,328 @@ export default function BlogPostFormPage() {
   if (loadingPost) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="size-6 animate-spin text-muted-foreground" />
+        <Loader2 className="size-6 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="sticky -top-3 sm:-top-6 z-30 -mt-3 sm:-mt-6 -mx-3 sm:-mx-6 px-4 sm:px-6 py-3 bg-background/95 backdrop-blur-md border-b border-border flex items-center justify-between gap-3 shadow-xs">
+    <form onSubmit={handleSubmit} className="space-y-6 max-w-6xl mx-auto p-4 sm:p-6">
+      <div className="sticky -top-3 sm:-top-6 z-30 -mt-3 sm:-mt-6 -mx-3 sm:-mx-6 px-4 sm:px-6 py-3 bg-background/95 border-b border-border flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <button type="button" onClick={() => navigate('/blog/posts')} className="p-1.5 rounded-lg hover:bg-muted transition-colors">
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            onClick={() => navigate('/blog/posts')}
+            className="h-8 w-8 rounded-[6px] border-border text-muted-foreground hover:text-foreground"
+          >
             <ArrowLeft className="size-4" />
-          </button>
+          </Button>
           <div>
-            <h1 className="text-sm font-semibold text-foreground">{isEdit ? 'Chỉnh sửa bài viết' : 'Tạo bài viết mới'}</h1>
+            <h1 className="text-base font-bold text-foreground">{isEdit ? 'Chỉnh sửa bài viết' : 'Tạo bài viết mới'}</h1>
             <p className="text-xs text-muted-foreground">
               {isEdit ? form.title.slice(0, 50) : 'Điền thông tin bài viết'}
             </p>
           </div>
         </div>
         <div className="flex gap-2">
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
             onClick={() => { set('status', 'draft'); handleSubmit({ preventDefault: () => { } }); }}
-            className="px-4 py-1.5 rounded-lg border border-border text-sm font-medium hover:bg-muted transition-colors"
+            className="h-8 rounded-[6px] text-xs font-semibold"
           >
             Lưu nháp
-          </button>
-          <button
+          </Button>
+          <Button
             type="submit"
             disabled={saving}
+            size="sm"
             onClick={() => set('status', 'published')}
-            className="flex items-center gap-2 px-4 py-1.5 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+            className="h-8 rounded-[6px] bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center gap-1.5"
           >
-            {saving && <Loader2 className="size-4 animate-spin" />}
+            {saving && <Loader2 className="size-3.5 animate-spin" />}
             {isEdit ? 'Cập nhật' : 'Đăng bài'}
-          </button>
+          </Button>
         </div>
       </div>
 
-      {/* Spacer to push content below fixed bar */}
-      <div className="h-12" />
-
-      <div className="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-6 pt-2">
         <div className="space-y-6">
-          <div className="bg-card border border-border rounded-xl p-5 space-y-4">
-            <div>
-              <label className="text-sm font-medium text-foreground block mb-1.5">Tiêu đề <span className="text-destructive">*</span></label>
-              <input
-                className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/20"
-                placeholder="Nhập tiêu đề bài viết..."
-                value={form.title}
-                onChange={e => set('title', e.target.value)}
-              />
-            </div>
-
-            {/* Custom Slug / Permalink Input */}
-            <div>
-              <label className="text-xs font-medium text-foreground block mb-1.5">
-                Slug
-              </label>
-              <div className="flex gap-2">
-                <input
-                  className="w-full h-10 px-3 rounded-md border border-input bg-background font-mono text-xs text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20"
-                  placeholder="Nhấp Generate hoặc tự nhập slug..."
-                  value={form.slug}
-                  onChange={e => set('slug', computedSlug(e.target.value))}
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!form.title.trim()) {
-                      toast.error('Vui lòng nhập tiêu đề trước khi sinh slug');
-                      return;
-                    }
-                    set('slug', computedSlug(form.title));
-                    toast.success('Đã tạo slug từ tiêu đề');
-                  }}
-                  className="h-10 px-3.5 rounded-md border border-border bg-muted/40 hover:bg-muted text-xs font-semibold text-foreground transition-colors shrink-0 flex items-center gap-1.5 cursor-pointer"
-                  title="Tự động tạo slug từ tiêu đề bài viết"
-                >
-                  <RefreshCwIcon className="size-3.5" />
-                  <span>Generate</span>
-                </button>
-              </div>
-              <p className="text-[11px] text-muted-foreground mt-1.5 flex items-center gap-1 font-mono">
-                <GlobeIcon className="size-3.5 text-primary shrink-0" />
-                <span>URL Preview:</span>
-                <span className="text-primary font-semibold truncate">{FRONTEND_URL}/blog/{form.slug || computedSlug(form.title || 'bai-viet')}</span>
-              </p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-foreground block mb-1.5">Mô tả ngắn (excerpt)</label>
-              <textarea
-                rows={3}
-                className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 resize-none"
-                placeholder="Tự động lấy từ nội dung nếu để trống..."
-                value={form.excerpt}
-                onChange={e => set('excerpt', e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="bg-card border border-border rounded-xl p-5">
-            <label className="text-sm font-medium text-foreground block mb-3">Nội dung <span className="text-destructive">*</span></label>
-            <RichTextEditor value={form.content} onChange={v => set('content', v)} />
-          </div>
-
-          <div className="bg-card border border-border rounded-xl overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-3.5 border-b border-border bg-muted/30">
-              <h3 className="text-sm font-semibold text-foreground">SEO Preview</h3>
-              <div className="flex items-center gap-1.5 text-xs text-emerald-700 dark:text-emerald-400 font-medium">
-                <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-                Schema auto-generated
-              </div>
-            </div>
-
-            {/* Google SERP Preview */}
-            <div className="p-5 space-y-5">
+          <Card className="rounded-[6px] border border-border shadow-none">
+            <CardHeader className="pb-3 border-b border-border">
+              <CardTitle className="text-sm font-semibold text-foreground">Nội dung chính</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-4 space-y-4">
               <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">Google Search Preview</p>
-                <div className="border border-border rounded-lg p-4 bg-background space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground block mb-1.5">Tiêu đề <span className="text-destructive">*</span></label>
+                <Input
+                  className="h-9 rounded-[6px] text-xs"
+                  placeholder="Nhập tiêu đề bài viết..."
+                  value={form.title}
+                  onChange={e => set('title', e.target.value)}
+                />
+              </div>
+
+              {/* Custom Slug / Permalink Input */}
+              <div>
+                <label className="text-xs font-medium text-muted-foreground block mb-1.5">
+                  Slug URL
+                </label>
+                <div className="flex gap-2">
+                  <Input
+                    className="h-9 rounded-[6px] font-mono text-xs"
+                    placeholder="Nhấp Generate hoặc tự nhập slug..."
+                    value={form.slug}
+                    onChange={e => set('slug', computedSlug(e.target.value))}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (!form.title.trim()) {
+                        toast.error('Vui lòng nhập tiêu đề trước khi sinh slug');
+                        return;
+                      }
+                      set('slug', computedSlug(form.title));
+                      toast.success('Đã tạo slug từ tiêu đề');
+                    }}
+                    className="h-9 px-3 rounded-[6px] text-xs font-semibold shrink-0"
+                    title="Tự động tạo slug từ tiêu đề bài viết"
+                  >
+                    <RefreshCwIcon className="size-3.5 mr-1" />
+                    <span>Generate</span>
+                  </Button>
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-1.5 flex items-center gap-1 font-mono truncate">
+                  <GlobeIcon className="size-3 text-primary shrink-0" />
+                  <span>URL:</span>
+                  <span className="text-primary font-semibold truncate">{FRONTEND_URL}/blog/{form.slug || computedSlug(form.title || 'bai-viet')}</span>
+                </p>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground block mb-1.5">Mô tả ngắn (excerpt)</label>
+                <textarea
+                  rows={3}
+                  className="w-full px-3 py-2 rounded-[6px] border border-input bg-background text-xs outline-none focus:border-ring focus:ring-1 focus:ring-ring resize-none"
+                  placeholder="Tự động lấy từ nội dung nếu để trống..."
+                  value={form.excerpt}
+                  onChange={e => set('excerpt', e.target.value)}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-[6px] border border-border shadow-none">
+            <CardHeader className="pb-3 border-b border-border">
+              <CardTitle className="text-sm font-semibold text-foreground">Nội dung bài viết <span className="text-destructive">*</span></CardTitle>
+            </CardHeader>
+            <CardContent className="pt-4">
+              <RichTextEditor value={form.content} onChange={v => set('content', v)} />
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-[6px] border border-border shadow-none overflow-hidden">
+            <CardHeader className="pb-3 border-b border-border flex flex-row items-center justify-between space-y-0">
+              <CardTitle className="text-sm font-semibold text-foreground">SEO & Trình tìm kiếm</CardTitle>
+              <Badge variant="outline" className="text-[10px] rounded-[4px] bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
+                Schema auto-generated
+              </Badge>
+            </CardHeader>
+
+            <CardContent className="pt-4 space-y-4">
+              {/* Google SERP Preview */}
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Google Search Preview</p>
+                <div className="border border-border rounded-[6px] p-4 bg-muted/10 space-y-1.5">
                   <div className="flex items-center gap-2">
-                    <div className="size-4 rounded-full bg-muted flex items-center justify-center shrink-0">
-                      <svg className="size-2.5 text-muted-foreground" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10" /></svg>
-                    </div>
-                    <span className="text-xs text-[#202124] dark:text-zinc-400 truncate">{canonicalUrl}</span>
-                    <svg className="size-3 text-muted-foreground shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9l6 6 6-6" /></svg>
+                    <span className="text-xs text-muted-foreground truncate">{canonicalUrl}</span>
                   </div>
-                  <div className="text-[#1a0dab] dark:text-[#8ab4f8] text-lg leading-snug line-clamp-1 hover:underline cursor-pointer">
+                  <div className="text-primary text-base font-semibold leading-snug line-clamp-1 hover:underline cursor-pointer">
                     {form.metaTitle || form.title || 'Tiêu đề bài viết sẽ hiển thị ở đây'}
                   </div>
-                  <div className="text-sm text-[#4d5156] dark:text-zinc-400 line-clamp-2 leading-relaxed">
+                  <div className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
                     {form.metaDescription || form.excerpt || 'Mô tả bài viết sẽ hiển thị ở đây. Nếu để trống, hệ thống sẽ tự động trích xuất từ nội dung.'}
                   </div>
                 </div>
               </div>
 
               {/* Editable meta fields */}
-              <div className="grid grid-cols-1 gap-4">
+              <div className="grid grid-cols-1 gap-3">
                 <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-xs font-medium text-foreground">Meta title</label>
-                    <span className={`text-xs tabular-nums ${form.metaTitle.length > 60 ? 'text-orange-500 font-medium' : 'text-muted-foreground'}`}>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-medium text-muted-foreground">Meta title</label>
+                    <span className={`text-[11px] font-mono tabular-nums ${form.metaTitle.length > 60 ? 'text-amber-500 font-medium' : 'text-muted-foreground'}`}>
                       {form.metaTitle.length} / 70
                     </span>
                   </div>
-                  <input
-                    className="w-full h-9 px-3 rounded-md border border-input bg-background text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/20"
+                  <Input
+                    className="h-8 rounded-[6px] text-xs"
                     placeholder={form.title.slice(0, 70) || 'Để trống — tự lấy từ tiêu đề bài viết'}
                     value={form.metaTitle}
                     onChange={e => set('metaTitle', e.target.value)}
                     maxLength={70}
                   />
                   {form.metaTitle.length > 60 && (
-                    <p className="text-xs text-orange-500 mt-1">Nên giữ dưới 60 ký tự để hiển thị đầy đủ trên Google</p>
+                    <p className="text-[11px] text-amber-500 mt-1">Nên giữ dưới 60 ký tự để hiển thị đầy đủ trên Google</p>
                   )}
                 </div>
                 <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-xs font-medium text-foreground">Meta description</label>
-                    <span className={`text-xs tabular-nums ${form.metaDescription.length > 140 ? 'text-orange-500 font-medium' : 'text-muted-foreground'}`}>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-medium text-muted-foreground">Meta description</label>
+                    <span className={`text-[11px] font-mono tabular-nums ${form.metaDescription.length > 140 ? 'text-amber-500 font-medium' : 'text-muted-foreground'}`}>
                       {form.metaDescription.length} / 160
                     </span>
                   </div>
                   <textarea
-                    rows={3}
-                    className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 resize-none"
+                    rows={2}
+                    className="w-full px-3 py-1.5 rounded-[6px] border border-input bg-background text-xs outline-none focus:border-ring focus:ring-1 focus:ring-ring resize-none"
                     placeholder="Để trống — tự trích xuất từ nội dung bài viết"
                     value={form.metaDescription}
                     onChange={e => set('metaDescription', e.target.value)}
                     maxLength={160}
                   />
                   {form.metaDescription.length > 140 && (
-                    <p className="text-xs text-orange-500 mt-1">Nên giữ dưới 140 ký tự để tránh bị cắt ngắn</p>
+                    <p className="text-[11px] text-amber-500 mt-1">Nên giữ dưới 140 ký tự để tránh bị cắt ngắn</p>
                   )}
                 </div>
               </div>
 
-              {/* Auto info — professional table style */}
-              <div className="border border-border rounded-lg overflow-hidden text-xs">
-                <div className="grid grid-cols-[120px_1fr] divide-x divide-border">
-                  <div className="px-3 py-2 bg-muted/40 text-muted-foreground font-medium">Canonical URL</div>
-                  <div className="px-3 py-2 font-mono text-foreground truncate">{canonicalUrl}</div>
+              {/* Auto info */}
+              <div className="border border-border rounded-[6px] overflow-hidden text-xs">
+                <div className="grid grid-cols-[110px_1fr] divide-x divide-border">
+                  <div className="px-3 py-1.5 bg-muted/40 text-muted-foreground font-medium">Canonical URL</div>
+                  <div className="px-3 py-1.5 font-mono text-foreground truncate">{canonicalUrl}</div>
                 </div>
-                <div className="grid grid-cols-[120px_1fr] divide-x divide-border border-t border-border">
-                  <div className="px-3 py-2 bg-muted/40 text-muted-foreground font-medium">JSON-LD Schema</div>
-                  <div className="px-3 py-2 text-foreground">BlogPosting · BreadcrumbList · FAQPage · WebSite</div>
+                <div className="grid grid-cols-[110px_1fr] divide-x divide-border border-t border-border">
+                  <div className="px-3 py-1.5 bg-muted/40 text-muted-foreground font-medium">JSON-LD Schema</div>
+                  <div className="px-3 py-1.5 text-foreground">BlogPosting · BreadcrumbList · FAQPage · WebSite</div>
                 </div>
-                <div className="grid grid-cols-[120px_1fr] divide-x divide-border border-t border-border">
-                  <div className="px-3 py-2 bg-muted/40 text-muted-foreground font-medium">Social Tags</div>
-                  <div className="px-3 py-2 text-foreground">OpenGraph · Twitter Card</div>
-                </div>
-                <div className="grid grid-cols-[120px_1fr] divide-x divide-border border-t border-border">
-                  <div className="px-3 py-2 bg-muted/40 text-muted-foreground font-medium">Language</div>
-                  <div className="px-3 py-2 text-foreground">vi-VN · E-E-A-T author entity</div>
+                <div className="grid grid-cols-[110px_1fr] divide-x divide-border border-t border-border">
+                  <div className="px-3 py-1.5 bg-muted/40 text-muted-foreground font-medium">Social Tags</div>
+                  <div className="px-3 py-1.5 text-foreground">OpenGraph · Twitter Card</div>
                 </div>
               </div>
-            </div>
-          </div>
-
+            </CardContent>
+          </Card>
         </div>
 
         <div className="space-y-4">
-          <div className="bg-card border border-border rounded-xl p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-foreground">Xuất bản</h3>
-            <div>
-              <label className="text-xs text-muted-foreground block mb-1">Trạng thái</label>
-              <SearchableSelect
-                options={[
-                  { label: 'Nháp', value: 'draft' },
-                  { label: 'Chờ duyệt', value: 'pending_review' },
-                  { label: 'Đã đăng', value: 'published' },
-                  { label: 'Lưu trữ', value: 'archived' },
-                ]}
-                value={form.status}
-                onChange={(val) => set('status', val)}
-                creatable={false}
-                placeholder="Chọn trạng thái..."
-              />
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground block mb-1">Lên lịch đăng</label>
-              <DateTimePicker
-                value={form.scheduledAt}
-                onChange={(val) => set('scheduledAt', val)}
-                placeholder="Chọn thời gian lên lịch đăng..."
-                align="right"
-              />
-            </div>
-            <div className="space-y-2 pt-1">
-              {[
-                { key: 'isActive', label: 'Hiển thị' },
-                { key: 'isPinned', label: 'Ghim lên đầu' },
-                { key: 'isFeatured', label: 'Nổi bật' },
-                { key: 'allowComment', label: 'Cho phép bình luận' },
-              ].map(({ key, label }) => (
-                <label key={key} className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={form[key]}
-                    onChange={e => set(key, e.target.checked)}
-                    className="rounded border-border"
-                  />
-                  <span className="text-sm text-foreground">{label}</span>
-                </label>
-              ))}
-            </div>
-          </div>
+          <Card className="rounded-[6px] border border-border shadow-none">
+            <CardHeader className="pb-3 border-b border-border">
+              <CardTitle className="text-sm font-semibold text-foreground">Xuất bản</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-4 space-y-3">
+              <div>
+                <label className="text-xs text-muted-foreground block mb-1">Trạng thái</label>
+                <SearchableSelect
+                  options={[
+                    { label: 'Nháp', value: 'draft' },
+                    { label: 'Chờ duyệt', value: 'pending_review' },
+                    { label: 'Đã đăng', value: 'published' },
+                    { label: 'Lưu trữ', value: 'archived' },
+                  ]}
+                  value={form.status}
+                  onChange={(val) => set('status', val)}
+                  creatable={false}
+                  placeholder="Chọn trạng thái..."
+                />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground block mb-1">Lên lịch đăng</label>
+                <DateTimePicker
+                  value={form.scheduledAt}
+                  onChange={(val) => set('scheduledAt', val)}
+                  placeholder="Chọn thời gian lên lịch đăng..."
+                  align="right"
+                />
+              </div>
+              <div className="space-y-2 pt-2 border-t border-border">
+                {[
+                  { key: 'isActive', label: 'Hiển thị' },
+                  { key: 'isPinned', label: 'Ghim lên đầu' },
+                  { key: 'isFeatured', label: 'Nổi bật' },
+                  { key: 'allowComment', label: 'Cho phép bình luận' },
+                ].map(({ key, label }) => (
+                  <label key={key} className="flex items-center gap-2 cursor-pointer text-xs">
+                    <input
+                      type="checkbox"
+                      checked={form[key]}
+                      onChange={e => set(key, e.target.checked)}
+                      className="rounded-[3px] border-border size-3.5"
+                    />
+                    <span className="text-foreground">{label}</span>
+                  </label>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
 
-          <div className="bg-card border border-border rounded-xl p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-foreground">Thumbnail</h3>
-            {form.thumbnailUrl ? (
-              <div className="relative group">
-                <MediaThumbnailHover media={pickedMedia} className="w-full">
-                  <img src={form.thumbnailUrl} alt="" className="w-full aspect-video object-cover rounded-lg" />
-                </MediaThumbnailHover>
+          <Card className="rounded-[6px] border border-border shadow-none">
+            <CardHeader className="pb-3 border-b border-border">
+              <CardTitle className="text-sm font-semibold text-foreground">Thumbnail</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-4">
+              {form.thumbnailUrl ? (
+                <div className="relative group">
+                  <MediaThumbnailHover media={pickedMedia} className="w-full">
+                    <img src={form.thumbnailUrl} alt="" className="w-full aspect-video object-cover rounded-[6px] border border-border" />
+                  </MediaThumbnailHover>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => { set('thumbnailMediaId', ''); set('thumbnailUrl', ''); setPickedMedia(null); }}
+                    className="absolute top-2 right-2 h-7 rounded-[4px] opacity-0 group-hover:opacity-100 transition-opacity text-xs"
+                  >
+                    Xóa
+                  </Button>
+                </div>
+              ) : (
                 <button
                   type="button"
-                  onClick={() => { set('thumbnailMediaId', ''); set('thumbnailUrl', ''); setPickedMedia(null); }}
-                  className="absolute top-2 right-2 p-1.5 bg-destructive text-white rounded-md opacity-0 group-hover:opacity-100 transition-opacity text-xs"
+                  onClick={() => setShowMedia(true)}
+                  className="w-full aspect-video border-2 border-dashed border-border rounded-[6px] flex flex-col items-center justify-center gap-2 text-muted-foreground hover:border-primary hover:text-primary transition-colors cursor-pointer bg-muted/10 active:scale-[0.98]"
                 >
-                  Xóa
+                  <ImageIcon className="size-6 opacity-70" />
+                  <span className="text-xs">Chọn ảnh thumbnail</span>
                 </button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setShowMedia(true)}
-                className="w-full aspect-video border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center gap-2 text-muted-foreground hover:border-primary hover:text-primary transition-colors cursor-pointer"
-              >
-                <ImageIcon className="size-8 opacity-70" />
-                <span className="text-xs">Chọn ảnh thumbnail</span>
-              </button>
-            )}
-          </div>
+              )}
+            </CardContent>
+          </Card>
 
-          <div className="bg-card border border-border rounded-xl p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-foreground">Danh mục <span className="text-destructive">*</span></h3>
-            <MultiSelectSearch
-              options={categories.map(c => ({ value: c._id, label: c.name }))}
-              selected={form.categories}
-              onChange={v => set('categories', v)}
-              placeholder="Tìm và chọn danh mục..."
-              chipColor="primary"
-            />
-          </div>
+          <Card className="rounded-[6px] border border-border shadow-none">
+            <CardHeader className="pb-3 border-b border-border">
+              <CardTitle className="text-sm font-semibold text-foreground">Danh mục <span className="text-destructive">*</span></CardTitle>
+            </CardHeader>
+            <CardContent className="pt-4">
+              <MultiSelectSearch
+                options={categories.map(c => ({ value: c._id, label: c.name }))}
+                selected={form.categories}
+                onChange={v => set('categories', v)}
+                placeholder="Tìm và chọn danh mục..."
+                chipColor="primary"
+              />
+            </CardContent>
+          </Card>
 
-          <div className="bg-card border border-border rounded-xl p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-foreground">Tags</h3>
-            <MultiSelectSearch
-              options={allTags.map(t => ({ value: t._id, label: t.name, prefix: '#' }))}
-              selected={form.tags}
-              onChange={v => set('tags', v)}
-              placeholder="Tìm và chọn tag..."
-              chipColor="muted"
-            />
-          </div>
+          <Card className="rounded-[6px] border border-border shadow-none">
+            <CardHeader className="pb-3 border-b border-border">
+              <CardTitle className="text-sm font-semibold text-foreground">Tags</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-4">
+              <MultiSelectSearch
+                options={allTags.map(t => ({ value: t._id, label: t.name, prefix: '#' }))}
+                selected={form.tags}
+                onChange={v => set('tags', v)}
+                placeholder="Tìm và chọn tag..."
+                chipColor="muted"
+              />
+            </CardContent>
+          </Card>
         </div>
       </div>
 

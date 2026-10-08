@@ -406,9 +406,9 @@ function serverToLocal(v) {
     stock: v.stock ?? 0,
     isActive: v.isActive ?? true,
     thumbnailMediaId: v.thumbnail?.mediaId || null,
-    thumbnailUrl: v.thumbnail?.url || '',
-    imageMediaIds: (v.images || []).map((img) => img.mediaId).filter(Boolean),
-    imageUrls: (v.images || []).map((img) => img.url).filter(Boolean),
+    thumbnailUrl: (typeof v.thumbnail === 'string' ? v.thumbnail : v.thumbnail?.url) || '',
+    imageMediaIds: (v.images || []).map((img) => img?.mediaId || img?._id).filter(Boolean),
+    imageUrls: (v.images || []).map((img) => (typeof img === 'string' ? img : img?.url)).filter(Boolean),
   };
 }
 

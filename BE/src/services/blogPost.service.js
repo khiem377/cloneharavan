@@ -109,8 +109,21 @@ const getAllPosts = async (query = {}) => {
       filter.tags = new mongoose.Types.ObjectId(); // Không tìm thấy tag → 0 kết quả hợp lệ
     }
   }
-  if (query.isFeatured !== undefined) filter.isFeatured = query.isFeatured === 'true';
-  if (query.isPinned   !== undefined) filter.isPinned   = query.isPinned   === 'true';
+  if (query.isFeatured !== undefined && query.isFeatured !== '') filter.isFeatured = query.isFeatured === true || query.isFeatured === 'true';
+  if (query.isPinned   !== undefined && query.isPinned !== '') filter.isPinned   = query.isPinned === true || query.isPinned === 'true';
+
+  // Date range filter (from / to / startDate / endDate)
+  const fromDate = query.startDate || query.from || query.dateFrom;
+  const toDate = query.endDate || query.to || query.dateTo;
+  if (fromDate || toDate) {
+    filter.createdAt = {};
+    if (fromDate) filter.createdAt.$gte = new Date(fromDate);
+    if (toDate) {
+      const end = new Date(toDate);
+      end.setHours(23, 59, 59, 999);
+      filter.createdAt.$lte = end;
+    }
+  }
 
   const page  = Math.max(1, parseInt(query.page)  || 1);
   const limit = Math.max(1, parseInt(query.limit) || 10);

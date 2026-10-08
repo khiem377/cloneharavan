@@ -3,9 +3,7 @@ import { notFound } from 'next/navigation';
 import productServerService from '@/services/product.server.service';
 import ProductDetailClient from '@/components/product/detail/ProductDetailClient';
 
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
-export const fetchCache = 'force-no-store';
+export const revalidate = 60;
 
 /**
  * Sinh Dynamic SEO Metadata chuẩn E-commerce
