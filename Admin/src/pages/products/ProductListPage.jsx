@@ -373,9 +373,10 @@ export default function ProductListPage() {
                       <div className="flex items-center gap-2.5">
                         {(() => {
                           const mid = resolveId(p.thumbnail?.mediaId || p.thumbnail?._id);
+                          const thumbSrc = (typeof p.thumbnail === 'string' ? p.thumbnail : p.thumbnail?.url) || 'https://placehold.co/40x40/1e293b/fff?text=?';
                           return (
                             <MediaThumbnailHover media={mid ? mediaMap[mid] : null} className="size-9 shrink-0 rounded-[4px] overflow-hidden border border-border bg-muted">
-                              <img src={p.thumbnail?.url || 'https://placehold.co/40x40/1e293b/fff?text=?'} alt={p.name} className="size-full object-cover" />
+                              <img src={thumbSrc} alt={p.name} className="size-full object-cover" />
                             </MediaThumbnailHover>
                           );
                         })()}
@@ -474,7 +475,7 @@ export default function ProductListPage() {
               <div className="absolute top-2 left-2 z-10">
                 <input type="checkbox" className="size-4 rounded-[4px] border-input text-primary focus:ring-ring" checked={selected.includes(p._id)} onChange={() => toggleSelect(p._id)} />
               </div>
-              <img src={p.thumbnail?.url || 'https://placehold.co/200x200/1e293b/fff?text=?'} alt={p.name} className="aspect-square w-full object-cover bg-muted" />
+              <img src={(typeof p.thumbnail === 'string' ? p.thumbnail : p.thumbnail?.url) || 'https://placehold.co/200x200/1e293b/fff?text=?'} alt={p.name} className="aspect-square w-full object-cover bg-muted" />
               <div className="p-3 flex flex-col gap-1.5">
                 <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border w-fit ${STATUS_BADGE[p.status]}`}>{STATUS_LABELS[p.status]}</span>
                 <p className="font-semibold text-sm text-foreground line-clamp-1">{p.name}</p>

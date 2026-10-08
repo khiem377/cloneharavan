@@ -84,7 +84,7 @@ export default function ProductVariantsPage() {
       <Card className="rounded-[6px] border border-border shadow-none bg-muted/20">
         <CardContent className="p-4 flex items-center gap-4">
           <img
-            src={product.thumbnail?.url || 'https://placehold.co/56x56/1e293b/fff?text=?'}
+            src={(typeof product.thumbnail === 'string' ? product.thumbnail : product.thumbnail?.url) || 'https://placehold.co/56x56/1e293b/fff?text=?'}
             alt={product.name}
             className="size-14 rounded-[6px] object-cover border border-border bg-muted shrink-0"
           />

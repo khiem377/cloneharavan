@@ -104,9 +104,9 @@ export default function VariantEditPage() {
       descriptionOverride: variant.descriptionOverride || '',
       specifications: variant.specifications || [],
       thumbnailMediaId: variant.thumbnail?.mediaId || null,
-      thumbnailUrl: variant.thumbnail?.url || '',
-      imageMediaIds: (variant.images || []).map((img) => img.mediaId).filter(Boolean),
-      imageUrls: (variant.images || []).map((img) => img.url).filter(Boolean),
+      thumbnailUrl: (typeof variant.thumbnail === 'string' ? variant.thumbnail : variant.thumbnail?.url) || '',
+      imageMediaIds: (variant.images || []).map((img) => img?.mediaId || img?._id).filter(Boolean),
+      imageUrls: (variant.images || []).map((img) => (typeof img === 'string' ? img : img?.url)).filter(Boolean),
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [variant?._id]);

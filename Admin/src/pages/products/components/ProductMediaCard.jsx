@@ -43,47 +43,58 @@ export default function ProductMediaCard({
           <label className="text-xs font-medium text-muted-foreground">
             Ảnh đại diện <span className="text-destructive ml-0.5">*</span>
           </label>
-          {form.thumbnailUrl ? (
-            <div className="relative aspect-square w-full rounded-[6px] border border-border overflow-hidden bg-muted group">
-              <MediaThumbnailHover media={mediaMap[form.thumbnailMediaId]} className="size-full">
-                <img
-                  src={form.thumbnailUrl}
-                  alt="thumbnail"
-                  className="size-full object-cover"
-                />
-              </MediaThumbnailHover>
-              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  className="h-7 text-xs rounded-[4px] cursor-pointer"
-                  onClick={() => setPickerMode('thumbnail')}
-                >
-                  Thay đổi
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="destructive"
-                  className="h-7 text-xs rounded-[4px] cursor-pointer"
-                  onClick={() =>
-                    setForm((f) => ({ ...f, thumbnailMediaId: '', thumbnailUrl: '' }))
-                  }
-                >
-                  Xóa
-                </Button>
+          {(() => {
+            const thumbSrc =
+              typeof form.thumbnailUrl === 'string'
+                ? form.thumbnailUrl
+                : form.thumbnailUrl?.url || '';
+
+            if (thumbSrc) {
+              return (
+                <div className="relative aspect-square w-full rounded-[6px] border border-border overflow-hidden bg-muted group">
+                  <MediaThumbnailHover media={mediaMap[form.thumbnailMediaId]} className="size-full">
+                    <img
+                      src={thumbSrc}
+                      alt="thumbnail"
+                      className="size-full object-cover"
+                    />
+                  </MediaThumbnailHover>
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      className="h-7 text-xs rounded-[4px] cursor-pointer"
+                      onClick={() => setPickerMode('thumbnail')}
+                    >
+                      Thay đổi
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="destructive"
+                      className="h-7 text-xs rounded-[4px] cursor-pointer"
+                      onClick={() =>
+                        setForm((f) => ({ ...f, thumbnailMediaId: '', thumbnailUrl: '' }))
+                      }
+                    >
+                      Xóa
+                    </Button>
+                  </div>
+                </div>
+              );
+            }
+
+            return (
+              <div
+                className="flex flex-col items-center justify-center gap-2 p-6 rounded-[6px] border-2 border-dashed border-border bg-muted/20 hover:border-primary/50 transition-colors cursor-pointer text-center"
+                onClick={() => setPickerMode('thumbnail')}
+              >
+                <Image size={24} className="text-muted-foreground" />
+                <span className="text-xs font-medium text-foreground">Chọn ảnh đại diện</span>
               </div>
-            </div>
-          ) : (
-            <div
-              className="flex flex-col items-center justify-center gap-2 p-6 rounded-[6px] border-2 border-dashed border-border bg-muted/20 hover:border-primary/50 transition-colors cursor-pointer text-center"
-              onClick={() => setPickerMode('thumbnail')}
-            >
-              <Image size={24} className="text-muted-foreground" />
-              <span className="text-xs font-medium text-foreground">Chọn ảnh đại diện</span>
-            </div>
-          )}
+            );
+          })()}
         </div>
 
         {/* Gallery Image List */}
@@ -101,12 +112,13 @@ export default function ProductMediaCard({
             onDragEnd={handleDragEndGallery}
           >
             <SortableContext
-              items={form.imageUrls.map((_, i) => form.imageMediaIds[i] || `img-${i}`)}
+              items={form.imageUrls.map((u, i) => form.imageMediaIds[i] || (typeof u === 'string' ? u : `img-${i}`))}
               strategy={rectSortingStrategy}
             >
               <div className="grid grid-cols-3 gap-2">
-                {form.imageUrls.map((url, idx) => {
-                  const itemId = form.imageMediaIds[idx] || `img-${idx}`;
+                {form.imageUrls.map((rawUrl, idx) => {
+                  const url = typeof rawUrl === 'string' ? rawUrl : rawUrl?.url || '';
+                  const itemId = form.imageMediaIds[idx] || (url ? `img-${url}-${idx}` : `img-${idx}`);
                   return (
                     <SortableGalleryItem
                       key={itemId}
@@ -114,7 +126,7 @@ export default function ProductMediaCard({
                       url={url}
                       idx={idx}
                       onRemove={removeGalleryImage}
-                      media={mediaMap[itemId] || null}
+                      media={mediaMap[form.imageMediaIds[idx]] || null}
                     />
                   );
                 })}

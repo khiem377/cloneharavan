@@ -66,7 +66,7 @@ export default function FlashSaleFormModal({ flashSale, onClose, onSuccess }) {
       return {
         productId: typeof item.productId === 'object' ? item.productId._id : item.productId,
         productName: typeof item.productId === 'object' ? item.productId.name : 'Sản phẩm',
-        productImage: typeof item.productId === 'object' ? item.productId.thumbnail?.url : '',
+        productImage: typeof item.productId === 'object' ? (typeof item.productId.thumbnail === 'string' ? item.productId.thumbnail : item.productId.thumbnail?.url || '') : '',
         variantId: item.variantId ? (typeof item.variantId === 'object' ? item.variantId._id : item.variantId) : null,
         variantName: vName,
         inventoryStock: invStock,
@@ -151,7 +151,7 @@ export default function FlashSaleFormModal({ flashSale, onClose, onSuccess }) {
     const newItem = {
       productId: product._id,
       productName: product.name,
-      productImage: product.thumbnail?.url || '',
+      productImage: (typeof product.thumbnail === 'string' ? product.thumbnail : product.thumbnail?.url) || '',
       variantId: null,
       variantName: '',
       inventoryStock: product.stock ?? 0,
@@ -182,10 +182,13 @@ export default function FlashSaleFormModal({ flashSale, onClose, onSuccess }) {
 
     const attrString = variant.attributes?.map((a) => `${a.name}: ${a.value}`).join(', ') || variant.sku || 'Biến thể';
 
+    const vImg = typeof variant.image === 'string' ? variant.image : variant.image?.url;
+    const pImg = typeof product.thumbnail === 'string' ? product.thumbnail : product.thumbnail?.url;
+
     const newItem = {
       productId: product._id,
       productName: product.name,
-      productImage: variant.image?.url || product.thumbnail?.url || '',
+      productImage: vImg || pImg || '',
       variantId: variant._id,
       variantName: attrString,
       inventoryStock: variant.stock ?? product.stock ?? 0,
@@ -474,11 +477,14 @@ export default function FlashSaleFormModal({ flashSale, onClose, onSuccess }) {
                           onClick={() => handleSelectProduct(prod)}
                           className="flex items-center gap-3 px-3 py-2 hover:bg-accent transition-colors cursor-pointer"
                         >
-                          {prod.thumbnail?.url ? (
-                            <img src={prod.thumbnail.url} alt="" className="size-8 object-cover rounded-[4px] border border-border shrink-0" />
-                          ) : (
-                            <div className="size-8 rounded-[4px] bg-muted flex items-center justify-center text-xs shrink-0">SP</div>
-                          )}
+                          {(() => {
+                            const thumbSrc = typeof prod.thumbnail === 'string' ? prod.thumbnail : prod.thumbnail?.url;
+                            return thumbSrc ? (
+                              <img src={thumbSrc} alt="" className="size-8 object-cover rounded-[4px] border border-border shrink-0" />
+                            ) : (
+                              <div className="size-8 rounded-[4px] bg-muted flex items-center justify-center text-xs shrink-0">SP</div>
+                            );
+                          })()}
                           <div className="flex-1 min-w-0">
                             <p className="text-xs font-medium text-foreground truncate">
                               {prod.name} {prod.variants?.length > 0 && <span className="text-[11px] text-muted-foreground font-normal">(SP Gốc)</span>}

@@ -141,7 +141,10 @@ function GiftProductList({ selected, onAdd, onRemove, onQtyChange, allProducts }
                 className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-foreground hover:bg-muted transition-colors cursor-pointer"
                 onMouseDown={() => { onAdd(p); setSearch(''); setOpen(false); }}
               >
-                {p.thumbnail?.url && <img src={p.thumbnail.url} alt="" className="size-7 rounded-[4px] object-cover border border-border bg-muted shrink-0" />}
+                {(() => {
+                  const thumbSrc = typeof p.thumbnail === 'string' ? p.thumbnail : p.thumbnail?.url;
+                  return thumbSrc ? <img src={thumbSrc} alt="" className="size-7 rounded-[4px] object-cover border border-border bg-muted shrink-0" /> : null;
+                })()}
                 <span className="truncate">{p.name}</span>
               </button>
             ))}

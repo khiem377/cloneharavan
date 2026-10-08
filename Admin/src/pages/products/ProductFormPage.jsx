@@ -140,6 +140,26 @@ export default function ProductFormPage() {
   useEffect(() => {
     const p = productData?.data || productData;
     if (isEdit && p && (p._id || p.name)) {
+      const rawThumb = p.thumbnail;
+      const thumbUrl =
+        (typeof rawThumb === 'string' ? rawThumb : rawThumb?.url) ||
+        (typeof p.thumbnailUrl === 'string' ? p.thumbnailUrl : '') ||
+        '';
+      const thumbMediaId =
+        p.thumbnailMediaId?._id ||
+        p.thumbnailMediaId ||
+        rawThumb?.mediaId?._id ||
+        rawThumb?.mediaId ||
+        '';
+
+      const rawImages = Array.isArray(p.images) ? p.images : [];
+      const imgUrls = rawImages
+        .map((img) => (typeof img === 'string' ? img : img?.url))
+        .filter(Boolean);
+      const imgMediaIds = (p.imageMediaIds || rawImages)
+        .map((img) => img?.mediaId?._id || img?.mediaId || img?._id || '')
+        .filter(Boolean);
+
       setForm({
         name: p.name || '',
         sku: p.sku || '',
@@ -159,10 +179,10 @@ export default function ProductFormPage() {
         isHot: Boolean(p.isHot),
         specifications: p.specifications || [],
         options: p.options || [],
-        thumbnailMediaId: p.thumbnailMediaId?._id || p.thumbnailMediaId || '',
-        thumbnailUrl: p.thumbnail || p.thumbnailMediaId?.url || '',
-        imageMediaIds: (p.imageMediaIds || []).map((m) => m._id || m),
-        imageUrls: p.images || (p.imageMediaIds || []).map((m) => m.url || m),
+        thumbnailMediaId: thumbMediaId,
+        thumbnailUrl: thumbUrl,
+        imageMediaIds: imgMediaIds,
+        imageUrls: imgUrls,
       });
     }
   }, [isEdit, productData]);
@@ -267,8 +287,10 @@ export default function ProductFormPage() {
         !isEdit && hasVariants
           ? options.filter((o) => o.name?.trim() && o.values?.length > 0)
           : form.options,
-      thumbnailMediaId: form.thumbnailMediaId,
-      imageMediaIds: form.imageMediaIds,
+      thumbnailMediaId: form.thumbnailMediaId || undefined,
+      thumbnailUrl: form.thumbnailUrl || undefined,
+      imageMediaIds: form.imageMediaIds.filter(Boolean),
+      imageUrls: form.imageUrls.filter(Boolean),
     };
 
     if (!isEdit && hasVariants && generatedVariants.length > 0) {
