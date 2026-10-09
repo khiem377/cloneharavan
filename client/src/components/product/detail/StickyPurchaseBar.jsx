@@ -1,13 +1,18 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import useCartStore from '@/store/cartStore';
 
 export default function StickyPurchaseBar({
   product,
   selectedVariant,
 }) {
+  const router = useRouter();
+  const { addToCart } = useCartStore();
   const [isVisible, setIsVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     const target = document.getElementById('product-action-buttons');
@@ -26,32 +31,31 @@ export default function StickyPurchaseBar({
 
   if (!product) return null;
 
-  const isFlashSale = Boolean(
-    product.isFlashSale && (product.flashSale?.flashSalePrice || product.flashSalePrice)
-  );
-  const activeSalePrice = isFlashSale
-    ? (product.flashSale?.flashSalePrice || product.flashSalePrice)
-    : selectedVariant?.salePrice !== undefined && selectedVariant?.salePrice !== null && selectedVariant.salePrice > 0
-    ? selectedVariant.salePrice
-    : product.salePrice || product.cachedSalePrice || 0;
+  const handleAction = async (isBuyNow = false) => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
 
-  const activeRegularPrice = isFlashSale && (product.flashSale?.originalPrice || product.flashSaleOriginalPrice)
-    ? (product.flashSale?.originalPrice || product.flashSaleOriginalPrice)
-    : selectedVariant?.price !== undefined && selectedVariant?.price !== null && selectedVariant.price > 0
-    ? selectedVariant.price
-    : product.price || product.cachedPrice || 0;
+    const payload = {
+      productId: product._id || product.id,
+      variantId: selectedVariant?._id || selectedVariant?.id,
+      sku: selectedVariant?.sku,
+      quantity: 1,
+    };
 
-  const displayPrice = activeSalePrice > 0 ? activeSalePrice : activeRegularPrice;
+    const res = await addToCart(payload);
+    setIsSubmitting(false);
 
-  const thumb =
-    selectedVariant?.thumbnail?.url ||
-    (typeof product.thumbnail === 'string' ? product.thumbnail : product.thumbnail?.url) ||
-    product.images?.[0]?.url ||
-    '/logo-shop.jpg';
-
-  const handleAction = (name) => {
-    setToastMessage(`Tính năng "${name}" đang được chuẩn bị.`);
-    setTimeout(() => setToastMessage(null), 2500);
+    if (res?.success) {
+      if (isBuyNow) {
+        router.push('/cart');
+      } else {
+        setToastMessage('Đã thêm sản phẩm vào giỏ hàng!');
+        setTimeout(() => setToastMessage(null), 3000);
+      }
+    } else {
+      setToastMessage(res?.message || 'Không thể thêm vào giỏ');
+      setTimeout(() => setToastMessage(null), 3000);
+    }
   };
 
   return (

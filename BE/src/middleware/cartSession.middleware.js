@@ -31,14 +31,19 @@ const cartSession = (req, res, next) => {
       }
     }
 
-    // 2. Kiểm tra Session ID
-    const headerSessionId = req.headers['x-session-id'];
-    const cookieSessionId = req.cookies?.cart_session;
+    // 2. Kiểm tra Session ID (từ Header, Cookie, Query hoặc Body)
+    const rawSessionId =
+      req.headers['x-session-id'] ||
+      req.headers['session-id'] ||
+      req.headers['x-guest-id'] ||
+      req.cookies?.cart_session ||
+      req.query?.sessionId ||
+      req.query?.session_id ||
+      req.body?.sessionId ||
+      req.body?.session_id;
 
-    if (headerSessionId && typeof headerSessionId === 'string' && headerSessionId.trim()) {
-      sessionId = headerSessionId.trim();
-    } else if (cookieSessionId && typeof cookieSessionId === 'string' && cookieSessionId.trim()) {
-      sessionId = cookieSessionId.trim();
+    if (rawSessionId && typeof rawSessionId === 'string' && rawSessionId.trim()) {
+      sessionId = rawSessionId.trim();
     }
 
     // 3. Nếu chưa đăng nhập và chưa có sessionId -> Tự phát sinh sessionId mới

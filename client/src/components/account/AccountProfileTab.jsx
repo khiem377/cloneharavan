@@ -178,7 +178,11 @@ export default function AccountProfileTab({
                 onChange={(e) =>
                   setProfileForm({ ...profileForm, phone: e.target.value })
                 }
-                placeholder="0919615474"
+                placeholder={
+                  isEditing
+                    ? 'Nhập số điện thoại (ví dụ: 0912345678)'
+                    : 'Chưa cập nhật số điện thoại'
+                }
                 className={`h-9 text-xs font-mono rounded-[6px] ${
                   isEditing
                     ? 'bg-white text-slate-900 border-slate-300 focus-visible:ring-[#e30019]'

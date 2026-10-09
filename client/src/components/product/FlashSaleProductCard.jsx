@@ -6,16 +6,20 @@ import { ShoppingCart, Eye, ArrowLeftRight, Check } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { useRouter } from 'next/navigation';
 import useQuickViewStore from '@/store/quickViewStore';
 import useCompareStore from '@/store/compareStore';
+import useCartStore from '@/store/cartStore';
 import trackingService from '@/services/tracking.service';
 
 const FALLBACK_IMAGE =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120' fill='none'%3E%3Crect width='120' height='120' rx='6' fill='%23f8fafc'/%3E%3Crect x='30' y='35' width='60' height='45' rx='4' stroke='%23cbd5e1' stroke-width='2' fill='none'/%3E%3Cpolyline points='48 80 40 90 80 90 72 80' stroke='%23cbd5e1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E";
 
 export default function FlashSaleProductCard({ item, onAddToCartMock, onBuyNowMock }) {
+  const router = useRouter();
   const { openQuickView } = useQuickViewStore();
   const { addProduct, isCompared } = useCompareStore();
+  const { addToCart } = useCartStore();
   const [selectedVariantIdx, setSelectedVariantIdx] = useState(0);
 
   if (!item) return null;
@@ -108,20 +112,33 @@ export default function FlashSaleProductCard({ item, onAddToCartMock, onBuyNowMo
     addProduct(product);
   };
 
-  const handleAddToCart = (e) => {
+  const handleAddToCart = async (e) => {
     e.preventDefault();
     e.stopPropagation();
     if (onAddToCartMock) {
       onAddToCartMock(item);
     }
+    await addToCart({
+      productId: product?._id,
+      variantId: currentItem.variantId?._id || currentItem.variantId,
+      sku: currentItem.sku,
+      quantity: 1,
+    });
   };
 
-  const handleBuyNow = (e) => {
+  const handleBuyNow = async (e) => {
     e.preventDefault();
     e.stopPropagation();
     if (onBuyNowMock) {
       onBuyNowMock(item);
     }
+    await addToCart({
+      productId: product?._id,
+      variantId: currentItem.variantId?._id || currentItem.variantId,
+      sku: currentItem.sku,
+      quantity: 1,
+    });
+    router.push('/cart');
   };
 
   return (

@@ -613,6 +613,21 @@ const loginWithGoogle = async (credential, isAdminRequest = false) => {
 };
 
 /**
+ * Helper sinh mã PKCE Code Verifier & Challenge chuẩn RFC 7636 (43 ký tự [A-Za-z0-9])
+ * Tương thích 100% với yêu cầu bảo mật của Zalo (-5010) và TikTok OAuth
+ */
+const generatePkcePair = (length = 43) => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const bytes = crypto.randomBytes(length);
+  let verifier = '';
+  for (let i = 0; i < length; i++) {
+    verifier += chars[bytes[i] % chars.length];
+  }
+  const challenge = crypto.createHash('sha256').update(verifier).digest('base64url');
+  return { verifier, challenge };
+};
+
+/**
  * Lấy URL Đăng nhập / Xác thực OAuth 2.0 TikTok (Kèm PKCE code_challenge)
  */
 const getTikTokAuthUrl = (state = 'tiktok_auth', redirectUri = null, clientCodeChallenge = null) => {
@@ -631,8 +646,9 @@ const getTikTokAuthUrl = (state = 'tiktok_auth', redirectUri = null, clientCodeC
   let codeChallenge = clientCodeChallenge;
 
   if (!codeChallenge) {
-    codeVerifier = crypto.randomBytes(32).toString('hex');
-    codeChallenge = crypto.createHash('sha256').update(codeVerifier).digest('base64url');
+    const pkce = generatePkcePair(43);
+    codeVerifier = pkce.verifier;
+    codeChallenge = pkce.challenge;
   }
 
   const scope = 'user.info.basic,user.info.profile';
@@ -818,8 +834,9 @@ const getZaloAuthUrl = (state = 'zalo_auth', redirectUri = null, clientCodeChall
   let codeChallenge = clientCodeChallenge;
 
   if (!codeChallenge) {
-    codeVerifier = crypto.randomBytes(32).toString('hex');
-    codeChallenge = crypto.createHash('sha256').update(codeVerifier).digest('base64url');
+    const pkce = generatePkcePair(43);
+    codeVerifier = pkce.verifier;
+    codeChallenge = pkce.challenge;
   }
 
   const encodedRedirect = encodeURIComponent(targetRedirect);

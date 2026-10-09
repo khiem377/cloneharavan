@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Loader2, AlertCircle, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { toast } from '@/providers/ToastProvider';
@@ -14,9 +14,12 @@ export default function AdminAuthCallbackPage() {
 
   const [status, setStatus] = useState('processing');
   const [errorMessage, setErrorMessage] = useState('');
+  const hasHandledRef = useRef(false);
 
   useEffect(() => {
     const handleAuthCallback = async () => {
+      if (hasHandledRef.current) return;
+      hasHandledRef.current = true;
       // 1. Kiểm tra nếu có token truyền trực tiếp từ client callback
       const directToken = searchParams.get('token');
       const directRefreshToken = searchParams.get('refreshToken');
@@ -65,7 +68,17 @@ export default function AdminAuthCallbackPage() {
 
       const isZalo = window.location.pathname.includes('zalo') || state.includes('zalo');
       const providerName = isZalo ? 'Zalo' : 'TikTok';
-      const action = searchParams.get('action') || (typeof window !== 'undefined' ? sessionStorage.getItem(isZalo ? 'zalo_action' : 'tiktok_action') : null);
+      const actionParam = searchParams.get('action');
+      const savedAction =
+        typeof window !== 'undefined'
+          ? sessionStorage.getItem(isZalo ? 'zalo_action' : 'tiktok_action')
+          : null;
+      const action =
+        actionParam === 'link' ||
+        state.startsWith('link_') ||
+        (savedAction === 'link' && !state.startsWith(isZalo ? 'zalo_' : 'tiktok_'))
+          ? 'link'
+          : 'login';
 
       if (error) {
         setStatus('error');
@@ -172,8 +185,12 @@ export default function AdminAuthCallbackPage() {
           err.message ||
           `Xác thực ${providerName} thất bại. Vui lòng thử lại!`;
         setErrorMessage(msg);
+      } finally {
+        if (typeof window !== 'undefined') {
+          sessionStorage.removeItem('zalo_action');
+          sessionStorage.removeItem('tiktok_action');
+        }
       }
-
     };
 
     handleAuthCallback();

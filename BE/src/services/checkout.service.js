@@ -9,6 +9,7 @@ const promotionService = require('./promotion.service');
 const couponService = require('./coupon.service');
 const giftProgramService = require('./gift-program.service');
 const flashSaleService = require('./flashSale.service');
+const { getSellingPrice } = require('../utils/pricing.helper');
 
 /**
  * MASTER DISCOUNT CALCULATOR PIPELINE (Chống Xung Đột 4 Cấp Độ)
@@ -51,6 +52,7 @@ const calculateCheckout = async ({ cartItems = [], couponCode = null }) => {
 
       // Tìm thông tin sản phẩm / variant từ DB nếu chưa có
       let originalPrice = Number(item.originalPrice) || 0;
+      let sellingPrice = Number(item.unitPrice) || originalPrice;
       let productName = item.productName || '';
       let sku = item.sku || '';
 
@@ -58,14 +60,16 @@ const calculateCheckout = async ({ cartItems = [], couponCode = null }) => {
         if (vId) {
           const variant = await ProductVariant.findById(vId).populate('productId');
           if (variant) {
-            originalPrice = variant.salePrice || variant.price || 0;
+            originalPrice = Number(variant.price) || 0;
+            sellingPrice = getSellingPrice(variant);
             productName = variant.productId?.name || '';
             sku = variant.sku || '';
           }
         } else if (pId) {
           const prod = await Product.findById(pId);
           if (prod) {
-            originalPrice = prod.salePrice || prod.price || 0;
+            originalPrice = Number(prod.price) || 0;
+            sellingPrice = getSellingPrice(prod);
             productName = prod.name || '';
           }
         }
@@ -76,16 +80,16 @@ const calculateCheckout = async ({ cartItems = [], couponCode = null }) => {
       const matchedFsItem = flashSaleItemMap.get(keyWithVariant) || flashSaleItemMap.get(keyProductOnly);
 
       let isFlashSale = false;
-      let unitPrice = originalPrice;
+      let unitPrice = sellingPrice;
       let flashSaleDiscount = 0;
 
       const fsPrice = matchedFsItem ? (matchedFsItem.flashSalePrice ?? matchedFsItem.flashPrice) : null;
       const fsStockRemaining = matchedFsItem ? Math.max(0, (matchedFsItem.stockLimit || 0) - (matchedFsItem.soldCount || 0)) : 0;
 
-      if (matchedFsItem && fsPrice !== null && fsPrice < originalPrice && fsStockRemaining > 0) {
+      if (matchedFsItem && fsPrice !== null && fsPrice < sellingPrice && fsStockRemaining > 0) {
         isFlashSale = true;
         unitPrice = fsPrice;
-        flashSaleDiscount = (originalPrice - fsPrice) * qty;
+        flashSaleDiscount = (sellingPrice - fsPrice) * qty;
       }
 
       const itemSubtotal = unitPrice * qty;

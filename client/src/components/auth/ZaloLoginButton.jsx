@@ -46,6 +46,7 @@ export default function ZaloLoginButton({ text = 'Tiếp tục với Zalo', redi
       const stateToken = `zalo_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
       if (typeof window !== 'undefined') {
         sessionStorage.setItem('zalo_oauth_state', stateToken);
+        sessionStorage.removeItem('zalo_action');
       }
 
       const appId = process.env.NEXT_PUBLIC_ZALO_APP_ID;
@@ -79,9 +80,13 @@ export default function ZaloLoginButton({ text = 'Tiếp tục với Zalo', redi
       }
 
       // Fallback: Direct PKCE OAuth URL builder
-      const array = new Uint8Array(32);
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+      const array = new Uint8Array(43);
       window.crypto.getRandomValues(array);
-      const codeVerifier = Array.from(array, (dec) => dec.toString(16).padStart(2, '0')).join('');
+      let codeVerifier = '';
+      for (let i = 0; i < 43; i++) {
+        codeVerifier += chars[array[i] % chars.length];
+      }
       sessionStorage.setItem('zalo_code_verifier', codeVerifier);
 
       const encoder = new TextEncoder();
