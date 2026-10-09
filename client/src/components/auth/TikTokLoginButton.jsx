@@ -47,10 +47,11 @@ export default function TikTokLoginButton({ text = 'Tiếp tục với TikTok', 
         sessionStorage.setItem('tiktok_oauth_state', stateToken);
       }
 
-      const clientKey = process.env.NEXT_PUBLIC_TIKTOK_CLIENT_KEY || 'awog7e9rw0fh0kso';
+      const clientKey = process.env.NEXT_PUBLIC_TIKTOK_CLIENT_KEY || 'sbawe8bhj9r8km52mp';
       const redirectUri =
-        process.env.NEXT_PUBLIC_TIKTOK_REDIRECT_URI ||
-        `${window.location.origin}/auth/tiktok/callback`;
+        typeof window !== 'undefined'
+          ? `${window.location.origin}/auth/tiktok/callback`
+          : (process.env.NEXT_PUBLIC_TIKTOK_REDIRECT_URI || 'http://localhost:3000/auth/tiktok/callback');
 
       // Ưu tiên lấy URL và PKCE verifier từ Backend API
       try {

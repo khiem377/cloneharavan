@@ -153,7 +153,7 @@ export default function TrangDangKy() {
         )}
 
         <CardContent className="p-0 space-y-4">
-          <form onSubmit={handleNopForm} className="space-y-4">
+          <form onSubmit={handleNopForm} method="POST" className="space-y-4">
             {/* Full Name */}
             <div className="space-y-1.5">
               <Label htmlFor="regFullName">

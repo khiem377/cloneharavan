@@ -17,6 +17,8 @@ const CLIENT_ORIGINS = [
   'http://localhost:3000',
   'http://localhost:3001',
   'http://127.0.0.1:3000',
+  'https://ba7596453f41f6.lhr.life',
+  'https://80952fadaa029c.lhr.life'
 ];
 
 // Admin dashboard origins

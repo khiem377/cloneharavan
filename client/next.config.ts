@@ -6,6 +6,16 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   compress: true,
+  allowedDevOrigins: [
+    'ba7596453f41f6.lhr.life',
+    '80952fadaa029c.lhr.life',
+    '*.lhr.life',
+    '*.localhost.run',
+    '*.ngrok-free.app',
+    '*.ngrok.io',
+    '127.0.0.1',
+    'localhost',
+  ],
   experimental: {
     optimizePackageImports: [
       'lucide-react',

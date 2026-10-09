@@ -266,7 +266,7 @@ export default function AccountSecurityTab({
         sessionStorage.setItem('tiktok_oauth_state', stateToken);
       }
 
-      const clientKey = process.env.NEXT_PUBLIC_TIKTOK_CLIENT_KEY || 'awog7e9rw0fh0kso';
+      const clientKey = process.env.NEXT_PUBLIC_TIKTOK_CLIENT_KEY || 'sbawe8bhj9r8km52mp';
 
       try {
         const res = await authService.getTikTokAuthUrl({

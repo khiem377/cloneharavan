@@ -86,8 +86,9 @@ function TikTokCallbackContent() {
 
         const sessionId = anonymousId || getOrCreateAnonymousId();
         const redirectUri =
-          process.env.NEXT_PUBLIC_TIKTOK_REDIRECT_URI ||
-          `${window.location.origin}/auth/tiktok/callback`;
+          typeof window !== 'undefined'
+            ? `${window.location.origin}/auth/tiktok/callback`
+            : (process.env.NEXT_PUBLIC_TIKTOK_REDIRECT_URI || 'http://localhost:3000/auth/tiktok/callback');
 
         const res = await authService.tiktokLogin({
           code,
