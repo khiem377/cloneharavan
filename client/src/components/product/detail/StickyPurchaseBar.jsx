@@ -31,9 +31,29 @@ export default function StickyPurchaseBar({
 
   if (!product) return null;
 
-  const handleAction = async (isBuyNow = false) => {
+  // Ảnh đại diện sản phẩm & biến thể
+  const thumb =
+    selectedVariant?.image ||
+    selectedVariant?.thumbnail ||
+    product?.thumbnail ||
+    (typeof product?.images?.[0] === 'string'
+      ? product.images[0]
+      : product?.images?.[0]?.url) ||
+    '/logo-shop.jpg';
+
+  // Đơn giá hiển thị
+  const displayPrice =
+    selectedVariant?.price ??
+    product?.price ??
+    product?.regularPrice ??
+    product?.salePrice ??
+    0;
+
+  const handleAction = async (actionType = 'Thêm vào giỏ') => {
     if (isSubmitting) return;
     setIsSubmitting(true);
+
+    const isBuyNow = actionType === 'Mua ngay' || actionType === true;
 
     const payload = {
       productId: product._id || product.id,
@@ -73,6 +93,9 @@ export default function StickyPurchaseBar({
                 src={thumb}
                 alt={product.name}
                 className="w-full h-full object-contain"
+                onError={(e) => {
+                  e.currentTarget.src = '/logo-shop.jpg';
+                }}
               />
             </div>
 
@@ -82,7 +105,7 @@ export default function StickyPurchaseBar({
               </span>
               <div className="flex items-center gap-2 text-xs">
                 <span className="font-extrabold text-red-600">
-                  {displayPrice > 0 ? `${displayPrice.toLocaleString('vi-VN')}₫` : 'Liên hệ'}
+                  {displayPrice > 0 ? `${displayPrice.toLocaleString('vi-VN')} ₫` : 'Liên hệ'}
                 </span>
                 {selectedVariant?.displayName &&
                   !['mặc định', 'mac dinh', 'default', 'default title'].includes(

@@ -42,6 +42,7 @@ export default function AiChatWidget() {
   const typewriterTimerRef = useRef(null);
 
   const isProductPage = pathname?.startsWith('/products/');
+  const isCartPage = pathname === '/cart' || pathname?.startsWith('/cart');
 
   // Dọn dẹp typewriter timer khi unmount
   useEffect(() => {
@@ -322,6 +323,7 @@ export default function AiChatWidget() {
         showPill={showPill}
         onClosePill={() => setShowPill(false)}
         isProductPage={isProductPage}
+        isCartPage={isCartPage}
       />
 
       {/* Cửa sổ chat chính dạng modal nổi bên góc phải */}

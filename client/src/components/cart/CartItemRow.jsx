@@ -2,15 +2,18 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { Minus, Plus, Trash2, AlertCircle, Loader2, Zap } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { confirm } from '@/components/ui/confirm-dialog';
 
 export default function CartItemRow({
   item,
   onUpdateQuantity,
   onRemoveItem,
   isUpdating = false,
+  isSelected = false,
+  onToggleSelect,
 }) {
   const [localUpdating, setLocalUpdating] = useState(false);
 
@@ -34,6 +37,15 @@ export default function CartItemRow({
 
   const handleRemove = async () => {
     if (localUpdating || isUpdating) return;
+    const isConfirmed = await confirm({
+      title: 'Xóa sản phẩm khỏi giỏ hàng?',
+      description: `Bạn có chắc chắn muốn xóa "${item.name || 'sản phẩm này'}" khỏi giỏ hàng?`,
+      confirmText: 'Xóa sản phẩm',
+      cancelText: 'Hủy',
+      variant: 'destructive',
+    });
+    if (!isConfirmed) return;
+
     setLocalUpdating(true);
     await onRemoveItem(item._id);
     setLocalUpdating(false);
@@ -45,7 +57,8 @@ export default function CartItemRow({
     '/logo-shop.jpg';
 
   const productUrl = item.slug ? `/products/${item.slug}` : `/products/${item.productId}`;
-  const isOutOfStock = Boolean(item.isOutOfStock) || (item.availableStock !== undefined && item.availableStock <= 0);
+  const isOutOfStock =
+    Boolean(item.isOutOfStock) || (item.availableStock !== undefined && item.availableStock <= 0);
   const isLowStock = !isOutOfStock && item.availableStock !== undefined && item.availableStock <= 5;
 
   return (
@@ -53,10 +66,23 @@ export default function CartItemRow({
       className={`p-3.5 sm:p-4 rounded-xl border transition-all ${
         isOutOfStock
           ? 'bg-red-50/40 border-red-200'
+          : isSelected
+          ? 'bg-white border-red-300 shadow-2xs ring-1 ring-red-200/60'
           : 'bg-white border-slate-200/90 hover:border-slate-300 shadow-2xs'
       }`}
     >
-      <div className="flex gap-3 sm:gap-4 items-start">
+      <div className="flex gap-2.5 sm:gap-4 items-start">
+        {/* Checkbox chọn sản phẩm mua hàng chuẩn Shopee */}
+        <div className="pt-2 sm:pt-4 shrink-0 flex items-center justify-center">
+          <Checkbox
+            checked={isSelected}
+            disabled={isOutOfStock || isUpdating || localUpdating}
+            onChange={() => onToggleSelect && onToggleSelect(item._id)}
+            aria-label={`Chọn sản phẩm ${item.name || ''}`}
+            className="h-4 w-4 rounded cursor-pointer"
+          />
+        </div>
+
         {/* Ảnh đại diện sản phẩm */}
         <Link
           href={productUrl}
