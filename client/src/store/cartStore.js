@@ -123,20 +123,42 @@ export const useCartStore = create((set, get) => ({
   },
 
   /**
-   * Xóa tất cả các sản phẩm đang được tích chọn
+   * Xóa tất cả các sản phẩm đang được tích chọn (Tối ưu hóa: 1 request duy nhất, xử lý hàng nghìn sản phẩm tức thì)
    */
   removeSelectedItems: async () => {
-    const { selectedItemIds, removeItem } = get();
+    const { selectedItemIds, items, clearCart } = get();
     if (!selectedItemIds || selectedItemIds.length === 0)
       return { success: false, count: 0 };
-    set({ isUpdating: true });
+
+    set({ isUpdating: true, error: null });
     try {
-      const idsToDelete = [...selectedItemIds];
-      for (const id of idsToDelete) {
-        await removeItem(id);
+      const count = selectedItemIds.length;
+
+      // TRƯỜNG HỢP 1: Nếu đã chọn toàn bộ sản phẩm trong giỏ -> dùng clearCart trong 1 request duy nhất!
+      if (selectedItemIds.length >= items.length) {
+        const res = await clearCart();
+        return { success: res?.success !== false, count };
       }
-      set({ selectedItemIds: [] });
-      return { success: true, count: idsToDelete.length };
+
+      // TRƯỜNG HỢP 2: Xóa nhiều sản phẩm đã chọn cùng lúc qua API Batch remove trong 1 request duy nhất!
+      const res = await cartService.removeItems(selectedItemIds);
+      if (res?.success && res?.data) {
+        get()._setCartData(res.data);
+        set({ selectedItemIds: [] });
+        return { success: true, count };
+      }
+
+      return {
+        success: false,
+        message: res?.message || 'Không thể xóa các sản phẩm đã chọn',
+      };
+    } catch (err) {
+      const msg =
+        err.response?.data?.message ||
+        err.message ||
+        'Không thể xóa các sản phẩm đã chọn';
+      set({ error: msg });
+      return { success: false, message: msg };
     } finally {
       set({ isUpdating: false });
     }

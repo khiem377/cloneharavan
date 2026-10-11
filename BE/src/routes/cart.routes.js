@@ -19,6 +19,10 @@ router.patch('/items/:itemId', cartCtrl.updateCartItemQuantity);
 // 4. Xóa một sản phẩm khỏi giỏ
 router.delete('/items/:itemId', cartCtrl.removeCartItem);
 
+// 4.1. Xóa nhiều sản phẩm khỏi giỏ hàng (Batch remove)
+router.post('/remove-items', cartCtrl.removeCartItems);
+router.delete('/items', cartCtrl.removeCartItems);
+
 // 5. Xóa sạch giỏ hàng
 router.delete('/', cartCtrl.clearCart);
 

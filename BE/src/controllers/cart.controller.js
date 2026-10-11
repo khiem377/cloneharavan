@@ -67,6 +67,20 @@ const removeCartItem = async (req, res, next) => {
   }
 };
 
+const removeCartItems = async (req, res, next) => {
+  try {
+    const itemIds = req.body.itemIds || req.body.ids || [];
+    const result = await cartService.removeCartItems(req.cartOwner, itemIds);
+    res.json({
+      success: true,
+      message: 'Đã xóa các sản phẩm được chọn khỏi giỏ hàng',
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const clearCart = async (req, res, next) => {
   try {
     const result = await cartService.clearCart(req.cartOwner);
@@ -148,6 +162,7 @@ module.exports = {
   addToCart,
   updateCartItemQuantity,
   removeCartItem,
+  removeCartItems,
   clearCart,
   applyCoupon,
   removeCoupon,
