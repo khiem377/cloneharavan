@@ -346,12 +346,6 @@ export default function ProductInfo({
     if (res?.success) {
       if (isBuyNow) {
         router.push('/cart');
-      } else {
-        setActionNotice({
-          type: 'success',
-          message: `Đã thêm ${quantity} sản phẩm vào giỏ hàng thành công!`,
-        });
-        setTimeout(() => setActionNotice(null), 4000);
       }
     } else {
       setActionNotice({

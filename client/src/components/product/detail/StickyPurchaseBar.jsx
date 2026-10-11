@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import useCartStore from '@/store/cartStore';
 
@@ -11,7 +12,6 @@ export default function StickyPurchaseBar({
   const router = useRouter();
   const { addToCart } = useCartStore();
   const [isVisible, setIsVisible] = useState(false);
-  const [toastMessage, setToastMessage] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -68,13 +68,7 @@ export default function StickyPurchaseBar({
     if (res?.success) {
       if (isBuyNow) {
         router.push('/cart');
-      } else {
-        setToastMessage('Đã thêm sản phẩm vào giỏ hàng!');
-        setTimeout(() => setToastMessage(null), 3000);
       }
-    } else {
-      setToastMessage(res?.message || 'Không thể thêm vào giỏ');
-      setTimeout(() => setToastMessage(null), 3000);
     }
   };
 
@@ -123,10 +117,18 @@ export default function StickyPurchaseBar({
           <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
+              disabled={isSubmitting}
               onClick={() => handleAction('Thêm vào giỏ')}
-              className="hidden sm:inline-flex items-center px-4 py-2 rounded-[6px] border border-red-600 bg-white text-red-600 hover:bg-red-50 text-xs font-bold transition-all cursor-pointer active:scale-[0.98]"
+              className="hidden sm:inline-flex items-center px-4 py-2 rounded-[6px] border border-red-600 bg-white text-red-600 hover:bg-red-50 text-xs font-bold transition-all cursor-pointer active:scale-[0.98] disabled:opacity-60"
             >
-              Thêm vào giỏ
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+                  <span>Đang thêm...</span>
+                </>
+              ) : (
+                <span>Thêm vào giỏ</span>
+              )}
             </button>
 
             <button
@@ -140,11 +142,7 @@ export default function StickyPurchaseBar({
         </div>
       </div>
 
-      {toastMessage && (
-        <div className="fixed bottom-16 right-4 z-50 bg-slate-900 text-white text-xs py-2 px-3 rounded-[6px] shadow-sm animate-fadeIn">
-          {toastMessage}
-        </div>
-      )}
+
     </>
   );
 }
