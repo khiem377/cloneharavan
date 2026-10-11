@@ -61,13 +61,16 @@ export default function ChatTriggerButton({
   showPill,
   onClosePill,
   isProductPage,
+  isCartPage,
 }) {
   if (isOpen) return null;
 
   return (
     <div
       className={`fixed z-50 flex items-end gap-2.5 select-none transition-all duration-200 ${
-        isProductPage
+        isCartPage
+          ? 'bottom-[175px] right-4 sm:bottom-[185px] sm:right-6'
+          : isProductPage
           ? 'bottom-20 right-4 sm:bottom-22 sm:right-6'
           : 'bottom-5 right-4 sm:bottom-6 sm:right-6'
       }`}

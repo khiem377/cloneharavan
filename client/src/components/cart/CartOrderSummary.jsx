@@ -9,11 +9,9 @@ import {
   ShieldCheck,
   RotateCcw,
   Truck,
-  X,
   Check,
-  Loader2,
-  Tag,
   AlertTriangle,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,20 +19,26 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import {
   Dialog,
+  DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogContent,
   DialogClose,
 } from '@/components/ui/dialog';
 import couponService from '@/services/coupon.service';
+import { toast } from '@/components/ui/toast';
 
 export default function CartOrderSummary({
   cart = {},
+  selectedItemIds = [],
+  selectedCount = 0,
+  selectedSubtotal = 0,
   onApplyCoupon,
   onRemoveCoupon,
   onValidateCheckout,
   isUpdating = false,
   hasStockIssue = false,
+  showVoucherModal = false,
+  setShowVoucherModal,
 }) {
   const router = useRouter();
   const [couponInput, setCouponInput] = useState('');
@@ -42,11 +46,13 @@ export default function CartOrderSummary({
   const [couponSuccess, setCouponSuccess] = useState('');
   const [applying, setApplying] = useState(false);
 
-  // Dialog chọn voucher
-  const [showVoucherModal, setShowVoucherModal] = useState(false);
+  // Local voucher modal fallback nếu không truyền từ ngoài
+  const [localShowVoucher, setLocalShowVoucher] = useState(false);
+  const isVoucherOpen = setShowVoucherModal ? showVoucherModal : localShowVoucher;
+  const setVoucherOpen = setShowVoucherModal || setLocalShowVoucher;
+
   const [availableCoupons, setAvailableCoupons] = useState([]);
   const [loadingCoupons, setLoadingCoupons] = useState(false);
-
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState('');
 
@@ -55,7 +61,7 @@ export default function CartOrderSummary({
 
   // Load danh sách coupon khi mở modal
   useEffect(() => {
-    if (showVoucherModal) {
+    if (isVoucherOpen) {
       setLoadingCoupons(true);
       couponService
         .getActiveCoupons(20)
@@ -65,7 +71,7 @@ export default function CartOrderSummary({
         .catch(() => setAvailableCoupons([]))
         .finally(() => setLoadingCoupons(false));
     }
-  }, [showVoucherModal]);
+  }, [isVoucherOpen]);
 
   const handleApply = async (codeToApply) => {
     const code = (codeToApply || couponInput || '').trim();
@@ -84,7 +90,7 @@ export default function CartOrderSummary({
     if (res?.success) {
       setCouponSuccess(res.message || `Đã áp dụng mã "${code}" thành công`);
       setCouponInput('');
-      setShowVoucherModal(false);
+      setVoucherOpen(false);
     } else {
       setCouponError(res?.message || 'Mã giảm giá không hợp lệ hoặc đã hết lượt');
     }
@@ -99,6 +105,11 @@ export default function CartOrderSummary({
   };
 
   const handleProceedCheckout = async () => {
+    if (selectedCount === 0) {
+      toast('Vui lòng chọn ít nhất 1 sản phẩm để thanh toán', { type: 'warning' });
+      return;
+    }
+
     setCheckoutError('');
     setCheckoutLoading(true);
 
@@ -111,6 +122,10 @@ export default function CartOrderSummary({
           return;
         }
       }
+
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('checkoutItemIds', JSON.stringify(selectedItemIds));
+      }
       router.push('/checkout');
     } catch (err) {
       setCheckoutError(err.message || 'Không thể tiến hành thanh toán');
@@ -118,36 +133,28 @@ export default function CartOrderSummary({
     }
   };
 
-  const subtotalOriginal = cart.subtotalOriginal || cart.subtotal || 0;
-  const totalFlashSaleDiscount = cart.totalFlashSaleDiscount || 0;
-  const totalPromotionDiscount = cart.totalPromotionDiscount || 0;
-  const couponDiscount = cart.couponDiscount || 0;
-  const totalDiscount = cart.totalDiscount || totalFlashSaleDiscount + totalPromotionDiscount + couponDiscount;
-  const finalTotal = cart.finalTotal !== undefined ? cart.finalTotal : cart.subtotal || 0;
-  const isFreeship = (cart.subtotal || 0) >= 500000;
+  // Tính toán số tiền dựa trên các sản phẩm đã chọn (chuẩn Shopee)
+  const couponDiscount = selectedCount > 0 ? cart.couponDiscount || 0 : 0;
+  const totalDiscount = couponDiscount;
+  const effectiveSubtotal = selectedCount > 0 ? selectedSubtotal : 0;
+  const finalTotal = selectedCount > 0 ? Math.max(0, effectiveSubtotal - totalDiscount) : 0;
+  const isFreeship = effectiveSubtotal >= 500000;
 
   return (
-    <div className="bg-white border border-slate-200/90 rounded-xl p-4 sm:p-5 shadow-2xs space-y-4 lg:sticky lg:top-24">
-      <h3 className="font-bold text-sm sm:text-base text-slate-800 flex items-center justify-between">
-        <span>Tóm tắt đơn hàng</span>
-        <span className="text-xs font-semibold text-slate-500">
-          ({cart.totalItems || 0} sản phẩm)
-        </span>
-      </h3>
-
+    <div className="bg-white rounded-xl border border-slate-200/90 p-4 sm:p-5 shadow-2xs space-y-4">
       {/* 1. KHỐI MÃ GIẢM GIÁ (COUPON BOX) */}
       <div className="bg-slate-50/70 border border-slate-200/80 rounded-lg p-3 space-y-2.5">
         <div className="flex items-center justify-between">
-          <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+          <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
             <TicketPercent size={14} className="text-red-600" />
             <span>Mã ưu đãi / Voucher</span>
           </label>
           <button
             type="button"
-            onClick={() => setShowVoucherModal(true)}
+            onClick={() => setVoucherOpen(true)}
             className="text-[11px] font-semibold text-red-600 hover:text-red-700 hover:underline cursor-pointer"
           >
-            Chọn mã có sẵn
+            Chọn mã có sẵn &gt;
           </button>
         </div>
 
@@ -155,16 +162,19 @@ export default function CartOrderSummary({
         {cart.couponCode ? (
           <div className="flex items-center justify-between p-2 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-900 animate-fadeIn">
             <div className="flex items-center gap-2 min-w-0">
-              <Tag size={14} className="text-emerald-700 shrink-0" />
+              <Check size={14} className="text-emerald-700 shrink-0" />
               <div className="min-w-0">
                 <div className="text-xs font-bold truncate">
-                  MÃ: {cart.couponCode}
+                  Mã: {cart.couponCode}
                 </div>
-                <div className="text-[10px] text-emerald-700">
-                  Giảm: -{formatPrice(couponDiscount)}
-                </div>
+                {couponDiscount > 0 && (
+                  <div className="text-[10px] text-emerald-700">
+                    Giảm: -{formatPrice(couponDiscount)}
+                  </div>
+                )}
               </div>
             </div>
+
             <button
               type="button"
               onClick={handleRemove}
@@ -172,13 +182,14 @@ export default function CartOrderSummary({
               className="text-xs font-medium text-red-600 hover:text-red-700 p-1 hover:bg-red-50 rounded cursor-pointer shrink-0"
               title="Gỡ mã giảm giá"
             >
-              {applying ? <Loader2 size={13} className="animate-spin" /> : 'Gỡ'}
+              {applying ? <Loader2 size={12} className="animate-spin" /> : 'Gỡ bỏ'}
             </button>
           </div>
         ) : (
           <div className="space-y-1.5">
-            <div className="flex gap-1.5">
+            <div className="flex gap-2">
               <Input
+                type="text"
                 placeholder="Nhập mã giảm giá..."
                 value={couponInput}
                 onChange={(e) => {
@@ -191,16 +202,16 @@ export default function CartOrderSummary({
                     handleApply();
                   }
                 }}
-                className="text-xs h-8 uppercase font-semibold"
+                className="h-8 text-xs font-mono uppercase bg-white border-slate-300 focus:border-red-500"
               />
               <Button
                 type="button"
                 size="sm"
                 onClick={() => handleApply()}
                 disabled={applying || isUpdating || !couponInput.trim()}
-                className="h-8 px-3 text-xs bg-red-600 hover:bg-red-700 text-white shrink-0"
+                className="h-8 px-3 text-xs bg-red-600 hover:bg-red-700 text-white shrink-0 cursor-pointer"
               >
-                {applying ? <Loader2 size={13} className="animate-spin" /> : 'Áp dụng'}
+                {applying ? <Loader2 size={12} className="animate-spin" /> : 'Áp dụng'}
               </Button>
             </div>
 
@@ -218,32 +229,23 @@ export default function CartOrderSummary({
         )}
       </div>
 
-      {/* 2. CHI TIẾT TÍNH TIỀN HÀNG */}
-      <div className="space-y-2 text-xs">
-        <div className="flex justify-between text-slate-600">
-          <span>Tiền hàng tạm tính:</span>
+      <Separator />
+
+      {/* 2. CHI TIẾT THANH TOÁN */}
+      <div className="space-y-2.5 text-xs text-slate-600">
+        <div className="flex justify-between items-center">
+          <span>Sản phẩm đã chọn:</span>
           <span className="font-semibold text-slate-800">
-            {formatPrice(subtotalOriginal)}
+            {selectedCount} sản phẩm
           </span>
         </div>
 
-        {totalFlashSaleDiscount > 0 && (
-          <div className="flex justify-between text-red-600">
-            <span>Giảm giá Flash Sale:</span>
-            <span className="font-semibold">
-              -{formatPrice(totalFlashSaleDiscount)}
-            </span>
-          </div>
-        )}
-
-        {totalPromotionDiscount > 0 && (
-          <div className="flex justify-between text-emerald-700">
-            <span>Khuyến mãi giảm trực tiếp:</span>
-            <span className="font-semibold">
-              -{formatPrice(totalPromotionDiscount)}
-            </span>
-          </div>
-        )}
+        <div className="flex justify-between items-center">
+          <span>Tạm tính:</span>
+          <span className="font-semibold text-slate-900">
+            {formatPrice(effectiveSubtotal)}
+          </span>
+        </div>
 
         {couponDiscount > 0 && (
           <div className="flex justify-between text-emerald-700">
@@ -254,7 +256,7 @@ export default function CartOrderSummary({
           </div>
         )}
 
-        <div className="flex justify-between text-slate-600">
+        <div className="flex justify-between items-center">
           <span className="flex items-center gap-1">
             <span>Phí vận chuyển:</span>
             {isFreeship && (
@@ -317,10 +319,9 @@ export default function CartOrderSummary({
             checkoutLoading ||
             isUpdating ||
             hasStockIssue ||
-            !cart.items ||
-            cart.items.length === 0
+            selectedCount === 0
           }
-          className="w-full h-11 text-sm font-bold bg-red-600 hover:bg-red-700 text-white shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
+          className="w-full h-11 text-sm font-bold bg-red-600 hover:bg-red-700 text-white shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {checkoutLoading ? (
             <>
@@ -329,11 +330,17 @@ export default function CartOrderSummary({
             </>
           ) : (
             <>
-              <span>TIẾN HÀNH THANH TOÁN</span>
+              <span>MUA HÀNG {selectedCount > 0 ? `(${selectedCount})` : ''}</span>
               <ArrowRight size={16} />
             </>
           )}
         </Button>
+
+        {selectedCount === 0 && (
+          <p className="text-[11px] text-center text-slate-400">
+            * Vui lòng tích chọn sản phẩm để mua hàng
+          </p>
+        )}
 
         <Link
           href="/"
@@ -360,13 +367,13 @@ export default function CartOrderSummary({
       </div>
 
       {/* MODAL CHỌN MÃ ƯU ĐÃI KHẢ DỤNG */}
-      <Dialog open={showVoucherModal} onOpenChange={setShowVoucherModal}>
+      <Dialog open={isVoucherOpen} onOpenChange={setVoucherOpen}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-slate-800">
             <TicketPercent size={18} className="text-red-600" />
             <span>Danh sách Mã giảm giá & Ưu đãi</span>
           </DialogTitle>
-          <DialogClose onClick={() => setShowVoucherModal(false)} />
+          <DialogClose onClick={() => setVoucherOpen(false)} />
         </DialogHeader>
 
         <DialogContent className="max-h-[75vh] overflow-y-auto p-4 space-y-3">
@@ -384,7 +391,7 @@ export default function CartOrderSummary({
               {availableCoupons.map((c) => {
                 const code = c.code || c.couponCode;
                 const minOrder = c.minOrderValue || 0;
-                const isApplicable = (cart.subtotal || 0) >= minOrder;
+                const isApplicable = (effectiveSubtotal || 0) >= minOrder;
                 const isCurrent = cart.couponCode === code;
 
                 return (

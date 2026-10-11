@@ -1,22 +1,23 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ChevronRight, AlertTriangle, ArrowRight, Loader2 } from 'lucide-react';
+import { ChevronRight, AlertTriangle } from 'lucide-react';
 import useCartStore from '@/store/cartStore';
 import CartRewardBar from './CartRewardBar';
 import CartItemList from './CartItemList';
 import CartGiftItems from './CartGiftItems';
 import CartAddons from './CartAddons';
 import CartOrderSummary from './CartOrderSummary';
+import CartFixedBottomBar from './CartFixedBottomBar';
 import CartEmptyState from './CartEmptyState';
-import { Button } from '@/components/ui/button';
 
 export default function CartView() {
   const {
     cart,
     items,
     totalItems,
+    selectedItemIds,
     warnings,
     hasStockIssue,
     hasPriceChange,
@@ -24,6 +25,10 @@ export default function CartView() {
     isUpdating,
     initialized,
     fetchCart,
+    toggleSelectItem,
+    toggleSelectAll,
+    removeSelectedItems,
+    getSelectedSubtotal,
     updateQuantity,
     removeItem,
     clearCart,
@@ -32,13 +37,25 @@ export default function CartView() {
     validateCheckout,
   } = useCartStore();
 
+  const [showVoucherModal, setShowVoucherModal] = useState(false);
+
   // Tải giỏ hàng lần đầu khi mount
   useEffect(() => {
     fetchCart();
   }, [fetchCart]);
 
-  const formatPrice = (val) =>
-    new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val || 0);
+  // Dọn dẹp các sản phẩm hết hàng trong giỏ
+  const handleClearOutOfStock = async () => {
+    const outOfStockItems = items.filter(
+      (i) => Boolean(i.isOutOfStock) || (i.availableStock !== undefined && i.availableStock <= 0)
+    );
+    for (const item of outOfStockItems) {
+      await removeItem(item._id);
+    }
+  };
+
+  const selectedCount = selectedItemIds ? selectedItemIds.length : 0;
+  const selectedSubtotal = getSelectedSubtotal ? getSelectedSubtotal() : 0;
 
   // SKELETON LOADING KHI ĐANG TẢI DỮ LIỆU
   if (isLoading && !initialized) {
@@ -80,7 +97,7 @@ export default function CartView() {
   }
 
   return (
-    <div className="bg-slate-50/50 min-h-[calc(100vh-200px)] pb-24 lg:pb-12">
+    <div className="bg-slate-50/50 min-h-[calc(100vh-200px)] pb-36 sm:pb-44">
       <div className="container mx-auto px-4 py-4 sm:py-6 max-w-7xl">
         {/* BREADCRUMB */}
         <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs text-slate-500 mb-4 sm:mb-6">
@@ -115,12 +132,15 @@ export default function CartView() {
           {/* CỘT TRÁI (8 CỘT TRÊN DESKTOP) */}
           <div className="lg:col-span-8 space-y-5">
             {/* 1. Thanh tiến trình nhận quà */}
-            <CartRewardBar subtotal={cart.subtotal || 0} />
+            <CartRewardBar subtotal={selectedSubtotal || cart.subtotal || 0} />
 
-            {/* 2. Danh sách sản phẩm trong giỏ */}
+            {/* 2. Danh sách sản phẩm trong giỏ (Kèm checkbox chọn từng món chuẩn Shopee) */}
             <CartItemList
               items={items}
               totalItems={totalItems}
+              selectedItemIds={selectedItemIds}
+              onToggleSelect={toggleSelectItem}
+              onToggleSelectAll={toggleSelectAll}
               onUpdateQuantity={updateQuantity}
               onRemoveItem={removeItem}
               onClearCart={clearCart}
@@ -138,36 +158,33 @@ export default function CartView() {
           <div className="lg:col-span-4">
             <CartOrderSummary
               cart={cart}
+              selectedItemIds={selectedItemIds}
+              selectedCount={selectedCount}
+              selectedSubtotal={selectedSubtotal}
               onApplyCoupon={applyCoupon}
               onRemoveCoupon={removeCoupon}
               onValidateCheckout={validateCheckout}
               isUpdating={isUpdating}
               hasStockIssue={hasStockIssue}
+              showVoucherModal={showVoucherModal}
+              setShowVoucherModal={setShowVoucherModal}
             />
           </div>
         </div>
       </div>
 
-      {/* THANH GHIM ĐÁY TRÊN ĐIỆN THOẠI (MOBILE STICKY BOTTOM BAR) */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-200 p-3 px-4 shadow-lg flex items-center justify-between gap-3 animate-fadeIn">
-        <div>
-          <div className="text-[10px] text-slate-500 font-medium">Tổng thanh toán:</div>
-          <div className="text-base font-black text-red-600">
-            {formatPrice(cart.finalTotal || cart.subtotal || 0)}
-          </div>
-        </div>
-
-        <Link href="/checkout" className="shrink-0">
-          <Button
-            size="default"
-            disabled={isUpdating || hasStockIssue || items.length === 0}
-            className="h-10 px-5 bg-red-600 hover:bg-red-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs"
-          >
-            <span>Thanh toán</span>
-            <ArrowRight size={14} />
-          </Button>
-        </Link>
-      </div>
+      {/* THANH GHIM ĐÁY TOÀN TRANG (FIXED BOTTOM BAR CHUẨN SHOPEE) */}
+      <CartFixedBottomBar
+        items={items}
+        selectedItemIds={selectedItemIds}
+        onToggleSelectAll={toggleSelectAll}
+        onRemoveSelected={removeSelectedItems}
+        onOpenVoucherModal={() => setShowVoucherModal(true)}
+        appliedCouponCode={cart.couponCode}
+        couponDiscount={cart.couponDiscount}
+        isUpdating={isUpdating}
+        onClearOutOfStock={handleClearOutOfStock}
+      />
     </div>
   );
 }
