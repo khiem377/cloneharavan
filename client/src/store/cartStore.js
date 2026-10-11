@@ -26,6 +26,30 @@ export const useCartStore = create((set, get) => ({
   totalItems: 0,
   totalKinds: 0,
   selectedItemIds: [], // Danh sách ID các sản phẩm được chọn (mặc định rỗng: 0 sản phẩm, 0 đ)
+  cartHud: {
+    visible: false,
+    status: 'idle', // 'idle' | 'loading' | 'success' | 'error'
+    message: '',
+  },
+  _hudTimeout: null,
+
+  showCartHud: (status = 'loading', message = '') => {
+    const prev = get()._hudTimeout;
+    if (prev) clearTimeout(prev);
+    set({
+      cartHud: { visible: true, status, message },
+      _hudTimeout: null,
+    });
+  },
+
+  hideCartHud: () => {
+    const prev = get()._hudTimeout;
+    if (prev) clearTimeout(prev);
+    set({
+      cartHud: { visible: false, status: 'idle', message: '' },
+      _hudTimeout: null,
+    });
+  },
   warnings: [],
   hasStockIssue: false,
   hasPriceChange: false,
@@ -169,20 +193,46 @@ export const useCartStore = create((set, get) => ({
   /**
    * Thêm 1 hoặc nhiều sản phẩm vào giỏ
    */
-  addToCart: async (payload) => {
+  addToCart: async (payload, options = {}) => {
+    const { silent = false } = options;
     try {
       set({ isUpdating: true, error: null });
-      const res = await cartService.addToCart(payload);
+      if (!silent) {
+        get().showCartHud('loading', 'Đang thêm vào giỏ...');
+      }
+
+      // Đảm bảo hiệu ứng loading hiển thị mượt mà ít nhất 300ms
+      const [res] = await Promise.all([
+        cartService.addToCart(payload),
+        new Promise((resolve) => setTimeout(resolve, 320)),
+      ]);
+
       if (res?.success && res?.data) {
         get()._setCartData(res.data);
+        if (!silent) {
+          get().showCartHud('success', 'Thêm vào giỏ hàng thành công!');
+          const timeout = setTimeout(() => {
+            get().hideCartHud();
+          }, 1500);
+          set({ _hudTimeout: timeout });
+        }
         return {
           success: true,
           message: res.message || 'Đã thêm vào giỏ hàng',
         };
       }
+
+      const errMsg = res?.message || 'Thêm vào giỏ thất bại';
+      if (!silent) {
+        get().showCartHud('error', errMsg);
+        const timeout = setTimeout(() => {
+          get().hideCartHud();
+        }, 2000);
+        set({ _hudTimeout: timeout });
+      }
       return {
         success: false,
-        message: res?.message || 'Thêm vào giỏ thất bại',
+        message: errMsg,
       };
     } catch (err) {
       const msg =
@@ -190,6 +240,13 @@ export const useCartStore = create((set, get) => ({
         err.message ||
         'Thêm vào giỏ hàng thất bại';
       set({ error: msg });
+      if (!silent) {
+        get().showCartHud('error', msg);
+        const timeout = setTimeout(() => {
+          get().hideCartHud();
+        }, 2000);
+        set({ _hudTimeout: timeout });
+      }
       return { success: false, message: msg };
     } finally {
       set({ isUpdating: false });
