@@ -1,6 +1,6 @@
 # Hệ Thống Clone Haravan (E-Commerce Enterprise) — Tổng Hợp Tính Năng Hoàn Chỉnh
 
-> **Phiên bản tài liệu**: 2.0 (Cập nhật toàn diện sau khi hoàn thiện đầy đủ Backend, Admin Panel và Client Storefront)  
+> **Phiên bản tài liệu**: 2.1 (Cập nhật ngày 12/10/2026 — Bổ sung Combo AI, Pancake Supplier, VietQR, Đa Kho Hàng, Sơ đồ Kho 2D, GHN v3 2 cấp & Chuẩn UI Flat)  
 > **Tham chiếu nghiệp vụ & UI/UX**: [EGA Điện Máy / Haravan Enterprise Theme](https://ega-dien-may.myharavan.com)  
 > **Cấu trúc dự án**: Gồm 3 khối chính: **Backend REST & AI Engine (`BE`)**, **Admin Dashboard Quản trị (`Admin`)**, và **Client Storefront Bán hàng (`client`)**.
 
@@ -10,18 +10,18 @@
 
 1. [Phân Hệ Backend (BE & AI Services)](#1-phân-hệ-backend-be--ai-services)
    - [1.1 Xác thực, Phân quyền & Quản lý Người dùng (Auth, RBAC & Security)](#11-xác-thực-phân-quyền--quản-lý-người-dùng-auth-rbac--security)
-   - [1.2 Quản lý Sản phẩm & Danh mục (PIM - Product Information Management)](#12-quản-lý-sản-phẩm--danh-mục-pim---product-information-management)
+   - [1.2 Quản lý Sản phẩm, Danh mục & Combo AI (PIM & Gemini Bundles)](#12-quản-lý-sản-phẩm--danh-mục-pim---product-information-management)
    - [1.3 Quản lý Kho Vận & Chuỗi Cung Ứng (Inventory & Supply Chain)](#13-quản-lý-kho-vận--chuỗi-cung-ứng-inventory--supply-chain)
    - [1.4 Khuyến mãi, Mã giảm giá & Flash Sale (Marketing & Promotions)](#14-khuyến-mãi-mã-giảm-giá--flash-sale-marketing--promotions)
-   - [1.5 Giỏ hàng, Đơn hàng & Vận chuyển (Cart, Order & Logistics)](#15-giỏ-hàng-đơn-hàng--vận-chuyển-cart-order--logistics)
+   - [1.5 Giỏ hàng, Đơn hàng & Vận chuyển GHN v2/v3 (Cart, Order & Logistics)](#15-giỏ-hàng-đơn-hàng--vận-chuyển-cart-order--logistics)
    - [1.6 Trợ lý AI & Động cơ Tìm kiếm Thông minh (AI Chatbot, Search & Visual Search)](#16-trợ-lý-ai--động-cơ-tìm-kiếm-thông-minh-ai-chatbot-search--visual-search)
    - [1.7 Động cơ Gợi ý Cá nhân hóa (Personalized Recommendation Engine)](#17-động-cơ-gợi-ý-cá-nhân-hóa-personalized-recommendation-engine)
    - [1.8 CMS Nội dung, Thư viện Media, Banner & Blog (Content Management)](#18-cms-nội-dung-thư-viện-media-banner--blog-content-management)
    - [1.9 Nhật ký Hoạt động & Giám sát Hệ thống (Audit Log & Monitoring)](#19-nhật-ký-hoạt-động--giám-sát-hệ-thống-audit-log--monitoring)
 2. [Phân Hệ Admin Panel (Trang Quản Trị Doanh Nghiệp)](#2-phân-hệ-admin-panel-trang-quản-trị-doanh-nghiệp)
    - [2.1 Bảng điều khiển Tổng quan (Executive Dashboard)](#21-bảng-điều-khiển-tổng-quan-executive-dashboard)
-   - [2.2 Quản lý Danh mục & Sản phẩm Chuyên sâu](#22-quản-lý-danh-mục--sản-phẩm-chuyên-sâu)
-   - [2.3 Quản trị Kho hàng & Nhà Cung Cấp Toàn diện](#23-quản-trị-kho-hàng--nhà-cung-cấp-toàn-diện)
+   - [2.2 Quản lý Danh mục, Sản phẩm & Combo AI Chuyên sâu](#22-quản-lý-danh-mục--sản-phẩm-chuyên-sâu)
+   - [2.3 Quản trị Kho hàng, Sơ đồ 2D & Nhà Cung Cấp Pancake Toàn diện](#23-quản-trị-kho-hàng--nhà-cung-cấp-toàn-diện)
    - [2.4 Thiết lập Chiến dịch Khuyến mãi & Flash Sale](#24-thiết-lập-chiến-dịch-khuyến-mãi--flash-sale)
    - [2.5 Quản lý Thư viện Media & Quản lý Cây Thư mục](#25-quản-lý-thư-viện-media--quản-lý-cây-thư-mục)
    - [2.6 Quản lý Khách hàng, Nhân sự & Phân quyền Ma trận (RBAC)](#26-quản-lý-khách-hàng-nhân-sự--phân-quyền-ma-trận-rbac)
@@ -39,6 +39,7 @@
    - [3.9 Hệ Thống Tin Tức & Blog Chuẩn SEO (Blog & Knowledge Hub)](#39-hệ-thống-tin-tức--blog-chuẩn-seo-blog--knowledge-hub)
    - [3.10 Trung Tâm Quản Lý Tài Khoản Khách Hàng (Customer Account Center)](#310-trung-tâm-quản-lý-tài-khoản-khách-hàng-customer-account-center)
    - [3.11 Xác Thực Đa Phương Thức Hiện Đại (Modern Authentication Suite)](#311-xác-thực-đa-phương-thức-hiện-đại-modern-authentication-suite)
+4. [Quy Chuẩn Thiết Kế Giao Diện UI/UX Quản Trị (Admin Enterprise Design System)](#4-quy-chuẩn-thiết-kế-giao-diện-uiux-quản-trị-admin-enterprise-design-system)
 
 ---
 
@@ -79,11 +80,33 @@
 - **Cây Danh mục Đa cấp (Category Hierarchy)**:
   - Hỗ trợ danh mục lồng nhau không giới hạn cấp (Parent-Child Tree).
   - Tự động tính toán đường dẫn danh mục (breadcrumb path), icon, ảnh banner danh mục.
+- **Combo Sản Phẩm & Trí Tuệ Nhân Tạo Gemini Định Giá (Gemini Bundles & AI Pricing Engine)**:
+  - Model `combo.model.js`: Mã combo tự sinh (`CB-`), tên, slug, mô tả, danh sách items (liên kết product/variant và số lượng).
+  - Tồn kho ảo thông minh (`virtualStock`): Tự động tính toán theo sản phẩm thành phần có số lượng nhỏ nhất, đảm bảo không bao giờ bán vượt tồn kho thực tế.
+  - Tự động cộng dồn giá gốc (`originalPrice`), áp dụng chiết khấu linh hoạt (% hoặc số tiền), tính số tiền tiết kiệm (`savingsAmount`) và % tiết kiệm (`savingsPercent`), cờ freeship.
+  - **Gemini AI Gợi Ý Định Giá (`POST /api/v1/combos/ai-suggest-pricing`)**: Kết nối Google Gemini Pro AI phân tích giá vốn, giá bán lẻ và biên lợi nhuận của từng món để đưa ra 3 kịch bản định giá (Kích cầu tối đa, Cân bằng tối ưu, Định vị cao cấp).
+  - **Gemini AI Gợi Ý Combo Tiềm Năng (`GET /api/v1/combos/ai-suggest-bundles`)**: Quét catalog và lịch sử bán hàng để gợi ý các gói bundle có xác suất bán chéo cao.
 
 ---
 
 ### 1.3 Quản lý Kho Vận & Chuỗi Cung Ứng (Inventory & Supply Chain)
-- **Quản lý Nhà Cung Cấp (Suppliers)**: Lưu trữ mã NCC, tên công ty, số điện thoại, email, địa chỉ, mã số thuế, công nợ và trạng thái hợp tác.
+- **Quản lý Nhà Cung Cấp Chuẩn Pancake POS & VietQR (`supplier.model.js`)**:
+  - Lưu trữ mã NCC, tên công ty, số điện thoại, email, địa chỉ, mã số thuế, loại NCC (`Sản phẩm / Nguyên vật liệu`, `Sản phẩm`, `Nguyên phụ liệu`), công nợ (`totalDebt`) và trạng thái (`active`, `inactive`).
+  - Hệ thống Tab trạng thái Pancake: Tất cả, Đang hoạt động, Không hoạt động kèm aggregation đếm chính xác và tính tổng công nợ toàn sàn ghim chân bảng.
+  - Tích hợp tài khoản Ngân hàng chuẩn VietQR: Kết nối API VietQR (`https://api.vietqr.io/v2/banks`), chọn ngân hàng kèm logo, tự động viết hoa tên tài khoản không dấu (`toUpperCase`), chi nhánh.
+  - Hỗ trợ chọn địa chỉ 2 chế độ: Địa chỉ mới 2 cấp GHN v3 và Địa chỉ cũ 3 cấp GHN v2.
+- **Quản Trị Đa Kho Hàng Vật Lý (Multi-Warehouse - `warehouse.model.js`)**:
+  - Quản lý mạng lưới chi nhánh kho vật lý: Kho tổng, Kho miền Bắc, Kho miền Nam, Kho bán lẻ...
+  - Thiết lập kho mặc định (`isDefault`), phân công Thủ kho quản lý (`manager`), diện tích, sức chứa.
+  - Quản lý tồn kho phân tán theo từng kho (`productWarehouseStock.model.js`).
+- **Sơ Đồ Mặt Bằng Kho 2D Trực Quan (Interactive 2D Floor Plan - MISA AMIS Standard - `WarehouseMapPage.jsx`)**:
+  - Trình giả lập mặt bằng kho tương tác 2D trực quan theo chuẩn ERP/WMS MISA AMIS.
+  - Trực quan hóa mặt bằng lưới tọa độ: Khu dỡ hàng, Dãy kệ (Racks), Tầng kệ (Shelves), Vị trí ô lưu trữ (Bins), Lối đi nội bộ, Khu đóng gói, Cửa xuất hàng.
+  - Click từng ô kệ để mở popover xem danh sách các SKU, số lượng tồn thực tế, cảnh báo lấp đầy và nhiệt độ bảo quản.
+- **Điều Chuyển Kho Nội Bộ (Stock Transfers - `stockTransfer.model.js`)**:
+  - Lập phiếu điều chuyển hàng hóa giữa các kho chi nhánh (Kho xuất -> Kho nhập).
+  - Quy trình duyệt nghiêm ngặt: `Draft` -> `In Transit` -> `Received` -> `Cancelled`.
+  - Tự động sinh giao dịch thẻ kho kép (`StockMovement`: OUT tại kho nguồn và IN tại kho đích).
 - **Đơn Đặt Hàng Nhập (Purchase Orders - PO)**:
   - Tạo đơn nhập từ nhà cung cấp với nhiều biến thể sản phẩm, đơn giá nhập, thuế VAT, chiết khấu.
   - Luồng trạng thái chuẩn: `Draft` (Dự thảo) -> `Ordered` (Đã đặt hàng) -> `Partial Received` (Nhập kho một phần) -> `Completed` (Hoàn thành) -> `Cancelled` (Đã hủy).
@@ -143,8 +166,10 @@
   - Tạo đơn hàng, tự sinh mã đơn hàng độc nhất (`DH-YYYYMMDD-XXXX`).
   - Quy trình trạng thái chuẩn: Chờ xác nhận -> Đã xác nhận -> Đang chuẩn bị -> Đang giao hàng -> Đã giao thành công -> Đã hủy -> Hoàn tiền.
   - Lưu trữ chi tiết snapshot giá tại thời điểm mua, thông tin người nhận, ghi chú giao hàng.
-- **Tích hợp Vận Chuyển Giao Hàng Nhanh (GHN Integration)**:
-  - Đồng bộ bảng mã Tỉnh/Thành, Quận/Huyện, Phường/Xã từ GHN API v2.
+- **Tích hợp Vận Chuyển Giao Hàng Nhanh (GHN Integration v2 & v3)**:
+  - Đồng bộ bảng mã Tỉnh/Thành, Quận/Huyện, Phường/Xã từ GHN API v2 (Cấu trúc cũ 3 cấp).
+  - Tích hợp chuẩn bưu chính 2 cấp GHN v3 (Tỉnh mới -> Phường mới) theo Nghị quyết 202/2025/QH15 (`/new-provinces`, `/new-wards`).
+  - Động cơ đối soát và tự động ánh xạ địa chỉ sáp nhập (`/post-merger-lookup`).
   - Tự động tính phí vận chuyển chính xác dựa trên trọng lượng, kích thước gói hàng và khoảng cách địa lý.
   - Tạo mã vận đơn GHN, tra cứu trạng thái đơn vận thời gian thực.
 - **Phương Thức Thanh Toán Đa Dạng**:
@@ -154,12 +179,13 @@
 ---
 
 ### 1.6 Trợ lý AI & Động cơ Tìm kiếm Thông minh (AI Chatbot, Search & Visual Search)
-- **Trợ lý Bán Hàng AI Thông Minh (RAG AI Chatbot)**:
-  - Kiến trúc RAG (Retrieval-Augmented Generation): Kết nối trực tiếp mô hình ngôn ngữ lớn (Groq / Llama 3 & Google Gemini) với toàn bộ kho dữ liệu sản phẩm, giá, tồn kho, khuyến mãi trong MongoDB.
+- **Trợ lý Bán Hàng AI Thông Minh Đa Động Cơ (Dual AI Engine & SSE Streaming)**:
+  - Kiến trúc Động cơ Kép: Kết hợp mô hình Groq Llama 3 (phản hồi siêu tốc) và Google Gemini Pro AI (xử lý logic phức tạp và dự phòng tin cậy). Tự động chuyển đổi Fallback khi một trong hai dịch vụ quá tải.
+  - Truyền dữ liệu luồng Server-Sent Events (SSE) từng từ theo mili-giây, trải nghiệm đàm thoại mượt mà không độ trễ.
+  - **Nhận Diện Ngữ Cảnh Sản Phẩm Đang Xem Thời Gian Thực (`Viewed Product Context`)**: Khi khách hàng đang mở trang sản phẩm (Samsung, iPhone...), chatbot tự động bóc tách SKU, giá và tồn kho khả dụng thực tế (`availableStock`) để trả lời chính xác còn/hết hàng, loại bỏ triệt để lỗi báo nhầm hết hàng.
   - Tự động ghi nhớ hồ sơ khách hàng tích lũy (`Customer Intelligence Profile`): Học mức giá quan tâm, thương hiệu yêu thích, nhu cầu sử dụng qua từng lượt chat.
   - Lưu trữ phiên hội thoại bền vững (`ChatSession`) trong MongoDB kết hợp In-Memory Cache.
-  - Hỗ trợ Server-Sent Events (SSE) Streaming giúp hiển thị phản hồi từng từ mượt mà.
-  - Trả về danh sách card sản phẩm trực tiếp trong tin nhắn để khách hàng click xem hoặc mua ngay.
+  - Trả về danh sách thẻ sản phẩm tương tác mua ngay (`ChatProductCard.jsx`) và Tra cứu vận đơn nhanh (`ChatOrderLookup.jsx`) trực tiếp trong tin nhắn.
 - **Động cơ Tìm kiếm Đa Chế độ (Multi-modal Search Engine)**:
   - **Live Search Autocomplete**: Gợi ý tức thì sản phẩm, bài viết, danh mục có debounce 300ms.
   - **Tìm kiếm Ngữ âm / Không dấu Tiếng Việt**: Tự động bóc tách token tiếng Việt có dấu và không dấu, hỗ trợ fuzzy matching chống gõ sai chính tả.
@@ -243,12 +269,22 @@
   - Card Thư viện Ảnh (Product Media): Tích hợp Modal chọn ảnh từ Cloudinary Media Picker, kéo thả đổi thứ tự ảnh chính/phụ.
   - Card Bộ Sinh Biến Thể (Variant Matrix Generator): Nhập các tùy chọn (Màu sắc, Dung lượng...), bấm sinh tự động ma trận biến thể, chỉnh sửa nhanh giá bán, giá vốn, tồn kho hàng loạt.
 - **Quản lý Biến thể Riêng Biệt (`VariantEditPage`)**: Chỉnh sửa chi tiết từng biến thể (ảnh đại diện, SKU, barcode, giá, cân nặng để tính ship).
+- **Quản lý Combo Sản Phẩm & Gợi Ý Định Giá AI (`ComboListPage` & `ComboFormModal`)**:
+  - Giao diện bảng dữ liệu chuẩn Pancake POS hiển thị đầy đủ 14 cột nghiệp vụ (Mã, Tên, Thành phần món kèm ảnh/số lượng, Tồn kho ảo `virtualStock`, Loại combo, Miễn phí vận chuyển, Giá bán, % Tiết kiệm, Tiền tiết kiệm, Thời gian, Ngày tạo, Ngày sửa, Trạng thái, Thao tác).
+  - Bộ toggle bật/tắt cột linh hoạt (`ColumnToggleDropdown`).
+  - Modal tạo/sửa siêu rộng (`max-w-5xl xl:max-w-6xl`) 2 cột phẳng, tích hợp nút "Gợi ý định giá AI" kết nối Google Gemini Pro AI phân tích chi phí và đề xuất 3 mức giá tối ưu.
 - **Trang Import / Export Excel (`ImportExportPage`)**: Tải template mẫu, tải lên file Excel, xem trước dữ liệu với `ExcelPreviewModal`, xuất danh sách sản phẩm toàn sàn ra Excel.
 
 ---
 
 ### 2.3 Quản trị Kho hàng & Nhà Cung Cấp Toàn diện
-- **Quản lý Nhà Cung Cấp (`SupplierListPage`)**: Bảng danh sách NCC, Modal thêm mới/sửa thông tin, theo dõi công nợ.
+- **Quản lý Nhà Cung Cấp Chuẩn Pancake POS (`SupplierListPage` & `SupplierFormModal`)**:
+  - Hệ thống Tab trạng thái Pancake: Tất cả, Đang hoạt động, Không hoạt động (kèm badge đếm số lượng bản ghi chính xác).
+  - Bảng dữ liệu hiển thị thông tin ngân hàng VietQR kèm logo, công nợ, phân loại NCC, thanh thống kê ghim chân trang tính tổng công nợ toàn bộ danh sách NCC.
+  - Modal thêm/sửa rộng rãi 2 cột (`max-w-5xl`), công tắc trạng thái nhanh trên Header, tích hợp API VietQR tìm kiếm ngân hàng và tự động chuẩn hóa tên tài khoản viết hoa, bộ chọn địa chỉ 2 chế độ (Địa chỉ mới 2 cấp GHN v3 & Địa chỉ cũ 3 cấp GHN v2).
+- **Quản Trị Đa Kho Hàng Vật Lý (`WarehouseListPage`)**: Quản lý mạng lưới chi nhánh kho, thiết lập kho mặc định, phân công thủ kho quản lý từ danh sách nhân viên có quyền, theo dõi diện tích, sức chứa và tỷ lệ lấp đầy.
+- **Sơ Đồ Mặt Bằng Kho 2D Trực Quan (`WarehouseMapPage`)**: Trình giả lập mặt bằng lưới tọa độ kho tương tác chuẩn ERP MISA AMIS (Dãy kệ Racks, Tầng Shelves, Ô Bins, Cửa xuất nhập, Lối đi), click từng ô xem chi tiết SKU và tồn kho thực tế.
+- **Quản lý Điều Chuyển Kho Nội Bộ (`StockTransferListPage`)**: Lập và duyệt phiếu điều chuyển hàng giữa các kho chi nhánh, tự động sinh thẻ kho kép OUT/IN.
 - **Quản lý Đơn Nhập Hàng (`PurchaseOrderListPage` & `PurchaseOrderCreatePage`)**:
   - Tạo đơn nhập hàng: Chọn NCC, chọn danh sách biến thể sản phẩm, nhập số lượng và đơn giá nhập, tính thuế VAT, chiết khấu.
   - In / Xem trước phiếu nhập, gửi email đơn hàng tự động cho NCC.
@@ -487,3 +523,30 @@
 - **Quên Mật Khẩu & Đặt Lại Mật Khẩu**:
   - Nhập email nhận mã OTP xác thực hoặc đường dẫn khôi phục mật khẩu.
   - Đặt mật khẩu mới an toàn với thanh đo độ mạnh mật khẩu.
+
+---
+
+## 4. Quy Chuẩn Thiết Kế Giao Diện UI/UX Quản Trị (Admin Enterprise Design System)
+
+Dự án áp dụng chặt chẽ triết lý thiết kế phẳng doanh nghiệp (Enterprise Flat Design) nhằm mang lại trải nghiệm chuyên nghiệp, tốc độ cao và loại bỏ hoàn toàn các phong cách AI-slop:
+
+### 4.1 Triết lý Thiết kế Cốt lõi
+- **Mặc định Flat & Solid Colors**: Sử dụng hệ màu đặc chuẩn mực (`bg-background`, `bg-surface`, `bg-card`). Tuyệt đối không dùng dải màu gradient loè loẹt hay màu nền bán trong suốt thiếu kiểm soát.
+- **Không Glassmorphism**: Loại bỏ các hiệu ứng kính mờ (`backdrop-blur`, viền trắng mờ ảo) để giữ giao diện luôn sắc nét, hiệu năng cao trên mọi thiết bị.
+- **Không Card Lồng Card**: Bố cục phẳng phân tầng bằng đường kẻ viền mảnh 1px (`border-slate-200 / border-border`), bảng biểu rõ ràng thay cho các khối hộp xếp lồng nhau gây rối mắt.
+- **Bo Góc Cố Định 6px (`rounded-[6px]`)**: Đồng bộ 100% các thành phần UI (Nút bấm, Input, Modal, Badge, Dropdown, Khung Bảng) theo kích thước bo góc 6px tinh gọn, hiện đại.
+- **Hệ Thống Khoảng Cách (Spacing System)**: Chuẩn hóa theo bội số của 4px (`gap-1` 4px, `gap-2` 8px, `gap-3` 12px, `gap-4` 16px, `gap-6` 24px).
+- **Định Dạng Số Liệu Chuẩn Mực**: Luôn sử dụng `tabular-nums font-mono` cho các trường tiền tệ, mã đơn hàng, mã SKU, mã vận đơn GHN, số lượng tồn kho và công nợ để căn thẳng cột tuyệt đối.
+
+### 4.2 Chuẩn Không Gian Làm Việc Siêu Rộng Cho Modal (Wide Workspace Standard)
+- Nhằm xóa bỏ hoàn toàn cảm giác chật chội, bí bách trong các tác vụ quản trị kho vận và cấu hình sản phẩm phức tạp, toàn bộ các Modal nghiệp vụ chính đều được nâng cấp kích thước rộng rãi:
+  - **Modal Nhà Cung Cấp (`SupplierFormModal.jsx`)**: Chiều rộng cực đại `max-w-5xl`, chia 2 cột rõ ràng, tách bạch giữa thông tin cơ bản, thông tin tài chính VietQR và sổ địa chỉ.
+  - **Modal Combo Sản Phẩm (`ComboFormModal.jsx`)**: Chiều rộng cực đại `max-w-5xl xl:max-w-6xl`, hiển thị song song danh sách sản phẩm thành phần ma trận và bảng tính giá gợi ý từ Gemini AI.
+  - **Modal Đơn PO & Phiếu Nhập Kho**: Không gian thoáng đãng, dễ dàng kiểm đếm bảng hàng chục sản phẩm mà không phải cuộn ngang.
+
+### 4.3 Tương Tác Xúc Giác & Chống Nhảy Layout (Rule N1 & Micro-interactions)
+- Mọi nút bấm và tương tác người dùng đều có phản hồi vật lý tinh tế (`active:scale-[0.98] transition-transform`).
+- Cơ chế bảo vệ chống giật layout (Layout Shift Prevention): Khi chuyển đổi tab, kích hoạt dropdown hay trạng thái loading, kích thước phần tử được cố định để không làm dịch chuyển các thành phần lân cận.
+
+---
+*Tài liệu được cập nhật và kiểm duyệt đối soát trực tiếp 100% từ cấu trúc mã nguồn thực tế của dự án Clone Haravan.*
