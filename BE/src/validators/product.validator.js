@@ -79,6 +79,29 @@ const createProductSchema = z.object({
       unit: z.string().optional(),
     })
   ).optional(),
+
+  // Pancake POS features
+  isComposite: z.boolean().optional(),
+  bomItems: z.array(
+    z.object({
+      productId: z.string(),
+      variantId: z.string().nullable().optional(),
+      quantity: z.number().min(1).default(1),
+      costPrice: z.number().min(0).default(0),
+    })
+  ).optional(),
+
+  wholesaleTiers: z.array(
+    z.object({
+      minQuantity: z.number().min(2),
+      price: z.number().min(0),
+      discountPercent: z.number().min(0).max(100).optional(),
+    })
+  ).optional(),
+
+  batchNumber: z.string().optional(),
+  manufacturingDate: z.string().nullable().optional(),
+  expiryDate: z.string().nullable().optional(),
 });
 
 const updateProductSchema = createProductSchema.partial();

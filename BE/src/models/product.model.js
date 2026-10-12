@@ -154,6 +154,42 @@ const productSchema = new mongoose.Schema(
         ],
       },
     ],
+    // Sản phẩm cấu thành (BOM / Composite / Assembly Kits)
+    isComposite: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    bomItems: [
+      {
+        productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
+        variantId: { type: mongoose.Schema.Types.ObjectId, ref: 'ProductVariant', default: null },
+        quantity: { type: Number, required: true, default: 1, min: 1 },
+        costPrice: { type: Number, default: 0 },
+      },
+    ],
+    // Bảng giá bán sỉ theo bậc số lượng (Tiered Wholesale Pricing)
+    wholesaleTiers: [
+      {
+        minQuantity: { type: Number, required: true, min: 2 },
+        price: { type: Number, required: true, min: 0 },
+        discountPercent: { type: Number, default: 0 },
+      },
+    ],
+    // Quản lý lô hàng & Hạn sử dụng (Batch / Expiry Tracking)
+    batchNumber: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+    manufacturingDate: {
+      type: Date,
+      default: null,
+    },
+    expiryDate: {
+      type: Date,
+      default: null,
+    },
     searchTokens: [{ type: String, index: true }],
   },
   { timestamps: true }

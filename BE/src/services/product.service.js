@@ -532,7 +532,7 @@ const getAllProductsAdmin = async (query = {}) => {
       { $group: { _id: '$productId', count: { $sum: 1 } } },
     ]),
     ProductVariant.find({ productId: { $in: productIds }, isDefault: true })
-      .select('productId price salePrice stock sku').lean(),
+      .select('productId price salePrice stock allocated sku').lean(),
   ]);
 
   const variantCountMap = {};
@@ -562,6 +562,10 @@ const getAllProductsAdmin = async (query = {}) => {
         }
       }
 
+      const totalStock = dv?.stock ?? p.stock ?? 0;
+      const allocatedStock = dv?.allocated ?? p.allocated ?? 0;
+      const availableStock = Math.max(0, totalStock - allocatedStock);
+
       return {
         ...p,
         category: p.categories?.[0] || null,
@@ -569,7 +573,9 @@ const getAllProductsAdmin = async (query = {}) => {
         defaultVariantId: dv?._id || null,
         price,
         salePrice,
-        stock: dv?.stock ?? null,
+        stock: totalStock,
+        allocated: allocatedStock,
+        availableStock,
         isFlashSale,
       };
     }),
@@ -935,32 +941,71 @@ const searchInventoryProducts = async (keyword) => {
   const matchingProducts = await Product.find({
     $or: [{ name: regex }, { sku: regex }, { code: regex }, { productCode: regex }],
     isActive: true,
-  }).select('_id').lean();
+  })
+    .select('name code productCode price costPrice thumbnail images stock sku')
+    .lean();
 
   const productIds = matchingProducts.map((p) => p._id);
 
   const matchingVariants = await ProductVariant.find({
     $or: [{ productId: { $in: productIds } }, { sku: regex }, { displayName: regex }],
   })
-    .populate('productId', 'name code productCode price costPrice thumbnail')
+    .populate('productId', 'name code productCode price costPrice thumbnail images stock sku')
     .lean();
 
   const results = [];
   const seenVariantIds = new Set();
+  const seenProductIds = new Set();
 
   for (const v of matchingVariants) {
     if (!v.productId || seenVariantIds.has(v._id.toString())) continue;
     seenVariantIds.add(v._id.toString());
     const prod = v.productId;
+    seenProductIds.add(prod._id.toString());
+
+    const thumbUrl =
+      v.thumbnail?.url ||
+      (typeof v.thumbnail === 'string' ? v.thumbnail : '') ||
+      (Array.isArray(v.images) && v.images[0]?.url) ||
+      prod.thumbnail?.url ||
+      (typeof prod.thumbnail === 'string' ? prod.thumbnail : '') ||
+      (Array.isArray(prod.images) && prod.images[0]?.url) ||
+      '';
+
     results.push({
       _id: prod._id,
       variantId: v._id,
       name: !v.isDefault ? `${prod.name} (${v.displayName || v.sku || 'Biến thể'})` : prod.name,
-      sku: v.sku || prod.productCode || prod.code || '',
+      sku: v.sku || prod.productCode || prod.code || prod.sku || '',
       unit: 'Cái',
       price: v.price || prod.price || 0,
       costPrice: v.costPrice || prod.costPrice || 0,
-      stock: v.stock || 0,
+      stock: v.stock ?? prod.stock ?? 0,
+      thumbnail: thumbUrl,
+    });
+  }
+
+  // Bổ sung sản phẩm chưa có biến thể vào kết quả
+  for (const prod of matchingProducts) {
+    if (seenProductIds.has(prod._id.toString())) continue;
+    seenProductIds.add(prod._id.toString());
+
+    const thumbUrl =
+      prod.thumbnail?.url ||
+      (typeof prod.thumbnail === 'string' ? prod.thumbnail : '') ||
+      (Array.isArray(prod.images) && prod.images[0]?.url) ||
+      '';
+
+    results.push({
+      _id: prod._id,
+      variantId: null,
+      name: prod.name,
+      sku: prod.sku || prod.productCode || prod.code || '',
+      unit: 'Cái',
+      price: prod.price || 0,
+      costPrice: prod.costPrice || 0,
+      stock: prod.stock || 0,
+      thumbnail: thumbUrl,
     });
   }
 
@@ -975,6 +1020,69 @@ const bulkUpdateProductStatus = async (ids, status) => {
     throw new AppError('Trạng thái không hợp lệ', 400);
   const result = await Product.updateMany({ _id: { $in: ids } }, { $set: { status } });
   return { updated: result.modifiedCount };
+};
+
+const updateWholesaleTiers = async (id, tiers = []) => {
+  const product = await Product.findById(id);
+  if (!product) throw new AppError('Không tìm thấy sản phẩm', 404);
+
+  const cleanTiers = (Array.isArray(tiers) ? tiers : [])
+    .map((t) => ({
+      minQuantity: Math.max(2, parseInt(t.minQuantity, 10) || 2),
+      price: Math.max(0, parseInt(t.price, 10) || 0),
+      discountPercent: Math.max(0, Math.min(100, parseInt(t.discountPercent, 10) || 0)),
+    }))
+    .sort((a, b) => a.minQuantity - b.minQuantity);
+
+  product.wholesaleTiers = cleanTiers;
+  await product.save();
+
+  await ProductVariant.updateMany(
+    { productId: id, isDefault: true },
+    { $set: { wholesaleTiers: cleanTiers } }
+  );
+
+  return product;
+};
+
+const updateCompositeBom = async (id, { isComposite = false, bomItems = [] }) => {
+  const product = await Product.findById(id);
+  if (!product) throw new AppError('Không tìm thấy sản phẩm', 404);
+
+  product.isComposite = Boolean(isComposite);
+  product.bomItems = (Array.isArray(bomItems) ? bomItems : []).map((item) => ({
+    productId: item.productId,
+    variantId: item.variantId || null,
+    quantity: Math.max(1, parseInt(item.quantity, 10) || 1),
+    costPrice: Math.max(0, Number(item.costPrice) || 0),
+  }));
+
+  await product.save();
+  return product;
+};
+
+const updateBatchExpiry = async (id, { batchNumber = '', manufacturingDate = null, expiryDate = null }) => {
+  const product = await Product.findById(id);
+  if (!product) throw new AppError('Không tìm thấy sản phẩm', 404);
+
+  product.batchNumber = (batchNumber || '').trim();
+  product.manufacturingDate = manufacturingDate ? new Date(manufacturingDate) : null;
+  product.expiryDate = expiryDate ? new Date(expiryDate) : null;
+
+  await product.save();
+
+  await ProductVariant.updateMany(
+    { productId: id },
+    {
+      $set: {
+        batchNumber: product.batchNumber,
+        manufacturingDate: product.manufacturingDate,
+        expiryDate: product.expiryDate,
+      },
+    }
+  );
+
+  return product;
 };
 
 module.exports = {
@@ -994,6 +1102,9 @@ module.exports = {
   generateProductCode,
   generateVariantSku,
   createDefaultVariant,
+  updateWholesaleTiers,
+  updateCompositeBom,
+  updateBatchExpiry,
   locateProduct: async (id, limit = 20) => {
     const product = await Product.findById(id).select('_id createdAt');
     if (!product) throw new AppError('Không tìm thấy sản phẩm', 404);

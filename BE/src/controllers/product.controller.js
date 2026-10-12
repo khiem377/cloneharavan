@@ -151,6 +151,52 @@ const searchInventoryProducts = async (req, res, next) => {
   }
 };
 
+const updateWholesaleTiers = async (req, res, next) => {
+  try {
+    const { tiers } = req.body;
+    const product = await productService.updateWholesaleTiers(req.params.id, tiers);
+    res.status(200).json({
+      status: 'success',
+      message: 'Cập nhật bảng giá bán sỉ thành công',
+      data: product,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const updateCompositeBom = async (req, res, next) => {
+  try {
+    const { isComposite, bomItems } = req.body;
+    const product = await productService.updateCompositeBom(req.params.id, { isComposite, bomItems });
+    res.status(200).json({
+      status: 'success',
+      message: 'Cập nhật cấu hình sản phẩm cấu thành (BOM) thành công',
+      data: product,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const updateBatchExpiry = async (req, res, next) => {
+  try {
+    const { batchNumber, manufacturingDate, expiryDate } = req.body;
+    const product = await productService.updateBatchExpiry(req.params.id, {
+      batchNumber,
+      manufacturingDate,
+      expiryDate,
+    });
+    res.status(200).json({
+      status: 'success',
+      message: 'Cập nhật thông tin lô hàng và hạn sử dụng thành công',
+      data: product,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createProduct,
   getProducts,
@@ -164,4 +210,7 @@ module.exports = {
   deleteBulkProducts,
   bulkUpdateProductStatus,
   searchInventoryProducts,
+  updateWholesaleTiers,
+  updateCompositeBom,
+  updateBatchExpiry,
 };

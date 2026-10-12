@@ -105,6 +105,28 @@ const productVariantSchema = new mongoose.Schema(
         value: { type: String, required: true },
       },
     ],
+    // Bảng giá bán sỉ theo bậc số lượng
+    wholesaleTiers: [
+      {
+        minQuantity: { type: Number, required: true, min: 2 },
+        price: { type: Number, required: true, min: 0 },
+        discountPercent: { type: Number, default: 0 },
+      },
+    ],
+    // Quản lý lô hàng & Hạn sử dụng
+    batchNumber: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+    manufacturingDate: {
+      type: Date,
+      default: null,
+    },
+    expiryDate: {
+      type: Date,
+      default: null,
+    },
   },
   { timestamps: true }
 );
