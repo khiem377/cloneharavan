@@ -163,8 +163,8 @@ export default function AiChatWidget() {
     const tickTypewriter = () => {
       if (streamDisplayedText.length < streamTargetText.length) {
         const remaining = streamTargetText.length - streamDisplayedText.length;
-        // Nhả từng 1-2 ký tự (hoặc 3-4 nếu buffer tồn nhiều) để tạo hiệu ứng gõ phím mượt mà tự nhiên
-        const step = remaining > 60 ? 4 : (remaining > 20 ? 2 : 1);
+        // Tốc độ phản hồi siêu nhanh, mượt mà và không bắt người dùng phải chờ đợi
+        const step = remaining > 100 ? 8 : (remaining > 40 ? 5 : (remaining > 15 ? 3 : 2));
         streamDisplayedText = streamTargetText.slice(0, streamDisplayedText.length + step);
 
         setMessages((prev) =>
@@ -200,13 +200,19 @@ export default function AiChatWidget() {
       typewriterTimerRef.current = null;
     }
 
-    typewriterTimerRef.current = setInterval(tickTypewriter, 18);
+    typewriterTimerRef.current = setInterval(tickTypewriter, 12);
 
     try {
+      const currentProductSlug = isProductPage && pathname
+        ? pathname.replace('/products/', '').split('?')[0].split('/')[0]
+        : null;
+
       await chatService.sendMessageStream(
         {
           sessionId: sessionIdRef.current,
           message: cleanMsg,
+          currentProductSlug,
+          currentUrl: typeof window !== 'undefined' ? window.location.href : pathname,
         },
         {
           signal: abortCtrlRef.current.signal,
