@@ -71,6 +71,7 @@ export default function ScrollToTop() {
   };
 
   const isProductPage = pathname?.startsWith('/products/');
+  const isCartPage = pathname === '/cart' || pathname?.startsWith('/cart');
 
   return (
     <>
@@ -88,7 +89,9 @@ export default function ScrollToTop() {
           aria-label="Cuộn lên đầu trang"
           data-no-progress="true"
           className={`fixed z-40 w-9 h-9 sm:w-10 sm:h-10 rounded-[6px] bg-white border border-slate-300 text-slate-700 shadow-md flex items-center justify-center hover:bg-slate-50 hover:text-red-600 hover:border-red-500 transition-all cursor-pointer active:scale-[0.98] animate-fadeIn ${
-            isProductPage
+            isCartPage
+              ? 'bottom-[116px] right-4 sm:bottom-[124px] sm:right-6'
+              : isProductPage
               ? 'bottom-[176px] right-4 sm:bottom-[184px] sm:right-6'
               : 'bottom-[108px] right-4 sm:bottom-[116px] sm:right-6'
           }`}

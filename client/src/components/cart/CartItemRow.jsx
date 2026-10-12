@@ -2,6 +2,10 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { Minus, Plus, Trash2, AlertCircle, Loader2, Zap } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { confirm } from '@/components/ui/confirm-dialog';
 
 export default function CartItemRow({
   item,
@@ -35,6 +39,15 @@ export default function CartItemRow({
 
   const handleRemove = async () => {
     if (localUpdating || isUpdating) return;
+    const isConfirmed = await confirm({
+      title: 'Xóa sản phẩm khỏi giỏ hàng?',
+      description: `Bạn có chắc chắn muốn xóa "${item.name || 'sản phẩm này'}" khỏi giỏ hàng?`,
+      confirmText: 'Xóa sản phẩm',
+      cancelText: 'Hủy',
+      variant: 'destructive',
+    });
+    if (!isConfirmed) return;
+
     setLocalUpdating(true);
     await onRemoveItem(item._id);
     setLocalUpdating(false);
@@ -68,17 +81,20 @@ export default function CartItemRow({
       className={`p-3.5 sm:p-4 transition-colors ${
         isOutOfStock
           ? 'bg-red-50/40'
-          : 'bg-white hover:bg-slate-50/50'
+          : isSelected
+          ? 'bg-white hover:bg-slate-50/50'
+          : 'bg-slate-50/30 hover:bg-slate-50/50'
       }`}
     >
       <div className="flex items-start md:items-center gap-3 sm:gap-4">
         {/* CHECKBOX CHỌN SẢN PHẨM */}
         <div className="w-5 shrink-0 flex items-center justify-center pt-2 md:pt-0">
-          <input
-            type="checkbox"
+          <Checkbox
             checked={isSelected}
+            disabled={isOutOfStock || isUpdating || localUpdating}
             onChange={() => onToggleSelect && onToggleSelect(item._id)}
-            className="w-4 h-4 rounded-[4px] border-slate-300 text-red-600 focus:ring-red-500 cursor-pointer accent-red-600"
+            aria-label={`Chọn sản phẩm ${item.name || ''}`}
+            className="h-4 w-4 rounded-[4px] cursor-pointer"
           />
         </div>
 

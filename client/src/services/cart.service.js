@@ -33,6 +33,15 @@ export const cartService = {
   },
 
   /**
+   * Xóa nhiều sản phẩm cùng lúc khỏi giỏ hàng (Batch remove)
+   * @param {Array<string>} itemIds - Danh sách ID các dòng sản phẩm cần xóa
+   */
+  async removeItems(itemIds) {
+    const response = await api.post('/cart/remove-items', { itemIds });
+    return response.data;
+  },
+
+  /**
    * Xóa một sản phẩm khỏi giỏ hàng
    * @param {string} itemId - ID dòng item
    */

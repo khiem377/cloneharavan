@@ -9,6 +9,9 @@ import { Separator } from '@/components/ui/separator';
 export default function CartOrderSummary({
   cart = {},
   itemsCount = 0,
+  selectedItemIds = [],
+  selectedCount = 0,
+  selectedSubtotal = 0,
   onValidateCheckout,
   isUpdating = false,
   hasStockIssue = false,
@@ -20,7 +23,14 @@ export default function CartOrderSummary({
   const formatPrice = (val) =>
     new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val || 0);
 
+  const effectiveItemCount = selectedCount || itemsCount || (cart.items ? cart.items.length : 0);
+
   const handleProceedCheckout = async () => {
+    if (effectiveItemCount === 0) {
+      setCheckoutError('Giỏ hàng chưa có sản phẩm nào để đặt hàng');
+      return;
+    }
+
     setCheckoutError('');
     setCheckoutLoading(true);
 
@@ -33,6 +43,14 @@ export default function CartOrderSummary({
           return;
         }
       }
+
+      if (typeof window !== 'undefined') {
+        if (selectedItemIds && selectedItemIds.length > 0) {
+          sessionStorage.setItem('checkoutItemIds', JSON.stringify(selectedItemIds));
+        } else {
+          sessionStorage.removeItem('checkoutItemIds');
+        }
+      }
       router.push('/checkout');
     } catch (err) {
       setCheckoutError(err.message || 'Không thể tiến hành đặt hàng');
@@ -41,20 +59,35 @@ export default function CartOrderSummary({
   };
 
   const subtotalOriginal = Number(cart.subtotalOriginal) || Number(cart.subtotal) || 0;
-  const subtotalEffective = cart.subtotal !== undefined ? Number(cart.subtotal) : subtotalOriginal;
+  const subtotalEffective =
+    selectedSubtotal > 0
+      ? selectedSubtotal
+      : cart.subtotal !== undefined
+      ? Number(cart.subtotal)
+      : subtotalOriginal;
   const productSavings = Math.max(0, subtotalOriginal - subtotalEffective);
   const hasProductDiscount = productSavings > 0;
 
   const couponDiscount = Number(cart.couponDiscount) || 0;
   const hasCoupon = Boolean(cart.couponCode) && couponDiscount > 0;
 
-  const finalTotal = cart.finalTotal !== undefined ? Number(cart.finalTotal) : Math.max(0, subtotalEffective - couponDiscount);
+  const finalTotal =
+    selectedSubtotal > 0
+      ? Math.max(0, selectedSubtotal - couponDiscount)
+      : cart.finalTotal !== undefined
+      ? Number(cart.finalTotal)
+      : Math.max(0, subtotalEffective - couponDiscount);
   const totalSavings = productSavings + couponDiscount;
 
   return (
     <div className="bg-white border border-slate-200 rounded-[6px] p-4 sm:p-5 2xl:p-6 space-y-4 shadow-2xs">
-      <h3 className="font-bold text-base 2xl:text-lg text-slate-900 pb-2.5 border-b border-slate-100">
-        Tổng giỏ hàng
+      <h3 className="font-bold text-base 2xl:text-lg text-slate-900 pb-2.5 border-b border-slate-100 flex items-center justify-between">
+        <span>Tổng giỏ hàng</span>
+        {effectiveItemCount > 0 && (
+          <span className="text-xs font-normal text-slate-500 font-mono tabular-nums">
+            ({effectiveItemCount} sản phẩm)
+          </span>
+        )}
       </h3>
 
       {/* CHI TIẾT GIÁ ĐƠN HÀNG (PHÂN BIỆT RÕ GIẢM GIÁ SẢN PHẨM VS VOUCHER) */}
@@ -95,14 +128,14 @@ export default function CartOrderSummary({
         )}
 
         {/* 2. VOUCHER / MÃ GIẢM GIÁ (PHẠM TRÙ RIÊNG BIỆT) */}
-        {hasCoupon ? (
+        {hasCoupon && (
           <div className="p-2 bg-emerald-50/70 border border-emerald-200 rounded-[4px] flex justify-between items-center text-emerald-800 text-xs">
             <span className="font-semibold">Voucher ({cart.couponCode}):</span>
             <span className="font-mono tabular-nums font-bold text-emerald-700 text-xs sm:text-sm">
               -{formatPrice(couponDiscount)}
             </span>
           </div>
-        ) : null}
+        )}
 
         {/* 3. PHÍ VẬN CHUYỂN */}
         <div className="flex justify-between items-center text-slate-600">
@@ -158,8 +191,7 @@ export default function CartOrderSummary({
             checkoutLoading ||
             isUpdating ||
             hasStockIssue ||
-            !cart.items ||
-            cart.items.length === 0
+            effectiveItemCount === 0
           }
           className="w-full h-10 2xl:h-11 text-xs sm:text-sm font-bold bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-[6px] flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-[0.98] shadow-xs"
         >

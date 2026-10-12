@@ -2,12 +2,24 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { X, Check, ArrowLeftRight, Plus, Minus, ShieldCheck, Flame, Star } from 'lucide-react';
+import {
+  X,
+  Check,
+  ArrowLeftRight,
+  Plus,
+  Minus,
+  ShieldCheck,
+  Flame,
+  Star,
+  AlertCircle,
+  Loader2,
+} from 'lucide-react';
 import { api } from '@/lib/axios';
 import { useRouter } from 'next/navigation';
 import useQuickViewStore from '@/store/quickViewStore';
 import useCompareStore from '@/store/compareStore';
 import useCartStore from '@/store/cartStore';
+import { toast } from '@/components/ui/toast';
 
 export const QuickViewModal = () => {
   const router = useRouter();
@@ -16,33 +28,89 @@ export const QuickViewModal = () => {
   const { addToCart } = useCartStore();
 
   const [activeImageIdx, setActiveImageIdx] = useState(0);
+  const [variantSelectedImage, setVariantSelectedImage] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [variantsList, setVariantsList] = useState([]);
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [selectedOptionVal, setSelectedOptionVal] = useState('');
-  const [addedToCartToast, setAddedToCartToast] = useState(false);
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const [variantError, setVariantError] = useState(false);
 
   // Animation states for smooth sliding and scaling
   const [isRendered, setIsRendered] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
 
+  // Lấy ảnh của biến thể nếu có
+  const getVariantImage = (v) => {
+    if (!v) return null;
+    if (typeof v.image === 'string' && v.image) return v.image;
+    if (v.image?.url) return v.image.url;
+    if (typeof v.thumbnail === 'string' && v.thumbnail) return v.thumbnail;
+    if (v.thumbnail?.url) return v.thumbnail.url;
+    if (Array.isArray(v.images) && v.images.length > 0) {
+      const first = v.images[0];
+      if (typeof first === 'string' && first) return first;
+      if (first?.url) return first.url;
+    }
+    return null;
+  };
+
+  const isDefaultVariantName = (name) => {
+    if (!name) return true;
+    const lower = String(name).trim().toLowerCase();
+    return (
+      lower === 'mặc định' ||
+      lower === 'mac dinh' ||
+      lower === 'default' ||
+      lower === 'default title' ||
+      lower === 'tiêu chuẩn' ||
+      lower === 'tieu chuan'
+    );
+  };
+
+  const getVariantLabel = (v) => {
+    if (!v) return '';
+    if (v.attributes && v.attributes.length > 0) {
+      const validAttrs = v.attributes.filter((a) => !isDefaultVariantName(a.value));
+      if (validAttrs.length > 0) {
+        return validAttrs.map((a) => a.value).join(' - ');
+      }
+    }
+    if (v.displayName && !isDefaultVariantName(v.displayName)) {
+      if (v.displayName.includes(' - ')) {
+        return v.displayName.split(' - ').pop().trim();
+      }
+      return v.displayName;
+    }
+    if (v.title && !isDefaultVariantName(v.title)) return v.title;
+    if (v.name && !isDefaultVariantName(v.name)) return v.name;
+    return '';
+  };
+
   useEffect(() => {
     if (isOpen && product) {
       setIsRendered(true);
       setActiveImageIdx(0);
+      setVariantSelectedImage(null);
       setQuantity(1);
+      setVariantError(false);
 
       // Pre-seed variants if passed with product
       const initialVars = Array.isArray(product.variants) ? product.variants : [];
       setVariantsList(initialVars);
-      const defaultVar = initialVars.find((v) => v.isDefault) || initialVars[0] || null;
-      setSelectedVariant(defaultVar);
 
-      if (product.options?.[0]?.values?.[0]) {
-        const firstVal = product.options[0].values[0];
-        const valStr = typeof firstVal === 'object' && firstVal !== null ? (firstVal.value || '') : String(firstVal || '');
-        setSelectedOptionVal(valStr);
+      // Xác định xem sản phẩm có nhiều biến thể thực sự hay không
+      const realVars = initialVars.filter((v) => Boolean(getVariantLabel(v)));
+      const hasMulti =
+        realVars.length > 1 || (product.options?.[0]?.values?.length > 1);
+
+      if (hasMulti) {
+        // KHÔNG TỰ ĐỘNG CHỌN SẴN BIẾN THỂ (để người dùng tự chọn)
+        setSelectedVariant(null);
+        setSelectedOptionVal('');
       } else {
+        // Sản phẩm đơn (chỉ có 1 biến thể mặc định)
+        setSelectedVariant(initialVars[0] || null);
         setSelectedOptionVal('');
       }
 
@@ -54,13 +122,11 @@ export const QuickViewModal = () => {
             const fetched = res.data?.data || res.data || [];
             if (Array.isArray(fetched) && fetched.length > 0) {
               setVariantsList(fetched);
-              setSelectedVariant((prev) => {
-                if (prev) {
-                  const match = fetched.find((v) => (v._id || v.id) === (prev._id || prev.id));
-                  if (match) return match;
-                }
-                return fetched.find((v) => v.isDefault) || fetched[0];
-              });
+              const realFetched = fetched.filter((v) => Boolean(getVariantLabel(v)));
+              if (realFetched.length <= 1) {
+                // Chỉ tự gán nếu là sản phẩm đơn
+                setSelectedVariant(fetched[0]);
+              }
             }
           })
           .catch(() => {});
@@ -104,6 +170,7 @@ export const QuickViewModal = () => {
 
   if (!isRendered || !product) return null;
 
+  // Danh sách hình ảnh của sản phẩm chủ thể
   const images = [];
   if (product.thumbnail) {
     images.push(typeof product.thumbnail === 'string' ? product.thumbnail : product.thumbnail?.url);
@@ -118,7 +185,8 @@ export const QuickViewModal = () => {
     images.push('/logo-shop.jpg');
   }
 
-  const currentImage = images[activeImageIdx] || images[0];
+  // Ảnh hiển thị chính: Nếu biến thể có ảnh -> hiển thị ảnh biến thể; nếu không có -> hiển thị ảnh mặc định của chủ thể
+  const currentImage = variantSelectedImage || images[activeImageIdx] || images[0];
 
   // Dynamic pricing based on selected variant, with Flash Sale taking TOP priority
   const isFlashSale = !!(product.isFlashSale && product.flashSalePrice > 0);
@@ -146,19 +214,79 @@ export const QuickViewModal = () => {
   const brandSlug = product.brand?.slug || (product.brand?.name ? product.brand.name.toLowerCase() : '');
   const sku = selectedVariant?.sku || product.sku || product.productCode || product._id?.slice(-8)?.toUpperCase();
 
+  // Determine variant group title and items to render
+  const realVariants = variantsList.filter((v) => {
+    const label = getVariantLabel(v);
+    return Boolean(label);
+  });
+  const displayVariants = realVariants.length > 1 ? realVariants : [];
+
+  const groupTitle =
+    displayVariants[0]?.attributes?.[0]?.name ||
+    product.options?.[0]?.name ||
+    'Màu sắc / Phiên bản';
+
+  const hasMultipleVariants =
+    displayVariants.length > 1 || (product.options?.[0]?.values?.length > 1);
+
+  // Xử lý khi chọn một biến thể
+  const handleSelectVariant = (v) => {
+    setSelectedVariant(v);
+    setVariantError(false);
+
+    // Đổi ảnh theo lựa chọn biến thể:
+    const varImg = getVariantImage(v);
+    if (varImg) {
+      setVariantSelectedImage(varImg);
+      const imgIdx = images.indexOf(varImg);
+      if (imgIdx >= 0) {
+        setActiveImageIdx(imgIdx);
+      }
+    } else {
+      // Khi biến thể không có hình ảnh -> lấy ảnh mặc định của sản phẩm chủ thể
+      setVariantSelectedImage(null);
+      setActiveImageIdx(0);
+    }
+  };
+
+  // Thêm vào giỏ hàng
   const handleAddToCart = async () => {
+    // Nếu sản phẩm có nhiều biến thể mà người dùng CHƯA chọn
+    if (hasMultipleVariants && !selectedVariant) {
+      setVariantError(true);
+      toast(`Vui lòng chọn ${groupTitle} trước khi thêm vào giỏ hàng!`, {
+        type: 'warning',
+      });
+      return;
+    }
+
+    if (isAddingToCart) return;
+    setIsAddingToCart(true);
+
     const payload = {
       productId: product._id || product.id,
       variantId: selectedVariant?._id || selectedVariant?.id,
       sku: selectedVariant?.sku,
       quantity,
     };
-    await addToCart(payload);
-    setAddedToCartToast(true);
-    setTimeout(() => setAddedToCartToast(false), 2500);
+
+    const res = await addToCart(payload);
+    setIsAddingToCart(false);
+
+    // Thành công: global AddToCartSuccessHud trong cartStore tự động kích hoạt
   };
 
+  // Mua ngay
   const handleBuyNow = async () => {
+    // Nếu sản phẩm có nhiều biến thể mà người dùng CHƯA chọn
+    if (hasMultipleVariants && !selectedVariant) {
+      setVariantError(true);
+      toast(`Vui lòng chọn ${groupTitle} trước khi mua hàng!`, {
+        type: 'warning',
+      });
+      return;
+    }
+
     const payload = {
       productId: product._id || product.id,
       variantId: selectedVariant?._id || selectedVariant?.id,
@@ -175,50 +303,6 @@ export const QuickViewModal = () => {
   };
 
   const compared = isCompared(product._id || product.id);
-
-  const isDefaultVariantName = (name) => {
-    if (!name) return true;
-    const lower = String(name).trim().toLowerCase();
-    return (
-      lower === 'mặc định' ||
-      lower === 'mac dinh' ||
-      lower === 'default' ||
-      lower === 'default title' ||
-      lower === 'tiêu chuẩn' ||
-      lower === 'tieu chuan'
-    );
-  };
-
-  const getVariantLabel = (v) => {
-    if (!v) return '';
-    if (v.attributes && v.attributes.length > 0) {
-      const validAttrs = v.attributes.filter((a) => !isDefaultVariantName(a.value));
-      if (validAttrs.length > 0) {
-        return validAttrs.map((a) => a.value).join(' - ');
-      }
-    }
-    if (v.displayName && !isDefaultVariantName(v.displayName)) {
-      if (v.displayName.includes(' - ')) {
-        return v.displayName.split(' - ').pop().trim();
-      }
-      return v.displayName;
-    }
-    if (v.title && !isDefaultVariantName(v.title)) return v.title;
-    if (v.name && !isDefaultVariantName(v.name)) return v.name;
-    return '';
-  };
-
-  // Determine variant group title and items to render
-  const realVariants = variantsList.filter((v) => {
-    const label = getVariantLabel(v);
-    return Boolean(label);
-  });
-  const displayVariants = realVariants.length > 1 ? realVariants : [];
-
-  const groupTitle =
-    displayVariants[0]?.attributes?.[0]?.name ||
-    product.options?.[0]?.name ||
-    'Phiên bản';
 
   return (
     <div
@@ -270,6 +354,9 @@ export const QuickViewModal = () => {
                   src={currentImage}
                   alt={product.name}
                   className="w-full h-full object-contain transition-transform duration-300 hover:scale-105"
+                  onError={(e) => {
+                    e.currentTarget.src = '/logo-shop.jpg';
+                  }}
                 />
               </div>
 
@@ -280,9 +367,12 @@ export const QuickViewModal = () => {
                     <button
                       key={idx}
                       type="button"
-                      onClick={() => setActiveImageIdx(idx)}
+                      onClick={() => {
+                        setActiveImageIdx(idx);
+                        setVariantSelectedImage(null);
+                      }}
                       className={`w-14 h-14 rounded-[6px] border p-1 bg-white shrink-0 transition cursor-pointer overflow-hidden ${
-                        activeImageIdx === idx
+                        activeImageIdx === idx && !variantSelectedImage
                           ? 'border-[#e30019] ring-2 ring-[#e30019]/20'
                           : 'border-slate-200 hover:border-slate-400'
                       }`}
@@ -352,11 +442,11 @@ export const QuickViewModal = () => {
               {/* Price Box */}
               <div className={`p-3 rounded-[6px] flex items-baseline gap-2.5 flex-wrap ${isFlashSale ? 'bg-red-50/70 border border-red-200' : 'bg-slate-50 border border-slate-200'}`}>
                 <span className="text-2xl font-black text-[#e30019] font-mono tabular-nums">
-                  {displayPrice > 0 ? `${displayPrice.toLocaleString('vi-VN')}₫` : 'Liên hệ'}
+                  {displayPrice > 0 ? `${displayPrice.toLocaleString('vi-VN')} ₫` : 'Liên hệ'}
                 </span>
                 {originalPrice > 0 && (
                   <span className="text-sm text-slate-400 line-through font-mono tabular-nums">
-                    {originalPrice.toLocaleString('vi-VN')}₫
+                    {originalPrice.toLocaleString('vi-VN')} ₫
                   </span>
                 )}
                 {hasDiscount && (
@@ -371,33 +461,40 @@ export const QuickViewModal = () => {
                 )}
               </div>
 
+              {/* Cảnh báo yêu cầu chọn phân loại khi người dùng chưa chọn */}
+              {variantError && (
+                <div className="p-2 sm:p-2.5 rounded-[6px] bg-red-50 border border-red-300 text-red-700 text-xs font-semibold flex items-center gap-2 animate-fadeIn">
+                  <AlertCircle size={15} className="shrink-0 text-red-600" />
+                  <span>Vui lòng chọn {groupTitle} trước khi thêm vào giỏ hàng hoặc mua ngay!</span>
+                </div>
+              )}
+
               {/* Variant Selectors matching EGA */}
               {displayVariants.length > 1 ? (
-                <div className="space-y-1.5 pt-1">
-                  <label className="block text-xs font-semibold text-slate-800">
-                    {groupTitle}
+                <div className={`space-y-1.5 pt-1 p-2 rounded-[6px] transition-all ${variantError ? 'bg-red-50/40 border border-red-200 ring-1 ring-red-200' : ''}`}>
+                  <label className="flex items-center justify-between text-xs font-semibold text-slate-800">
+                    <span>{groupTitle}:</span>
+                    {selectedVariant && (
+                      <span className="text-slate-500 font-normal">
+                        Đã chọn: <strong className="text-slate-900">{getVariantLabel(selectedVariant)}</strong>
+                      </span>
+                    )}
                   </label>
                   <div className="flex flex-wrap gap-2">
                     {displayVariants.map((v, i) => {
                       const isSelected =
-                        (selectedVariant?._id && selectedVariant._id === v._id) ||
-                        (selectedVariant?.sku && selectedVariant.sku === v.sku) ||
-                        (!selectedVariant && i === 0);
+                        Boolean(selectedVariant) &&
+                        ((selectedVariant?._id && selectedVariant._id === v._id) ||
+                         (selectedVariant?.sku && selectedVariant.sku === v.sku));
                       const label = getVariantLabel(v);
                       return (
                         <button
                           key={v._id || v.sku || i}
                           type="button"
-                          onClick={() => {
-                            setSelectedVariant(v);
-                            if (v.images?.[0]?.url) {
-                              const imgIdx = images.indexOf(v.images[0].url);
-                              if (imgIdx >= 0) setActiveImageIdx(imgIdx);
-                            }
-                          }}
+                          onClick={() => handleSelectVariant(v)}
                           className={`min-w-16 px-3 py-1.5 rounded-[6px] text-xs font-medium border transition-all cursor-pointer active:scale-[0.98] ${
                             isSelected
-                              ? 'border-2 border-slate-900 text-slate-900 bg-white font-bold shadow-2xs'
+                              ? 'border-2 border-red-600 text-red-600 bg-red-50/20 font-bold shadow-2xs ring-1 ring-red-600/30'
                               : 'border border-slate-200 text-slate-700 bg-white hover:border-slate-300 hover:text-slate-900'
                           }`}
                         >
@@ -408,24 +505,42 @@ export const QuickViewModal = () => {
                   </div>
                 </div>
               ) : product.options?.[0]?.values?.length > 1 ? (
-                <div className="space-y-1.5 pt-1">
-                  <label className="block text-xs font-semibold text-slate-800">
-                    {product.options[0].name || 'Kích thước'}
+                <div className={`space-y-1.5 pt-1 p-2 rounded-[6px] transition-all ${variantError ? 'bg-red-50/40 border border-red-200 ring-1 ring-red-200' : ''}`}>
+                  <label className="flex items-center justify-between text-xs font-semibold text-slate-800">
+                    <span>{product.options[0].name || 'Kích thước / Màu sắc'}:</span>
+                    {selectedOptionVal && (
+                      <span className="text-slate-500 font-normal">
+                        Đã chọn: <strong className="text-slate-900">{selectedOptionVal}</strong>
+                      </span>
+                    )}
                   </label>
                   <div className="flex flex-wrap gap-2">
                     {product.options[0].values.map((val, i) => {
                       const valStr = typeof val === 'object' && val !== null ? (val.value || '') : String(val || '');
                       const colorCode = typeof val === 'object' && val !== null ? val.colorCode : '';
-                      const isSelected =
-                        selectedOptionVal === valStr || (!selectedOptionVal && i === 0);
+                      const isSelected = Boolean(selectedOptionVal) && selectedOptionVal === valStr;
                       return (
                         <button
                           key={val?._id || i}
                           type="button"
-                          onClick={() => setSelectedOptionVal(valStr)}
+                          onClick={() => {
+                            setSelectedOptionVal(valStr);
+                            setVariantError(false);
+                            // Thử tìm variant tương ứng
+                            const matched = variantsList.find((v) => {
+                              return (
+                                v.attributes?.some((a) => a.value === valStr) ||
+                                v.displayName?.includes(valStr) ||
+                                v.title?.includes(valStr)
+                              );
+                            });
+                            if (matched) {
+                              handleSelectVariant(matched);
+                            }
+                          }}
                           className={`min-w-16 px-3 py-1.5 rounded-[6px] text-xs font-medium border transition-all cursor-pointer active:scale-[0.98] flex items-center gap-1.5 ${
                             isSelected
-                              ? 'border-2 border-slate-900 text-slate-900 bg-white font-bold shadow-2xs'
+                              ? 'border-2 border-red-600 text-red-600 bg-red-50/20 font-bold shadow-2xs ring-1 ring-red-600/30'
                               : 'border border-slate-200 text-slate-700 bg-white hover:border-slate-300 hover:text-slate-900'
                           }`}
                         >
@@ -479,9 +594,17 @@ export const QuickViewModal = () => {
                 <button
                   type="button"
                   onClick={handleAddToCart}
-                  className="w-full py-2.5 bg-[#e30019] hover:bg-[#c40015] text-white font-bold text-xs rounded-[6px] shadow-xs transition active:scale-[0.98] cursor-pointer"
+                  disabled={isAddingToCart}
+                  className="w-full py-2.5 bg-[#e30019] hover:bg-[#c40015] disabled:opacity-80 disabled:cursor-not-allowed text-white font-bold text-xs rounded-[6px] shadow-xs transition active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2"
                 >
-                  Thêm vào giỏ hàng
+                  {isAddingToCart ? (
+                    <>
+                      <Loader2 size={15} className="animate-spin text-white" />
+                      <span>Đang thêm vào giỏ...</span>
+                    </>
+                  ) : (
+                    <span>Thêm vào giỏ hàng</span>
+                  )}
                 </button>
 
                 <div className="grid grid-cols-2 gap-2">
@@ -510,12 +633,7 @@ export const QuickViewModal = () => {
                 </span>
               </div>
 
-              {addedToCartToast && (
-                <div className="p-2.5 rounded-[6px] bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold flex items-center gap-2 animate-fadeIn">
-                  <Check size={15} />
-                  <span>Đã thêm sản phẩm vào giỏ hàng thành công!</span>
-                </div>
-              )}
+              
             </div>
           </div>
         </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import useCartStore from '@/store/cartStore';
 
@@ -12,7 +13,6 @@ export default function StickyPurchaseBar({
   const router = useRouter();
   const { addToCart } = useCartStore();
   const [isVisible, setIsVisible] = useState(false);
-  const [toastMessage, setToastMessage] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -32,9 +32,29 @@ export default function StickyPurchaseBar({
 
   if (!product) return null;
 
-  const handleAction = async (isBuyNow = false) => {
+  // Ảnh đại diện sản phẩm & biến thể
+  const thumb =
+    selectedVariant?.image ||
+    selectedVariant?.thumbnail ||
+    product?.thumbnail ||
+    (typeof product?.images?.[0] === 'string'
+      ? product.images[0]
+      : product?.images?.[0]?.url) ||
+    '/logo-shop.jpg';
+
+  // Đơn giá hiển thị
+  const displayPrice =
+    selectedVariant?.price ??
+    product?.price ??
+    product?.regularPrice ??
+    product?.salePrice ??
+    0;
+
+  const handleAction = async (actionType = 'Thêm vào giỏ') => {
     if (isSubmitting) return;
     setIsSubmitting(true);
+
+    const isBuyNow = actionType === 'Mua ngay' || actionType === true;
 
     const payload = {
       productId: product._id || product.id,
@@ -49,13 +69,7 @@ export default function StickyPurchaseBar({
     if (res?.success) {
       if (isBuyNow) {
         router.push('/cart');
-      } else {
-        setToastMessage('Đã thêm sản phẩm vào giỏ hàng!');
-        setTimeout(() => setToastMessage(null), 3000);
       }
-    } else {
-      setToastMessage(res?.message || 'Không thể thêm vào giỏ');
-      setTimeout(() => setToastMessage(null), 3000);
     }
   };
 
@@ -90,6 +104,9 @@ export default function StickyPurchaseBar({
                 src={thumb}
                 alt={product.name}
                 className="w-full h-full object-contain"
+                onError={(e) => {
+                  e.currentTarget.src = '/logo-shop.jpg';
+                }}
               />
             </div>
 
@@ -99,7 +116,7 @@ export default function StickyPurchaseBar({
               </span>
               <div className="flex items-center gap-2 text-xs">
                 <span className="font-extrabold text-red-600">
-                  {displayPrice > 0 ? `${displayPrice.toLocaleString('vi-VN')}₫` : 'Liên hệ'}
+                  {displayPrice > 0 ? `${displayPrice.toLocaleString('vi-VN')} ₫` : 'Liên hệ'}
                 </span>
                 {selectedVariant?.displayName &&
                   !['mặc định', 'mac dinh', 'default', 'default title'].includes(
@@ -117,16 +134,25 @@ export default function StickyPurchaseBar({
           <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
-              onClick={() => handleAction(false)}
-              className="hidden sm:inline-flex items-center px-4 py-2 rounded-[6px] border border-red-600 bg-white text-red-600 hover:bg-red-50 text-xs font-bold transition-all cursor-pointer active:scale-[0.98]"
+              disabled={isSubmitting}
+              onClick={() => handleAction('Thêm vào giỏ')}
+              className="hidden sm:inline-flex items-center px-4 py-2 rounded-[6px] border border-red-600 bg-white text-red-600 hover:bg-red-50 text-xs font-bold transition-all cursor-pointer active:scale-[0.98] disabled:opacity-60"
             >
-              Thêm vào giỏ
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+                  <span>Đang thêm...</span>
+                </>
+              ) : (
+                <span>Thêm vào giỏ</span>
+              )}
             </button>
 
             <button
               type="button"
+              disabled={isSubmitting}
               onClick={() => handleAction(true)}
-              className="inline-flex items-center px-5 py-2 rounded-[6px] bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm font-bold transition-all cursor-pointer active:scale-[0.98]"
+              className="inline-flex items-center px-5 py-2 rounded-[6px] bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm font-bold transition-all cursor-pointer active:scale-[0.98] disabled:opacity-60"
             >
               Mua ngay
             </button>
@@ -134,11 +160,7 @@ export default function StickyPurchaseBar({
         </div>
       </div>
 
-      {toastMessage && (
-        <div className="fixed bottom-16 right-4 z-50 bg-slate-900 text-white text-xs py-2 px-3 rounded-[6px] shadow-sm animate-fadeIn">
-          {toastMessage}
-        </div>
-      )}
+
     </>
   );
 }

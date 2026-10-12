@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { ShoppingCart, Eye, ArrowLeftRight, Check } from 'lucide-react';
+import { ShoppingCart, Eye, ArrowLeftRight, Check, Loader2 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -21,6 +21,7 @@ export default function FlashSaleProductCard({ item, onAddToCartMock, onBuyNowMo
   const { addProduct, isCompared } = useCompareStore();
   const { addToCart } = useCartStore();
   const [selectedVariantIdx, setSelectedVariantIdx] = useState(0);
+  const [isAdding, setIsAdding] = useState(false);
 
   if (!item) return null;
 
@@ -115,15 +116,21 @@ export default function FlashSaleProductCard({ item, onAddToCartMock, onBuyNowMo
   const handleAddToCart = async (e) => {
     e.preventDefault();
     e.stopPropagation();
+    if (isAdding) return;
+    setIsAdding(true);
     if (onAddToCartMock) {
       onAddToCartMock(item);
     }
-    await addToCart({
-      productId: product?._id,
-      variantId: currentItem.variantId?._id || currentItem.variantId,
-      sku: currentItem.sku,
-      quantity: 1,
-    });
+    try {
+      await addToCart({
+        productId: product?._id,
+        variantId: currentItem.variantId?._id || currentItem.variantId,
+        sku: currentItem.sku,
+        quantity: 1,
+      });
+    } finally {
+      setIsAdding(false);
+    }
   };
 
   const handleBuyNow = async (e) => {
@@ -307,13 +314,17 @@ export default function FlashSaleProductCard({ item, onAddToCartMock, onBuyNowMo
                   type="button"
                   variant="outline"
                   size="sm"
-                  disabled={isSoldOut}
+                  disabled={isSoldOut || isAdding}
                   onClick={handleAddToCart}
                   title="Thêm vào giỏ"
                   className="h-7 rounded-[4px] border-slate-300 bg-white text-slate-800 hover:bg-slate-100 text-[10px] font-bold gap-1 px-1"
                 >
-                  <ShoppingCart size={12} className="shrink-0" />
-                  <span className="truncate">Thêm giỏ</span>
+                  {isAdding ? (
+                    <Loader2 size={12} className="shrink-0 animate-spin text-red-600" />
+                  ) : (
+                    <ShoppingCart size={12} className="shrink-0" />
+                  )}
+                  <span className="truncate">{isAdding ? 'Đang thêm' : 'Thêm giỏ'}</span>
                 </Button>
 
                 <Button

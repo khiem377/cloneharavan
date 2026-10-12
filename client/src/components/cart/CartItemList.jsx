@@ -1,24 +1,48 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import CartItemRow from './CartItemRow';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { confirm } from '@/components/ui/confirm-dialog';
 
 export default function CartItemList({
   items = [],
   giftItems = [],
   giftNudges = [],
   totalItems = 0,
+  selectedItemIds = [],
+  onToggleSelect,
+  onToggleSelectAll,
   onUpdateQuantity,
   onRemoveItem,
   onClearCart,
   isUpdating = false,
 }) {
-  const [showClearConfirm, setShowClearConfirm] = useState(false);
-  const [selectAll, setSelectAll] = useState(true);
-
   // Số lượng loại sản phẩm khác nhau
   const productCount = items.length;
+
+  // Danh sách các sản phẩm còn hàng khả dụng
+  const availableItems = items.filter(
+    (i) => !i.isOutOfStock && (i.availableStock === undefined || i.availableStock > 0)
+  );
+
+  const isAllSelected =
+    availableItems.length > 0 &&
+    availableItems.every((item) => selectedItemIds.includes(item._id));
+
+  const handleClearAll = async () => {
+    const isConfirmed = await confirm({
+      title: 'Xóa toàn bộ giỏ hàng?',
+      description: 'Bạn có chắc chắn muốn xóa toàn bộ sản phẩm trong giỏ hàng không?',
+      confirmText: 'Xác nhận xóa',
+      cancelText: 'Hủy',
+      variant: 'destructive',
+    });
+    if (isConfirmed) {
+      onClearCart();
+    }
+  };
 
   return (
     <div className="bg-white border border-slate-200 rounded-[6px] overflow-hidden shadow-2xs">
@@ -27,18 +51,21 @@ export default function CartItemList({
         <div className="flex items-center gap-3 sm:gap-4">
           {/* CHECKBOX CHỌN TẤT CẢ */}
           <div className="w-5 shrink-0 flex items-center justify-center">
-            <input
-              type="checkbox"
-              checked={selectAll}
-              onChange={() => setSelectAll(!selectAll)}
-              className="w-4 h-4 rounded-[4px] border-slate-300 text-red-600 focus:ring-red-500 cursor-pointer accent-red-600"
+            <Checkbox
+              checked={isAllSelected}
+              onChange={(e) => onToggleSelectAll && onToggleSelectAll(e.target.checked)}
+              disabled={availableItems.length === 0 || isUpdating}
+              className="h-4 w-4 rounded-[4px] cursor-pointer"
+              id="cart-select-all-header"
             />
           </div>
 
           <div className="flex-1 min-w-0 grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
             {/* TIÊU ĐỀ SẢN PHẨM (MD: 5 CỘT) */}
             <div className="md:col-span-5 flex items-center gap-1.5">
-              <span>Tất cả sản phẩm</span>
+              <label htmlFor="cart-select-all-header" className="cursor-pointer select-none">
+                Tất cả sản phẩm
+              </label>
               <span className="font-mono tabular-nums text-slate-500">
                 ({productCount})
               </span>
@@ -62,42 +89,16 @@ export default function CartItemList({
             {/* NÚT XÓA TẤT CẢ (MD: 1 CỘT) */}
             <div className="hidden md:flex md:col-span-1 justify-center items-center">
               {items.length > 0 && (
-                <div>
-                  {!showClearConfirm ? (
-                    <button
-                      type="button"
-                      onClick={() => setShowClearConfirm(true)}
-                      disabled={isUpdating}
-                      className="text-slate-400 hover:text-red-600 p-1 text-xs font-semibold rounded-[4px] hover:bg-red-50 transition cursor-pointer"
-                      title="Xóa tất cả giỏ hàng"
-                      aria-label="Xóa tất cả"
-                    >
-                      Xóa
-                    </button>
-                  ) : (
-                    <div className="flex items-center gap-1.5 bg-red-50 p-1 rounded-[4px] border border-red-200 animate-fadeIn">
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        className="h-6 px-1.5 text-[10px] rounded-[3px]"
-                        onClick={() => {
-                          onClearCart();
-                          setShowClearConfirm(false);
-                        }}
-                      >
-                        Xóa hết
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-6 px-1.5 text-[10px] rounded-[3px]"
-                        onClick={() => setShowClearConfirm(false)}
-                      >
-                        Hủy
-                      </Button>
-                    </div>
-                  )}
-                </div>
+                <button
+                  type="button"
+                  onClick={handleClearAll}
+                  disabled={isUpdating}
+                  className="text-slate-400 hover:text-red-600 p-1 text-xs font-semibold rounded-[4px] hover:bg-red-50 transition cursor-pointer"
+                  title="Xóa tất cả giỏ hàng"
+                  aria-label="Xóa tất cả"
+                >
+                  Xóa
+                </button>
               )}
             </div>
           </div>
@@ -129,10 +130,11 @@ export default function CartItemList({
               item={item}
               attachedGifts={attachedGifts}
               giftNudge={giftNudge}
+              isSelected={selectedItemIds.includes(item._id)}
+              onToggleSelect={onToggleSelect}
               onUpdateQuantity={onUpdateQuantity}
               onRemoveItem={onRemoveItem}
               isUpdating={isUpdating}
-              isSelected={selectAll}
             />
           );
         })}

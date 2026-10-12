@@ -4,6 +4,7 @@ import React, { useEffect } from 'react';
 import Link from 'next/link';
 import useCartStore from '@/store/cartStore';
 import CartCheckoutSteps from './CartCheckoutSteps';
+import CartRewardBar from './CartRewardBar';
 import CartItemList from './CartItemList';
 import CartGiftItems from './CartGiftItems';
 import CartVoucherCard from './CartVoucherCard';
@@ -15,12 +16,18 @@ export default function CartView() {
   const {
     cart,
     items,
+    totalItems,
+    selectedItemIds,
     warnings,
     hasStockIssue,
     isLoading,
     isUpdating,
     initialized,
     fetchCart,
+    toggleSelectItem,
+    toggleSelectAll,
+    removeSelectedItems,
+    getSelectedSubtotal,
     updateQuantity,
     removeItem,
     clearCart,
@@ -31,6 +38,9 @@ export default function CartView() {
   useEffect(() => {
     fetchCart();
   }, [fetchCart]);
+
+  const selectedCount = selectedItemIds ? selectedItemIds.length : 0;
+  const selectedSubtotal = getSelectedSubtotal ? getSelectedSubtotal() : 0;
 
   const formatPrice = (val) =>
     new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val || 0);
@@ -107,31 +117,41 @@ export default function CartView() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5 2xl:gap-8 items-start">
           {/* CỘT TRÁI (8 CỘT) */}
           <div className="lg:col-span-8 space-y-4 2xl:space-y-6">
-            {/* 1. Bảng danh sách sản phẩm & quà tặng đính kèm */}
+            {/* 1. Thanh tiến trình nhận quà / freeship */}
+            <CartRewardBar subtotal={selectedSubtotal > 0 ? selectedSubtotal : (cart.subtotal || 0)} />
+
+            {/* 2. Bảng danh sách sản phẩm & quà tặng đính kèm */}
             <CartItemList
               items={items}
               giftItems={cart.giftItems || cart.giftPrograms || []}
               giftNudges={cart.giftNudges || []}
-              totalItems={items.length}
+              totalItems={totalItems || items.length}
+              selectedItemIds={selectedItemIds}
+              onToggleSelect={toggleSelectItem}
+              onToggleSelectAll={toggleSelectAll}
+              onRemoveSelected={removeSelectedItems}
               onUpdateQuantity={updateQuantity}
               onRemoveItem={removeItem}
               onClearCart={clearCart}
               isUpdating={isUpdating}
             />
 
-            {/* 2. Quà tặng kèm theo toàn đơn hàng nếu có quà độc lập */}
+            {/* 3. Quà tặng kèm theo toàn đơn hàng nếu có quà độc lập */}
             <CartGiftItems giftPrograms={cart.giftItems || cart.giftPrograms || []} />
           </div>
 
           {/* CỘT PHẢI (4 CỘT - STICKY) */}
           <div className="lg:col-span-4 space-y-4 lg:sticky lg:top-20 2xl:top-24">
-            {/* 1. Khối chọn Voucher giảm giá (Chuẩn ảnh 4) */}
+            {/* 1. Khối chọn Voucher giảm giá */}
             <CartVoucherCard />
 
-            {/* 2. Khối thông tin đơn hàng & nút Đặt hàng (Chuẩn ảnh 3 & 4) */}
+            {/* 2. Khối thông tin đơn hàng & nút Đặt hàng */}
             <CartOrderSummary
               cart={cart}
               itemsCount={items.length}
+              selectedItemIds={selectedItemIds}
+              selectedCount={selectedCount}
+              selectedSubtotal={selectedSubtotal}
               onValidateCheckout={validateCheckout}
               isUpdating={isUpdating}
               hasStockIssue={hasStockIssue}
@@ -145,17 +165,17 @@ export default function CartView() {
         <div>
           <div className="text-[10px] text-slate-500 font-medium">Tổng thanh toán:</div>
           <div className="text-base font-mono tabular-nums font-black text-red-600">
-            {formatPrice(cart.finalTotal || cart.subtotal || 0)}
+            {formatPrice(selectedSubtotal > 0 ? Math.max(0, selectedSubtotal - (cart.couponDiscount || 0)) : (cart.finalTotal || cart.subtotal || 0))}
           </div>
         </div>
 
         <Link href="/checkout" className="shrink-0">
           <Button
             size="default"
-            disabled={isUpdating || hasStockIssue || items.length === 0}
+            disabled={isUpdating || hasStockIssue || (selectedCount > 0 ? false : items.length === 0)}
             className="h-10 px-6 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-[6px] active:scale-[0.98] transition cursor-pointer shadow-xs"
           >
-            Đặt hàng ({items.length})
+            Đặt hàng ({selectedCount > 0 ? selectedCount : items.length})
           </Button>
         </Link>
       </div>

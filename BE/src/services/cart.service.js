@@ -682,6 +682,30 @@ const removeCartItem = async (cartOwner, itemId) => {
 /**
  * Xóa sạch toàn bộ giỏ hàng
  */
+/**
+ * Xóa nhiều dòng sản phẩm cùng lúc khỏi giỏ hàng (Batch remove)
+ */
+const removeCartItems = async (cartOwner, itemIds = []) => {
+  if (!Array.isArray(itemIds) || itemIds.length === 0) {
+    throw new AppError('Danh sách sản phẩm cần xóa không hợp lệ hoặc đang rỗng', 400);
+  }
+
+  const cart = await getOrCreateCart(cartOwner);
+  const idSet = new Set(itemIds.map((id) => id?.toString?.() || String(id)));
+
+  cart.items = cart.items.filter((item) => !idSet.has(item._id.toString()));
+
+  // Nếu giỏ hàng trống, xóa luôn coupon đã áp dụng
+  if (cart.items.length === 0) {
+    cart.couponCode = null;
+  }
+
+  cart.lastValidatedAt = new Date();
+  await cart.save();
+
+  return formatAndValidateCart(cart);
+};
+
 const clearCart = async (cartOwner) => {
   const cart = await getOrCreateCart(cartOwner);
   cart.items = [];
@@ -770,6 +794,7 @@ module.exports = {
   addMultipleToCart,
   updateCartItemQuantity,
   removeCartItem,
+  removeCartItems,
   clearCart,
   applyCoupon,
   removeCoupon,
