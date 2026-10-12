@@ -32,24 +32,6 @@ export default function StickyPurchaseBar({
 
   if (!product) return null;
 
-  // Ảnh đại diện sản phẩm & biến thể
-  const thumb =
-    selectedVariant?.image ||
-    selectedVariant?.thumbnail ||
-    product?.thumbnail ||
-    (typeof product?.images?.[0] === 'string'
-      ? product.images[0]
-      : product?.images?.[0]?.url) ||
-    '/logo-shop.jpg';
-
-  // Đơn giá hiển thị
-  const displayPrice =
-    selectedVariant?.price ??
-    product?.price ??
-    product?.regularPrice ??
-    product?.salePrice ??
-    0;
-
   const handleAction = async (actionType = 'Thêm vào giỏ') => {
     if (isSubmitting) return;
     setIsSubmitting(true);
