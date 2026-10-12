@@ -191,6 +191,12 @@ const userSchema = new mongoose.Schema(
       },
     ],
 
+    assignedWarehouseId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Warehouse',
+      default: null,
+    },
+
     isActive: {
       type: Boolean,
       default: true,

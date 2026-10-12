@@ -12,6 +12,7 @@ import ProductFormPage from '@/pages/products/ProductFormPage';
 import ProductVariantsPage from '@/pages/products/ProductVariantsPage';
 import VariantEditPage from '@/pages/products/VariantEditPage';
 import ImportExportPage from '@/pages/products/ImportExportPage';
+import ComboListPage from '@/pages/products/ComboListPage';
 import CouponPage from '@/pages/promotions/CouponPage';
 import PromotionPage from '@/pages/promotions/PromotionPage';
 import GiftProgramPage from '@/pages/promotions/GiftProgramPage';
@@ -46,6 +47,9 @@ import StockAlertPage from '@/pages/inventory/StockAlertPage';
 import StockMovementListPage from '@/pages/inventory/StockMovementListPage';
 import InventoryReportPage from '@/pages/inventory/InventoryReportPage';
 import StockDocumentListPage from '@/pages/inventory/StockDocumentListPage';
+import WarehouseListPage from '@/pages/inventory/WarehouseListPage';
+import StockTransferListPage from '@/pages/inventory/StockTransferListPage';
+import WarehouseMapPage from '@/pages/inventory/WarehouseMapPage';
 
 import RootRedirector from '@/components/auth/RootRedirector';
 import AdminAuthCallbackPage from '@/pages/auth/AdminAuthCallbackPage';
@@ -91,6 +95,7 @@ const router = createBrowserRouter([
                     { path: 'products/:id/edit', element: <PermissionGuard requiredPermission="product.edit"><ProductFormPage /></PermissionGuard> },
                     { path: 'products/:id/variants', element: <PermissionGuard requiredPermission="product.view"><ProductVariantsPage /></PermissionGuard> },
                     { path: 'products/:id/variants/:variantId/edit', element: <PermissionGuard requiredPermission="product.edit"><VariantEditPage /></PermissionGuard> },
+                    { path: 'products/combos', element: <PermissionGuard requiredPermission="product.view"><ComboListPage /></PermissionGuard> },
                     { path: 'promotions/coupons', element: <PermissionGuard requiredPermission="promotion.view"><CouponPage /></PermissionGuard> },
                     { path: 'promotions/discounts', element: <PermissionGuard requiredPermission="promotion.manage"><PromotionPage /></PermissionGuard> },
                     { path: 'promotions/gifts', element: <PermissionGuard requiredPermission="promotion.manage"><GiftProgramPage /></PermissionGuard> },
@@ -109,6 +114,9 @@ const router = createBrowserRouter([
                     { path: 'settings', element: <PermissionGuard requiredPermission="role.manage"><ComingSoonPage title="Cài đặt hệ thống" /></PermissionGuard> },
 
                     // ── Kho & Cung Ứng ─────────────────────────────────────────────────────────────────────
+                    { path: 'warehouses',              element: <PermissionGuard requiredPermission="purchase_order.view"><WarehouseListPage /></PermissionGuard> },
+                    { path: 'warehouse-map',           element: <PermissionGuard requiredPermission="purchase_order.view"><WarehouseMapPage /></PermissionGuard> },
+                    { path: 'stock-transfers',         element: <PermissionGuard requiredPermission="purchase_order.view"><StockTransferListPage /></PermissionGuard> },
                     { path: 'suppliers',               element: <PermissionGuard requiredPermission="supplier.view"><SupplierListPage /></PermissionGuard> },
                     { path: 'purchase-orders',         element: <PermissionGuard requiredPermission="purchase_order.view"><PurchaseOrderListPage /></PermissionGuard> },
                     { path: 'purchase-orders/create',  element: <PermissionGuard requiredPermission="purchase_order.create"><PurchaseOrderCreatePage /></PermissionGuard> },

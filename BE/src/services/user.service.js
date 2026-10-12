@@ -348,13 +348,33 @@ const getAllUsers = async (query = {}) => {
         populate: { path: 'permissions', select: 'name code module description' },
       })
       .populate('customPermissions', 'name code module description')
+      .populate('assignedWarehouseId', 'name code isDefault')
       .sort(sort)
       .skip(skip)
       .limit(limitNum),
   ]);
 
+  // Đồng bộ hai chiều: Nếu user chưa có assignedWarehouseId nhưng có trong Warehouse.assignedStaffIds
+  const Warehouse = require('../models/warehouse.model');
+  const warehouses = await Warehouse.find({ 'assignedStaffIds.0': { $exists: true } }).select('_id name code isDefault assignedStaffIds');
+  const staffWhMap = new Map();
+  warehouses.forEach((w) => {
+    (w.assignedStaffIds || []).forEach((staffId) => {
+      const sId = typeof staffId === 'object' && staffId._id ? staffId._id.toString() : staffId.toString();
+      staffWhMap.set(sId, { _id: w._id, name: w.name, code: w.code, isDefault: w.isDefault });
+    });
+  });
+
+  const enrichedUsers = users.map((u) => {
+    const uObj = u.toObject();
+    if (!uObj.assignedWarehouseId && staffWhMap.has(uObj._id.toString())) {
+      uObj.assignedWarehouseId = staffWhMap.get(uObj._id.toString());
+    }
+    return uObj;
+  });
+
   return {
-    users,
+    users: enrichedUsers,
     total,
     page: pageNum,
     limit: limitNum,
@@ -372,7 +392,8 @@ const getUserById = async (id) => {
       select: 'name code description permissions',
       populate: { path: 'permissions', select: 'name code module description' },
     })
-    .populate('customPermissions', 'name code module description');
+    .populate('customPermissions', 'name code module description')
+    .populate('assignedWarehouseId', 'name code isDefault');
   if (!user) throw new AppError('Không tìm thấy người dùng', 404);
   return user;
 };
@@ -489,6 +510,8 @@ const createAdminUser = async (data) => {
     }
   }
 
+  const assignedWhId = data.assignedWarehouseId || data.warehouseId || null;
+
   const newAdmin = await User.create({
     fullName: data.fullName.trim(),
     email: data.email.toLowerCase().trim(),
@@ -498,10 +521,18 @@ const createAdminUser = async (data) => {
     dateOfBirth: data.dateOfBirth || null,
     role: data.role || 'staff',
     roleId: data.roleId || null,
+    assignedWarehouseId: assignedWhId,
     isActive: data.isActive !== undefined ? data.isActive : true,
     isEmailVerified: data.isEmailVerified !== undefined ? data.isEmailVerified : true,
     isPhoneVerified: data.isPhoneVerified !== undefined ? data.isPhoneVerified : true,
   });
+
+  if (assignedWhId) {
+    const Warehouse = require('../models/warehouse.model');
+    await Warehouse.findByIdAndUpdate(assignedWhId, {
+      $addToSet: { assignedStaffIds: newAdmin._id },
+    });
+  }
 
   const userObj = newAdmin.toObject();
   delete userObj.password;

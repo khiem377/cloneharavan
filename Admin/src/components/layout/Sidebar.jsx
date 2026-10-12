@@ -84,6 +84,7 @@ const NAV_GROUPS = [
           { to: '/products', icon: ProductListNavIcon, label: 'Danh sách sản phẩm', permission: 'product.view' },
           { to: '/products/new', icon: ProductAddNavIcon, label: 'Thêm sản phẩm mới', permission: 'product.create' },
           { to: '/products/import', icon: ProductImportNavIcon, label: 'Nhập / Xuất Excel', permission: 'product.create' },
+          { to: '/products/combos', icon: VariantsNavIcon, label: 'Combo sản phẩm', permission: 'product.view' },
           { to: '/categories', icon: CategoriesIcon, label: 'Danh mục sản phẩm', permission: 'category.manage' },
           { to: '/brands', icon: BrandsIcon, label: 'Thương hiệu', permission: 'brand.manage' },
           { to: '/products?view=variants', icon: VariantsNavIcon, label: 'Quản lý biến thể', permission: 'product.view' },
@@ -99,6 +100,9 @@ const NAV_GROUPS = [
         label: 'Quản lý Kho hàng',
         permission: 'purchase_order.view',
         children: [
+          { to: '/warehouses', icon: WarehouseNavIcon, label: 'Danh sách kho hàng', permission: 'purchase_order.view' },
+          // { to: '/warehouse-map', icon: StockDocNavIcon, label: 'Sơ đồ mặt bằng kho (2D)', permission: 'purchase_order.view' }, // Tạm ẩn, phát triển trong tương lai
+          { to: '/stock-transfers', icon: StockHistoryNavIcon, label: 'Chuyển kho nội bộ', permission: 'purchase_order.view' },
           { to: '/stock-documents', icon: StockDocNavIcon, label: 'Đơn & Phiếu kho', permission: 'purchase_order.view' },
           { to: '/suppliers', icon: SupplierNavIcon, label: 'Nhà cung cấp', permission: 'supplier.view' },
           { to: '/purchase-orders', icon: PurchaseOrderNavIcon, label: 'Đơn mua hàng (PO)', permission: 'purchase_order.view' },

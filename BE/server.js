@@ -271,7 +271,26 @@ const ensureAdminRolesAndPermissions = async () => {
   }
 };
 
-const { fixAllProductCategoriesAndImages } = require('./src/services/productCatalogFix.service');
+const cleanupZeroStockForNonDefaultWarehouses = async () => {
+  try {
+    const Warehouse = require('./src/models/warehouse.model');
+    const ProductWarehouseStock = require('./src/models/productWarehouseStock.model');
+    const nonDefaultWarehouses = await Warehouse.find({ isDefault: { $ne: true } }).select('_id');
+    const nonDefaultIds = nonDefaultWarehouses.map((w) => w._id);
+    if (nonDefaultIds.length > 0) {
+      const res = await ProductWarehouseStock.deleteMany({
+        warehouseId: { $in: nonDefaultIds },
+        stock: { $lte: 0 },
+        allocated: { $lte: 0 },
+      });
+      if (res.deletedCount > 0) {
+        console.log(`[WarehouseClean] Đã dọn dẹp ${res.deletedCount} bản ghi tồn kho rỗng (stock=0) của các kho phụ`);
+      }
+    }
+  } catch (err) {
+    console.warn('[WarehouseClean] Warning:', err.message);
+  }
+};
 
 connectDB().then(async () => {
   await initElasticsearch();
@@ -279,6 +298,9 @@ connectDB().then(async () => {
   // await fixAllProductCategoriesAndImages();
   await ensureSamsungVariants();
   await ensureAdminRolesAndPermissions();
+  await cleanupZeroStockForNonDefaultWarehouses();
+  const assignStaffWarehouses = require('./scripts/assign_staff_warehouses');
+  await assignStaffWarehouses();
 
   app.listen(PORT, () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);

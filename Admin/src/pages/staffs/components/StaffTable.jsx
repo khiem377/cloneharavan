@@ -12,6 +12,7 @@ import {
   KeyRound,
   Eye,
 } from '@/components/ui/Icons';
+import { Warehouse } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -63,6 +64,7 @@ export default function StaffTable({
               {isColumnVisible('staff') && <TableHead className="p-3">Nhân Viên</TableHead>}
               {isColumnVisible('contact') && <TableHead className="p-3">Liên Hệ</TableHead>}
               {isColumnVisible('role') && <TableHead className="p-3">Vai Trò & Quyền Hạn</TableHead>}
+              {isColumnVisible('warehouse') && <TableHead className="p-3">Kho Phụ Trách</TableHead>}
               {isColumnVisible('lastLogin') && <TableHead className="p-3">Đăng Nhập Gần Nhất</TableHead>}
               {isColumnVisible('createdAt') && <TableHead className="p-3">Ngày Tạo</TableHead>}
               {isColumnVisible('status') && <TableHead className="p-3 text-center">Trạng Thái</TableHead>}
@@ -72,7 +74,7 @@ export default function StaffTable({
           <TableBody className="divide-y divide-border/60">
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={7} className="py-12 text-center text-muted-foreground">
+                <TableCell colSpan={8} className="py-12 text-center text-muted-foreground">
                   <div className="flex items-center justify-center gap-2">
                     <div className="size-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                     <span>Đang tải danh sách nhân viên...</span>
@@ -81,7 +83,7 @@ export default function StaffTable({
               </TableRow>
             ) : staffs.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="py-12 text-center text-muted-foreground">
+                <TableCell colSpan={8} className="py-12 text-center text-muted-foreground">
                   Không tìm thấy nhân viên nào phù hợp
                 </TableCell>
               </TableRow>
@@ -182,6 +184,32 @@ export default function StaffTable({
                             </Badge>
                           )}
                         </div>
+                      </TableCell>
+                    )}
+
+                    {/* Warehouse */}
+                    {isColumnVisible('warehouse') && (
+                      <TableCell className="p-3">
+                        {user.assignedWarehouseId?.name ? (
+                          <div className="flex items-center gap-1.5">
+                            <Badge
+                              variant="outline"
+                              className="text-[11px] font-semibold px-2 py-0.5 rounded-[4px] border-primary/30 bg-primary/5 text-primary flex items-center gap-1 w-fit"
+                            >
+                              <Warehouse size={11} className="shrink-0" />
+                              <span className="truncate max-w-[150px]">{user.assignedWarehouseId.name}</span>
+                            </Badge>
+                          </div>
+                        ) : ['admin', 'administrator'].includes(user.role) ? (
+                          <span className="text-[11px] text-muted-foreground font-medium flex items-center gap-1">
+                            <Shield size={11} className="text-primary/70" />
+                            Toàn hệ thống
+                          </span>
+                        ) : (
+                          <span className="text-[11px] text-muted-foreground/60 italic">
+                            Chưa phân kho
+                          </span>
+                        )}
                       </TableCell>
                     )}
 
