@@ -202,7 +202,7 @@ export const CategoryDrawer = ({ isOpen, onClose }) => {
         </div>
 
         {currentActive && subGroups.length > 0 && (
-          <div className="hidden md:block bg-white h-full shadow-md border-l border-slate-200 p-6 overflow-y-auto w-[480px] lg:w-[680px] xl:w-[840px] max-w-[calc(100vw-340px)] animate-fadeIn">
+          <div className="hidden md:block bg-white h-full shadow-md border-l border-slate-200 p-6 2xl:p-8 overflow-y-auto w-[480px] lg:w-[680px] xl:w-[840px] 2xl:w-[960px] max-w-[calc(100vw-340px)] animate-fadeIn">
             <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 items-start">
               {subGroups.map((group) => (
                 <div key={group._id} className="space-y-3">

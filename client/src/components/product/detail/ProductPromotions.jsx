@@ -89,12 +89,6 @@ export default function ProductPromotions({ deals, product, currentPrice = 0 }) 
 
   return (
     <div className="flex flex-col gap-3">
-      {/* THÔNG BÁO ƯU TIÊN KHI ĐANG FLASH SALE */}
-      {isFlashSale && (
-        <Card className="rounded-[6px] border border-red-200 bg-red-50/40 p-3 text-xs text-red-900 leading-relaxed shadow-none">
-          <strong>LƯU Ý FLASH SALE:</strong> Sản phẩm đang áp dụng mức giá sốc độc quyền. Không áp dụng đồng thời với các chương trình quà tặng kèm hoặc chiết khấu khác. Bạn vẫn có thể sử dụng thêm mã giảm giá ở giỏ hàng.
-        </Card>
-      )}
 
       {/* 1. KHỐI ƯU ĐÃI ĐI KÈM (QUÀ TẶNG & KHUYẾN MÃI THỰC TẾ) */}
       {hasGifts && (

@@ -55,7 +55,7 @@ export default function HomeBrandMarquee({ initialBrands = [] }) {
 
   return (
     <section className="w-full py-6 bg-slate-50 border-y border-slate-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6">
+      <div className="max-w-[1536px] 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 2xl:px-8">
         {/* Header khối */}
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">

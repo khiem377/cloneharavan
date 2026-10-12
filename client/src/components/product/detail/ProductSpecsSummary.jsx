@@ -13,21 +13,18 @@ export default function ProductSpecsSummary({ product, selectedVariant }) {
 
   // Tổng hợp thông số kỹ thuật (ưu tiên từ variant nếu có, hoặc product cha)
   const specs = useMemo(() => {
-    const rawSpecs = selectedVariant?.specifications?.length > 0
+    const rawSpecs = (selectedVariant?.specifications?.length > 0
       ? selectedVariant.specifications
-      : product?.specifications || [];
+      : product?.specifications || []
+    ).filter((s) => {
+      const k = String(s.key || '').trim().toLowerCase();
+      return !['mã sku', 'sku', 'mã sản phẩm'].includes(k);
+    });
 
     const list = [...rawSpecs];
 
     if (!list.some((s) => s.key === 'Thương hiệu') && product?.brand?.name) {
       list.unshift({ group: 'Thông tin chung', key: 'Thương hiệu', value: product.brand.name });
-    }
-    if (!list.some((s) => s.key === 'Mã SKU') && (selectedVariant?.sku || product?.sku || product?.productCode)) {
-      list.unshift({
-        group: 'Thông tin chung',
-        key: 'Mã SKU',
-        value: selectedVariant?.sku || product?.sku || product?.productCode,
-      });
     }
     if (!list.some((s) => s.key === 'Đơn vị tính') && product?.unit) {
       list.push({ group: 'Thông tin chung', key: 'Đơn vị tính', value: product.unit });

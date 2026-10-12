@@ -7,6 +7,7 @@ const ExcelJS = require('exceljs');
 const path = require('path');
 const fs = require('fs');
 const AppError = require('../utils/AppError');
+const { numberToWordsVN } = require('../utils/vnNumberToWords');
 
 class PurchaseOrderService {
     // 1. Lấy danh sách Đơn Nhập Kho
@@ -295,7 +296,8 @@ class PurchaseOrderService {
                         } else if (val.startsWith('Phí vận chuyển')) {
                             cell.value = `Phí vận chuyển: Miễn phí`;
                         } else if (val.startsWith('Tổng tiền thanh toán:')) {
-                            cell.value = `Tổng tiền thanh toán: ${grandTotal.toLocaleString('vi-VN')} VNĐ`;
+                            const grandTotalWords = numberToWordsVN(grandTotal);
+                            cell.value = `Tổng tiền thanh toán: ${grandTotal.toLocaleString('vi-VN')} VNĐ (Bằng chữ: ${grandTotalWords})`;
                         } else if (val.startsWith('Thời gian giao hàng:')) {
                             cell.value = `Thời gian giao hàng: ${po.deliveryDate ? new Date(po.deliveryDate).toLocaleDateString('vi-VN') : 'Dự kiến 3 - 5 ngày làm việc'}`;
                         } else if (val.startsWith('Địa điểm giao hàng:')) {

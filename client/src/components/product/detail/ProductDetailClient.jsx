@@ -13,6 +13,7 @@ import ProductReviewsAndComments from './ProductReviewsAndComments';
 import StickyPurchaseBar from './StickyPurchaseBar';
 import ProductViewTracker from '@/components/common/ProductViewTracker';
 import { recommendationService } from '@/services/recommendation.service';
+import { getDynamicProductName } from '@/utils/productNameHelper';
 
 export default function ProductDetailClient({
   product,
@@ -61,6 +62,12 @@ export default function ProductDetailClient({
 
   const [selectedVariant, setSelectedVariant] = useState(initialVariant);
 
+  // Tên sản phẩm phản ứng động theo biến thể được chọn
+  const dynamicProductName = useMemo(
+    () => getDynamicProductName(product, selectedVariant, variants),
+    [product, selectedVariant, variants]
+  );
+
   const flashSaleDeal = deals?.flashSale || null;
   const isFlashSale = Boolean(deals?.isFlashSale && flashSaleDeal?.price > 0);
 
@@ -87,14 +94,14 @@ export default function ProductDetailClient({
   return (
     <div className="min-h-[100dvh] bg-slate-50/60 pb-16">
       <ProductViewTracker product={product} />
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6">
+      <div className="max-w-[1536px] 2xl:max-w-[1600px] mx-auto px-3 sm:px-4 lg:px-6 2xl:px-8">
         {/* BREADCRUMB */}
-        <ProductBreadcrumbs product={product} />
+        <ProductBreadcrumbs product={product} dynamicProductName={dynamicProductName} />
 
         {/* KHUNG CHÍNH (MAIN PRODUCT STAGE) */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 bg-white rounded-[6px] border border-slate-200 p-4 sm:p-6 mb-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 2xl:gap-8 bg-white rounded-[6px] border border-slate-200 p-4 sm:p-6 mb-6">
           {/* CỘT TRÁI (5/12): GALLERY HOVER ZOOM & TRUST BADGES */}
-          <div className="lg:col-span-6 flex flex-col gap-5">
+          <div className="lg:col-span-5 flex flex-col gap-4">
             <ProductGallery
               product={product}
               variants={variants}
@@ -108,9 +115,10 @@ export default function ProductDetailClient({
           </div>
 
           {/* CỘT PHẢI (7/12): THÔNG TIN GIÁ, BIẾN THỂ, UPSELL, ƯU ĐÃI & NÚT MUA */}
-          <div className="lg:col-span-6 flex flex-col gap-4">
+          <div className="lg:col-span-7 flex flex-col gap-4">
             <ProductInfo
               product={product}
+              dynamicProductName={dynamicProductName}
               variants={variants}
               selectedVariant={selectedVariant}
               onSelectVariant={setSelectedVariant}
@@ -135,7 +143,7 @@ export default function ProductDetailClient({
             {/* FEED ĐÁNH GIÁ & BÌNH LUẬN KIỂU FACEBOOK TRỰC TIẾP TRÊN TRANG (KHÔNG DÙNG DRAWER) */}
             <ProductReviewsAndComments
               productId={product._id || product.id}
-              productName={product.name}
+              productName={dynamicProductName || product.name}
             />
           </div>
 
@@ -159,6 +167,7 @@ export default function ProductDetailClient({
       {/* THANH MUA HÀNG GHIM ĐÁY */}
       <StickyPurchaseBar
         product={product}
+        dynamicProductName={dynamicProductName}
         selectedVariant={selectedVariant}
       />
     </div>

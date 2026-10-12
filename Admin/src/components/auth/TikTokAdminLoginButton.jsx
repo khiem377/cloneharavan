@@ -1,14 +1,33 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { toast } from '@/providers/ToastProvider';
 import { authService } from '@/services/auth.service';
 
 export default function TikTokAdminLoginButton() {
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    const handleReset = () => setLoading(false);
+
+    window.addEventListener('pageshow', handleReset);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        handleReset();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleReset);
+
+    return () => {
+      window.removeEventListener('pageshow', handleReset);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleReset);
+    };
+  }, []);
+
   const handleTikTokAdminLogin = async () => {
     setLoading(true);
+
     try {
-      // Đánh dấu state với tiền tố admin_ để khi callback tại client biết đường redirect về admin
       const stateToken = `admin_oauth_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
       const clientKey =
@@ -17,7 +36,9 @@ export default function TikTokAdminLoginButton() {
 
       const redirectUri =
         import.meta.env.VITE_TIKTOK_REDIRECT_URI ||
-        'http://localhost:3000/auth/tiktok/callback';
+        `${window.location.origin}/auth/tiktok/callback`;
+
+      let authUrl = null;
 
       try {
         const { data } = await authService.getTikTokAuthUrl({
@@ -29,37 +50,37 @@ export default function TikTokAdminLoginButton() {
           if (data.data.codeVerifier && typeof window !== 'undefined') {
             sessionStorage.setItem('tiktok_code_verifier', data.data.codeVerifier);
           }
-          window.location.href = data.data.url;
-          return;
+          authUrl = data.data.url;
         }
       } catch (beErr) {
         console.warn('Lấy URL TikTok từ BE thất bại, fallback sang frontend PKCE:', beErr);
       }
 
-      // Fallback: Direct PKCE OAuth URL builder
-      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-      const array = new Uint8Array(43);
-      window.crypto.getRandomValues(array);
-      let codeVerifier = '';
-      for (let i = 0; i < 43; i++) {
-        codeVerifier += chars[array[i] % chars.length];
+      if (!authUrl) {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        const array = new Uint8Array(43);
+        window.crypto.getRandomValues(array);
+        let codeVerifier = '';
+        for (let i = 0; i < 43; i++) {
+          codeVerifier += chars[array[i] % chars.length];
+        }
+        sessionStorage.setItem('tiktok_code_verifier', codeVerifier);
+
+        const encoder = new TextEncoder();
+        const encodedData = encoder.encode(codeVerifier);
+        const hash = await window.crypto.subtle.digest('SHA-256', encodedData);
+        const codeChallenge = btoa(String.fromCharCode(...new Uint8Array(hash)))
+          .replace(/\+/g, '-')
+          .replace(/\//g, '_')
+          .replace(/=+$/, '');
+
+        const scope = 'user.info.basic,user.info.profile';
+        authUrl = `https://www.tiktok.com/v2/auth/authorize/?client_key=${clientKey}&scope=${encodeURIComponent(
+          scope
+        )}&response_type=code&redirect_uri=${encodeURIComponent(
+          redirectUri
+        )}&state=${encodeURIComponent(stateToken)}&code_challenge=${codeChallenge}&code_challenge_method=S256&disable_auto_auth=1`;
       }
-      sessionStorage.setItem('tiktok_code_verifier', codeVerifier);
-
-      const encoder = new TextEncoder();
-      const encodedData = encoder.encode(codeVerifier);
-      const hash = await window.crypto.subtle.digest('SHA-256', encodedData);
-      const codeChallenge = btoa(String.fromCharCode(...new Uint8Array(hash)))
-        .replace(/\+/g, '-')
-        .replace(/\//g, '_')
-        .replace(/=+$/, '');
-
-      const scope = 'user.info.basic,user.info.profile';
-      const authUrl = `https://www.tiktok.com/v2/auth/authorize/?client_key=${clientKey}&scope=${encodeURIComponent(
-        scope
-      )}&response_type=code&redirect_uri=${encodeURIComponent(
-        redirectUri
-      )}&state=${encodeURIComponent(stateToken)}&code_challenge=${codeChallenge}&code_challenge_method=S256`;
 
       window.location.href = authUrl;
     } catch (err) {
@@ -73,11 +94,11 @@ export default function TikTokAdminLoginButton() {
       type="button"
       onClick={handleTikTokAdminLogin}
       disabled={loading}
-      className="w-full h-10 px-4 flex items-center justify-center gap-2.5 rounded-[6px] bg-[#000000] hover:bg-[#111111] text-white text-xs font-semibold border border-black shadow-xs transition-all active:scale-[0.98] cursor-pointer disabled:opacity-60 select-none"
+      className="flex h-10 w-full items-center justify-center gap-2.5 rounded-[6px] border border-black bg-[#000000] px-4 text-xs font-semibold text-white shadow-xs transition-all hover:bg-[#111111] active:scale-[0.98] cursor-pointer disabled:opacity-60 select-none"
     >
       {loading ? (
         <>
-          <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+          <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
           </svg>
@@ -85,7 +106,7 @@ export default function TikTokAdminLoginButton() {
         </>
       ) : (
         <>
-          {/* Authentic Multi-color TikTok Logo */}
+          {/* Multi-color TikTok Logo */}
           <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path
               d="M19.321 5.562a5.122 5.122 0 0 1-3.414-1.297A5.19 5.19 0 0 1 14.48.973h-3.47v14.43c0 1.93-1.57 3.49-3.5 3.49-1.93 0-3.5-1.56-3.5-3.49 0-1.93 1.57-3.5 3.5-3.5.37 0 .73.06 1.06.17V8.53a6.974 6.974 0 0 0-1.06-.08C3.36 8.45 0 11.81 0 15.9c0 4.09 3.36 7.45 7.51 7.45 4.14 0 7.5-3.36 7.5-7.45V8.18a8.62 8.62 0 0 0 5.15 1.68V6.4a5.15 5.15 0 0 1-.839-.838z"

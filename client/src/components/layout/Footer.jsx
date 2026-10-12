@@ -81,8 +81,8 @@ export default function Footer({ initialMenu = null }) {
   return (
     <footer className="w-full bg-white border-t border-slate-200 mt-auto text-slate-800">
       {/* Main Footer Container */}
-      <div className="max-w-[1320px] mx-auto px-4 py-8 lg:py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+      <div className="max-w-[1536px] 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 2xl:px-8 py-8 lg:py-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 2xl:gap-12">
           
           {/* ========================================================= */}
           {/* CỘT 1: THÔNG TIN CÔNG TY & LIÊN HỆ                       */}
@@ -372,7 +372,7 @@ export default function Footer({ initialMenu = null }) {
       {/* THANH BẢN QUYỀN BOTTOM                                    */}
       {/* ========================================================= */}
       <div className="border-t border-slate-200 bg-white py-3.5">
-        <div className="max-w-[1320px] mx-auto px-4 text-center text-xs text-slate-500">
+        <div className="max-w-[1536px] 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 2xl:px-8 text-center text-xs text-slate-500">
           © Bản quyền thuộc về{' '}
           <span className="font-semibold text-slate-800">SHOP</span>
           {' '}| Cung cấp bởi{' '}

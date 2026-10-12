@@ -29,19 +29,16 @@ export default function ZaloAdminLoginButton() {
   const handleZaloAdminLogin = async () => {
     setLoading(true);
 
-    // Safety fallback timeout to prevent infinite spinner if navigation is cancelled or blocked
     const safetyTimer = setTimeout(() => {
       setLoading(false);
     }, 4500);
 
     try {
-      // Đánh dấu state với tiền tố admin_ để khi callback tại client biết đường redirect về admin
       const stateToken = `admin_zalo_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-
       const appId = import.meta.env.VITE_ZALO_APP_ID;
       const redirectUri =
         import.meta.env.VITE_ZALO_REDIRECT_URI ||
-        'http://localhost:3000/auth/zalo/callback';
+        `${window.location.origin}/auth/zalo/callback`;
 
       try {
         const { data } = await authService.getZaloAuthUrl({
@@ -67,7 +64,6 @@ export default function ZaloAdminLoginButton() {
         return;
       }
 
-      // Fallback: Direct PKCE OAuth URL builder
       const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
       const array = new Uint8Array(43);
       window.crypto.getRandomValues(array);
@@ -102,11 +98,11 @@ export default function ZaloAdminLoginButton() {
       type="button"
       onClick={handleZaloAdminLogin}
       disabled={loading}
-      className="w-full h-10 px-4 flex items-center justify-center gap-2 rounded-[6px] bg-[#0068ff] hover:bg-[#0057d9] text-white text-xs font-semibold border border-[#0068ff] shadow-xs transition-all active:scale-[0.98] cursor-pointer disabled:opacity-60 select-none"
+      className="flex h-10 w-full items-center justify-center gap-2.5 rounded-[6px] border border-[#0068ff] bg-[#0068ff] px-4 text-xs font-semibold text-white shadow-xs transition-all hover:bg-[#0057d9] active:scale-[0.98] cursor-pointer disabled:opacity-60 select-none"
     >
       {loading ? (
         <>
-          <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+          <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
           </svg>
@@ -114,7 +110,6 @@ export default function ZaloAdminLoginButton() {
         </>
       ) : (
         <>
-          {/* Authentic Vector Zalo Logo with Transparent Background */}
           <ZaloIcon className="h-4.5 w-auto shrink-0" color="white" />
           <span>Đăng nhập với Zalo</span>
         </>

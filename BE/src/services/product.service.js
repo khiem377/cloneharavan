@@ -31,6 +31,9 @@ const getActiveFlashSaleMap = async () => {
       ...item,
       flashSaleId: activeSale._id,
       flashSaleName: activeSale.name,
+      flashSaleSlug: activeSale.slug,
+      flashSaleDescription: activeSale.description || '',
+      startDate: activeSale.startDate,
       endDate: activeSale.endDate,
     });
   }
@@ -856,16 +859,22 @@ const getProductDeals = async (idOrSlug) => {
   let flashSaleDeal = null;
 
   if (isFlashSaleActive) {
+    const limit = matchedFsItem.stockLimit || 0;
+    const sold = matchedFsItem.soldCount || 0;
     effectivePrice = fsPrice;
     flashSaleDeal = {
       _id: matchedFsItem.flashSaleId,
       name: matchedFsItem.flashSaleName,
+      slug: matchedFsItem.flashSaleSlug || '',
+      description: matchedFsItem.flashSaleDescription || '',
       price: fsPrice,
       originalPrice: productPrice,
       remaining: fsRemaining,
-      stockLimit: matchedFsItem.stockLimit,
-      soldCount: matchedFsItem.soldCount,
+      stockLimit: limit,
+      soldCount: sold,
+      percentSold: limit > 0 ? Math.min(100, Math.round((sold / limit) * 100)) : 0,
       discountPercent: Math.round(((productPrice - fsPrice) / productPrice) * 100),
+      startDate: matchedFsItem.startDate,
       endDate: matchedFsItem.endDate,
     };
   } else {
@@ -896,13 +905,16 @@ const getProductDeals = async (idOrSlug) => {
       for (const [, item] of (fsData.itemMap || new Map())) {
         const itemPId = item.productId?.toString() || '';
         if (itemPId === product._id.toString()) {
+          const limit = item.stockLimit || 0;
+          const sold = item.soldCount || 0;
           items.push({
             variantId: item.variantId ? item.variantId.toString() : null,
             price: item.flashSalePrice ?? item.flashPrice,
             originalPrice: item.originalPrice,
-            remaining: Math.max(0, (item.stockLimit || 0) - (item.soldCount || 0)),
-            stockLimit: item.stockLimit,
-            soldCount: item.soldCount,
+            remaining: Math.max(0, limit - sold),
+            stockLimit: limit,
+            soldCount: sold,
+            percentSold: limit > 0 ? Math.min(100, Math.round((sold / limit) * 100)) : 0,
           });
         }
       }

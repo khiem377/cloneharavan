@@ -324,11 +324,11 @@ export default function AiChatWidget() {
         isProductPage={isProductPage}
       />
 
-      {/* Cửa sổ chat chính dạng modal nổi bên góc phải */}
+      {/* Cửa sổ chat chính dạng modal nổi bên góc phải / Fullscreen trên Mobile */}
       {isOpen && (
         <div
-          className={`fixed z-50 flex flex-col bg-white border border-slate-200 shadow-lg overflow-hidden transition-all duration-200 select-none
-            inset-x-0 bottom-0 top-0 sm:inset-auto sm:right-6 sm:bottom-6 sm:w-[420px] sm:h-[620px] sm:max-h-[85vh] sm:rounded-[6px]
+          className={`fixed z-50 flex flex-col bg-white border border-slate-200 shadow-xl overflow-hidden transition-all duration-200 select-none
+            inset-0 h-[100dvh] max-h-[100dvh] sm:inset-auto sm:right-6 sm:bottom-6 sm:w-[420px] sm:h-[620px] sm:max-h-[85vh] sm:rounded-[6px]
           `}
           role="dialog"
           aria-label="Cửa sổ trò chuyện tư vấn SHOP"

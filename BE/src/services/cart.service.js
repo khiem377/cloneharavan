@@ -21,21 +21,6 @@ const getAvailableStock = (variant) => {
   return Math.max(0, stock - allocated);
 };
 
-/**
- * Phân giải sản phẩm & biến thể cho Giỏ hàng:
- * 1. ƯU TIÊN SỐ 1: variantId (Đơn vị lưu kho & bán hàng chuẩn nhất)
- *    - Tìm trực tiếp ProductVariant theo variantId và populate('productId').
- *    - Hoàn toàn KHÔNG cần client truyền productId vì biến thể đã liên kết chặt chẽ với sản phẩm cha.
- * 2. ƯU TIÊN SỐ 2: sku
- *    - Tìm trực tiếp ProductVariant theo mã SKU và populate('productId').
- * 3. FALLBACK LINH HOẠT: productId
- *    - Nếu ID truyền vào thực chất là ID của một variant (client gửi nhầm tên trường):
- *      Tự động nhận diện luôn là variant!
- *    - Nếu đúng là ID của Product cha:
- *      + Tự động chọn Default Variant (isDefault: true) đại diện của sản phẩm đó.
- *      + Nếu default variant hết hàng, tự động tìm biến thể đầu tiên còn hàng khả dụng.
- *      + Cho phép thêm ngay vào giỏ hàng mà không bị chặn lỗi 400.
- */
 const resolveVariantAndProduct = async ({ productId, variantId, sku }) => {
   let targetProduct = null;
   let targetVariant = null;
@@ -409,6 +394,7 @@ const formatAndValidateCart = async (cartDoc) => {
       productId: product._id,
       variantId: variant._id,
       sku: variant.sku || '',
+      slug: product.slug || '',
       name: product.name,
       displayName: variant.displayName || '',
       isDefaultVariant: Boolean(variant.isDefault),
@@ -431,6 +417,13 @@ const formatAndValidateCart = async (cartDoc) => {
   }
 
   // 5. Tích hợp Master Discount Calculator (Promotion, Coupon, Gift Program)
+  const rawSubtotalOriginal = validatedItems.reduce(
+    (acc, it) => acc + (it.canCheckout ? (it.originalPrice || it.unitPrice) * it.quantity : 0),
+    0
+  );
+  const subtotal = validatedItems.reduce((acc, it) => acc + (it.canCheckout ? it.subtotal : 0), 0);
+  const totalItems = validatedItems.reduce((acc, it) => acc + (it.canCheckout ? it.quantity : 0), 0);
+
   const checkoutPayload = {
     cartItems: validatedItems
       .filter((it) => it.canCheckout)
@@ -438,7 +431,8 @@ const formatAndValidateCart = async (cartDoc) => {
         productId: it.productId,
         variantId: it.variantId,
         quantity: it.quantity,
-        originalPrice: it.originalPrice,
+        originalPrice: it.originalPrice || it.unitPrice,
+        unitPrice: it.unitPrice,
         productName: it.name,
         sku: it.sku,
       })),
@@ -466,8 +460,9 @@ const formatAndValidateCart = async (cartDoc) => {
     }
   }
 
-  const subtotal = validatedItems.reduce((acc, it) => acc + (it.canCheckout ? it.subtotal : 0), 0);
-  const totalItems = validatedItems.reduce((acc, it) => acc + (it.canCheckout ? it.quantity : 0), 0);
+  const calcSummary = calculation?.summary;
+  const finalSubtotalOriginal = calcSummary?.subtotalOriginal || rawSubtotalOriginal;
+  const finalSubtotal = calcSummary?.subtotalAfterFlashSale || subtotal;
 
   return {
     cart: {
@@ -477,17 +472,20 @@ const formatAndValidateCart = async (cartDoc) => {
       items: validatedItems,
       totalItems,
       totalKinds: validatedItems.length,
-      subtotalOriginal: calculation?.subtotalOriginal || subtotal,
-      subtotal: calculation?.subtotalAfterFlashSale || subtotal,
-      totalFlashSaleDiscount: calculation?.totalFlashSaleDiscount || 0,
-      totalPromotionDiscount: calculation?.totalPromotionDiscount || 0,
-      appliedPromotion: calculation?.appliedPromotion || null,
+      subtotalOriginal: finalSubtotalOriginal,
+      subtotal: finalSubtotal,
+      totalProductDiscount: Math.max(0, finalSubtotalOriginal - finalSubtotal),
+      totalFlashSaleDiscount: calcSummary?.totalFlashSaleDiscount || 0,
+      totalPromotionDiscount: calcSummary?.totalPromoDiscount || 0,
+      appliedPromotion: calculation?.appliedPromotions || null,
       couponCode: cartDoc.couponCode || null,
       appliedCoupon: calculation?.appliedCoupon || null,
-      couponDiscount: calculation?.couponDiscount || 0,
-      totalDiscount: calculation?.totalDiscount || 0,
-      finalTotal: calculation?.finalTotal ?? subtotal,
-      giftPrograms: calculation?.gifts || [],
+      couponDiscount: calcSummary?.couponDiscount || 0,
+      totalDiscount: calcSummary?.totalDiscountAll || 0,
+      finalTotal: calcSummary?.finalTotal ?? finalSubtotal,
+      giftPrograms: calculation?.giftItems || [],
+      giftItems: calculation?.giftItems || [],
+      giftNudges: calculation?.giftNudges || [],
     },
     warnings,
     hasStockIssue,
@@ -755,7 +753,7 @@ const validateCheckout = async (cartOwner) => {
     );
     throw new AppError(
       stockWarn?.message ||
-        'Một số sản phẩm trong giỏ hàng đã hết hàng hoặc thay đổi tồn kho. Vui lòng kiểm tra lại giỏ hàng trước khi đặt hàng.',
+      'Một số sản phẩm trong giỏ hàng đã hết hàng hoặc thay đổi tồn kho. Vui lòng kiểm tra lại giỏ hàng trước khi đặt hàng.',
       400
     );
   }

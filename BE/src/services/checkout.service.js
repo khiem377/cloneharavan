@@ -172,16 +172,29 @@ const calculateCheckout = async ({ cartItems = [], couponCode = null }) => {
   // BƯỚC 4: TẶNG KÈM QUÀ TẶNG (Chuẩn doanh nghiệp: Hàng Flash Sale giá sốc không kèm quà tặng)
   // --------------------------------------------------------------------------
   const giftResult = await giftProgramService.applyGiftPrograms(nonFlashSaleItems);
-  const giftItems = giftResult.flatMap((res) =>
+  const giftItems = (giftResult.appliedGifts || []).flatMap((res) =>
     (res.gifts || []).map((g) => ({
+      _id: `gift_${g.productId}_${res.giftProgramId}`,
       productId: g.productId,
+      variantId: g.variantId || null,
+      name: g.name,
+      productName: g.name,
+      thumbnail: g.thumbnail,
+      originalPrice: g.originalPrice || 0,
       quantity: g.qty,
       unitPrice: 0,
+      subtotal: 0,
       isGift: true,
+      giftType: res.giftType,
       giftProgramId: res.giftProgramId,
       giftProgramName: res.giftProgramName,
+      triggerProductId: g.triggerProductId || null,
+      triggerProductIds: g.triggerProductIds || [],
+      slug: g.slug || '',
+      sku: g.sku || '',
     }))
   );
+  const giftNudges = giftResult.giftNudges || [];
 
   return {
     summary: {
@@ -200,6 +213,7 @@ const calculateCheckout = async ({ cartItems = [], couponCode = null }) => {
     appliedPromotions: promoAppliedItems,
     appliedCoupon,
     giftItems,
+    giftNudges,
     activeFlashSale: activeFlashSale
       ? { _id: activeFlashSale._id, name: activeFlashSale.name }
       : null,

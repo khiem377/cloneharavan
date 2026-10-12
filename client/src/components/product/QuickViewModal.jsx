@@ -333,10 +333,6 @@ export const QuickViewModal = () => {
                         )}
                       </span>
                     )}
-                    <span>|</span>
-                    <span>
-                      Mã: <strong className="text-gray-800">{sku}</strong>
-                    </span>
                   </div>
 
                   {/* Compare Link */}

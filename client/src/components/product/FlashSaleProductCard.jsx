@@ -236,7 +236,15 @@ export default function FlashSaleProductCard({ item, onAddToCartMock, onBuyNowMo
                 <div className="flex flex-wrap items-center gap-1 mt-1 pt-1 border-t border-slate-100">
                   {item.variantsList.map((vItem, vIdx) => {
                     const vObj = typeof vItem.variantId === 'object' ? vItem.variantId : null;
-                    const vLabel = vObj?.attributes?.map((a) => a.value).join(' ') || vObj?.nameOverride || vObj?.sku || `Bản ${vIdx + 1}`;
+                    const validAttrs = vObj?.attributes?.filter(a => {
+                      const v = String(a.value || '').trim().toLowerCase();
+                      return !['mặc định', 'mac dinh', 'default', 'default title', 'tiêu chuẩn', 'tieu chuan'].includes(v);
+                    });
+                    const vLabel = validAttrs?.length > 0
+                      ? validAttrs.map((a) => a.value).join(' ')
+                      : vObj?.displayName && !['mặc định', 'mac dinh', 'default', 'default title'].includes(String(vObj.displayName).toLowerCase().trim())
+                        ? vObj.displayName
+                        : vObj?.nameOverride || `Bản ${vIdx + 1}`;
                     const isSelected = selectedVariantIdx === vIdx;
                     return (
                       <button

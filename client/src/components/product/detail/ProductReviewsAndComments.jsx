@@ -17,12 +17,14 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Textarea } from '@/components/ui/textarea';
 import useAuthStore from '@/store/authStore';
 import commentService from '@/services/comment.client.service';
 import { toast } from '@/components/ui/toast';
 import { confirm } from '@/components/ui/confirm-dialog';
-import ReactionIcon, { REACTION_SVG_MAP, ReactionFlyoutBar } from '@/components/common/ReactionIcons';
+import ReactionIcon, { REACTION_SVG_MAP } from '@/components/common/ReactionIcons';
+import { ReactionLottieFlyoutBar } from '@/components/common/ReactionLottie';
+import CommentRichEditor from '@/components/common/CommentRichEditor';
+import CommentContentRenderer from '@/components/common/CommentContentRenderer';
 
 const REACTION_CONFIG = {
   like:  { label: 'Thích',     color: 'text-blue-600' },
@@ -774,10 +776,8 @@ function ProductCommentNode({
               </div>
             )}
 
-            {/* Nội dung text */}
-            <p className="text-xs sm:text-sm text-slate-800 leading-relaxed whitespace-pre-wrap mt-0.5">
-              {comment.content}
-            </p>
+            {/* Nội dung text hỗ trợ Markdown & Mentions */}
+            <CommentContentRenderer content={comment.content} className="mt-0.5" />
 
             {/* Khối xử lý gửi hỏng (Screenshot 4) */}
             {isFailed && (
@@ -835,14 +835,14 @@ function ProductCommentNode({
                     )}
                   </button>
 
-                  {/* FLYOUT BAR ANIMATED */}
+                  {/* FLYOUT BAR ANIMATED LOTTIE */}
                   {hoveredReactionCommentId === comment._id && (
                     <div
-                      className="absolute bottom-full left-0 pb-2 z-30"
+                      className="absolute bottom-full left-0 pb-2 z-50"
                       onMouseEnter={() => onReactionMouseEnter?.(comment._id)}
                       onMouseLeave={onReactionMouseLeave}
                     >
-                      <ReactionFlyoutBar
+                      <ReactionLottieFlyoutBar
                         onSelect={(type) => {
                           onReaction(comment._id, type);
                           onReactionMouseLeave?.();
@@ -883,44 +883,24 @@ function ProductCommentNode({
               </div>
             )}
 
-            {/* FORM SOẠN PHẢN HỒI LỒNG */}
+            {/* FORM SOẠN PHẢN HỒI LỒNG (RICH EDITOR KÈM MENTION PILL) */}
             {isReplying && (
-              <div className="mt-3 p-3 rounded-[6px] border border-slate-200 bg-slate-50 flex flex-col gap-2.5 animate-in fade-in">
-                <div className="text-xs text-slate-500">
-                  Trả lời <span className="font-semibold text-slate-800">@{authorName}</span>
-                </div>
-                <Textarea
+              <div className="mt-3 animate-in fade-in">
+                <CommentRichEditor
                   autoFocus
                   value={replyContent}
-                  onChange={(e) => setReplyContent(e.target.value)}
+                  onChange={setReplyContent}
+                  onSubmit={() => onSubmitReply(comment)}
+                  onCancel={() => {
+                    setReplyingToId(null);
+                    setReplyContent('');
+                  }}
+                  replyTo={{ name: authorName }}
                   placeholder="Viết câu trả lời của bạn..."
-                  rows={2}
-                  className="text-xs bg-white rounded-[6px] border-slate-200 focus:border-slate-400 focus:ring-1 focus:ring-slate-300"
+                  submitting={replySubmitting}
+                  submitLabel="TRẢ LỜI"
+                  minRows={2}
                 />
-                <div className="flex items-center justify-end gap-2">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => {
-                      setReplyingToId(null);
-                      setReplyContent('');
-                    }}
-                    className="h-7 text-xs px-3 rounded-[6px] cursor-pointer"
-                  >
-                    HỦY
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="default"
-                    size="sm"
-                    disabled={replySubmitting || !replyContent.trim()}
-                    onClick={() => onSubmitReply(comment)}
-                    className="h-7 text-xs px-4 rounded-[6px] cursor-pointer"
-                  >
-                    {replySubmitting ? 'ĐANG GỬI...' : 'TRẢ LỜI'}
-                  </Button>
-                </div>
               </div>
             )}
           </div>

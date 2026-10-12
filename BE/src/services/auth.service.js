@@ -628,6 +628,35 @@ const generatePkcePair = (length = 43) => {
 };
 
 /**
+ * Định dạng thông báo lỗi OAuth (Zalo/TikTok) thành thông điệp tiếng Việt thân thiện, dễ hiểu
+ */
+const formatOAuthErrorMessage = (rawError, provider = 'Zalo') => {
+  if (!rawError) return `Đăng nhập ${provider} thất bại. Vui lòng thử lại!`;
+  const errStr = typeof rawError === 'string' ? rawError : JSON.stringify(rawError);
+  const lower = errStr.toLowerCase();
+
+  if (lower.includes('code verifier') || lower.includes('invalid code verifier') || lower.includes('pkce')) {
+    return 'Phiên xác thực bảo mật đã hết hạn hoặc không khớp. Vui lòng quay lại trang đăng nhập và thử lại!';
+  }
+  if (lower.includes('invalid_grant') || lower.includes('code has expired') || lower.includes('expired') || lower.includes('used') || lower.includes('invalid authorization code')) {
+    return 'Mã xác thực đã hết hạn hoặc đã được sử dụng. Vui lòng thực hiện đăng nhập lại!';
+  }
+  if (lower.includes('access_denied') || lower.includes('cancel') || lower.includes('user_denied')) {
+    return `Bạn đã từ chối hoặc hủy cấp quyền đăng nhập với ${provider}.`;
+  }
+  if (lower.includes('redirect_uri') || lower.includes('redirect uri')) {
+    return 'Địa chỉ chuyển hướng xác thực không hợp lệ hoặc chưa được đăng ký trong cấu hình.';
+  }
+  if (lower.includes('invalid_client') || lower.includes('app_id') || lower.includes('app secret')) {
+    return 'Thông tin ứng dụng xác thực chưa chính xác. Vui lòng liên hệ quản trị viên hệ thống!';
+  }
+  if (/[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(errStr)) {
+    return errStr;
+  }
+  return `Xác thực ${provider} không thành công. Vui lòng thử lại!`;
+};
+
+/**
  * Lấy URL Đăng nhập / Xác thực OAuth 2.0 TikTok (Kèm PKCE code_challenge)
  */
 const getTikTokAuthUrl = (state = 'tiktok_auth', redirectUri = null, clientCodeChallenge = null) => {
@@ -656,7 +685,7 @@ const getTikTokAuthUrl = (state = 'tiktok_auth', redirectUri = null, clientCodeC
   const encodedScope = encodeURIComponent(scope);
   const encodedState = encodeURIComponent(state);
 
-  const url = `https://www.tiktok.com/v2/auth/authorize/?client_key=${clientKey}&scope=${encodedScope}&response_type=code&redirect_uri=${encodedRedirect}&state=${encodedState}&code_challenge=${codeChallenge}&code_challenge_method=S256`;
+  const url = `https://www.tiktok.com/v2/auth/authorize/?client_key=${clientKey}&scope=${encodedScope}&response_type=code&redirect_uri=${encodedRedirect}&state=${encodedState}&code_challenge=${codeChallenge}&code_challenge_method=S256&disable_auto_auth=1`;
 
   return {
     url,
@@ -708,11 +737,12 @@ const loginWithTikTok = async (code, redirectUri = null, codeVerifier = null, is
     });
   } catch (err) {
     console.error('TikTok OAuth Token Error:', err.response?.data || err.message);
-    const errorMsg =
+    const rawMsg =
       err.response?.data?.error_description ||
       err.response?.data?.error?.message ||
-      'Không thể xác thực mã ủy quyền với TikTok. Vui lòng thử lại!';
-    throw new AppError(errorMsg, 400);
+      err.response?.data?.message ||
+      err.message;
+    throw new AppError(formatOAuthErrorMessage(rawMsg, 'TikTok'), 400);
   }
 
   const tokenData = tokenRes.data?.data || tokenRes.data;
@@ -720,11 +750,11 @@ const loginWithTikTok = async (code, redirectUri = null, codeVerifier = null, is
   const openId = tokenData?.open_id;
 
   if (!accessToken || !openId) {
-    const errorMsg =
+    const rawMsg =
       tokenRes.data?.error?.message ||
       tokenRes.data?.message ||
       'Không thể nhận access token từ TikTok';
-    throw new AppError(errorMsg, 400);
+    throw new AppError(formatOAuthErrorMessage(rawMsg, 'TikTok'), 400);
   }
 
   // 2. Lấy thông tin người dùng từ TikTok User Info API
@@ -895,17 +925,17 @@ const loginWithZalo = async (code, redirectUri = null, codeVerifier = null, isAd
     });
   } catch (err) {
     console.error('Zalo OAuth Token Request Error:', err.response?.data || err.message);
-    const errorMsg =
+    const rawMsg =
       err.response?.data?.message ||
       err.response?.data?.error_description ||
-      'Không thể kết nối đến máy chủ Zalo OAuth. Vui lòng thử lại!';
-    throw new AppError(errorMsg, 400);
+      err.message;
+    throw new AppError(formatOAuthErrorMessage(rawMsg, 'Zalo'), 400);
   }
 
   const tokenData = tokenRes.data || {};
   if (tokenData.error && tokenData.error !== 0) {
-    const errorMsg = tokenData.message || tokenData.error_name || `Lỗi Zalo OAuth: ${tokenData.error}`;
-    throw new AppError(errorMsg, 400);
+    const rawMsg = tokenData.message || tokenData.error_name || `Lỗi Zalo OAuth: ${tokenData.error}`;
+    throw new AppError(formatOAuthErrorMessage(rawMsg, 'Zalo'), 400);
   }
 
   const accessToken = tokenData.access_token;
@@ -1094,17 +1124,17 @@ const linkZaloAccount = async (userId, code, redirectUri = null, codeVerifier = 
     });
   } catch (err) {
     console.error('Zalo Link Token Error:', err.response?.data || err.message);
-    const errorMsg =
+    const rawMsg =
       err.response?.data?.message ||
       err.response?.data?.error_description ||
-      'Không thể kết nối đến máy chủ Zalo OAuth. Vui lòng thử lại!';
-    throw new AppError(errorMsg, 400);
+      err.message;
+    throw new AppError(formatOAuthErrorMessage(rawMsg, 'Zalo'), 400);
   }
 
   const tokenData = tokenRes.data || {};
   if (tokenData.error && tokenData.error !== 0) {
-    const errorMsg = tokenData.message || tokenData.error_name || `Lỗi Zalo OAuth: ${tokenData.error}`;
-    throw new AppError(errorMsg, 400);
+    const rawMsg = tokenData.message || tokenData.error_name || `Lỗi Zalo OAuth: ${tokenData.error}`;
+    throw new AppError(formatOAuthErrorMessage(rawMsg, 'Zalo'), 400);
   }
 
   const accessToken = tokenData.access_token;
@@ -1201,11 +1231,11 @@ const linkTikTokAccount = async (userId, code, redirectUri = null, codeVerifier 
     });
   } catch (err) {
     console.error('TikTok Link Token Error:', err.response?.data || err.message);
-    const errorMsg =
+    const rawMsg =
       err.response?.data?.error_description ||
       err.response?.data?.error?.message ||
-      'Không thể xác thực mã ủy quyền với TikTok. Vui lòng thử lại!';
-    throw new AppError(errorMsg, 400);
+      err.message;
+    throw new AppError(formatOAuthErrorMessage(rawMsg, 'TikTok'), 400);
   }
 
   const tokenData = tokenRes.data?.data || tokenRes.data;
@@ -1213,11 +1243,11 @@ const linkTikTokAccount = async (userId, code, redirectUri = null, codeVerifier 
   const openId = tokenData?.open_id;
 
   if (!accessToken || !openId) {
-    const errorMsg =
+    const rawMsg =
       tokenRes.data?.error?.message ||
       tokenRes.data?.message ||
       'Không thể nhận access token từ TikTok';
-    throw new AppError(errorMsg, 400);
+    throw new AppError(formatOAuthErrorMessage(rawMsg, 'TikTok'), 400);
   }
 
   // 2. Lấy thông tin người dùng từ TikTok User Info API

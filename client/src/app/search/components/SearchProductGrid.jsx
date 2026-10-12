@@ -16,7 +16,7 @@ export default function SearchProductGrid({ products = [], query = '' }) {
   };
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-2.5 lg:gap-3">
+    <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2 sm:gap-2.5 lg:gap-3 2xl:gap-4">
       {products.map((prod) => (
         <SearchProductCard
           key={prod._id || prod.id || prod.slug}

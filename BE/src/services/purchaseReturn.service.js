@@ -8,6 +8,7 @@ const ProductVariant = require('../models/productVariant.model');
 const StockMovement = require('../models/stockMovement.model');
 const { uploadRawToCloudinary } = require('../config/cloudinary');
 const AppError = require('../utils/AppError');
+const { numberToWordsVN } = require('../utils/vnNumberToWords');
 
 class PurchaseReturnService {
   static async getPurchaseReturns({ page = 1, limit = 10, search = '', status = '', supplierId = '' }) {
@@ -237,6 +238,10 @@ class PurchaseReturnService {
       reason: '',
     });
     sumRow.font = { bold: true };
+
+    sheet.addRow([]);
+    const wordsRow = sheet.addRow([`- Tổng số tiền trả lại (viết bằng chữ): ${numberToWordsVN(pr.totalAmount || 0)}`]);
+    wordsRow.font = { italic: true };
 
     return { workbook, returnNumber: pr.returnNumber };
   }

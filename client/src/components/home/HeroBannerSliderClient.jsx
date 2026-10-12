@@ -86,13 +86,13 @@ export default function HeroBannerSliderClient({ slides = [] }) {
 
     return (
         <section
-            className="w-full overflow-hidden bg-slate-900 select-none relative mb-6 rounded-[6px] border border-slate-800"
+            className="max-w-[1536px] 2xl:max-w-[1600px] mx-auto px-3 sm:px-4 lg:px-6 2xl:px-8 mt-2 sm:mt-3 mb-6"
             aria-label="Khuyến mãi nổi bật"
             onMouseEnter={() => setIsPaused(true)}
             onMouseLeave={() => setIsPaused(false)}
         >
             <div
-                className="relative w-full overflow-hidden group aspect-[16/7] sm:aspect-[19/7] md:aspect-[21/8] lg:aspect-[24/8] max-h-[480px]"
+                className="relative w-full overflow-hidden bg-slate-900 select-none rounded-[6px] border border-slate-800 group aspect-[16/7] sm:aspect-[19/7] md:aspect-[21/8] lg:aspect-[24/8] max-h-[480px] 2xl:max-h-[520px]"
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
@@ -117,7 +117,7 @@ export default function HeroBannerSliderClient({ slides = [] }) {
                                     }
                                     fill
                                     priority={index === 0}
-                                    sizes="(max-width: 1280px) 100vw, 1280px"
+                                    sizes="(max-width: 1536px) 100vw, 1600px"
                                     className={`w-full h-full object-cover object-center transition-transform duration-700 ease-out ${
                                         isCurrent ? 'scale-100' : 'scale-105'
                                     }`}

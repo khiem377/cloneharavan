@@ -100,7 +100,7 @@ export default async function CollectionPage({ params, searchParams }) {
 
   return (
     <div className="bg-[#f8f9fa] min-h-[90vh] py-4 sm:py-6">
-      <div className="max-w-7xl mx-auto px-3 sm:px-4">
+      <div className="max-w-[1536px] 2xl:max-w-[1600px] mx-auto px-3 sm:px-4 lg:px-6 2xl:px-8">
         {/* Breadcrumb */}
         <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-4 flex-wrap">
           <Link href="/" className="hover:text-[#e30019] transition">
@@ -113,7 +113,7 @@ export default async function CollectionPage({ params, searchParams }) {
         </div>
 
         {/* Category Header Banner / Title */}
-        <div className="bg-white rounded-[6px] border border-gray-200/80 p-4 sm:p-5 mb-5 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="bg-white rounded-[6px] border border-gray-200/80 p-4 sm:p-5 2xl:p-6 mb-5 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h1 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight flex items-baseline gap-2.5">
               <span>{categoryTitle}</span>
@@ -133,10 +133,10 @@ export default async function CollectionPage({ params, searchParams }) {
           </div>
         </div>
 
-        {/* Main Content Layout: 3 Columns Products (Left) + 1 Column Filter Sidebar (Right) matching EGA layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-5 items-start">
-          {/* Main Product Grid (Left 3 Columns) */}
-          <div className="lg:col-span-3 space-y-5">
+        {/* Main Content Layout: 3-4 Columns Products (Left) + 1 Column Filter Sidebar (Right) matching EGA layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 2xl:grid-cols-5 gap-5 2xl:gap-6 items-start">
+          {/* Main Product Grid (Left Columns) */}
+          <div className="lg:col-span-3 2xl:col-span-4 space-y-5">
             {products.length === 0 ? (
               <div className="bg-white rounded-[6px] border border-gray-200/80 p-12 text-center shadow-2xs">
                 <div className="w-14 h-14 rounded-full bg-red-50 text-[#e30019] flex items-center justify-center mx-auto mb-3">
@@ -160,7 +160,7 @@ export default async function CollectionPage({ params, searchParams }) {
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 2xl:grid-cols-4 gap-3 sm:gap-4 2xl:gap-5">
                   {products.map((p) => (
                     <ProductCard key={p._id || p.id} product={p} />
                   ))}

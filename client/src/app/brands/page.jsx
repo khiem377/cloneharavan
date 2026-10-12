@@ -17,7 +17,7 @@ export default async function BrandsPage() {
 
   return (
     <div className="min-h-[100dvh] bg-slate-50/60 pb-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-4">
+      <div className="max-w-[1536px] 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 2xl:px-8 pt-4">
         {/* Breadcrumb */}
         <nav className="flex items-center gap-2 text-xs text-slate-500 mb-4">
           <Link href="/" className="hover:text-slate-900 transition-colors">
@@ -28,7 +28,7 @@ export default async function BrandsPage() {
         </nav>
 
         {/* Page Title Header - Tối giản, chuyên nghiệp, không icon rườm rà */}
-        <div className="bg-white rounded-[6px] border border-slate-200 p-5 sm:p-6 mb-6">
+        <div className="bg-white rounded-[6px] border border-slate-200 p-5 sm:p-6 2xl:p-7 mb-6">
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900">
             Thương hiệu đối tác chính hãng
           </h1>
@@ -38,7 +38,7 @@ export default async function BrandsPage() {
         </div>
 
         {/* Brands Grid - Chuyển hướng trực tiếp sang /search?brand=... */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 2xl:grid-cols-8 gap-3 sm:gap-4 2xl:gap-5">
           {validBrands.map((brand) => {
             const logoUrl = brand.logo?.url || (typeof brand.logo === 'string' ? brand.logo : '');
             const targetSlug = brand.slug || brand._id;

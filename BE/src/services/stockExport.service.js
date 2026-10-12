@@ -7,6 +7,7 @@ const ExcelJS = require('exceljs');
 const path = require('path');
 const fs = require('fs');
 const AppError = require('../utils/AppError');
+const { numberToWordsVN } = require('../utils/vnNumberToWords');
 
 class StockExportService {
   static async getStockExports({ page = 1, limit = 20, keyword = '', type }) {
@@ -336,8 +337,9 @@ class StockExportService {
 
     // === BUOC 5: Tong tien chu ===
     const wordRowIdx = 22 + offset;
+    const totalWords = numberToWordsVN(se.totalAmount || 0);
     sheet.getRow(wordRowIdx).getCell(1).value =
-      '- Tổng số tiền (viết bằng chữ): ' + (se.totalAmount || 0).toLocaleString('vi-VN') + ' đồng.';
+      '- Tổng số tiền (viết bằng chữ): ' + totalWords;
     sheet.getRow(wordRowIdx).commit();
 
     return { workbook, exportNumber: se.exportNumber };

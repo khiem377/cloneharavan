@@ -19,7 +19,12 @@ export default function ChatInput({
   };
 
   return (
-    <div className="bg-white border-t border-slate-200 p-2.5 sm:p-3 shrink-0">
+    <div
+      className="bg-white border-t border-slate-200 p-2.5 sm:p-3 shrink-0"
+      style={{
+        paddingBottom: 'max(0.625rem, env(safe-area-inset-bottom, 0.625rem))',
+      }}
+    >
       <form
         onSubmit={(e) => {
           e.preventDefault();

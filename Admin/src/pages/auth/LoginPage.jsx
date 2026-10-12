@@ -1,4 +1,5 @@
 import React from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAdminAuthFlow } from '@/hooks/useAdminAuthFlow';
 import MascotAdminWelcome from '@/components/ui/MascotAdminWelcome';
 import AuthReasonAlert from '@/components/auth/AuthReasonAlert';
@@ -7,6 +8,8 @@ import OtpRequestForm from '@/components/auth/OtpRequestForm';
 import OtpVerifyForm from '@/components/auth/OtpVerifyForm';
 
 export default function LoginPage() {
+  const location = useLocation();
+  const authError = location.state?.authError || location.state?.error;
   const {
     reason,
     mode,
@@ -49,7 +52,7 @@ export default function LoginPage() {
         </div>
 
         <div className="rounded-[6px] border border-border bg-card p-6 shadow-xs text-card-foreground">
-          <AuthReasonAlert reason={reason} />
+          <AuthReasonAlert reason={reason} customMessage={authError} />
 
           {mode === 'password' && (
             <PasswordLoginForm

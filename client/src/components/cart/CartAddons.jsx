@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { FileText, Clock, Receipt, ChevronDown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -66,25 +65,24 @@ export default function CartAddons() {
   };
 
   return (
-    <div className="bg-white border border-slate-200/90 rounded-xl p-4 sm:p-5 shadow-2xs space-y-4">
-      <h3 className="font-bold text-sm text-slate-800 flex items-center gap-2">
-        <span>Tiện ích & Dịch vụ bổ sung</span>
+    <div className="bg-white border border-slate-200 rounded-[6px] p-4 sm:p-5 2xl:p-6 space-y-4 shadow-2xs">
+      <h3 className="font-bold text-sm 2xl:text-base text-slate-900 pb-2 border-b border-slate-100">
+        Tiện ích & Dịch vụ bổ sung
       </h3>
 
       {/* 1. Ghi chú đơn hàng */}
       <div className="space-y-1.5">
-        <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
-          <FileText size={14} className="text-slate-500" />
-          <span>Ghi chú đơn hàng</span>
+        <label className="text-xs 2xl:text-sm font-semibold text-slate-700 block">
+          Ghi chú đơn hàng
         </label>
         <Textarea
-          placeholder="Nhập yêu cầu đặc biệt về đơn hàng (ví dụ: giao giờ hành chính, bọc gói quà...)"
+          placeholder="Nhập yêu cầu đặc biệt về đơn hàng (ví dụ: giao giờ hành chính, gọi trước khi giao...)"
           value={note}
           onChange={(e) => {
             setNote(e.target.value);
             saveAddons({ note: e.target.value });
           }}
-          className="text-xs min-h-[64px] resize-none"
+          className="text-xs 2xl:text-sm min-h-[64px] resize-none rounded-[6px] border-slate-200 focus:border-slate-900"
         />
       </div>
 
@@ -100,16 +98,15 @@ export default function CartAddons() {
                 saveAddons({ enableSchedule: val });
               }}
             />
-            <span className="text-xs font-medium text-slate-800 flex items-center gap-1.5">
-              <Clock size={14} className="text-slate-500" />
-              <span>Hẹn ngày & giờ nhận hàng thuận tiện</span>
+            <span className="text-xs 2xl:text-sm font-medium text-slate-800">
+              Hẹn ngày & giờ nhận hàng thuận tiện
             </span>
           </label>
 
           {enableSchedule && (
             <div className="pl-6 grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1 animate-fadeIn">
               <div>
-                <label className="text-[11px] font-medium text-slate-500 block mb-1">
+                <label className="text-[11px] 2xl:text-xs font-medium text-slate-500 block mb-1">
                   Ngày giao mong muốn
                 </label>
                 <Input
@@ -120,12 +117,12 @@ export default function CartAddons() {
                     setDeliveryDate(e.target.value);
                     saveAddons({ deliveryDate: e.target.value });
                   }}
-                  className="text-xs h-8"
+                  className="text-xs 2xl:text-sm h-8 2xl:h-9 rounded-[6px] border-slate-200"
                 />
               </div>
 
               <div>
-                <label className="text-[11px] font-medium text-slate-500 block mb-1">
+                <label className="text-[11px] 2xl:text-xs font-medium text-slate-500 block mb-1">
                   Khung giờ nhận hàng
                 </label>
                 <select
@@ -134,7 +131,7 @@ export default function CartAddons() {
                     setDeliveryTimeSlot(e.target.value);
                     saveAddons({ deliveryTimeSlot: e.target.value });
                   }}
-                  className="w-full h-8 text-xs rounded-md border border-slate-300 bg-white px-2 text-slate-800 focus:outline-hidden focus:ring-1 focus:ring-red-600"
+                  className="w-full h-8 2xl:h-9 text-xs 2xl:text-sm rounded-[6px] border border-slate-200 bg-white px-2 text-slate-800 focus:outline-hidden focus:border-slate-900"
                 >
                   {TIME_SLOTS.map((slot) => (
                     <option key={slot.id} value={slot.id}>
@@ -158,9 +155,8 @@ export default function CartAddons() {
                 saveAddons({ enableVat: val });
               }}
             />
-            <span className="text-xs font-medium text-slate-800 flex items-center gap-1.5">
-              <Receipt size={14} className="text-slate-500" />
-              <span>Yêu cầu xuất hóa đơn điện tử VAT cho công ty</span>
+            <span className="text-xs 2xl:text-sm font-medium text-slate-800">
+              Yêu cầu xuất hóa đơn điện tử VAT cho công ty
             </span>
           </label>
 
@@ -174,7 +170,7 @@ export default function CartAddons() {
                     setCompanyName(e.target.value);
                     saveAddons({ companyName: e.target.value });
                   }}
-                  className="text-xs h-8"
+                  className="text-xs 2xl:text-sm h-8 2xl:h-9 rounded-[6px] border-slate-200"
                 />
                 <Input
                   placeholder="Mã số thuế (MST) (*)"
@@ -183,7 +179,7 @@ export default function CartAddons() {
                     setTaxId(e.target.value);
                     saveAddons({ taxId: e.target.value });
                   }}
-                  className="text-xs h-8"
+                  className="text-xs 2xl:text-sm h-8 2xl:h-9 rounded-[6px] border-slate-200 font-mono uppercase"
                 />
               </div>
 
@@ -194,7 +190,7 @@ export default function CartAddons() {
                   setCompanyAddress(e.target.value);
                   saveAddons({ companyAddress: e.target.value });
                 }}
-                className="text-xs h-8"
+                className="text-xs 2xl:text-sm h-8 2xl:h-9 rounded-[6px] border-slate-200"
               />
 
               <Input
@@ -205,7 +201,7 @@ export default function CartAddons() {
                   setInvoiceEmail(e.target.value);
                   saveAddons({ invoiceEmail: e.target.value });
                 }}
-                className="text-xs h-8"
+                className="text-xs 2xl:text-sm h-8 2xl:h-9 rounded-[6px] border-slate-200"
               />
             </div>
           )}

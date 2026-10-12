@@ -86,7 +86,9 @@ export default function ProfileSidebar({
             {user?.fullName || 'Quản trị viên'}
           </h2>
           <p className="text-xs text-muted-foreground font-mono truncate">
-            {user?.email || 'admin@shop.vn'}
+            {user?.email && (user.email.endsWith('@zalo.user') || user.email.endsWith('@tiktok.user') || user.email.startsWith('zalo_') || user.email.startsWith('tiktok_'))
+              ? 'Tài khoản Quản trị'
+              : (user?.email || 'admin@shop.vn')}
           </p>
           <div className="pt-1 flex items-center justify-center gap-1.5">
             <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />

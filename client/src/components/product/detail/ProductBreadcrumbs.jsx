@@ -9,11 +9,12 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 
-export default function ProductBreadcrumbs({ product }) {
+export default function ProductBreadcrumbs({ product, dynamicProductName = '' }) {
   if (!product) return null;
 
   const category = Array.isArray(product.categories) && product.categories[0];
   const brand = product.brand;
+  const displayName = dynamicProductName || product.name;
 
   return (
     <Breadcrumb className="py-3 px-2 sm:px-0">
@@ -53,9 +54,9 @@ export default function ProductBreadcrumbs({ product }) {
         <BreadcrumbItem>
           <BreadcrumbPage
             className="font-medium text-slate-900 max-w-[280px] sm:max-w-md truncate"
-            title={product.name}
+            title={displayName}
           >
-            {product.name}
+            {displayName}
           </BreadcrumbPage>
         </BreadcrumbItem>
       </BreadcrumbList>

@@ -10,11 +10,13 @@ const QuickViewModal = dynamic(() => import('@/components/product/QuickViewModal
 const CompareBar = dynamic(() => import('@/components/product/CompareBar'), { ssr: false });
 
 // Các path không cần header/footer/chatbot
-const AUTH_PATHS = ['/login', '/register', '/forgot-password', '/reset-password'];
+const AUTH_PATHS = ['/login', '/register', '/forgot-password', '/reset-password', '/auth'];
 
 export default function LayoutShell({ children, initialFooterMenu }) {
-  const pathname = usePathname();
-  const isAuthPage = AUTH_PATHS.some((p) => pathname === p || pathname.startsWith(p + '?'));
+  const pathname = usePathname() || '';
+  const isAuthPage = AUTH_PATHS.some(
+    (p) => pathname === p || pathname.startsWith(p + '/') || pathname.startsWith(p + '?')
+  );
 
   return (
     <>

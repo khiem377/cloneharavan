@@ -50,7 +50,12 @@ const getAllPromotions = async (query = {}) => {
   const skip = (page - 1) * limit;
 
   const [data, total] = await Promise.all([
-    Promotion.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
+    Promotion.find(filter)
+      .populate('scope.productIds', 'name thumbnail slug')
+      .populate('scope.categoryIds', 'name icon slug')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit),
     Promotion.countDocuments(filter),
   ]);
 
@@ -62,18 +67,23 @@ const getAllPromotions = async (query = {}) => {
 
 const getPromotionById = async (id) => {
   const promotion = await Promotion.findById(id)
-    .populate('scope.productIds', 'name thumbnail')
-    .populate('scope.categoryIds', 'name');
+    .populate('scope.productIds', 'name thumbnail slug')
+    .populate('scope.categoryIds', 'name icon slug');
   if (!promotion) throw new AppError('Không tìm thấy chương trình khuyến mãi', 404);
   return promotion;
 };
 
 const createPromotion = async (data) => {
-  return Promotion.create(data);
+  const promotion = await Promotion.create(data);
+  return Promotion.findById(promotion._id)
+    .populate('scope.productIds', 'name thumbnail slug')
+    .populate('scope.categoryIds', 'name icon slug');
 };
 
 const updatePromotion = async (id, data) => {
-  const promotion = await Promotion.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+  const promotion = await Promotion.findByIdAndUpdate(id, data, { new: true, runValidators: true })
+    .populate('scope.productIds', 'name thumbnail slug')
+    .populate('scope.categoryIds', 'name icon slug');
   if (!promotion) throw new AppError('Không tìm thấy chương trình khuyến mãi', 404);
   return promotion;
 };

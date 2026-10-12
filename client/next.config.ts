@@ -9,6 +9,7 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: [
     'ba7596453f41f6.lhr.life',
     '80952fadaa029c.lhr.life',
+    'ed8f7256f96495.lhr.life',
     '*.lhr.life',
     '*.localhost.run',
     '*.ngrok-free.app',

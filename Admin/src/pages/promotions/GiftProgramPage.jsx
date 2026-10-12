@@ -12,7 +12,7 @@ import {
   useDeleteGiftProgram,
   useDeleteBulkGiftPrograms,
 } from '@/hooks/useGiftPrograms';
-import { useProducts } from '@/hooks/useProducts';
+import { useProducts, useAllProductsSelect } from '@/hooks/useProducts';
 import { useCategories } from '@/hooks/useCategories';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import DataTablePagination from '@/components/ui/DataTablePagination';
@@ -47,20 +47,32 @@ function formatDate(d) {
 function TagPicker({ tags, onRemove, placeholder, allItems, searchFn, labelKey = 'name', thumbKey = null, onAdd }) {
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState(false);
-  const results = searchFn ? searchFn(search) : allItems?.filter((i) => !search || i[labelKey].toLowerCase().includes(search.toLowerCase())) ?? [];
+  const results = searchFn
+    ? searchFn(search)
+    : allItems?.filter((i) => !search || (i[labelKey] || '').toLowerCase().includes(search.toLowerCase())) ?? [];
 
   return (
     <div className="flex flex-col gap-2">
       {tags.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
-          {tags.map((t) => (
-            <span key={t.id} className="inline-flex items-center gap-1.5 rounded-[6px] bg-muted border border-border px-2.5 py-1 text-xs font-medium text-foreground">
-              {t.label}
-              <button type="button" className="text-muted-foreground hover:text-destructive transition-colors cursor-pointer" onClick={() => onRemove(t.id)}>
-                <X size={11} />
-              </button>
-            </span>
-          ))}
+          {tags.map((t) => {
+            const itemObj = allItems?.find((x) => x._id === t.id);
+            const displayLabel = (itemObj ? itemObj[labelKey] : null) || (t.label && t.label !== t.id ? t.label : null) || 'Sản phẩm';
+            const rawThumb = (itemObj && thumbKey) ? itemObj[thumbKey] : t.thumbnail;
+            const thumbSrc = typeof rawThumb === 'string' ? rawThumb : rawThumb?.url;
+
+            return (
+              <span key={t.id} className="inline-flex items-center gap-1.5 rounded-[6px] bg-muted border border-border px-2.5 py-1 text-xs font-medium text-foreground">
+                {thumbSrc && (
+                  <img src={thumbSrc} alt="" className="size-4 rounded-[2px] object-cover shrink-0" />
+                )}
+                <span className="max-w-[220px] truncate" title={displayLabel}>{displayLabel}</span>
+                <button type="button" className="text-muted-foreground hover:text-destructive transition-colors cursor-pointer" onClick={() => onRemove(t.id)}>
+                  <X size={11} />
+                </button>
+              </span>
+            );
+          })}
         </div>
       )}
       <div className="relative">
@@ -73,20 +85,34 @@ function TagPicker({ tags, onRemove, placeholder, allItems, searchFn, labelKey =
           onBlur={() => setTimeout(() => setOpen(false), 200)}
         />
         {open && results.filter((r) => !tags.some((t) => t.id === r._id)).length > 0 && (
-          <div className="absolute top-full left-0 z-50 mt-1 w-full rounded-[6px] border border-border bg-popover shadow-sm overflow-hidden max-h-44 overflow-y-auto">
-            {results.filter((r) => !tags.some((t) => t.id === r._id)).map((r) => (
-              <button
-                key={r._id}
-                type="button"
-                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-foreground hover:bg-muted transition-colors cursor-pointer"
-                onMouseDown={() => { onAdd({ id: r._id, label: r[labelKey] }); setSearch(''); setOpen(false); }}
-              >
-                {thumbKey && r[thumbKey]?.url && (
-                  <img src={r[thumbKey].url} alt="" className="size-7 rounded-[4px] object-cover border border-border bg-muted shrink-0" />
-                )}
-                <span className="truncate">{r[labelKey]}</span>
-              </button>
-            ))}
+          <div className="absolute top-full left-0 z-50 mt-1 w-full rounded-[6px] border border-border bg-popover shadow-md overflow-hidden max-h-48 overflow-y-auto">
+            {results.filter((r) => !tags.some((t) => t.id === r._id)).map((r) => {
+              const rThumb = thumbKey ? (typeof r[thumbKey] === 'string' ? r[thumbKey] : r[thumbKey]?.url) : null;
+              return (
+                <button
+                  key={r._id}
+                  type="button"
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left text-foreground hover:bg-muted transition-colors cursor-pointer"
+                  onMouseDown={() => {
+                    onAdd({ id: r._id, label: r[labelKey], thumbnail: r[thumbKey] });
+                    setSearch('');
+                    setOpen(false);
+                  }}
+                >
+                  {rThumb ? (
+                    <img src={rThumb} alt="" className="size-7 rounded-[4px] object-cover border border-border bg-muted shrink-0" />
+                  ) : (
+                    <div className="size-7 rounded-[4px] border border-border bg-muted flex items-center justify-center text-[10px] text-muted-foreground shrink-0 font-bold">
+                      {(r[labelKey] || 'SP').charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <div className="flex flex-col min-w-0 flex-1">
+                    <span className="truncate text-xs font-medium text-foreground">{r[labelKey]}</span>
+                    {r.sku && <span className="text-[10px] text-muted-foreground font-mono">SKU: {r.sku}</span>}
+                  </div>
+                </button>
+              );
+            })}
           </div>
         )}
       </div>
@@ -97,30 +123,47 @@ function TagPicker({ tags, onRemove, placeholder, allItems, searchFn, labelKey =
 function GiftProductList({ selected, onAdd, onRemove, onQtyChange, allProducts }) {
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState(false);
-  const results = allProducts?.filter((p) => !search || p.name.toLowerCase().includes(search.toLowerCase())) ?? [];
+  const results = allProducts?.filter((p) => !search || (p.name || '').toLowerCase().includes(search.toLowerCase())) ?? [];
 
   return (
     <div className="flex flex-col gap-2">
       {selected.length > 0 && (
         <div className="flex flex-col gap-2">
-          {selected.map((g) => (
-            <div key={g.productId} className="flex items-center gap-3 rounded-[6px] border border-border bg-background px-3 py-2">
-              <span className="flex-1 text-sm text-foreground truncate">{g.name}</span>
-              <div className="flex items-center gap-1.5 shrink-0">
-                <span className="text-xs text-muted-foreground">SL:</span>
-                <Input
-                  type="number"
-                  min={1}
-                  className="h-7 w-14 rounded-[4px] font-mono text-xs text-center"
-                  value={g.qty}
-                  onChange={(e) => onQtyChange(g.productId, e.target.value)}
-                />
+          {selected.map((g) => {
+            const prod = allProducts?.find((p) => p._id === g.productId);
+            const displayName = g.name && g.name !== 'Sản phẩm' && g.name !== g.productId ? g.name : (prod?.name || 'Sản phẩm');
+            const rawThumb = prod?.thumbnail || g.thumbnail;
+            const thumbSrc = typeof rawThumb === 'string' ? rawThumb : rawThumb?.url;
+
+            return (
+              <div key={g.productId} className="flex items-center gap-3 rounded-[6px] border border-border bg-background px-3 py-2">
+                {thumbSrc ? (
+                  <img src={thumbSrc} alt="" className="size-8 rounded-[4px] object-cover border border-border bg-muted shrink-0" />
+                ) : (
+                  <div className="size-8 rounded-[4px] border border-border bg-muted flex items-center justify-center text-xs text-muted-foreground shrink-0 font-bold">
+                    {(displayName || 'SP').charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <div className="flex flex-col min-w-0 flex-1">
+                  <span className="text-sm font-medium text-foreground truncate">{displayName}</span>
+                  {prod?.sku && <span className="text-[10px] text-muted-foreground font-mono">SKU: {prod.sku}</span>}
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className="text-xs text-muted-foreground">SL:</span>
+                  <Input
+                    type="number"
+                    min={1}
+                    className="h-7 w-14 rounded-[4px] font-mono text-xs text-center"
+                    value={g.qty}
+                    onChange={(e) => onQtyChange(g.productId, e.target.value)}
+                  />
+                </div>
+                <button type="button" className="text-muted-foreground hover:text-destructive transition-colors cursor-pointer" onClick={() => onRemove(g.productId)}>
+                  <X size={14} />
+                </button>
               </div>
-              <button type="button" className="text-muted-foreground hover:text-destructive transition-colors cursor-pointer" onClick={() => onRemove(g.productId)}>
-                <X size={14} />
-              </button>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
       <div className="relative">
@@ -133,21 +176,38 @@ function GiftProductList({ selected, onAdd, onRemove, onQtyChange, allProducts }
           onBlur={() => setTimeout(() => setOpen(false), 200)}
         />
         {open && results.filter((p) => !selected.some((s) => s.productId === p._id)).length > 0 && (
-          <div className="absolute top-full left-0 z-50 mt-1 w-full rounded-[6px] border border-border bg-popover shadow-sm overflow-hidden max-h-44 overflow-y-auto">
-            {results.filter((p) => !selected.some((s) => s.productId === p._id)).map((p) => (
-              <button
-                key={p._id}
-                type="button"
-                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-foreground hover:bg-muted transition-colors cursor-pointer"
-                onMouseDown={() => { onAdd(p); setSearch(''); setOpen(false); }}
-              >
-                {(() => {
-                  const thumbSrc = typeof p.thumbnail === 'string' ? p.thumbnail : p.thumbnail?.url;
-                  return thumbSrc ? <img src={thumbSrc} alt="" className="size-7 rounded-[4px] object-cover border border-border bg-muted shrink-0" /> : null;
-                })()}
-                <span className="truncate">{p.name}</span>
-              </button>
-            ))}
+          <div className="absolute top-full left-0 z-50 mt-1 w-full rounded-[6px] border border-border bg-popover shadow-md overflow-hidden max-h-48 overflow-y-auto">
+            {results.filter((p) => !selected.some((s) => s.productId === p._id)).map((p) => {
+              const thumbSrc = typeof p.thumbnail === 'string' ? p.thumbnail : p.thumbnail?.url;
+              return (
+                <button
+                  key={p._id}
+                  type="button"
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left text-foreground hover:bg-muted transition-colors cursor-pointer"
+                  onMouseDown={() => {
+                    onAdd({
+                      _id: p._id,
+                      name: p.name,
+                      thumbnail: p.thumbnail,
+                    });
+                    setSearch('');
+                    setOpen(false);
+                  }}
+                >
+                  {thumbSrc ? (
+                    <img src={thumbSrc} alt="" className="size-7 rounded-[4px] object-cover border border-border bg-muted shrink-0" />
+                  ) : (
+                    <div className="size-7 rounded-[4px] border border-border bg-muted flex items-center justify-center text-[10px] text-muted-foreground shrink-0 font-bold">
+                      {(p.name || 'SP').charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <div className="flex flex-col min-w-0 flex-1">
+                    <span className="truncate text-xs font-medium text-foreground">{p.name}</span>
+                    {p.sku && <span className="text-[10px] text-muted-foreground font-mono">SKU: {p.sku}</span>}
+                  </div>
+                </button>
+              );
+            })}
           </div>
         )}
       </div>
@@ -193,9 +253,7 @@ export default function GiftProgramPage() {
   const pagination = res.data?.pagination;
   const isLoading = res.isLoading;
 
-  const { data: productsData } = useProducts({ limit: 200 });
-  const allProducts = productsData?.data ?? [];
-
+  const { data: allProducts = [] } = useAllProductsSelect();
   const categoriesData = useCategories({});
   const allCategories = categoriesData.data ?? [];
 
@@ -218,19 +276,40 @@ export default function GiftProgramPage() {
       description: item.description || '',
       giftType: item.giftType,
       scopeType: item.scope?.type ?? 'all',
-      scopeProducts: (item.scope?.productIds ?? []).map((p) =>
-        typeof p === 'object' ? { id: p._id, label: p.name } : { id: p, label: p }
-      ),
-      scopeCategories: (item.scope?.categoryIds ?? []).map((c) =>
-        typeof c === 'object' ? { id: c._id, label: c.name } : { id: c, label: c }
-      ),
+      scopeProducts: (item.scope?.productIds ?? []).map((p) => {
+        if (p && typeof p === 'object' && p._id) {
+          return { id: p._id, label: p.name, thumbnail: p.thumbnail };
+        }
+        const found = allProducts.find((prod) => prod._id === p);
+        return {
+          id: p,
+          label: found ? found.name : p,
+          thumbnail: found ? found.thumbnail : null,
+        };
+      }),
+      scopeCategories: (item.scope?.categoryIds ?? []).map((c) => {
+        if (c && typeof c === 'object' && c._id) {
+          return { id: c._id, label: c.name };
+        }
+        const found = allCategories.find((cat) => cat._id === c);
+        return {
+          id: c,
+          label: found ? found.name : c,
+        };
+      }),
       triggerQty: item.triggerQty,
       giftQty: item.giftQty ?? 1,
-      giftProducts: (item.giftProducts ?? []).map((g) => ({
-        productId: g.productId?._id || g.productId,
-        name: g.productId?.name || 'Sản phẩm',
-        qty: g.qty,
-      })),
+      giftProducts: (item.giftProducts ?? []).map((g) => {
+        const prodObj = (g.productId && typeof g.productId === 'object')
+          ? g.productId
+          : allProducts.find((p) => p._id === g.productId);
+        return {
+          productId: (g.productId && typeof g.productId === 'object') ? g.productId._id : g.productId,
+          name: prodObj?.name || 'Sản phẩm',
+          thumbnail: prodObj?.thumbnail,
+          qty: g.qty,
+        };
+      }),
       giftLimit: item.giftLimit ?? '',
       startDate: new Date(item.startDate).toISOString().slice(0, 16),
       endDate: new Date(item.endDate).toISOString().slice(0, 16),
@@ -310,8 +389,24 @@ export default function GiftProgramPage() {
 
   const scopeLabel = (item) => {
     if (item.scope?.type === 'all') return 'Tất cả SP';
-    if (item.scope?.type === 'products') return `${item.scope.productIds?.length ?? 0} sản phẩm`;
-    if (item.scope?.type === 'categories') return `${item.scope.categoryIds?.length ?? 0} danh mục`;
+    if (item.scope?.type === 'products') {
+      const pList = item.scope.productIds || [];
+      if (pList.length === 1) {
+        const p0 = pList[0];
+        const name = typeof p0 === 'object' ? p0.name : allProducts.find((x) => x._id === p0)?.name || '1 sản phẩm';
+        return <span className="line-clamp-1 max-w-[150px] font-medium" title={name}>{name}</span>;
+      }
+      return `${pList.length} sản phẩm`;
+    }
+    if (item.scope?.type === 'categories') {
+      const cList = item.scope.categoryIds || [];
+      if (cList.length === 1) {
+        const c0 = cList[0];
+        const name = typeof c0 === 'object' ? c0.name : allCategories.find((x) => x._id === c0)?.name || '1 danh mục';
+        return <span className="line-clamp-1 max-w-[150px] font-medium" title={name}>{name}</span>;
+      }
+      return `${cList.length} danh mục`;
+    }
     return '—';
   };
 
@@ -403,6 +498,7 @@ export default function GiftProgramPage() {
                   <TableHead className="px-4">SP kích hoạt</TableHead>
                   <TableHead className="px-4">Điều kiện</TableHead>
                   <TableHead className="px-4">Quà tặng</TableHead>
+                  <TableHead className="px-4">Đã tặng / Giới hạn</TableHead>
                   <TableHead className="px-4">Thời gian</TableHead>
                   <TableHead className="px-4">Trạng thái</TableHead>
                   <TableHead className="px-4 text-right">Thao tác</TableHead>
@@ -413,6 +509,8 @@ export default function GiftProgramPage() {
                   const now = new Date();
                   const isExpired = new Date(item.endDate) < now;
                   const isNotStarted = new Date(item.startDate) > now;
+                  const isQuotaReached = item.giftLimit !== null && item.giftLimit !== undefined && item.giftLimit > 0 && (item.giftUsedCount || 0) >= item.giftLimit;
+
                   return (
                     <TableRow key={item._id} className={selectedIds.includes(item._id) ? 'bg-muted/60' : ''}>
                       <TableCell className="px-3 py-3 align-middle">
@@ -449,12 +547,39 @@ export default function GiftProgramPage() {
                           : <span>{item.giftProducts?.length || 0} sản phẩm tặng</span>
                         }
                       </TableCell>
+                      <TableCell className="px-4 py-3 align-middle">
+                        {item.giftLimit !== null && item.giftLimit !== undefined && item.giftLimit > 0 ? (
+                          <div className="flex flex-col gap-1 min-w-[120px]">
+                            <div className="flex items-center justify-between text-xs font-mono tabular-nums">
+                              <span className="font-semibold text-foreground">{item.giftUsedCount || 0}</span>
+                              <span className="text-muted-foreground">/ {item.giftLimit} suất</span>
+                            </div>
+                            <div className="h-1.5 w-full bg-muted rounded-[2px] overflow-hidden border border-border/40">
+                              <div
+                                className={`h-full transition-all ${
+                                  isQuotaReached ? 'bg-destructive' : 'bg-primary'
+                                }`}
+                                style={{
+                                  width: `${Math.min(100, Math.round(((item.giftUsedCount || 0) / item.giftLimit) * 100))}%`,
+                                }}
+                              />
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col text-xs">
+                            <span className="font-mono tabular-nums text-foreground font-medium">Đã tặng: {item.giftUsedCount || 0}</span>
+                            <span className="text-[11px] text-muted-foreground font-mono">Không giới hạn</span>
+                          </div>
+                        )}
+                      </TableCell>
                       <TableCell className="px-4 py-3 align-middle text-xs text-muted-foreground font-mono tabular-nums whitespace-nowrap">
                         <div>{formatDate(item.startDate)}</div>
                         <div className="text-[11px] text-muted-foreground/80">đến {formatDate(item.endDate)}</div>
                       </TableCell>
                       <TableCell className="px-4 py-3 align-middle">
-                        {isExpired ? (
+                        {isQuotaReached ? (
+                          <Badge variant="destructive" className="rounded-[6px] text-xs font-normal">Hết suất quà</Badge>
+                        ) : isExpired ? (
                           <Badge variant="destructive" className="rounded-[6px] text-xs font-normal">Hết hạn</Badge>
                         ) : isNotStarted ? (
                           <Badge variant="outline" className="rounded-[6px] text-xs font-normal border-amber-500/30 text-amber-600 dark:text-amber-400 bg-amber-500/10">Chưa diễn ra</Badge>
@@ -640,15 +765,18 @@ export default function GiftProgramPage() {
             <div className="flex flex-col gap-3 rounded-[6px] border border-border p-4 bg-card">
               <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Giới hạn &amp; Thời gian</h3>
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-foreground">Giới hạn số lần tặng <span className="text-muted-foreground font-normal">(Để trống = không giới hạn)</span></label>
+                <label className="text-xs font-medium text-foreground">Giới hạn số suất quà tặng <span className="text-muted-foreground font-normal">(Để trống = không giới hạn)</span></label>
                 <Input
                   type="number"
                   min={1}
                   className="h-9 rounded-[6px] font-mono"
-                  placeholder="Không giới hạn"
+                  placeholder="Không giới hạn số suất (chỉ phụ thuộc tồn kho)"
                   value={form.giftLimit}
                   onChange={(e) => setForm((f) => ({ ...f, giftLimit: e.target.value }))}
                 />
+                <p className="text-[11px] text-muted-foreground">
+                  Hệ thống luôn tự động kiểm tra tồn kho thực tế của sản phẩm quà tặng trước khi đính kèm vào đơn.
+                </p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1.5">

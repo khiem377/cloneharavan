@@ -58,7 +58,7 @@ export const HeaderNav = ({ onOpenCategoryDrawer }) => {
     >
       <div
         ref={navRef}
-        className="max-w-7xl mx-auto px-2 sm:px-4 flex items-center justify-between h-9 sm:h-10"
+        className="max-w-[1536px] 2xl:max-w-[1600px] mx-auto px-3 sm:px-4 lg:px-6 2xl:px-8 flex items-center justify-between h-9 sm:h-10"
         style={{ position: 'relative' }}
       >
         {/* Scroll container */}

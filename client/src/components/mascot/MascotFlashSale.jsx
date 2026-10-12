@@ -2,19 +2,10 @@
 
 import React from 'react';
 
-/**
- * ══════════════════════════════════════════════════════════════════════════════
- * MascotFlashSale — Studio-grade Animated 3D Vector Mascot Artwork
- * Hỗ trợ 2 trạng thái chuyên biệt:
- * 1. status="ended"    -> "Anty Shopy" tiếc nuối, tai cụp, 2 mắt ngấn lệ pha lê
- *                         chảy tự nhiên, đồng hồ cơ khí đứng kim 00:00 (ENDED).
- * 2. status="upcoming" -> "Anty Shopy" bay bổng bằng phản lực plasma,
- *                         mắt ngôi sao, đồng hồ đếm ngược, tia sét điện quang.
- * ══════════════════════════════════════════════════════════════════════════════
- */
+
 export default function MascotFlashSale({
   size = 420,
-  status = 'ended', // 'ended' | 'upcoming' | 'ongoing'
+  status = 'ended',
   className = '',
 }) {
   const isEnded = status === 'ended';
@@ -264,7 +255,7 @@ export default function MascotFlashSale({
 
         {/* ── 3. CHÚ ROBOT "ANTY SHOPY" ── */}
         <g className={isEnded ? 'anim-robot-sad' : 'anim-hover-fly'}>
-          
+
           {/* Phản lực nếu đang bay / Chân tựa sàn nếu hết giờ */}
           {!isEnded && (
             <g className="anim-thruster">

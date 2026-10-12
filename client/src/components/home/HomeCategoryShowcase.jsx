@@ -130,8 +130,8 @@ export default function HomeCategoryShowcase({
   };
 
   return (
-    <section className="max-w-7xl mx-auto px-3 sm:px-4 my-6" aria-label={categoryName}>
-      <div className="bg-white rounded-[6px] border border-slate-200 p-4 sm:p-5">
+    <section className="max-w-[1536px] 2xl:max-w-[1600px] mx-auto px-3 sm:px-4 lg:px-6 2xl:px-8 my-6" aria-label={categoryName}>
+      <div className="bg-white rounded-[6px] border border-slate-200 p-4 sm:p-5 2xl:p-6">
         
         {/* ─── HEADER KHỐI: Tiêu đề + Danh mục con + Link Xem tất cả ─── */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-slate-100">
@@ -221,7 +221,7 @@ export default function HomeCategoryShowcase({
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3"
+                className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 2xl:grid-cols-5 gap-2.5 sm:gap-3 2xl:gap-4"
               >
                 {Array.from({ length: 10 }).map((_, idx) => (
                   <div
@@ -238,7 +238,7 @@ export default function HomeCategoryShowcase({
             ) : products && products.length > 0 ? (
               <StaggerGrid
                 key={`${activeTab}-${activeBrand}`}
-                className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3"
+                className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 2xl:grid-cols-5 gap-2.5 sm:gap-3 2xl:gap-4"
               >
                 {products.slice(0, 10).map((prod) => (
                   <StaggerItem key={prod._id || prod.id}>

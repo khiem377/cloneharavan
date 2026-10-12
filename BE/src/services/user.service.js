@@ -107,6 +107,17 @@ const updateUserProfile = async (userId, data) => {
     user.isPhoneVerified = false; // Reset trạng thái xác minh khi đổi SĐT
   }
 
+  // Cho phép người dùng cập nhật email thật (đặc biệt khi đang dùng email giả định zalo/tiktok)
+  if (data.email && data.email.toLowerCase().trim() !== user.email) {
+    const targetEmail = data.email.toLowerCase().trim();
+    const emailExists = await User.findOne({ email: targetEmail, _id: { $ne: userId } });
+    if (emailExists) {
+      throw new AppError('Địa chỉ email này đã được sử dụng bởi một tài khoản khác', 400);
+    }
+    user.email = targetEmail;
+    user.isEmailVerified = false;
+  }
+
   if (data.fullName !== undefined) user.fullName = data.fullName;
   if (data.gender !== undefined) user.gender = data.gender;
   if (data.dateOfBirth !== undefined) user.dateOfBirth = data.dateOfBirth;

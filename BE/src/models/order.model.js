@@ -47,6 +47,20 @@ const orderItemSchema = new mongoose.Schema(
       required: [true, 'Giá gốc là bắt buộc'],
       min: [0, 'Giá gốc không được nhỏ hơn 0'],
     },
+    isGift: {
+      type: Boolean,
+      default: false,
+    },
+    giftProgramId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'GiftProgram',
+      default: null,
+    },
+    giftProgramName: {
+      type: String,
+      default: '',
+      trim: true,
+    },
     salePrice: {
       type: Number,
       default: null,

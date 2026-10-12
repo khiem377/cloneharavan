@@ -52,33 +52,63 @@ const generateTemplate = async () => {
   const dataStart = 2;
   const dataEnd = 1001;
 
-  const catNames = categories.map((c) => c.name);
-  const brandNames = brands.map((b) => b.name);
+  // Tạo sheet LookupData ẩn để chứa danh sách Category & Brand
+  // Tránh lỗi vượt quá 255 ký tự của Excel làm file bị hỏng [Repaired] và mất dropdown
+  const lookupWs = wb.addWorksheet('LookupData', { state: 'hidden' });
+  lookupWs.getCell('A1').value = 'Danh mục';
+  lookupWs.getCell('B1').value = 'Thương hiệu';
+  lookupWs.getCell('C1').value = 'Trạng thái';
 
-  ws.dataValidations.add(`F${dataStart}:F${dataEnd}`, {
-    type: 'list', allowBlank: true,
-    formulae: [`"${catNames.join(',')}"`],
-    showErrorMessage: true, errorTitle: 'Lỗi', error: 'Vui lòng chọn danh mục từ danh sách',
+  categories.forEach((c, i) => {
+    lookupWs.getCell(`A${i + 2}`).value = c.name;
   });
 
-  ws.dataValidations.add(`G${dataStart}:G${dataEnd}`, {
-    type: 'list', allowBlank: true,
-    formulae: [`"${brandNames.join(',')}"`],
-    showErrorMessage: true, errorTitle: 'Lỗi', error: 'Vui lòng chọn thương hiệu từ danh sách',
+  brands.forEach((b, i) => {
+    lookupWs.getCell(`B${i + 2}`).value = b.name;
   });
+
+  const statuses = ['published', 'draft', 'archived'];
+  statuses.forEach((s, i) => {
+    lookupWs.getCell(`C${i + 2}`).value = s;
+  });
+
+  if (categories.length > 0) {
+    ws.dataValidations.add(`F${dataStart}:F${dataEnd}`, {
+      type: 'list',
+      allowBlank: true,
+      formulae: [`LookupData!$A$2:$A$${categories.length + 1}`],
+      showErrorMessage: true,
+      errorTitle: 'Lỗi',
+      error: 'Vui lòng chọn danh mục từ danh sách',
+    });
+  }
+
+  if (brands.length > 0) {
+    ws.dataValidations.add(`G${dataStart}:G${dataEnd}`, {
+      type: 'list',
+      allowBlank: true,
+      formulae: [`LookupData!$B$2:$B$${brands.length + 1}`],
+      showErrorMessage: true,
+      errorTitle: 'Lỗi',
+      error: 'Vui lòng chọn thương hiệu từ danh sách',
+    });
+  }
 
   ws.dataValidations.add(`H${dataStart}:H${dataEnd}`, {
-    type: 'list', allowBlank: true,
-    formulae: ['"published,draft,archived"'],
+    type: 'list',
+    allowBlank: true,
+    formulae: ['LookupData!$C$2:$C$4'],
   });
 
   ws.dataValidations.add(`I${dataStart}:I${dataEnd}`, {
-    type: 'list', allowBlank: true,
+    type: 'list',
+    allowBlank: true,
     formulae: ['"true,false"'],
   });
 
   ws.dataValidations.add(`J${dataStart}:J${dataEnd}`, {
-    type: 'list', allowBlank: true,
+    type: 'list',
+    allowBlank: true,
     formulae: ['"true,false"'],
   });
 

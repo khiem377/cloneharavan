@@ -6,6 +6,7 @@ const StockMovement = require('../models/stockMovement.model');
 const ExcelJS = require('exceljs');
 const path = require('path');
 const fs = require('fs');
+const { numberToWordsVN } = require('../utils/vnNumberToWords');
 
 /**
  * Tự sinh mã Phiếu Nhập Kho (PNK-YYYYMMDD-XXX)
@@ -401,7 +402,8 @@ const generateExcelSlip = async (id) => {
   });
 
   // === BUOC 4: Cong row ===
-  const congRowIdx = DATA_START_ROW + itemCount;
+  const offset = itemCount > TEMPLATE_DATA_ROWS ? itemCount - TEMPLATE_DATA_ROWS : 0;
+  const congRowIdx = 18 + offset;
   const congRow = sheet.getRow(congRowIdx);
   congRow.getCell(2).value = 'Cộng';
   congRow.getCell(5).value = receiving.items.reduce((s, i) => s + (i.expectedQty || 0), 0);
@@ -413,6 +415,18 @@ const generateExcelSlip = async (id) => {
     congRow.getCell(c).border = CELL_BORDER;
   }
   congRow.commit();
+
+  // === BUOC 5: Tong so tien viet bang chu ===
+  const wordRowIdx = 20 + offset;
+  const wordCell = sheet.getRow(wordRowIdx).getCell(1);
+  wordCell.value = '- Tổng số tiền (viết bằng chữ): ' + numberToWordsVN(receiving.totalAmount || 0);
+  sheet.getRow(wordRowIdx).commit();
+
+  // === BUOC 6: Ngay thang nam ky ten ===
+  const sigDateRowIdx = 22 + offset;
+  const sigCell = sheet.getRow(sigDateRowIdx).getCell(7);
+  sigCell.value = `Ngày ${dd} tháng ${mm} năm ${yyyy}`;
+  sheet.getRow(sigDateRowIdx).commit();
 
   return { workbook, receivingNumber: receiving.receivingNumber };
 };

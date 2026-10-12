@@ -10,7 +10,7 @@ import {
   useDeletePromotion,
   useDeleteBulkPromotions,
 } from '@/hooks/usePromotions';
-import { useProducts } from '@/hooks/useProducts';
+import { useProducts, useAllProductsSelect } from '@/hooks/useProducts';
 import { useCategories } from '@/hooks/useCategories';
 import DateTimePicker from '@/components/ui/DateTimePicker';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
@@ -79,23 +79,35 @@ function describePromotion(item) {
   return '—';
 }
 
-function ItemSearchInput({ items, onAdd, onRemove, placeholder, searchFn, labelKey = 'name', thumbKey = null }) {
+function ItemSearchInput({ items, onAdd, onRemove, placeholder, searchFn, allItems, labelKey = 'name', thumbKey = null }) {
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState(false);
-  const results = searchFn(search);
+  const results = searchFn
+    ? searchFn(search)
+    : allItems?.filter((i) => !search || (i[labelKey] || '').toLowerCase().includes(search.toLowerCase())) ?? [];
 
   return (
     <div className="flex flex-col gap-2">
       {items.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
-          {items.map((it) => (
-            <span key={it.id} className="inline-flex items-center gap-1.5 rounded-[6px] bg-muted border border-border px-2.5 py-1 text-xs font-medium text-foreground">
-              {it.label}
-              <button type="button" className="text-muted-foreground hover:text-destructive transition-colors cursor-pointer" onClick={() => onRemove(it.id)}>
-                <X size={11} />
-              </button>
-            </span>
-          ))}
+          {items.map((it) => {
+            const itemObj = allItems?.find((x) => x._id === it.id);
+            const displayLabel = (itemObj ? itemObj[labelKey] : null) || (it.label && it.label !== it.id ? it.label : null) || 'Sản phẩm';
+            const rawThumb = (itemObj && thumbKey) ? itemObj[thumbKey] : it.thumbnail;
+            const thumbSrc = typeof rawThumb === 'string' ? rawThumb : rawThumb?.url;
+
+            return (
+              <span key={it.id} className="inline-flex items-center gap-1.5 rounded-[6px] bg-muted border border-border px-2.5 py-1 text-xs font-medium text-foreground">
+                {thumbSrc && (
+                  <img src={thumbSrc} alt="" className="size-4 rounded-[2px] object-cover shrink-0" />
+                )}
+                <span className="max-w-[220px] truncate" title={displayLabel}>{displayLabel}</span>
+                <button type="button" className="text-muted-foreground hover:text-destructive transition-colors cursor-pointer" onClick={() => onRemove(it.id)}>
+                  <X size={11} />
+                </button>
+              </span>
+            );
+          })}
         </div>
       )}
       <div className="relative">
@@ -107,21 +119,35 @@ function ItemSearchInput({ items, onAdd, onRemove, placeholder, searchFn, labelK
           onFocus={() => setOpen(true)}
           onBlur={() => setTimeout(() => setOpen(false), 200)}
         />
-        {open && results.length > 0 && (
-          <div className="absolute top-full left-0 z-50 mt-1 w-full rounded-[6px] border border-border bg-popover shadow-sm overflow-hidden max-h-44 overflow-y-auto">
-            {results.filter((r) => !items.some((it) => it.id === r._id)).map((r) => (
-              <button
-                key={r._id}
-                type="button"
-                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-foreground hover:bg-muted transition-colors cursor-pointer"
-                onMouseDown={() => { onAdd({ id: r._id, label: r[labelKey] }); setSearch(''); setOpen(false); }}
-              >
-                {thumbKey && r[thumbKey]?.url && (
-                  <img src={r[thumbKey].url} alt="" className="size-7 rounded-[4px] object-cover border border-border bg-muted shrink-0" />
-                )}
-                <span className="truncate">{r[labelKey]}</span>
-              </button>
-            ))}
+        {open && results.filter((r) => !items.some((it) => it.id === r._id)).length > 0 && (
+          <div className="absolute top-full left-0 z-50 mt-1 w-full rounded-[6px] border border-border bg-popover shadow-md overflow-hidden max-h-48 overflow-y-auto">
+            {results.filter((r) => !items.some((it) => it.id === r._id)).map((r) => {
+              const rThumb = thumbKey ? (typeof r[thumbKey] === 'string' ? r[thumbKey] : r[thumbKey]?.url) : null;
+              return (
+                <button
+                  key={r._id}
+                  type="button"
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left text-foreground hover:bg-muted transition-colors cursor-pointer"
+                  onMouseDown={() => {
+                    onAdd({ id: r._id, label: r[labelKey], thumbnail: r[thumbKey] });
+                    setSearch('');
+                    setOpen(false);
+                  }}
+                >
+                  {rThumb ? (
+                    <img src={rThumb} alt="" className="size-7 rounded-[4px] object-cover border border-border bg-muted shrink-0" />
+                  ) : (
+                    <div className="size-7 rounded-[4px] border border-border bg-muted flex items-center justify-center text-[10px] text-muted-foreground shrink-0 font-bold">
+                      {(r[labelKey] || 'SP').charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <div className="flex flex-col min-w-0 flex-1">
+                    <span className="truncate text-xs font-medium text-foreground">{r[labelKey]}</span>
+                    {r.sku && <span className="text-[10px] text-muted-foreground font-mono">SKU: {r.sku}</span>}
+                  </div>
+                </button>
+              );
+            })}
           </div>
         )}
       </div>
@@ -164,17 +190,13 @@ export default function PromotionPage() {
   const [selectedIds, setSelectedIds] = useState([]);
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
 
-  const [productSearch, setProductSearch] = useState('');
-
   const params = { keyword, isActive: filterStatus || undefined, type: filterType || undefined, page, limit };
   const res = usePromotions(params);
   const promotions = res.data?.data ?? [];
   const pagination = res.data?.pagination;
   const isLoading = res.isLoading;
 
-  const { data: productsData } = useProducts({ keyword: productSearch, limit: 20 });
-  const allProducts = productsData?.data ?? [];
-
+  const { data: allProducts = [] } = useAllProductsSelect();
   const allCategoriesData = useCategories({});
   const allCategories = allCategoriesData.data ?? [];
 
@@ -202,12 +224,27 @@ export default function PromotionPage() {
       triggerQty: item.triggerQty ?? '',
       payQty: item.payQty ?? '',
       scopeType: item.scope?.type ?? 'all',
-      scopeProducts: (item.scope?.productIds ?? []).map((p) =>
-        typeof p === 'object' ? { id: p._id, label: p.name } : { id: p, label: p }
-      ),
-      scopeCategories: (item.scope?.categoryIds ?? []).map((c) =>
-        typeof c === 'object' ? { id: c._id, label: c.name } : { id: c, label: c }
-      ),
+      scopeProducts: (item.scope?.productIds ?? []).map((p) => {
+        if (p && typeof p === 'object' && p._id) {
+          return { id: p._id, label: p.name, thumbnail: p.thumbnail };
+        }
+        const found = allProducts.find((prod) => prod._id === p);
+        return {
+          id: p,
+          label: found ? found.name : p,
+          thumbnail: found ? found.thumbnail : null,
+        };
+      }),
+      scopeCategories: (item.scope?.categoryIds ?? []).map((c) => {
+        if (c && typeof c === 'object' && c._id) {
+          return { id: c._id, label: c.name };
+        }
+        const found = allCategories.find((cat) => cat._id === c);
+        return {
+          id: c,
+          label: found ? found.name : c,
+        };
+      }),
       minOrderValue: item.minOrderValue ?? '',
       usageLimit: item.usageLimit ?? '',
       startDate: new Date(item.startDate).toISOString().slice(0, 16),
@@ -437,7 +474,27 @@ export default function PromotionPage() {
                         )}
                       </TableCell>
                       <TableCell className="px-4 py-3 align-middle text-xs text-muted-foreground">
-                        {item.scope?.type === 'all' ? 'Tất cả' : item.scope?.type === 'products' ? `${item.scope.productIds?.length ?? 0} SP` : `${item.scope.categoryIds?.length ?? 0} DM`}
+                        {item.scope?.type === 'all'
+                          ? 'Tất cả SP'
+                          : item.scope?.type === 'products'
+                          ? (() => {
+                              const pList = item.scope.productIds || [];
+                              if (pList.length === 1) {
+                                const p0 = pList[0];
+                                const name = typeof p0 === 'object' ? p0.name : allProducts.find((x) => x._id === p0)?.name || '1 SP';
+                                return <span className="line-clamp-1 max-w-[150px] font-medium" title={name}>{name}</span>;
+                              }
+                              return `${pList.length} SP`;
+                            })()
+                          : (() => {
+                              const cList = item.scope.categoryIds || [];
+                              if (cList.length === 1) {
+                                const c0 = cList[0];
+                                const name = typeof c0 === 'object' ? c0.name : allCategories.find((x) => x._id === c0)?.name || '1 DM';
+                                return <span className="line-clamp-1 max-w-[150px] font-medium" title={name}>{name}</span>;
+                              }
+                              return `${cList.length} DM`;
+                            })()}
                       </TableCell>
                       <TableCell className="px-4 py-3 align-middle text-xs text-muted-foreground font-mono tabular-nums whitespace-nowrap">
                         <div>{formatDate(item.startDate)}</div>
@@ -647,7 +704,7 @@ export default function PromotionPage() {
                     onAdd={(p) => setForm((f) => ({ ...f, scopeProducts: [...f.scopeProducts, p] }))}
                     onRemove={(id) => setForm((f) => ({ ...f, scopeProducts: f.scopeProducts.filter((p) => p.id !== id) }))}
                     placeholder="Tìm sản phẩm để thêm..."
-                    searchFn={() => allProducts}
+                    allItems={allProducts}
                     thumbKey="thumbnail"
                   />
                 )}
@@ -658,7 +715,7 @@ export default function PromotionPage() {
                     onAdd={(c) => setForm((f) => ({ ...f, scopeCategories: [...f.scopeCategories, c] }))}
                     onRemove={(id) => setForm((f) => ({ ...f, scopeCategories: f.scopeCategories.filter((c) => c.id !== id) }))}
                     placeholder="Tìm danh mục để thêm..."
-                    searchFn={(s) => allCategories.filter((c) => !s || c.name.toLowerCase().includes(s.toLowerCase()))}
+                    allItems={allCategories}
                   />
                 )}
               </div>

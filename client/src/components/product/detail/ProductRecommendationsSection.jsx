@@ -136,7 +136,7 @@ function RecommendationBlock({ title, items = [], isGift = false }) {
         {items.map((item) => (
           <div
             key={item._id || item.id}
-            className="w-[calc((100%-12px)/2)] sm:w-[calc((100%-24px)/3)] md:w-[calc((100%-36px)/4)] lg:w-[calc((100%-48px)/5)] shrink-0 snap-start flex flex-col self-stretch"
+            className="w-[calc((100%-12px)/2)] sm:w-[calc((100%-24px)/3)] md:w-[calc((100%-36px)/4)] lg:w-[calc((100%-48px)/5)] 2xl:w-[calc((100%-60px)/6)] shrink-0 snap-start flex flex-col self-stretch"
           >
             {isGift && item._giftBadge && (
               <div className="mb-1.5 shrink-0">

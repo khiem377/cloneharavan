@@ -8,6 +8,7 @@ const { AppError } = require('../utils/AppError');
 const { getSellingPrice } = require('../utils/pricing.helper');
 const couponService = require('./coupon.service');
 const flashSaleService = require('./flashSale.service');
+const giftProgramService = require('./gift-program.service');
 
 /**
  * Helper sinh mã đơn hàng độc nhất: ORD-YYYYMMDD-XXXX
@@ -183,7 +184,60 @@ const createOrderCOD = async (userId, orderData) => {
       subtotal: itemSubtotal,
       couponDiscountAllocated: 0,
       lineTotal: itemSubtotal,
+      isGift: false,
     });
+  }
+
+  // 4b. TÍNH TOÁN VÀ ĐÍNH KÈM QUÀ TẶNG (GIFT PROGRAM)
+  const nonFsCartItems = orderItemsData
+    .filter((it) => !it.isGift)
+    .map((it) => ({
+      productId: it.productId,
+      variantId: it.variantId,
+      quantity: it.quantity,
+      productName: it.productName,
+      unitPrice: it.unitPrice,
+      originalPrice: it.originalPrice,
+    }));
+
+  const giftResult = await giftProgramService.applyGiftPrograms(nonFsCartItems);
+  const giftProgramsUsed = [];
+
+  if (giftResult && Array.isArray(giftResult.appliedGifts)) {
+    for (const applied of giftResult.appliedGifts) {
+      if (applied.setsApplied > 0) {
+        giftProgramsUsed.push({
+          giftProgramId: applied.giftProgramId,
+          setsApplied: applied.setsApplied,
+        });
+      }
+
+      for (const g of applied.gifts || []) {
+        if (!g.variantId || g.qty <= 0) continue;
+        const giftVariant = await ProductVariant.findById(g.variantId).populate('productId');
+        if (!giftVariant) continue;
+
+        orderItemsData.push({
+          productId: giftVariant.productId?._id || giftVariant.productId,
+          variantId: giftVariant._id,
+          productName: g.name || giftVariant.productId?.name || 'Quà tặng',
+          variantName: giftVariant.displayName || '',
+          sku: giftVariant.sku || '',
+          thumbnail: g.thumbnail || giftVariant.thumbnail?.url || '',
+          attributes: giftVariant.attributes || [],
+          originalPrice: g.originalPrice || Number(giftVariant.price) || 0,
+          salePrice: 0,
+          unitPrice: 0,
+          quantity: g.qty,
+          subtotal: 0,
+          couponDiscountAllocated: 0,
+          lineTotal: 0,
+          isGift: true,
+          giftProgramId: applied.giftProgramId,
+          giftProgramName: applied.giftProgramName,
+        });
+      }
+    }
   }
 
   // 5. Re-check Coupon từ Database (Cấm tin số tiền giảm từ FE)
@@ -191,7 +245,7 @@ const createOrderCOD = async (userId, orderData) => {
   let totalCouponDiscount = 0;
   let couponDoc = null;
 
-  const codeToValidate = couponCode || cart.couponCode;
+  const codeToValidate = couponCode || userCart?.couponCode;
   if (codeToValidate && codeToValidate.trim()) {
     const couponRes = await couponService.validateCoupon(codeToValidate.trim(), totalSubtotal);
     totalCouponDiscount = couponRes.discountAmount || 0;
@@ -199,12 +253,13 @@ const createOrderCOD = async (userId, orderData) => {
     couponDoc = couponRes.coupon;
   }
 
-  // 6. Phân bổ Coupon Discount (Prorated Allocation) cho từng Line Item
+  // 6. Phân bổ Coupon Discount (Prorated Allocation) cho từng Line Item (chỉ item trả phí)
   if (totalCouponDiscount > 0 && totalSubtotal > 0) {
+    const paidItems = orderItemsData.filter((it) => !it.isGift);
     let allocatedSum = 0;
-    for (let i = 0; i < orderItemsData.length; i++) {
-      const it = orderItemsData[i];
-      if (i === orderItemsData.length - 1) {
+    for (let i = 0; i < paidItems.length; i++) {
+      const it = paidItems[i];
+      if (i === paidItems.length - 1) {
         // Món cuối cùng nhận phần còn lại để tránh chênh lệch do làm tròn
         it.couponDiscountAllocated = Math.max(0, totalCouponDiscount - allocatedSum);
       } else {
@@ -222,7 +277,7 @@ const createOrderCOD = async (userId, orderData) => {
 
   // 7. THỰC THI TRANSACTION MONGODB (ACID)
   const createdOrder = await withTransaction(async (session) => {
-    // 7.1. Atomic check & Giữ chỗ kho hàng: allocated += qty
+    // 7.1. Atomic check & Giữ chỗ kho hàng: allocated += qty (cho cả sản phẩm chính lẫn quà tặng)
     for (const it of orderItemsData) {
       const updatedVariant = await ProductVariant.findOneAndUpdate(
         {
@@ -248,6 +303,11 @@ const createOrderCOD = async (userId, orderData) => {
     // 7.2. Tăng số lượt dùng của Coupon
     if (couponDoc) {
       await couponService.applyCoupon(couponDoc._id, totalSubtotal, session);
+    }
+
+    // 7.2b. Tăng số lượt dùng (Quota) của Chương trình Quà tặng kèm
+    if (giftProgramsUsed.length > 0) {
+      await giftProgramService.markGiftProgramsUsed(giftProgramsUsed, session);
     }
 
     // 7.3. Tạo bản ghi Đơn hàng (Snapshot đóng băng bất biến)

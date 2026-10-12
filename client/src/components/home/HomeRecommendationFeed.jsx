@@ -114,8 +114,8 @@ export default function HomeRecommendationFeed({ initialProducts = [] }) {
   };
 
   return (
-    <section className="max-w-7xl mx-auto px-3 sm:px-4 my-6" aria-label="Gợi ý dành riêng cho bạn">
-      <div className="bg-white rounded-[6px] border border-slate-200 p-4 sm:p-5">
+    <section className="max-w-[1536px] 2xl:max-w-[1600px] mx-auto px-3 sm:px-4 lg:px-6 2xl:px-8 my-6" aria-label="Gợi ý dành riêng cho bạn">
+      <div className="bg-white rounded-[6px] border border-slate-200 p-4 sm:p-5 2xl:p-6">
         {/* ─── HEADER KHỐI & 4 TABS ─── */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-slate-100">
           <div className="flex items-center gap-2">
@@ -152,7 +152,7 @@ export default function HomeRecommendationFeed({ initialProducts = [] }) {
         {/* ─── LƯỚI SẢN PHẨM (2 HÀNG X 5 CỘT TRÊN DESKTOP = 10 ITEMS) ─── */}
         <div className="mt-4">
           {loading ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 2xl:grid-cols-5 gap-2.5 sm:gap-3 2xl:gap-4">
               {Array.from({ length: 10 }).map((_, idx) => (
                 <div
                   key={`rec-skeleton-${idx}`}
@@ -172,7 +172,7 @@ export default function HomeRecommendationFeed({ initialProducts = [] }) {
               </p>
             </div>
           ) : (
-            <StaggerGrid className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3">
+            <StaggerGrid className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 2xl:grid-cols-5 gap-2.5 sm:gap-3 2xl:gap-4">
               {products.map((product) => (
                 <StaggerItem key={product._id || product.id}>
                   <ProductCard product={product} />

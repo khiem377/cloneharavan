@@ -18,6 +18,7 @@ import { Label } from '../ui/label';
 import { Badge } from '../ui/badge';
 import { Separator } from '../ui/separator';
 import { Alert, AlertDescription } from '../ui/alert';
+import { isSyntheticEmail, getAuthProviderLabel } from '../../utils/userUtils';
 
 export default function AccountProfileTab({
   user,
@@ -193,13 +194,30 @@ export default function AccountProfileTab({
 
             {/* Email */}
             <div className="space-y-1.5">
-              <Label htmlFor="email">Email đăng ký</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="email">Email liên kết</Label>
+                {isSyntheticEmail(user?.email) && (
+                  <span className="text-[11px] text-amber-600 font-medium">Chưa liên kết email</span>
+                )}
+              </div>
               <Input
                 id="email"
                 type="email"
-                disabled
-                value={profileForm.email}
-                className="h-9 text-xs rounded-[6px] border border-slate-200 bg-slate-50 text-slate-500 cursor-not-allowed"
+                disabled={!isEditing}
+                value={isSyntheticEmail(profileForm.email) ? '' : profileForm.email}
+                onChange={(e) =>
+                  setProfileForm({ ...profileForm, email: e.target.value })
+                }
+                placeholder={
+                  isSyntheticEmail(user?.email)
+                    ? 'Nhập địa chỉ email để nhận thông báo đơn hàng'
+                    : 'Chưa cập nhật email'
+                }
+                className={`h-9 text-xs rounded-[6px] ${
+                  isEditing
+                    ? 'bg-white text-slate-900 border-slate-300 focus-visible:ring-[#e30019]'
+                    : 'bg-slate-50 text-slate-500 border-slate-200 cursor-not-allowed'
+                }`}
               />
             </div>
 
@@ -231,7 +249,7 @@ export default function AccountProfileTab({
             >
               <span className="font-semibold text-slate-700 mr-1.5">Phương thức đăng nhập:</span>
               <span className="font-semibold text-slate-900">
-                {user?.authProvider === 'google' ? 'Google Account' : 'Email & Mật khẩu'}
+                {getAuthProviderLabel(user)}
               </span>
             </Badge>
           </div>

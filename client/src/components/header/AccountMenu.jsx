@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ChevronDown, User } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
+import { isSyntheticEmail, getDisplayAccountIdentifier } from '../../utils/userUtils';
 import {
   IconProfile,
   IconOrders,
@@ -83,7 +84,7 @@ export const AccountMenu = () => {
                 {user?.fullName || user?.name || 'Khách hàng'}
               </div>
               <div className="text-[11px] text-slate-400 truncate mt-0.5 font-normal">
-                {user?.email || 'Chưa liên kết email'}
+                {getDisplayAccountIdentifier(user)}
               </div>
             </div>
 

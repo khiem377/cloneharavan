@@ -2,12 +2,11 @@
 
 import React, { useEffect } from 'react';
 import Link from 'next/link';
-import { ChevronRight, AlertTriangle, ArrowRight, Loader2 } from 'lucide-react';
 import useCartStore from '@/store/cartStore';
-import CartRewardBar from './CartRewardBar';
+import CartCheckoutSteps from './CartCheckoutSteps';
 import CartItemList from './CartItemList';
 import CartGiftItems from './CartGiftItems';
-import CartAddons from './CartAddons';
+import CartVoucherCard from './CartVoucherCard';
 import CartOrderSummary from './CartOrderSummary';
 import CartEmptyState from './CartEmptyState';
 import { Button } from '@/components/ui/button';
@@ -16,10 +15,8 @@ export default function CartView() {
   const {
     cart,
     items,
-    totalItems,
     warnings,
     hasStockIssue,
-    hasPriceChange,
     isLoading,
     isUpdating,
     initialized,
@@ -27,8 +24,6 @@ export default function CartView() {
     updateQuantity,
     removeItem,
     clearCart,
-    applyCoupon,
-    removeCoupon,
     validateCheckout,
   } = useCartStore();
 
@@ -43,18 +38,16 @@ export default function CartView() {
   // SKELETON LOADING KHI ĐANG TẢI DỮ LIỆU
   if (isLoading && !initialized) {
     return (
-      <div className="container mx-auto px-4 py-8 max-w-7xl animate-pulse">
-        {/* Breadcrumb Skeleton */}
-        <div className="h-4 w-48 bg-slate-200 rounded mb-6" />
-
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="container mx-auto px-3 sm:px-4 2xl:px-8 py-6 2xl:py-10 max-w-7xl 2xl:max-w-[1536px] animate-pulse">
+        <div className="h-4 w-48 bg-slate-200 rounded-[6px] mb-6" />
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 2xl:gap-8">
           <div className="lg:col-span-8 space-y-4">
-            <div className="h-28 bg-slate-200 rounded-xl" />
-            <div className="h-32 bg-slate-200 rounded-xl" />
-            <div className="h-32 bg-slate-200 rounded-xl" />
+            <div className="h-32 bg-slate-200 rounded-[6px]" />
+            <div className="h-32 bg-slate-200 rounded-[6px]" />
           </div>
-          <div className="lg:col-span-4">
-            <div className="h-96 bg-slate-200 rounded-xl" />
+          <div className="lg:col-span-4 space-y-4">
+            <div className="h-20 bg-slate-200 rounded-[6px]" />
+            <div className="h-80 bg-slate-200 rounded-[6px]" />
           </div>
         </div>
       </div>
@@ -64,14 +57,14 @@ export default function CartView() {
   // TRƯỜNG HỢP GIỎ HÀNG TRỐNG
   if (initialized && items.length === 0) {
     return (
-      <div className="container mx-auto px-4 py-6 max-w-7xl">
+      <div className="container mx-auto px-3 sm:px-4 2xl:px-8 py-6 2xl:py-10 max-w-7xl 2xl:max-w-[1536px]">
         {/* Breadcrumb */}
-        <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs text-slate-500 mb-6">
+        <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs 2xl:text-sm text-slate-500 mb-6">
           <Link href="/" className="hover:text-slate-900 transition-colors">
             Trang chủ
           </Link>
-          <ChevronRight size={13} className="text-slate-400" />
-          <span className="font-semibold text-slate-800">Giỏ hàng</span>
+          <span className="text-slate-400">/</span>
+          <span className="font-semibold text-slate-900">Giỏ hàng của bạn</span>
         </nav>
 
         <CartEmptyState />
@@ -80,66 +73,65 @@ export default function CartView() {
   }
 
   return (
-    <div className="bg-slate-50/50 min-h-[calc(100vh-200px)] pb-24 lg:pb-12">
-      <div className="container mx-auto px-4 py-4 sm:py-6 max-w-7xl">
+    <div className="bg-slate-50/60 min-h-[100dvh] pb-24 lg:pb-12 2xl:pb-16">
+      <div className="container mx-auto px-3 sm:px-4 2xl:px-8 py-3 sm:py-5 2xl:py-8 max-w-7xl 2xl:max-w-[1536px]">
         {/* BREADCRUMB */}
-        <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs text-slate-500 mb-4 sm:mb-6">
+        <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs 2xl:text-sm text-slate-500 mb-3 sm:mb-4">
           <Link href="/" className="hover:text-slate-900 transition-colors">
             Trang chủ
           </Link>
-          <ChevronRight size={13} className="text-slate-400" />
-          <span className="font-semibold text-slate-800">
-            Giỏ hàng ({totalItems} sản phẩm)
+          <span className="text-slate-400">/</span>
+          <span className="font-semibold text-slate-900">
+            Giỏ hàng của bạn
           </span>
         </nav>
 
-        {/* BANNER CẢNH BÁO TỒN KHO / BIẾN ĐỘNG GIÁ (NẾU CÓ TỪ BACKEND) */}
+        {/* 3-STEP CHECKOUT STEPPER */}
+        <CartCheckoutSteps currentStep={1} />
+
+        {/* BANNER CẢNH BÁO TỒN KHO NẾU CÓ */}
         {warnings && warnings.length > 0 && (
-          <div className="mb-5 p-3.5 sm:p-4 rounded-xl bg-amber-50 border border-amber-200/90 text-amber-900 text-xs sm:text-sm space-y-1.5 shadow-2xs animate-fadeIn">
-            <div className="flex items-center gap-2 font-bold text-amber-950">
-              <AlertTriangle size={16} className="text-amber-600 shrink-0" />
-              <span>Thông báo điều chỉnh giỏ hàng từ hệ thống:</span>
+          <div className="mb-4 p-3 sm:p-4 rounded-[6px] bg-amber-50 border border-amber-200 text-amber-900 text-xs sm:text-sm space-y-1 animate-fadeIn">
+            <div className="font-bold text-amber-950">
+              Thông báo giỏ hàng:
             </div>
-            <ul className="list-disc pl-5 space-y-1 text-slate-700">
+            <ul className="list-disc pl-5 space-y-0.5 text-slate-700 text-xs">
               {warnings.map((w, idx) => (
-                <li key={idx}>
-                  {w.message || 'Một số sản phẩm trong giỏ đã có sự thay đổi về tồn kho hoặc giá.'}
-                </li>
+                <li key={idx}>{w.message}</li>
               ))}
             </ul>
           </div>
         )}
 
-        {/* LAYOUT CHÍNH: 8 CỘT TRÁI / 4 CỘT PHẢI */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">
-          {/* CỘT TRÁI (8 CỘT TRÊN DESKTOP) */}
-          <div className="lg:col-span-8 space-y-5">
-            {/* 1. Thanh tiến trình nhận quà */}
-            <CartRewardBar subtotal={cart.subtotal || 0} />
-
-            {/* 2. Danh sách sản phẩm trong giỏ */}
+        {/* LAYOUT CHÍNH: 8 CỘT TRÁI (DANH SÁCH SẢN PHẨM) / 4 CỘT PHẢI (VOUCHER + TÓM TẮT ĐƠN HÀNG) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5 2xl:gap-8 items-start">
+          {/* CỘT TRÁI (8 CỘT) */}
+          <div className="lg:col-span-8 space-y-4 2xl:space-y-6">
+            {/* 1. Bảng danh sách sản phẩm & quà tặng đính kèm */}
             <CartItemList
               items={items}
-              totalItems={totalItems}
+              giftItems={cart.giftItems || cart.giftPrograms || []}
+              giftNudges={cart.giftNudges || []}
+              totalItems={items.length}
               onUpdateQuantity={updateQuantity}
               onRemoveItem={removeItem}
               onClearCart={clearCart}
               isUpdating={isUpdating}
             />
 
-            {/* 3. Khối quà tặng 0đ (nếu có chương trình khuyến mãi) */}
-            <CartGiftItems giftPrograms={cart.giftPrograms || []} />
-
-            {/* 4. Khối tiện ích Haravan (ghi chú, hẹn giờ, VAT) */}
-            <CartAddons />
+            {/* 2. Quà tặng kèm theo toàn đơn hàng nếu có quà độc lập */}
+            <CartGiftItems giftPrograms={cart.giftItems || cart.giftPrograms || []} />
           </div>
 
-          {/* CỘT PHẢI (4 CỘT TRÊN DESKTOP - STICKY) */}
-          <div className="lg:col-span-4">
+          {/* CỘT PHẢI (4 CỘT - STICKY) */}
+          <div className="lg:col-span-4 space-y-4 lg:sticky lg:top-20 2xl:top-24">
+            {/* 1. Khối chọn Voucher giảm giá (Chuẩn ảnh 4) */}
+            <CartVoucherCard />
+
+            {/* 2. Khối thông tin đơn hàng & nút Đặt hàng (Chuẩn ảnh 3 & 4) */}
             <CartOrderSummary
               cart={cart}
-              onApplyCoupon={applyCoupon}
-              onRemoveCoupon={removeCoupon}
+              itemsCount={items.length}
               onValidateCheckout={validateCheckout}
               isUpdating={isUpdating}
               hasStockIssue={hasStockIssue}
@@ -148,11 +140,11 @@ export default function CartView() {
         </div>
       </div>
 
-      {/* THANH GHIM ĐÁY TRÊN ĐIỆN THOẠI (MOBILE STICKY BOTTOM BAR) */}
+      {/* THANH GHIM ĐÁY TRÊN ĐIỆN THOẠI (MOBILE STICKY BAR) */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-200 p-3 px-4 shadow-lg flex items-center justify-between gap-3 animate-fadeIn">
         <div>
           <div className="text-[10px] text-slate-500 font-medium">Tổng thanh toán:</div>
-          <div className="text-base font-black text-red-600">
+          <div className="text-base font-mono tabular-nums font-black text-red-600">
             {formatPrice(cart.finalTotal || cart.subtotal || 0)}
           </div>
         </div>
@@ -161,10 +153,9 @@ export default function CartView() {
           <Button
             size="default"
             disabled={isUpdating || hasStockIssue || items.length === 0}
-            className="h-10 px-5 bg-red-600 hover:bg-red-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs"
+            className="h-10 px-6 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-[6px] active:scale-[0.98] transition cursor-pointer shadow-xs"
           >
-            <span>Thanh toán</span>
-            <ArrowRight size={14} />
+            Đặt hàng ({items.length})
           </Button>
         </Link>
       </div>

@@ -26,8 +26,17 @@ const cartSession = (req, res, next) => {
         if (decoded?.id) {
           userId = decoded.id;
         }
-      } catch {
-        // Token không hợp lệ hoặc hết hạn -> Tiếp tục dùng sessionId cho khách vãng lai
+      } catch (err) {
+        // Nếu client gửi Authorization header (user đăng nhập) nhưng token hết hạn/lỗi
+        // -> Trả về 401 để Axios Interceptor tự động refresh token và thử lại ngay lập tức
+        if (req.headers.authorization?.startsWith('Bearer ')) {
+          return res.status(401).json({
+            status: 'error',
+            statusCode: 401,
+            message: 'Phiên đăng nhập đã hết hạn hoặc không hợp lệ.',
+            code: 'TOKEN_EXPIRED',
+          });
+        }
       }
     }
 

@@ -16,6 +16,7 @@ import PasswordModal from './PasswordModal';
 import SessionsModal from './SessionsModal';
 import authService from '@/services/auth.service';
 import useAuthStore from '@/store/authStore';
+import { openCenteredPopup, waitForOAuthMessage } from '@/utils/oauthPopup';
 
 export default function AccountSecurityTab({
   user,
@@ -205,6 +206,7 @@ export default function AccountSecurityTab({
       }
 
       const appId = process.env.NEXT_PUBLIC_ZALO_APP_ID;
+      let authUrl = null;
 
       try {
         const res = await authService.getZaloAuthUrl({
@@ -216,41 +218,59 @@ export default function AccountSecurityTab({
           if (res.data.codeVerifier && typeof window !== 'undefined') {
             sessionStorage.setItem('zalo_code_verifier', res.data.codeVerifier);
           }
-          window.location.href = res.data.url;
-          return;
+          authUrl = res.data.url;
         }
       } catch (beErr) {
         console.warn('Lấy URL Zalo từ BE thất bại, fallback sang frontend PKCE builder:', beErr);
       }
 
-      if (!appId) {
-        toast.error('Cấu hình NEXT_PUBLIC_ZALO_APP_ID chưa được thiết lập.');
-        setLinkingProvider(null);
-        return;
+      if (!authUrl) {
+        if (!appId) {
+          toast.error('Cấu hình NEXT_PUBLIC_ZALO_APP_ID chưa được thiết lập.');
+          setLinkingProvider(null);
+          return;
+        }
+
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        const array = new Uint8Array(43);
+        window.crypto.getRandomValues(array);
+        let codeVerifier = '';
+        for (let i = 0; i < 43; i++) {
+          codeVerifier += chars[array[i] % chars.length];
+        }
+        sessionStorage.setItem('zalo_code_verifier', codeVerifier);
+
+        const encoder = new TextEncoder();
+        const encodedData = encoder.encode(codeVerifier);
+        const hash = await window.crypto.subtle.digest('SHA-256', encodedData);
+        const codeChallenge = btoa(String.fromCharCode(...new Uint8Array(hash)))
+          .replace(/\+/g, '-')
+          .replace(/\//g, '_')
+          .replace(/=+$/, '');
+
+        authUrl = `https://oauth.zaloapp.com/v4/permission?app_id=${appId}&redirect_uri=${encodeURIComponent(
+          redirectUri
+        )}&code_challenge=${encodeURIComponent(codeChallenge)}&state=${encodeURIComponent(stateToken)}`;
       }
 
-      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-      const array = new Uint8Array(43);
-      window.crypto.getRandomValues(array);
-      let codeVerifier = '';
-      for (let i = 0; i < 43; i++) {
-        codeVerifier += chars[array[i] % chars.length];
+      // 1. Thử mở popup (kích thước lớn 680x820)
+      const popup = openCenteredPopup(authUrl, 'Link Zalo', 680, 820);
+      if (popup) {
+        try {
+          await waitForOAuthMessage(popup, { provider: 'zalo', timeout: 180000 });
+          toast.success('Liên kết tài khoản Zalo thành công!');
+          await fetchLinkedAccounts();
+        } catch (popupErr) {
+          if (popupErr.message !== 'POPUP_CLOSED') {
+            toast.error(popupErr.message || 'Liên kết Zalo thất bại');
+          }
+        } finally {
+          setLinkingProvider(null);
+        }
+      } else {
+        // Fallback chuyển toàn trang
+        window.location.href = authUrl;
       }
-      sessionStorage.setItem('zalo_code_verifier', codeVerifier);
-
-      const encoder = new TextEncoder();
-      const encodedData = encoder.encode(codeVerifier);
-      const hash = await window.crypto.subtle.digest('SHA-256', encodedData);
-      const codeChallenge = btoa(String.fromCharCode(...new Uint8Array(hash)))
-        .replace(/\+/g, '-')
-        .replace(/\//g, '_')
-        .replace(/=+$/, '');
-
-      const authUrl = `https://oauth.zaloapp.com/v4/permission?app_id=${appId}&redirect_uri=${encodeURIComponent(
-        redirectUri
-      )}&code_challenge=${encodeURIComponent(codeChallenge)}&state=${encodeURIComponent(stateToken)}`;
-
-      window.location.href = authUrl;
     } catch (err) {
       toast.error('Không thể kết nối đến máy chủ Zalo. Vui lòng thử lại!');
       setLinkingProvider(null);
@@ -271,6 +291,7 @@ export default function AccountSecurityTab({
       }
 
       const clientKey = process.env.NEXT_PUBLIC_TIKTOK_CLIENT_KEY || 'sbawe8bhj9r8km52mp';
+      let authUrl = null;
 
       try {
         const res = await authService.getTikTokAuthUrl({
@@ -282,34 +303,52 @@ export default function AccountSecurityTab({
           if (res.data.codeVerifier && typeof window !== 'undefined') {
             sessionStorage.setItem('tiktok_code_verifier', res.data.codeVerifier);
           }
-          window.location.href = res.data.url;
-          return;
+          authUrl = res.data.url;
         }
       } catch (beErr) {
         console.warn('Lấy URL TikTok từ BE thất bại, fallback sang PKCE builder:', beErr);
       }
 
-      const array = new Uint8Array(32);
-      window.crypto.getRandomValues(array);
-      const codeVerifier = Array.from(array, (dec) => dec.toString(16).padStart(2, '0')).join('');
-      sessionStorage.setItem('tiktok_code_verifier', codeVerifier);
+      if (!authUrl) {
+        const array = new Uint8Array(32);
+        window.crypto.getRandomValues(array);
+        const codeVerifier = Array.from(array, (dec) => dec.toString(16).padStart(2, '0')).join('');
+        sessionStorage.setItem('tiktok_code_verifier', codeVerifier);
 
-      const encoder = new TextEncoder();
-      const data = encoder.encode(codeVerifier);
-      const hash = await window.crypto.subtle.digest('SHA-256', data);
-      const codeChallenge = btoa(String.fromCharCode(...new Uint8Array(hash)))
-        .replace(/\+/g, '-')
-        .replace(/\//g, '_')
-        .replace(/=+$/, '');
+        const encoder = new TextEncoder();
+        const data = encoder.encode(codeVerifier);
+        const hash = await window.crypto.subtle.digest('SHA-256', data);
+        const codeChallenge = btoa(String.fromCharCode(...new Uint8Array(hash)))
+          .replace(/\+/g, '-')
+          .replace(/\//g, '_')
+          .replace(/=+$/, '');
 
-      const scope = 'user.info.basic,user.info.profile';
-      const authUrl = `https://www.tiktok.com/v2/auth/authorize/?client_key=${clientKey}&scope=${encodeURIComponent(
-        scope
-      )}&response_type=code&redirect_uri=${encodeURIComponent(
-        redirectUri
-      )}&state=${encodeURIComponent(stateToken)}&code_challenge=${codeChallenge}&code_challenge_method=S256`;
+        const scope = 'user.info.basic,user.info.profile';
+        authUrl = `https://www.tiktok.com/v2/auth/authorize/?client_key=${clientKey}&scope=${encodeURIComponent(
+          scope
+        )}&response_type=code&redirect_uri=${encodeURIComponent(
+          redirectUri
+        )}&state=${encodeURIComponent(stateToken)}&code_challenge=${codeChallenge}&code_challenge_method=S256&disable_auto_auth=1`;
+      }
 
-      window.location.href = authUrl;
+      // 1. Thử mở popup (kích thước lớn 680x820)
+      const popup = openCenteredPopup(authUrl, 'Link TikTok', 680, 820);
+      if (popup) {
+        try {
+          await waitForOAuthMessage(popup, { provider: 'tiktok', timeout: 180000 });
+          toast.success('Liên kết tài khoản TikTok thành công!');
+          await fetchLinkedAccounts();
+        } catch (popupErr) {
+          if (popupErr.message !== 'POPUP_CLOSED') {
+            toast.error(popupErr.message || 'Liên kết TikTok thất bại');
+          }
+        } finally {
+          setLinkingProvider(null);
+        }
+      } else {
+        // Fallback chuyển toàn trang
+        window.location.href = authUrl;
+      }
     } catch (err) {
       toast.error('Không thể kết nối đến máy chủ TikTok. Vui lòng thử lại!');
       setLinkingProvider(null);
@@ -538,7 +577,18 @@ export default function AccountSecurityTab({
                       )}
                     </span>
                   ) : (
-                    'Chưa liên kết tài khoản Zalo'
+                    <span>
+                      Chưa liên kết tài khoản Zalo •{' '}
+                      <a
+                        href="https://id.zalo.me"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[#0068ff] hover:underline font-medium"
+                        title="Mở id.zalo.me để đăng xuất hoặc chuyển sang số điện thoại khác"
+                      >
+                        Đổi nick Zalo?
+                      </a>
+                    </span>
                   )}
                 </p>
               </div>

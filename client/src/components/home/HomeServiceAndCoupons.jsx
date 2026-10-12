@@ -132,10 +132,10 @@ export default function HomeServiceAndCoupons({ initialCoupons = [] }) {
   };
 
   return (
-    <section className="max-w-7xl mx-auto px-3 sm:px-4 my-5">
+    <section className="max-w-[1536px] 2xl:max-w-[1600px] mx-auto px-3 sm:px-4 lg:px-6 2xl:px-8 my-5">
       {/* ─── ROW 1: 4 DỊCH VỤ VỚI ICON ĐEN ĐỘC QUYỀN, SẮC SẢO, CHI TIẾT ─── */}
-      <div className="bg-white rounded-[6px] p-4 sm:p-5 border border-slate-200 mb-5">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 divide-y sm:divide-y-0 sm:divide-x divide-slate-100">
+      <div className="bg-white rounded-[6px] p-4 sm:p-5 2xl:p-6 border border-slate-200 mb-5">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 2xl:gap-8 divide-y sm:divide-y-0 sm:divide-x divide-slate-100">
           {SERVICE_FEATURES.map((item, idx) => (
             <div
               key={item.id}

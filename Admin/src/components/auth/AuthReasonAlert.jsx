@@ -6,7 +6,19 @@ import { AlertCircle } from 'lucide-react';
  * @param {Object} props
  * @param {string|null} props.reason - Reason code: 'session_expired' | 'blocked' | 'no_admin_access'
  */
-export default function AuthReasonAlert({ reason }) {
+export default function AuthReasonAlert({ reason, customMessage }) {
+  if (customMessage) {
+    return (
+      <div
+        role="alert"
+        className="mb-4 flex items-start gap-2.5 rounded-[6px] border border-destructive/20 bg-destructive/10 p-3 text-xs text-destructive"
+      >
+        <AlertCircle className="size-4 shrink-0 mt-0.5" />
+        <span>{customMessage}</span>
+      </div>
+    );
+  }
+
   if (!reason) return null;
 
   if (reason === 'session_expired') {

@@ -118,7 +118,7 @@ export default async function BlogDetailPage({ params }) {
       {/* View tracking trigger (runs once on client mount) */}
       <BlogViewTracker slug={post.slug} />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+      <main className="max-w-[1536px] 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 2xl:px-8 py-6 sm:py-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
           {/* Main Article Content (8 cols on desktop) */}
           <div className="lg:col-span-8 bg-white rounded-[6px] border border-gray-200/90 p-4 sm:p-7 shadow-2xs">

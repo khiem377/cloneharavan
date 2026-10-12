@@ -187,7 +187,7 @@ export default function HomeTrendingAndNewArrivals({
   const products = activeMainTab === 'hot_trend' ? trendingProducts : newArrivalProducts;
 
   return (
-    <section className="max-w-7xl mx-auto px-3 sm:px-4 my-7" aria-label="Sản phẩm Hot Trend & Hàng Mới Về">
+    <section className="max-w-[1536px] 2xl:max-w-[1600px] mx-auto px-3 sm:px-4 lg:px-6 2xl:px-8 my-7" aria-label="Sản phẩm Hot Trend & Hàng Mới Về">
       
       {/* ─── 1. HEADER 2 TABS CHUẨN CELLPHONES (50% MỖI BÊN) ─── */}
       <div className="flex items-end w-full select-none">
@@ -249,12 +249,12 @@ export default function HomeTrendingAndNewArrivals({
       {/* ─── 2. KHUNG CHÍNH bg-[#f4f7fe] VIỀN #609afa ─── */}
       <div className={`relative z-10 bg-[#f4f7fe] border-2 border-[#609afa] rounded-b-[10px] ${
         activeMainTab === 'hot_trend' ? 'rounded-tr-[10px]' : 'rounded-tl-[10px]'
-      } p-3 sm:p-4 shadow-[0_4px_20px_rgba(96,154,250,0.06)]`}>
+      } p-3 sm:p-4 2xl:p-5 shadow-[0_4px_20px_rgba(96,154,250,0.06)]`}>
         
         {/* ─── 3. LƯỚI SẢN PHẨM: 5 CỘT (2 HÀNG X 5 CỘT = 10 ITEMS) ─── */}
         <StaggerGrid
           key={activeMainTab}
-          className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5 sm:gap-3"
+          className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 2xl:grid-cols-5 gap-2.5 sm:gap-3 2xl:gap-4"
         >
           {products.slice(0, 10).map((prod) => (
             <StaggerItem key={prod._id || prod.id} className="h-full">

@@ -66,25 +66,29 @@ export default function ChatTriggerButton({
 
   return (
     <div
-      className={`fixed z-50 flex items-end gap-2.5 select-none transition-all duration-200 ${
+      className={`fixed z-50 flex items-end gap-2 select-none transition-all duration-200 ${
         isProductPage
-          ? 'bottom-20 right-4 sm:bottom-22 sm:right-6'
-          : 'bottom-5 right-4 sm:bottom-6 sm:right-6'
+          ? 'bottom-20 right-3 sm:bottom-22 sm:right-6'
+          : 'bottom-4 right-3 sm:bottom-6 sm:right-6'
       }`}
+      style={{
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+        paddingRight: 'env(safe-area-inset-right, 0px)',
+      }}
     >
       {/* Bong bóng chào hỏi thông minh (Speech Bubble with Speech Tail) */}
       {showPill && (
-        <div className="relative mb-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
+        <div className="relative mb-2 sm:mb-3 animate-in fade-in slide-in-from-bottom-2 duration-300 max-w-[calc(100vw-90px)] sm:max-w-none">
           <div
             onClick={onOpen}
-            className="relative bg-white text-slate-800 text-xs font-semibold py-2 px-3.5 rounded-[6px] shadow-sm border border-slate-200 flex items-center gap-2 cursor-pointer active:scale-[0.98] transition-all hover:shadow-md hover:border-slate-300 group"
+            className="relative bg-white text-slate-800 text-[11px] sm:text-xs font-semibold py-1.5 px-3 sm:py-2 sm:px-3.5 rounded-[6px] shadow-xs border border-slate-200 flex items-center gap-1.5 sm:gap-2 cursor-pointer active:scale-[0.98] transition-all hover:shadow-sm hover:border-slate-300 group"
           >
             <span className="flex h-2 w-2 relative shrink-0">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
             </span>
 
-            <span className="text-slate-800 group-hover:text-blue-600 transition-colors">
+            <span className="text-slate-800 group-hover:text-blue-600 transition-colors truncate">
               Anh/chị cần hỗ trợ gì ạ?
             </span>
 
@@ -94,20 +98,20 @@ export default function ChatTriggerButton({
                 e.stopPropagation();
                 onClosePill();
               }}
-              className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-0.5 rounded-full transition-colors cursor-pointer ml-0.5"
+              className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-0.5 rounded-full transition-colors cursor-pointer ml-0.5 shrink-0"
               title="Đóng thông báo"
             >
-              <X className="size-3.5" />
+              <X className="size-3 sm:size-3.5" />
             </button>
 
             {/* Mũi nhọn speech bubble chỉ về phía mascot bên phải */}
-            <div className="absolute right-[-6px] bottom-3 w-3 h-3 bg-white border-r border-b border-slate-200/80 rotate-[-45deg]" />
+            <div className="absolute right-[-5px] bottom-2.5 sm:bottom-3 w-2.5 h-2.5 bg-white border-r border-b border-slate-200/80 rotate-[-45deg]" />
           </div>
         </div>
       )}
 
       {/* MASCOT BOT TƯƠNG TÁC SỐNG ĐỘNG (LƠ LỬNG, VẪY TAY, CHỚP MẮT) */}
-      <div className="relative group">
+      <div className="relative group shrink-0">
         <button
           type="button"
           onClick={onOpen}
@@ -115,18 +119,24 @@ export default function ChatTriggerButton({
           title="Trò chuyện cùng Trợ lý AI SHOP"
           aria-label="Mở trợ lý tư vấn SHOP"
         >
-          <MascotBot size={66} isWaving={true} />
+          {/* Mobile Mascot: 52px gọn gàng, Desktop Mascot: 64px bắt mắt */}
+          <div className="block sm:hidden">
+            <MascotBot size={52} isWaving={true} />
+          </div>
+          <div className="hidden sm:block">
+            <MascotBot size={64} isWaving={true} />
+          </div>
 
           {/* Huy hiệu trực tuyến online pulsing */}
           <span
-            className="absolute bottom-2 right-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-emerald-500 ring-2 ring-white shadow-xs"
+            className="absolute bottom-1.5 right-1 sm:bottom-2 sm:right-1.5 flex h-3 w-3 sm:h-3.5 sm:w-3.5 items-center justify-center rounded-full bg-emerald-500 ring-2 ring-white shadow-xs"
             title="Đang trực tuyến"
           >
-            <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
+            <span className="h-1 w-1 sm:h-1.5 sm:w-1.5 rounded-full bg-white animate-pulse" />
           </span>
 
-          {/* Tooltip gợi ý thân thiện khi hover mascot (Dùng SVG vector custom chuẩn UI, tuyệt đối KHÔNG emoji) */}
-          <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[11px] font-medium px-2.5 py-1 rounded-[6px] whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none shadow-sm border border-slate-700/80 flex items-center gap-1.5 z-10">
+          {/* Tooltip gợi ý thân thiện khi hover mascot (chỉ hiện trên desktop) */}
+          <span className="hidden sm:flex absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[11px] font-medium px-2.5 py-1 rounded-[6px] whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none shadow-sm border border-slate-700/80 items-center gap-1.5 z-10">
             <span>Tư vấn ngay</span>
             <CustomWavingHandSvg className="w-3.5 h-3.5" />
           </span>
