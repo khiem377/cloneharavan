@@ -1,9 +1,10 @@
 const Product = require('../models/product.model');
 const ProductVariant = require('../models/productVariant.model');
+const ProductWarehouseStock = require('../models/productWarehouseStock.model');
 const AppError = require('../utils/AppError');
 
 class StockAlertService {
-  static async getLowStockItems({ threshold = 5, page = 1, limit = 10, search = '', viewMode = 'all' }) {
+  static async getLowStockItems({ threshold = 5, page = 1, limit = 10, search = '', viewMode = 'all', warehouseId = '' }) {
     const minQty = Number(threshold);
 
     const query = {};
@@ -73,10 +74,41 @@ class StockAlertService {
       StockExport.countDocuments({ status: 'completed' }),
     ]);
 
+    // Lấy chi tiết phân bổ tồn kho theo từng kho hàng
+    const variantIds = variants.map((v) => v._id);
+    const pwStocks = await ProductWarehouseStock.find({ variantId: { $in: variantIds } })
+      .populate('warehouseId', 'name code isDefault');
+
+    const pwMap = new Map();
+    pwStocks.forEach((pws) => {
+      const vid = pws.variantId.toString();
+      if (!pwMap.has(vid)) pwMap.set(vid, []);
+      pwMap.get(vid).push({
+        warehouseId: pws.warehouseId?._id,
+        warehouseName: pws.warehouseId?.name || 'Kho',
+        warehouseCode: pws.warehouseId?.code || '',
+        stock: pws.stock || 0,
+        allocated: pws.allocated || 0,
+        available: Math.max(0, (pws.stock || 0) - (pws.allocated || 0)),
+        isDefault: pws.warehouseId?.isDefault || false,
+      });
+    });
+
     const formattedList = variants.map((v) => {
       const parent = v.productId || {};
-      const stock = v.stock || 0;
-      const allocated = v.allocated || 0;
+      const itemWarehouseList = pwMap.get(v._id.toString()) || [];
+
+      let stock = v.stock || 0;
+      let allocated = v.allocated || 0;
+
+      if (warehouseId) {
+        const targetWhStock = itemWarehouseList.find(
+          (wh) => wh.warehouseId && wh.warehouseId.toString() === warehouseId.toString()
+        );
+        stock = targetWhStock?.stock || 0;
+        allocated = targetWhStock?.allocated || 0;
+      }
+
       const available = Math.max(0, stock - allocated);
       const isOutOfStock = stock === 0;
       const isLowStock = stock > 0 && stock <= minQty;
@@ -102,6 +134,7 @@ class StockAlertService {
         minThreshold: minQty,
         suggestedReorderQty: reorderQty,
         alertLevel: isOutOfStock ? 'OUT_OF_STOCK' : isLowStock ? 'LOW_STOCK' : 'SAFE',
+        warehouseStocks: itemWarehouseList,
       };
     });
 

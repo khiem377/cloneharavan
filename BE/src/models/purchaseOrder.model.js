@@ -33,6 +33,12 @@ const purchaseOrderSchema = new mongoose.Schema(
       ref: 'Supplier',
       required: [true, 'Nhà cung cấp không được để trống'],
     },
+    warehouseId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Warehouse',
+      default: null,
+      index: true,
+    },
     status: {
       type: String,
       enum: ['draft', 'sent', 'in_transit', 'partial_received', 'arrived', 'inspecting', 'completed', 'cancelled'],

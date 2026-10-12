@@ -4,6 +4,7 @@ import {
   FileCheck, ArrowLeft, Building2, Package, CheckCircle2,
 } from '@/components/ui/Icons';
 import { inventoryService } from '@/services/inventory.service';
+import { warehouseService } from '@/services/warehouse.service';
 import { toast } from '@/providers/ToastProvider';
 import SearchableSelect from '@/components/ui/SearchableSelect';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -22,21 +23,31 @@ export default function StockReceivingCreatePage() {
   const [selectedPoId, setSelectedPoId] = useState(poIdFromUrl || '');
   const [selectedPo, setSelectedPo] = useState(null);
 
+  const [warehouses, setWarehouses] = useState([]);
+  const [selectedWarehouseId, setSelectedWarehouseId] = useState('');
+
   const [note, setNote] = useState('');
   const [items, setItems] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Fetch pending POs
+  // Fetch pending POs and Warehouses
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        const res = await inventoryService.getPurchaseOrders({ limit: 100 });
+        const [res, whRes] = await Promise.all([
+          inventoryService.getPurchaseOrders({ limit: 100 }),
+          warehouseService.getWarehouses(),
+        ]);
         const orders = res.data?.orders || res.data?.data || [];
-        // Only allow POs that are in receiving workflow (inspecting, arrived, in_transit, partial_received)
         const eligibleStatuses = ['inspecting', 'arrived', 'in_transit', 'partial_received'];
         setPurchaseOrders(orders.filter((o) => eligibleStatuses.includes(o.status)));
+
+        const whList = whRes.data?.data?.data || [];
+        setWarehouses(whList);
+        const defaultWh = whList.find((w) => w.isDefault) || whList[0];
+        if (defaultWh) setSelectedWarehouseId(defaultWh._id);
       } catch (err) {
-        toast.error('Không thể tải danh sách Đơn mua hàng');
+        toast.error('Không thể tải dữ liệu nhập kho');
       }
     };
     fetchOrders();
@@ -118,11 +129,12 @@ export default function StockReceivingCreatePage() {
       setIsSubmitting(true);
       await inventoryService.createStockReceiving({
         purchaseOrderId: selectedPoId,
+        warehouseId: selectedWarehouseId,
         note,
         items: activeItems,
       });
 
-      toast.success('Lập Phiếu Nhập Kho thành công! Tồn kho đã tự động được cộng.');
+      toast.success('Lập Phiếu Nhập Kho thành công! Tồn kho đã tự động được cộng vào kho tương ứng.');
       navigate('/stock-receivings');
     } catch (err) {
       toast.error(err.response?.data?.message || 'Có lỗi khi lập Phiếu Nhập Kho');
@@ -185,6 +197,23 @@ export default function StockReceivingCreatePage() {
                     creatable={false}
                     placeholder="-- Chọn Đơn Mua Hàng (PO) --"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                    Kho Nhận Hàng Thực Tế <span className="text-destructive">*</span>
+                  </label>
+                  <select
+                    value={selectedWarehouseId}
+                    onChange={(e) => setSelectedWarehouseId(e.target.value)}
+                    className="w-full h-8 px-2.5 text-xs bg-background rounded-[6px] border border-input focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+                  >
+                    {warehouses.map((w) => (
+                      <option key={w._id} value={w._id}>
+                        {w.name} {w.isDefault ? '(Kho mặc định)' : ''}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 {selectedPo && (

@@ -2,6 +2,8 @@ const PurchaseOrder = require('../models/purchaseOrder.model');
 const Product = require('../models/product.model');
 const ProductVariant = require('../models/productVariant.model');
 const StockMovement = require('../models/stockMovement.model');
+const Warehouse = require('../models/warehouse.model');
+const ProductWarehouseStock = require('../models/productWarehouseStock.model');
 const { uploadRawToCloudinary } = require('../config/cloudinary');
 const ExcelJS = require('exceljs');
 const path = require('path');
@@ -11,10 +13,11 @@ const { numberToWordsVN } = require('../utils/vnNumberToWords');
 
 class PurchaseOrderService {
     // 1. Lấy danh sách Đơn Nhập Kho
-    static async getPurchaseOrders({ page = 1, limit = 20, keyword = '', status, supplierId }) {
+    static async getPurchaseOrders({ page = 1, limit = 20, keyword = '', status, supplierId, warehouseId }) {
         const query = {};
         if (status) query.status = status;
         if (supplierId) query.supplierId = supplierId;
+        if (warehouseId) query.warehouseId = warehouseId;
         if (keyword) {
             query.$or = [
                 { poNumber: { $regex: keyword, $options: 'i' } },
@@ -26,6 +29,7 @@ class PurchaseOrderService {
         const [data, total] = await Promise.all([
             PurchaseOrder.find(query)
                 .populate('supplierId', 'name code phone address email taxCode')
+                .populate('warehouseId', 'name code phone address')
                 .populate('createdById', 'name email')
                 .sort({ createdAt: -1 })
                 .skip(skip)
@@ -48,6 +52,7 @@ class PurchaseOrderService {
     static async getPurchaseOrderById(id) {
         const po = await PurchaseOrder.findById(id)
             .populate('supplierId')
+            .populate('warehouseId', 'name code phone address')
             .populate('createdById', 'name email');
         if (!po) throw new AppError('Đơn nhập kho không tồn tại', 404);
         return po;
@@ -55,9 +60,15 @@ class PurchaseOrderService {
 
     // 3. Tạo Đơn Nhập Kho Mới (Draft hoặc Completed)
     static async createPurchaseOrder(payload, userId) {
-        const { supplierId, items, note, deliveryDate, status = 'draft' } = payload;
+        const { supplierId, items, note, deliveryDate, status = 'draft', warehouseId } = payload;
         if (!items || items.length === 0) {
             throw new AppError('Danh sách sản phẩm nhập kho không được để trống', 400);
+        }
+
+        let targetWarehouseId = warehouseId;
+        if (!targetWarehouseId) {
+            const defaultWh = await Warehouse.findOne({ isDefault: true });
+            targetWarehouseId = defaultWh?._id;
         }
 
         const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
@@ -92,6 +103,7 @@ class PurchaseOrderService {
         const po = await PurchaseOrder.create({
             poNumber,
             supplierId,
+            warehouseId: targetWarehouseId,
             status,
             items: formattedItems,
             totalQuantity,
@@ -161,6 +173,8 @@ class PurchaseOrderService {
         const productBulkOps = [];
         const movementDocs   = [];
 
+        const pwStockOps = [];
+
         for (const item of po.items) {
             if (item.variantId) {
                 const variant = variantMap.get(item.variantId.toString());
@@ -175,6 +189,7 @@ class PurchaseOrderService {
                     });
                     movementDocs.push({
                         type: 'IMPORT',
+                        warehouseId: po.warehouseId,
                         productId: item.productId,
                         variantId: item.variantId,
                         sku: item.sku,
@@ -186,6 +201,19 @@ class PurchaseOrderService {
                         reason: `Nhập kho từ đơn ${po.poNumber}`,
                         createdById: userId,
                     });
+
+                    if (po.warehouseId) {
+                        pwStockOps.push({
+                            updateOne: {
+                                filter: { warehouseId: po.warehouseId, variantId: item.variantId },
+                                update: {
+                                    $inc: { stock: item.actualQty },
+                                    $setOnInsert: { productId: item.productId, allocated: 0 },
+                                },
+                                upsert: true,
+                            },
+                        });
+                    }
                 }
             } else {
                 const product = productMap.get(item.productId.toString());
@@ -200,6 +228,7 @@ class PurchaseOrderService {
                     });
                     movementDocs.push({
                         type: 'IMPORT',
+                        warehouseId: po.warehouseId,
                         productId: item.productId,
                         sku: item.sku,
                         productName: item.productName,
@@ -214,10 +243,11 @@ class PurchaseOrderService {
             }
         }
 
-        // Thực hiện trong 3 DB calls thay vì N*3 calls
+        // Thực hiện trong DB calls
         await Promise.all([
             variantBulkOps.length > 0 ? ProductVariant.bulkWrite(variantBulkOps) : Promise.resolve(),
             productBulkOps.length > 0 ? Product.bulkWrite(productBulkOps)         : Promise.resolve(),
+            pwStockOps.length > 0     ? ProductWarehouseStock.bulkWrite(pwStockOps) : Promise.resolve(),
             movementDocs.length > 0   ? StockMovement.insertMany(movementDocs, { ordered: false }) : Promise.resolve(),
         ]);
 
@@ -238,7 +268,7 @@ class PurchaseOrderService {
 
     // 5. 🔥 ĐIỀN DỮ LIỆU CHUẨN VÀO TEMPLATE EXCEL 'mau-don-dat-hang.xlsx' (ĐƠN ĐẶT HÀNG PO)
     static async generateExcelSlip(id) {
-        const po = await PurchaseOrder.findById(id).populate('supplierId');
+        const po = await PurchaseOrder.findById(id).populate('supplierId').populate('warehouseId');
         if (!po) throw new AppError('Đơn mua hàng không tồn tại', 404);
 
         let templatePath = path.join(__dirname, '../template/mau-don-dat-hang.xlsx');
@@ -301,7 +331,9 @@ class PurchaseOrderService {
                         } else if (val.startsWith('Thời gian giao hàng:')) {
                             cell.value = `Thời gian giao hàng: ${po.deliveryDate ? new Date(po.deliveryDate).toLocaleDateString('vi-VN') : 'Dự kiến 3 - 5 ngày làm việc'}`;
                         } else if (val.startsWith('Địa điểm giao hàng:')) {
-                            cell.value = `Địa điểm giao hàng: Kho Thành Phẩm SHOP - Tầng 35, Keangnam Hanoi Landmark Tower, Q.Nam Từ Liêm, Hà Nội`;
+                            const whName = po.warehouseId?.name || 'Kho Tổng Bình Tân';
+                            const whAddr = po.warehouseId?.address?.fullAddress || po.warehouseId?.address?.detailAddress || '38-40 Đường 21A, Phường Bình Trị Đông B, Quận Bình Tân, TP. Hồ Chí Minh';
+                            cell.value = `Địa điểm giao hàng: ${whName} - ${whAddr}`;
                         } else if (val.includes('ngày') && val.includes('tháng') && val.includes('năm')) {
                             cell.value = dateText;
                         }

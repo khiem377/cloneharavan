@@ -2,6 +2,8 @@ const StockExport = require('../models/stockExport.model');
 const Product = require('../models/product.model');
 const ProductVariant = require('../models/productVariant.model');
 const StockMovement = require('../models/stockMovement.model');
+const Warehouse = require('../models/warehouse.model');
+const ProductWarehouseStock = require('../models/productWarehouseStock.model');
 const { uploadRawToCloudinary } = require('../config/cloudinary');
 const ExcelJS = require('exceljs');
 const path = require('path');
@@ -10,9 +12,10 @@ const AppError = require('../utils/AppError');
 const { numberToWordsVN } = require('../utils/vnNumberToWords');
 
 class StockExportService {
-  static async getStockExports({ page = 1, limit = 20, keyword = '', type }) {
+  static async getStockExports({ page = 1, limit = 20, keyword = '', type, warehouseId }) {
     const query = {};
     if (type) query.type = type;
+    if (warehouseId) query.warehouseId = warehouseId;
     if (keyword) {
       query.$or = [
         { exportNumber: { $regex: keyword, $options: 'i' } },
@@ -25,6 +28,7 @@ class StockExportService {
     const skip = (page - 1) * limit;
     const [data, total] = await Promise.all([
       StockExport.find(query)
+        .populate('warehouseId', 'name code phone')
         .populate('createdById', 'name email')
         .sort({ createdAt: -1 })
         .skip(skip)
@@ -44,15 +48,23 @@ class StockExportService {
   }
 
   static async getStockExportById(id) {
-    const stockExport = await StockExport.findById(id).populate('createdById', 'name email');
+    const stockExport = await StockExport.findById(id)
+      .populate('warehouseId', 'name code phone address')
+      .populate('createdById', 'name email');
     if (!stockExport) throw new AppError('Phiếu xuất kho không tồn tại', 404);
     return stockExport;
   }
 
   static async createStockExport(payload, userId) {
-    const { type = 'sale', recipientName, recipientPhone, recipientAddress, note, items } = payload;
+    const { type = 'sale', recipientName, recipientPhone, recipientAddress, note, items, warehouseId } = payload;
     if (!items || items.length === 0) {
       throw new AppError('Danh sách sản phẩm xuất kho không được để trống', 400);
+    }
+
+    let targetWarehouseId = warehouseId;
+    if (!targetWarehouseId) {
+      const defaultWh = await Warehouse.findOne({ isDefault: true });
+      targetWarehouseId = defaultWh?._id;
     }
 
     const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
@@ -85,6 +97,7 @@ class StockExportService {
     const stockExport = await StockExport.create({
       exportNumber,
       type,
+      warehouseId: targetWarehouseId,
       status: 'pending_pick',
       recipientName: recipientName || '',
       recipientPhone: recipientPhone || '',
@@ -164,12 +177,33 @@ class StockExportService {
       const productBulkOps = [];
       const movementDocs   = [];
 
+      const targetWarehouseId = se.warehouseId;
+      const pwStockBulkOps = [];
+
       for (const item of se.items) {
         if (item.variantId) {
           const variant = variantMap.get(item.variantId.toString());
           if (variant) {
-            const beforeStock = variant.stock || 0;
-            const afterStock  = Math.max(0, beforeStock - item.quantity);
+            let beforeStock = variant.stock || 0;
+            if (targetWarehouseId) {
+              const whStockDoc = await ProductWarehouseStock.findOne({
+                warehouseId: targetWarehouseId,
+                variantId: item.variantId,
+              });
+              const currentWhStock = whStockDoc ? whStockDoc.stock : beforeStock;
+              const afterWhStock = Math.max(0, currentWhStock - item.quantity);
+              beforeStock = currentWhStock;
+
+              pwStockBulkOps.push({
+                updateOne: {
+                  filter: { warehouseId: targetWarehouseId, variantId: item.variantId },
+                  update: { $set: { stock: afterWhStock } },
+                  upsert: true,
+                },
+              });
+            }
+
+            const afterStock = Math.max(0, (variant.stock || 0) - item.quantity);
             variantBulkOps.push({
               updateOne: {
                 filter: { _id: item.variantId },
@@ -178,13 +212,14 @@ class StockExportService {
             });
             movementDocs.push({
               type: 'EXPORT',
+              warehouseId: targetWarehouseId,
               productId: item.productId,
               variantId: item.variantId,
               sku: item.sku,
               productName: item.productName,
               beforeStock,
               changeQty: -item.quantity,
-              afterStock,
+              afterStock: Math.max(0, beforeStock - item.quantity),
               referenceNumber: se.exportNumber,
               reason: `Xuất kho (${se.type}) - Đơn ${se.exportNumber}`,
               createdById: userId,
@@ -203,6 +238,7 @@ class StockExportService {
             });
             movementDocs.push({
               type: 'EXPORT',
+              warehouseId: targetWarehouseId,
               productId: item.productId,
               sku: item.sku,
               productName: item.productName,
@@ -217,8 +253,8 @@ class StockExportService {
         }
       }
 
-      // Thực hiện trong 3 DB calls thay vì N*2 calls
       await Promise.all([
+        pwStockBulkOps.length > 0 ? ProductWarehouseStock.bulkWrite(pwStockBulkOps) : Promise.resolve(),
         variantBulkOps.length > 0 ? ProductVariant.bulkWrite(variantBulkOps) : Promise.resolve(),
         productBulkOps.length > 0 ? Product.bulkWrite(productBulkOps)         : Promise.resolve(),
         movementDocs.length > 0   ? StockMovement.insertMany(movementDocs, { ordered: false }) : Promise.resolve(),
@@ -233,7 +269,7 @@ class StockExportService {
   // Template (inspect): A1=Don vi, A2=Bo phan, A6=Ngay, A7=So, A10=Nguoi nhan, A11=Ly do, A12=Xuat tai kho
   // R14-R16: header bang (giu nguyen), R17-R19: 3 data rows, R20: Cong row, R22: Tong tien chu
   static async generateExcelSlip(id) {
-    const se = await StockExport.findById(id);
+    const se = await StockExport.findById(id).populate('warehouseId');
     if (!se) throw new AppError('Phieu xuat kho khong ton tai', 404);
 
     const templatePath = path.join(__dirname, '../template/Phieu xuat kho.xlsx');
@@ -256,14 +292,17 @@ class StockExportService {
       left: { style: 'thin' }, right: { style: 'thin' },
     };
 
+    const whName = se.warehouseId?.name || 'Kho Tổng Bình Tân';
+    const whAddress = se.warehouseId?.address?.fullAddress || se.warehouseId?.address?.detailAddress || '38-40 Đường 21A, Phường Bình Trị Đông B, Quận Bình Tân, TP. Hồ Chí Minh';
+
     // === BUOC 1: Dien header ===
     sheet.getCell('A1').value = 'Đơn vị: CÔNG TY ĐIỆN MÁY SHOP';
-    sheet.getCell('A2').value = 'Bộ phận: Kho Thành Phẩm';
+    sheet.getCell('A2').value = `Bộ phận: ${whName}`;
     sheet.getCell('A6').value = 'Ngày ' + dd + ' tháng ' + mm + ' năm ' + yyyy;
     sheet.getCell('A7').value = '             Số: ' + se.exportNumber;
     sheet.getCell('A10').value = '- Họ và tên người nhận hàng: ' + (se.recipientName || 'Khách lẻ') + '    Địa chỉ (bộ phận): ' + (se.recipientAddress || 'TP. Hồ Chí Minh');
     sheet.getCell('A11').value = '- Lý do xuất kho: ' + (se.note || (se.type === 'sale' ? 'Xuất bán hàng' : 'Xuất điều chuyển kho'));
-    sheet.getCell('A12').value = '- Xuất tại kho (ngăn lô): Kho Thành Phẩm SHOP    Địa điểm: TP. Hồ Chí Minh';
+    sheet.getCell('A12').value = `- Xuất tại kho (ngăn lô): ${whName}    Địa điểm: ${whAddress}`;
 
     // === BUOC 1b: Column widths ===
     sheet.getColumn(1).width = 8;   // A: STT (merged A+B)

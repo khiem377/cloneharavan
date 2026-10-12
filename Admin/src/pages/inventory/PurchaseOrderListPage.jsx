@@ -10,6 +10,7 @@ import {
   useUpdatePurchaseOrderStatus,
 } from '@/hooks/useInventory';
 import { inventoryService } from '@/services/inventory.service';
+import { warehouseService } from '@/services/warehouse.service';
 import DataTablePagination from '@/components/ui/DataTablePagination';
 import Can from '@/components/auth/Can';
 import SearchableSelect from '@/components/ui/SearchableSelect';
@@ -29,6 +30,7 @@ import { Card } from '@/components/ui/card';
 const PO_COLUMNS = [
   { id: 'stt', label: 'STT', defaultVisible: true },
   { id: 'poNumber', label: 'Mã Đơn PO', defaultVisible: true, alwaysVisible: true },
+  { id: 'warehouse', label: 'Kho Nhập', defaultVisible: true },
   { id: 'supplier', label: 'Nhà Cung Cấp', defaultVisible: true },
   { id: 'itemCount', label: 'Số Loại SP', defaultVisible: true },
   { id: 'totalQuantity', label: 'Tổng SL', defaultVisible: true },
@@ -43,6 +45,8 @@ export default function PurchaseOrderListPage() {
   const queryClient = useQueryClient();
   const [keyword, setKeyword] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [warehouseFilter, setWarehouseFilter] = useState('');
+  const [warehouses, setWarehouses] = useState([]);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [downloadingId, setDownloadingId] = useState(null);
@@ -73,11 +77,24 @@ export default function PurchaseOrderListPage() {
   const columnVisibility = useColumnVisibility('admin_po_columns', PO_COLUMNS);
   const { isColumnVisible } = columnVisibility;
 
+  useEffect(() => {
+    const loadWh = async () => {
+      try {
+        const res = await warehouseService.getWarehouses();
+        setWarehouses(res.data?.data?.data || []);
+      } catch (e) {
+        console.warn('Lỗi tải danh sách kho:', e);
+      }
+    };
+    loadWh();
+  }, []);
+
   const { data: res = {}, isLoading } = usePurchaseOrders({
     page,
     limit: pageSize,
     keyword,
     status: statusFilter,
+    warehouseId: warehouseFilter || undefined,
   });
 
   const orders = res.data || [];
@@ -381,7 +398,25 @@ export default function PurchaseOrderListPage() {
             />
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="w-56">
+              <select
+                value={warehouseFilter}
+                onChange={(e) => {
+                  setWarehouseFilter(e.target.value);
+                  setPage(1);
+                }}
+                className="w-full h-9 px-3 text-xs bg-background rounded-[6px] border border-input focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+              >
+                <option value="">Tất cả kho nhận hàng</option>
+                {warehouses.map((w) => (
+                  <option key={w._id} value={w._id}>
+                    {w.name} {w.isDefault ? '(Kho mặc định)' : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <div className="w-64">
               <SearchableSelect
                 options={[
@@ -416,6 +451,7 @@ export default function PurchaseOrderListPage() {
               <tr>
                 {isColumnVisible('stt') && <th className="px-4 py-3.5 text-center w-12 whitespace-nowrap">STT</th>}
                 {isColumnVisible('poNumber') && renderSortHeader('poNumber', 'Mã Đơn PO', 'left', 'w-36')}
+                {isColumnVisible('warehouse') && <th className="px-4 py-3.5 whitespace-nowrap text-left text-xs uppercase text-muted-foreground font-semibold">Kho Nhập</th>}
                 {isColumnVisible('supplier') && renderSortHeader('supplierId', 'Nhà Cung Cấp', 'left', 'min-w-[220px]')}
                 {isColumnVisible('itemCount') && renderSortHeader('itemCount', 'Số Loại SP', 'center', 'w-24')}
                 {isColumnVisible('totalQuantity') && renderSortHeader('totalQuantity', 'Tổng SL', 'center', 'w-24')}
@@ -455,6 +491,11 @@ export default function PurchaseOrderListPage() {
                         >
                           {po.poNumber}
                         </button>
+                      </td>
+                    )}
+                    {isColumnVisible('warehouse') && (
+                      <td className="px-4 py-3.5 whitespace-nowrap text-xs font-medium text-foreground">
+                        {po.warehouseId?.name || 'Kho Tổng Bình Tân'}
                       </td>
                     )}
                     {isColumnVisible('supplier') && (
@@ -593,7 +634,11 @@ export default function PurchaseOrderListPage() {
             {/* Content */}
             <div className="p-6 space-y-6 overflow-y-auto flex-1">
               {/* Info Grid */}
-              <div className="grid grid-cols-2 gap-4 rounded-[6px] border border-border bg-card p-4 text-xs sm:grid-cols-4 shadow-2xs">
+              <div className="grid grid-cols-2 gap-4 rounded-[6px] border border-border bg-card p-4 text-xs sm:grid-cols-5 shadow-2xs">
+                <div>
+                  <span className="text-muted-foreground">Kho nhận hàng:</span>
+                  <p className="font-bold text-primary truncate">{selectedPoDetail.warehouseId?.name || 'Kho Tổng Bình Tân'}</p>
+                </div>
                 <div>
                   <span className="text-muted-foreground">Mã nhà cung cấp:</span>
                   <p className="font-mono font-bold text-foreground">{selectedPoDetail.supplierId?.code || 'NCC-01'}</p>

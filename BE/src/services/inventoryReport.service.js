@@ -1,4 +1,5 @@
 const ExcelJS = require('exceljs');
+const mongoose = require('mongoose');
 const ProductVariant = require('../models/productVariant.model');
 const StockMovement = require('../models/stockMovement.model');
 const PurchaseOrder = require('../models/purchaseOrder.model');
@@ -9,7 +10,7 @@ const StockExport = require('../models/stockExport.model');
  * Công thức: Tồn cuối kỳ = Tồn đầu kỳ + Nhập trong kỳ - Xuất trong kỳ
  */
 const getInventoryBalanceReport = async (query = {}) => {
-  const { startDate, endDate, keyword } = query;
+  const { startDate, endDate, keyword, warehouseId } = query;
 
   const now = new Date();
   const start = startDate ? new Date(startDate) : new Date(now.getFullYear(), now.getMonth(), 1);
@@ -30,8 +31,11 @@ const getInventoryBalanceReport = async (query = {}) => {
   const variantIds = variants.map((v) => v._id);
 
   // 2. Lấy các chuyển động kho TRƯỚC thời gian bắt đầu (để tính Tồn Đầu Kỳ)
+  const matchBefore = { variantId: { $in: variantIds }, createdAt: { $lt: start } };
+  if (warehouseId) matchBefore.warehouseId = new mongoose.Types.ObjectId(warehouseId);
+
   const movementsBefore = await StockMovement.aggregate([
-    { $match: { variantId: { $in: variantIds }, createdAt: { $lt: start } } },
+    { $match: matchBefore },
     {
       $group: {
         _id: '$variantId',
@@ -46,13 +50,14 @@ const getInventoryBalanceReport = async (query = {}) => {
   });
 
   // 3. Lấy các chuyển động kho TRONG khoảng thời gian (để tính Nhập & Xuất trong kỳ)
+  const matchPeriod = {
+    variantId: { $in: variantIds },
+    createdAt: { $gte: start, $lte: end },
+  };
+  if (warehouseId) matchPeriod.warehouseId = new mongoose.Types.ObjectId(warehouseId);
+
   const movementsPeriod = await StockMovement.aggregate([
-    {
-      $match: {
-        variantId: { $in: variantIds },
-        createdAt: { $gte: start, $lte: end },
-      },
-    },
+    { $match: matchPeriod },
     {
       $group: {
         _id: '$variantId',

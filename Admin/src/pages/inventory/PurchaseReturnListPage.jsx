@@ -236,7 +236,7 @@ export default function PurchaseReturnListPage() {
                     {item.supplierName}
                   </TableCell>
                   <TableCell className="text-muted-foreground whitespace-nowrap text-xs">
-                    Kho Thành Phẩm SHOP
+                    {item.warehouseId?.name || item.warehouseName || 'Kho Tổng Bình Tân'}
                   </TableCell>
                   <TableCell className="whitespace-nowrap">
                     <Badge

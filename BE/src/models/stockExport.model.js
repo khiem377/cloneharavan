@@ -30,9 +30,24 @@ const stockExportSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Order',
     },
+    warehouseId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Warehouse',
+      default: null,
+      index: true,
+    },
     type: {
       type: String,
-      enum: ['sale', 'transfer', 'return_supplier', 'other'],
+      enum: [
+        'sale',
+        'transfer',
+        'return_supplier',
+        'internal_use',
+        'damage_expired',
+        'sample_gift',
+        'audit_deficit',
+        'other',
+      ],
       default: 'sale',
     },
     status: {

@@ -11,6 +11,7 @@ import DateTimePicker from '@/components/ui/DateTimePicker';
 import { useCreatePurchaseOrder } from '@/hooks/useInventory';
 import { useSearchInventoryProducts } from '@/hooks/useProducts';
 import { inventoryService } from '@/services/inventory.service';
+import { warehouseService } from '@/services/warehouse.service';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -64,10 +65,28 @@ export default function PurchaseOrderCreatePage() {
 
   // Form State
   const [supplierId, setSupplierId] = useState(initialSupplierId);
+  const [warehouseId, setWarehouseId] = useState('');
+  const [warehouses, setWarehouses] = useState([]);
   const [note, setNote] = useState('');
   const [deliveryDate, setDeliveryDate] = useState('');
   const [productSearch, setProductSearch] = useState('');
   const [items, setItems] = useState([]);
+
+  // Fetch Warehouses
+  useEffect(() => {
+    const loadWh = async () => {
+      try {
+        const whRes = await warehouseService.getWarehouses();
+        const list = whRes.data?.data?.data || [];
+        setWarehouses(list);
+        const def = list.find((w) => w.isDefault) || list[0];
+        if (def) setWarehouseId(def._id);
+      } catch (err) {
+        console.warn('Lỗi tải danh sách kho:', err);
+      }
+    };
+    loadWh();
+  }, []);
 
   // Step 2 Excel Preview State
   const [excelHtml, setExcelHtml] = useState('');
@@ -187,6 +206,7 @@ export default function PurchaseOrderCreatePage() {
     try {
       await createPOMutation.mutateAsync({
         supplierId,
+        warehouseId,
         note,
         deliveryDate,
         status: submitStatus,
@@ -347,6 +367,23 @@ export default function PurchaseOrderCreatePage() {
                       creatable={false}
                       placeholder="-- Chọn nhà cung cấp --"
                     />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                      Kho Nhận Hàng Dự Kiến <span className="text-destructive">*</span>
+                    </label>
+                    <select
+                      value={warehouseId}
+                      onChange={(e) => setWarehouseId(e.target.value)}
+                      className="w-full h-8 px-2.5 text-xs bg-background rounded-[6px] border border-input focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+                    >
+                      {warehouses.map((w) => (
+                        <option key={w._id} value={w._id}>
+                          {w.name} {w.isDefault ? '(Kho mặc định)' : ''}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   <div>

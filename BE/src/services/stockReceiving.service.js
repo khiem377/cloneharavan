@@ -3,6 +3,8 @@ const PurchaseOrder = require('../models/purchaseOrder.model');
 const ProductVariant = require('../models/productVariant.model');
 const Product = require('../models/product.model');
 const StockMovement = require('../models/stockMovement.model');
+const Warehouse = require('../models/warehouse.model');
+const ProductWarehouseStock = require('../models/productWarehouseStock.model');
 const ExcelJS = require('exceljs');
 const path = require('path');
 const fs = require('fs');
@@ -30,7 +32,7 @@ const generateReceivingNumber = async () => {
  * Lập Phiếu Nhập Kho (PNK) từ Đơn Mua Hàng (PO)
  */
 const createStockReceiving = async (data, userId) => {
-  const { purchaseOrderId, note, items } = data;
+  const { purchaseOrderId, note, items, warehouseId } = data;
 
   const po = await PurchaseOrder.findById(purchaseOrderId);
   if (!po) {
@@ -43,6 +45,13 @@ const createStockReceiving = async (data, userId) => {
 
   if (!items || items.length === 0) {
     throw new Error('Danh sách hàng thực nhập không được để trống');
+  }
+
+  // Xác định kho nhận hàng
+  let targetWarehouseId = warehouseId || po.warehouseId;
+  if (!targetWarehouseId) {
+    const defaultWh = await Warehouse.findOne({ isDefault: true });
+    targetWarehouseId = defaultWh?._id;
   }
 
   const receivingNumber = await generateReceivingNumber();
@@ -97,20 +106,48 @@ const createStockReceiving = async (data, userId) => {
     if (item.variantId) {
       const variant = variantMap.get(item.variantId.toString());
       if (variant) {
-        const oldStock = variant.stock || 0;
-        variant.stock = oldStock + recQty;
+        // Cập nhật tồn kho theo kho cụ thể (ProductWarehouseStock)
+        let oldWhStock = 0;
+        if (targetWarehouseId) {
+          const whStockDoc = await ProductWarehouseStock.findOne({
+            warehouseId: targetWarehouseId,
+            variantId: variant._id,
+          });
+          oldWhStock = whStockDoc ? whStockDoc.stock : 0;
+          const newWhStock = oldWhStock + recQty;
+
+          await ProductWarehouseStock.updateOne(
+            { warehouseId: targetWarehouseId, variantId: variant._id },
+            { $set: { productId: variant.productId, stock: newWhStock } },
+            { upsert: true }
+          );
+
+          // Tính lại tổng tồn kho toàn bộ các kho cho variant
+          const aggregateStock = await ProductWarehouseStock.aggregate([
+            { $match: { variantId: variant._id } },
+            { $group: { _id: null, total: { $sum: '$stock' } } },
+          ]);
+          variant.stock = aggregateStock[0]?.total || (variant.stock || 0) + recQty;
+        } else {
+          variant.stock = (variant.stock || 0) + recQty;
+        }
+
         if (price > 0) variant.costPrice = price;
         await variant.save();
 
         await StockMovement.create({
-          variantId: variant._id,
           type: 'INBOUND_PO',
+          warehouseId: targetWarehouseId,
+          productId: variant.productId,
+          variantId: variant._id,
+          sku: variant.sku || item.sku,
+          productName: item.productName,
+          beforeStock: oldWhStock,
           changeQty: recQty,
-          previousStock: oldStock,
-          newStock: variant.stock,
-          referenceDoc: receivingNumber,
-          note: `Nhập kho từ PO ${po.poNumber}`,
-          createdBy: userId,
+          afterStock: oldWhStock + recQty,
+          referenceNumber: receivingNumber,
+          reason: `Nhập kho từ PO ${po.poNumber}`,
+          createdById: userId,
         });
       }
     } else {
@@ -142,6 +179,7 @@ const createStockReceiving = async (data, userId) => {
     receivingNumber,
     purchaseOrderId: po._id,
     supplierId: po.supplierId,
+    warehouseId: targetWarehouseId,
     note,
     items: processedItems,
     totalQuantity,
@@ -235,7 +273,7 @@ const syncFromPOs = async (userId) => {
  * Danh sách Phiếu Nhập Kho PNK
  */
 const getAllStockReceivings = async (query = {}) => {
-  const { page = 1, limit = 10, keyword } = query;
+  const { page = 1, limit = 10, keyword, warehouseId } = query;
   const pageNum = Math.max(1, parseInt(page, 10));
   const limitNum = Math.max(1, parseInt(limit, 10));
   const skip = (pageNum - 1) * limitNum;
@@ -245,9 +283,12 @@ const getAllStockReceivings = async (query = {}) => {
     const regex = new RegExp(keyword.trim(), 'i');
     filter.$or = [{ receivingNumber: regex }, { note: regex }];
   }
+  if (warehouseId) {
+    filter.warehouseId = warehouseId;
+  }
 
   // Always sync missing active POs into PNK
-  if (!keyword) {
+  if (!keyword && !warehouseId) {
     await syncFromPOs();
   }
 
@@ -256,6 +297,7 @@ const getAllStockReceivings = async (query = {}) => {
   const data = await StockReceiving.find(filter)
     .populate('purchaseOrderId', 'poNumber deliveryDate status')
     .populate('supplierId', 'name code phone')
+    .populate('warehouseId', 'name code phone address')
     .populate('createdBy', 'name email')
     .sort({ createdAt: -1 })
     .skip(skip)
@@ -279,6 +321,7 @@ const getStockReceivingById = async (id) => {
   const receiving = await StockReceiving.findById(id)
     .populate('purchaseOrderId')
     .populate('supplierId')
+    .populate('warehouseId')
     .populate('createdBy', 'name email');
 
   if (!receiving) {
@@ -322,15 +365,18 @@ const generateExcelSlip = async (id) => {
     || 'Nha cung cap';
   const poNumber = receiving.purchaseOrderId?.poNumber || '';
 
+  const whName = receiving.warehouseId?.name || 'Kho Tổng Bình Tân';
+  const whAddress = receiving.warehouseId?.address?.fullAddress || receiving.warehouseId?.address?.detailAddress || '38-40 Đường 21A, Phường Bình Trị Đông B, Quận Bình Tân, TP. Hồ Chí Minh';
+
   // === BUOC 1: Dien cac o header bang dia chi chinh xac (tieng Viet co dau) ===
-  sheet.getCell('A1').value = `Đơn vị: CÔNG TY ĐIỆN MÁY SHOP\nBộ phận: Kho Thành Phẩm`;
+  sheet.getCell('A1').value = `Đơn vị: CÔNG TY ĐIỆN MÁY SHOP\nBộ phận: ${whName}`;
   sheet.getCell('A5').value = `Ngày ${dd} tháng ${mm} năm ${yyyy}`;
   sheet.getCell('H6').value = `Số: ${receiving.receivingNumber}`;
   sheet.getCell('A9').value = `- Họ và tên người giao: ${supplierName}`;
   sheet.getCell('A10').value = poNumber
     ? `- Theo Đơn Mua Hàng số ${poNumber} ngày ${dd}/${mm}/${yyyy}`
     : `- Theo yêu cầu nhập kho ngày ${dd}/${mm}/${yyyy}`;
-  sheet.getCell('A11').value = `Nhập tại kho: Kho Thành Phẩm SHOP     Địa điểm: TP. Hồ Chí Minh`;
+  sheet.getCell('A11').value = `Nhập tại kho: ${whName}     Địa điểm: ${whAddress}`;
 
   // === BUOC 1b: Set column widths ===
   sheet.getColumn(1).width = 6;

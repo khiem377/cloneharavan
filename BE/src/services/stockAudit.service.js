@@ -2,6 +2,10 @@ const StockAudit = require('../models/stockAudit.model');
 const Product = require('../models/product.model');
 const ProductVariant = require('../models/productVariant.model');
 const StockMovement = require('../models/stockMovement.model');
+const StockReceiving = require('../models/stockReceiving.model');
+const StockExport = require('../models/stockExport.model');
+const Warehouse = require('../models/warehouse.model');
+const ProductWarehouseStock = require('../models/productWarehouseStock.model');
 const { uploadRawToCloudinary } = require('../config/cloudinary');
 const ExcelJS = require('exceljs');
 const path = require('path');
@@ -9,8 +13,9 @@ const fs = require('fs');
 const AppError = require('../utils/AppError');
 
 class StockAuditService {
-  static async getStockAudits({ page = 1, limit = 20, keyword = '' }) {
+  static async getStockAudits({ page = 1, limit = 20, keyword = '', warehouseId }) {
     const query = {};
+    if (warehouseId) query.warehouseId = warehouseId;
     if (keyword) {
       query.$or = [
         { auditNumber: { $regex: keyword, $options: 'i' } },
@@ -21,6 +26,7 @@ class StockAuditService {
     const skip = (page - 1) * limit;
     const [data, total] = await Promise.all([
       StockAudit.find(query)
+        .populate('warehouseId', 'name code phone')
         .populate('createdById', 'name email')
         .sort({ createdAt: -1 })
         .skip(skip)
@@ -40,15 +46,23 @@ class StockAuditService {
   }
 
   static async getStockAuditById(id) {
-    const stockAudit = await StockAudit.findById(id).populate('createdById', 'name email');
+    const stockAudit = await StockAudit.findById(id)
+      .populate('warehouseId', 'name code phone address')
+      .populate('createdById', 'name email');
     if (!stockAudit) throw new AppError('Phiếu kiểm kê không tồn tại', 404);
     return stockAudit;
   }
 
   static async createStockAudit(payload, userId) {
-    const { note, auditDate, items } = payload;
+    const { note, auditDate, items, warehouseId } = payload;
     if (!items || items.length === 0) {
       throw new AppError('Danh sách sản phẩm kiểm kê không được để trống', 400);
+    }
+
+    let targetWarehouseId = warehouseId;
+    if (!targetWarehouseId) {
+      const defaultWh = await Warehouse.findOne({ isDefault: true });
+      targetWarehouseId = defaultWh?._id;
     }
 
     const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
@@ -62,13 +76,17 @@ class StockAuditService {
     const variantIds = items.filter((i) => i.variantId).map((i) => i.variantId);
     const productIds = items.filter((i) => i.productId).map((i) => i.productId);
 
-    const [variantsList, productsList] = await Promise.all([
+    const [variantsList, productsList, pwStockList] = await Promise.all([
       variantIds.length > 0 ? ProductVariant.find({ _id: { $in: variantIds } }) : [],
       productIds.length > 0 ? Product.find({ _id: { $in: productIds } }) : [],
+      targetWarehouseId && variantIds.length > 0
+        ? ProductWarehouseStock.find({ warehouseId: targetWarehouseId, variantId: { $in: variantIds } })
+        : [],
     ]);
 
     const variantMap = new Map(variantsList.map((v) => [v._id.toString(), v]));
     const productMap = new Map(productsList.map((p) => [p._id.toString(), p]));
+    const pwStockMap = new Map(pwStockList.map((s) => [s.variantId.toString(), s]));
 
     for (const item of items) {
       let sysStock = Number(item.systemStock || 0);
@@ -77,8 +95,12 @@ class StockAuditService {
       if (item.variantId) {
         const variant = variantMap.get(item.variantId.toString());
         if (variant) {
-          sysStock = variant.stock || 0;
           price = variant.price || 0;
+          if (pwStockMap.has(item.variantId.toString())) {
+            sysStock = pwStockMap.get(item.variantId.toString()).stock || 0;
+          } else {
+            sysStock = variant.stock || 0;
+          }
         }
       } else if (item.productId) {
         const product = productMap.get(item.productId.toString());
@@ -107,6 +129,7 @@ class StockAuditService {
 
     const stockAudit = await StockAudit.create({
       auditNumber,
+      warehouseId: targetWarehouseId,
       note: note || '',
       auditDate: auditDate ? new Date(auditDate) : new Date(),
       items: formattedItems,
@@ -114,7 +137,8 @@ class StockAuditService {
       createdById: userId,
     });
 
-    // ── Bulk update stock + create StockMovements (thay vì sequential saves trong loop) ──
+    // ── Bulk update stock + create StockMovements ──
+    const pwStockBulkOps = [];
     const variantBulkOps = [];
     const productBulkOps = [];
     const movementDocs   = [];
@@ -125,15 +149,29 @@ class StockAuditService {
       if (item.variantId) {
         const variant = variantMap.get(item.variantId.toString());
         if (variant) {
-          const beforeStock = variant.stock || 0;
+          const beforeStock = item.systemStock;
+
+          if (targetWarehouseId) {
+            pwStockBulkOps.push({
+              updateOne: {
+                filter: { warehouseId: targetWarehouseId, variantId: item.variantId },
+                update: { $set: { productId: item.productId, stock: item.actualStock } },
+                upsert: true,
+              },
+            });
+          }
+
+          const newVariantTotal = Math.max(0, (variant.stock || 0) + item.difference);
           variantBulkOps.push({
             updateOne: {
               filter: { _id: item.variantId },
-              update: { $set: { stock: item.actualStock } },
+              update: { $set: { stock: newVariantTotal } },
             },
           });
+
           movementDocs.push({
             type: 'ADJUSTMENT',
+            warehouseId: targetWarehouseId,
             productId: item.productId,
             variantId: item.variantId,
             sku: item.sku,
@@ -159,6 +197,7 @@ class StockAuditService {
         });
         movementDocs.push({
           type: 'ADJUSTMENT',
+          warehouseId: targetWarehouseId,
           productId: item.productId,
           sku: item.sku,
           productName: item.productName,
@@ -172,12 +211,78 @@ class StockAuditService {
       }
     }
 
-    // Thực hiện trong 3 DB calls thay vì N*4 calls
     await Promise.all([
+      pwStockBulkOps.length > 0 ? ProductWarehouseStock.bulkWrite(pwStockBulkOps) : Promise.resolve(),
       variantBulkOps.length > 0 ? ProductVariant.bulkWrite(variantBulkOps) : Promise.resolve(),
       productBulkOps.length > 0 ? Product.bulkWrite(productBulkOps)         : Promise.resolve(),
       movementDocs.length > 0   ? StockMovement.insertMany(movementDocs, { ordered: false }) : Promise.resolve(),
     ]);
+
+    // Tự động sinh chứng từ bù trừ cân bằng kho (PNK cho hàng thừa, PXK cho hàng thiếu)
+    try {
+      const surplusItems = stockAudit.items.filter((i) => i.difference > 0);
+      const deficitItems = stockAudit.items.filter((i) => i.difference < 0);
+
+      // 1. Sinh Phiếu Nhập Kho (PNK) cân bằng nếu phát hiện hàng thừa
+      if (surplusItems.length > 0) {
+        const cleanCode = (auditNumber || '').replace(/^KK-?/, '');
+        const recNumber = `PNK-KK-${cleanCode}`;
+        await StockReceiving.create({
+          receivingNumber: recNumber,
+          type: 'audit_surplus',
+          referenceDoc: auditNumber,
+          warehouseId: targetWarehouseId,
+          note: `Nhập kho tự động cân bằng hàng thừa từ kiểm kê ${auditNumber}`,
+          totalQuantity: surplusItems.reduce((acc, it) => acc + it.difference, 0),
+          totalAmount: 0,
+          items: surplusItems.map((it) => ({
+            productId: it.productId,
+            variantId: it.variantId || null,
+            sku: it.sku || '',
+            productName: it.productName,
+            unit: it.unit || 'Cái',
+            expectedQty: it.difference,
+            receivedQty: it.difference,
+            importPrice: 0,
+            subtotal: 0,
+          })),
+          createdBy: userId,
+        }).catch((e) => console.warn('[Auto-PNK-Warn] Cannot create surplus receipt:', e.message));
+      }
+
+      // 2. Sinh Phiếu Xuất Kho (PXK) cân bằng nếu phát hiện hàng thiếu / hao hụt
+      if (deficitItems.length > 0) {
+        const cleanCode = (auditNumber || '').replace(/^KK-?/, '');
+        const expNumber = `PXK-KK-${cleanCode}`;
+        await StockExport.create({
+          exportNumber: expNumber,
+          type: 'audit_deficit',
+          status: 'completed',
+          warehouseId: targetWarehouseId,
+          recipientName: 'Hao hụt kiểm kê',
+          note: `Xuất kho tự động cân bằng hàng thiếu / hao hụt từ kiểm kê ${auditNumber}`,
+          items: deficitItems.map((it) => ({
+            productId: it.productId,
+            variantId: it.variantId || null,
+            sku: it.sku || '',
+            productName: it.productName,
+            unit: it.unit || 'Cái',
+            quantity: Math.abs(it.difference),
+            exportPrice: 0,
+            subtotal: 0,
+          })),
+          activityLogs: [
+            {
+              status: 'completed',
+              note: `Tự động xuất kho cân bằng hao hụt từ phiếu kiểm kê ${auditNumber}`,
+              performedBy: userId,
+            },
+          ],
+        }).catch((e) => console.warn('[Auto-PXK-Warn] Cannot create deficit export:', e.message));
+      }
+    } catch (docErr) {
+      console.error('[Audit-Doc-Error] Auto generation of PNK/PXK failed:', docErr.message);
+    }
 
     try {
       const { workbook } = await this.generateExcelSlip(stockAudit._id);

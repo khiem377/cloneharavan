@@ -5,6 +5,7 @@ import {
   RefreshCw, FileSpreadsheet, CheckCircle2, Clock, ExternalLink, X,
 } from '@/components/ui/Icons';
 import { inventoryService } from '@/services/inventory.service';
+import { warehouseService } from '@/services/warehouse.service';
 import DataTablePagination from '@/components/ui/DataTablePagination';
 import { toast } from '@/providers/ToastProvider';
 import ExcelPreviewModal from '@/components/common/ExcelPreviewModal';
@@ -17,6 +18,8 @@ export default function StockReceivingListPage() {
   const [keyword, setKeyword] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [warehouseFilter, setWarehouseFilter] = useState('');
+  const [warehouses, setWarehouses] = useState([]);
   const [receivings, setReceivings] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 1 });
   const [isLoading, setIsLoading] = useState(false);
@@ -62,7 +65,12 @@ export default function StockReceivingListPage() {
   const fetchReceivings = async () => {
     try {
       setIsLoading(true);
-      const res = await inventoryService.getStockReceivings({ page, limit: pageSize, keyword });
+      const res = await inventoryService.getStockReceivings({
+        page,
+        limit: pageSize,
+        keyword,
+        warehouseId: warehouseFilter || undefined,
+      });
       setReceivings(res.data?.data || res.data || []);
       setPagination(res.data?.pagination || { page: 1, limit: pageSize, total: 0, totalPages: 1 });
     } catch (err) {
@@ -73,8 +81,20 @@ export default function StockReceivingListPage() {
   };
 
   useEffect(() => {
+    const loadWh = async () => {
+      try {
+        const whRes = await warehouseService.getWarehouses();
+        setWarehouses(whRes.data?.data?.data || []);
+      } catch (e) {
+        console.warn('Lỗi tải danh sách kho:', e);
+      }
+    };
+    loadWh();
+  }, []);
+
+  useEffect(() => {
     fetchReceivings();
-  }, [page, pageSize, keyword]);
+  }, [page, pageSize, keyword, warehouseFilter]);
 
   return (
     <div className="space-y-6 p-6 antialiased">
@@ -133,7 +153,7 @@ export default function StockReceivingListPage() {
 
       {/* Search Toolbar */}
       <Card className="rounded-[6px] border border-border p-4 shadow-xs">
-        <div className="flex items-center gap-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -147,6 +167,25 @@ export default function StockReceivingListPage() {
               className="pl-9 h-9 text-xs rounded-[6px]"
             />
           </div>
+
+          <div className="w-full sm:w-60">
+            <select
+              value={warehouseFilter}
+              onChange={(e) => {
+                setWarehouseFilter(e.target.value);
+                setPage(1);
+              }}
+              className="w-full h-9 px-3 text-xs bg-background rounded-[6px] border border-input focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+            >
+              <option value="">Tất cả kho nhận hàng</option>
+              {warehouses.map((w) => (
+                <option key={w._id} value={w._id}>
+                  {w.name} {w.isDefault ? '(Kho mặc định)' : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <Button
             variant="outline"
             size="sm"
@@ -165,6 +204,7 @@ export default function StockReceivingListPage() {
             <thead>
               <tr className="border-b border-border bg-muted/60 font-bold text-foreground text-[11px]">
                 <th className="px-4 py-3.5 whitespace-nowrap">Mã PNK</th>
+                <th className="px-4 py-3.5 whitespace-nowrap">Kho Nhập</th>
                 <th className="px-4 py-3.5 whitespace-nowrap">Mã PO Tham Chiếu</th>
                 <th className="px-4 py-3.5 whitespace-nowrap">Nhà Cung Cấp</th>
                 <th className="px-4 py-3.5 text-center whitespace-nowrap">Số Mặt Hàng</th>
@@ -177,13 +217,13 @@ export default function StockReceivingListPage() {
             <tbody className="divide-y divide-border">
               {isLoading ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-xs text-muted-foreground">
+                  <td colSpan={9} className="py-12 text-center text-xs text-muted-foreground">
                     Đang tải danh sách Phiếu Nhập Kho...
                   </td>
                 </tr>
               ) : receivings.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-xs text-muted-foreground">
+                  <td colSpan={9} className="py-12 text-center text-xs text-muted-foreground">
                     Chưa có Phiếu Nhập Kho (PNK) nào trong hệ thống.
                   </td>
                 </tr>
@@ -192,6 +232,9 @@ export default function StockReceivingListPage() {
                   <tr key={pnk._id} className="hover:bg-muted/30 transition-colors align-middle">
                     <td className="px-4 py-3 font-mono font-bold text-primary whitespace-nowrap text-xs">
                       {pnk.receivingNumber}
+                    </td>
+                    <td className="px-4 py-3 font-medium text-foreground whitespace-nowrap text-xs">
+                      {pnk.warehouseId?.name || 'Kho Tổng Bình Tân'}
                     </td>
                     <td className="px-4 py-3 font-mono font-semibold whitespace-nowrap text-xs">
                       {pnk.purchaseOrderId ? (

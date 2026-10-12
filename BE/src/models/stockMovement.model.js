@@ -4,8 +4,14 @@ const stockMovementSchema = new mongoose.Schema(
   {
     type: {
       type: String,
-      enum: ['IMPORT', 'EXPORT', 'ADJUSTMENT', 'RETURN_IMPORT', 'RETURN', 'PO_RECEIPT'],
+      enum: ['IMPORT', 'EXPORT', 'ADJUSTMENT', 'RETURN_IMPORT', 'RETURN', 'PO_RECEIPT', 'TRANSFER_OUT', 'TRANSFER_IN'],
       required: true,
+    },
+    warehouseId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Warehouse',
+      default: null,
+      index: true,
     },
     productId: {
       type: mongoose.Schema.Types.ObjectId,

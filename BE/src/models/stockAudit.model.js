@@ -32,6 +32,12 @@ const stockAuditSchema = new mongoose.Schema(
       enum: ['draft', 'completed', 'cancelled'],
       default: 'completed',
     },
+    warehouseId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Warehouse',
+      default: null,
+      index: true,
+    },
     items: [stockAuditItemSchema],
     totalDifference: { type: Number, default: 0 },
     note: { type: String, default: '' },

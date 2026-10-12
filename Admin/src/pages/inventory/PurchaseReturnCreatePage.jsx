@@ -7,6 +7,7 @@ import {
 import { useSuppliers } from '@/hooks/useSuppliers';
 import { useProducts } from '@/hooks/useProducts';
 import { usePurchaseOrders, useCreatePurchaseReturn } from '@/hooks/useInventory';
+import { warehouseService } from '@/services/warehouse.service';
 import { toast } from '@/providers/ToastProvider';
 import SearchableSelect from '@/components/ui/SearchableSelect';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -28,11 +29,28 @@ export default function PurchaseReturnCreatePage() {
   const [paymentMethod, setPaymentMethod] = useState('cash'); // cash | transfer | card
   const [returnItems, setReturnItems] = useState([]);
   const [productSearch, setProductSearch] = useState('');
+  const [warehouses, setWarehouses] = useState([]);
+  const [selectedWarehouseId, setSelectedWarehouseId] = useState('');
 
   const { data: suppliersData } = useSuppliers({ limit: 100 });
   const { data: productsData } = useProducts({ search: productSearch, limit: 10 });
   const { data: poListData } = usePurchaseOrders({ limit: 100 });
   const createMutation = useCreatePurchaseReturn();
+
+  useEffect(() => {
+    const fetchWh = async () => {
+      try {
+        const res = await warehouseService.getWarehouses();
+        const list = res.data?.data?.data || [];
+        setWarehouses(list);
+        const def = list.find((w) => w.isDefault) || list[0];
+        if (def) setSelectedWarehouseId(def._id);
+      } catch (err) {
+        console.warn('Lỗi tải kho:', err);
+      }
+    };
+    fetchWh();
+  }, []);
 
   const suppliers = suppliersData?.data || suppliersData?.suppliers || [];
   const products = productsData?.products || productsData?.data || [];
@@ -107,6 +125,7 @@ export default function PurchaseReturnCreatePage() {
 
     const payload = {
       poId: poIdQuery || null,
+      warehouseId: selectedWarehouseId,
       supplierId: selectedSupplierId,
       note,
       refundStatus,
@@ -202,13 +221,20 @@ export default function PurchaseReturnCreatePage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-muted-foreground mb-1.5">Kho Xuất Trả</label>
-                  <Input
-                    type="text"
-                    readOnly
-                    value="Kho Thành Phẩm SHOP"
-                    className="h-9 rounded-[6px] text-xs bg-muted text-muted-foreground font-medium"
-                  />
+                  <label className="block text-xs font-semibold text-foreground mb-1.5">
+                    Kho Xuất Trả <span className="text-destructive">*</span>
+                  </label>
+                  <select
+                    value={selectedWarehouseId}
+                    onChange={(e) => setSelectedWarehouseId(e.target.value)}
+                    className="w-full h-9 px-3 rounded-[6px] text-xs border border-input bg-background font-medium focus:ring-1 focus:ring-primary cursor-pointer"
+                  >
+                    {warehouses.map((w) => (
+                      <option key={w._id} value={w._id}>
+                        {w.name} {w.isDefault ? '(Kho mặc định)' : ''}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 

@@ -1,11 +1,12 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   ClipboardList, Plus, SearchIcon as Search, Download, AlertTriangle, Eye,
-  Trash2, X, FileSpreadsheet, CheckCircle2, Clock, Save, Check,
+  Trash2, X, FileSpreadsheet, CheckCircle2, Clock, Save, Check, Building2,
 } from '@/components/ui/Icons';
 import { useStockAudits, useCreateStockAudit } from '@/hooks/useInventory';
 import { useSearchInventoryProducts } from '@/hooks/useProducts';
 import { inventoryService } from '@/services/inventory.service';
+import { warehouseService } from '@/services/warehouse.service';
 import DataTablePagination from '@/components/ui/DataTablePagination';
 import { toast } from '@/providers/ToastProvider';
 import ExcelPreviewModal from '@/components/common/ExcelPreviewModal';
@@ -19,6 +20,10 @@ export default function StockAuditListPage() {
   const [pageSize, setPageSize] = useState(10);
   const [downloadingId, setDownloadingId] = useState(null);
 
+  // Warehouse State
+  const [warehouses, setWarehouses] = useState([]);
+  const [warehouseFilter, setWarehouseFilter] = useState('');
+
   // Modals state
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [excelPreviewOpen, setExcelPreviewOpen] = useState(false);
@@ -30,6 +35,7 @@ export default function StockAuditListPage() {
 
   // Form State
   const [formData, setFormData] = useState({
+    warehouseId: '',
     note: '',
     items: [],
   });
@@ -40,6 +46,7 @@ export default function StockAuditListPage() {
     page,
     limit: pageSize,
     keyword,
+    warehouseId: warehouseFilter || undefined,
   });
 
   const audits = res.data || [];
@@ -47,6 +54,23 @@ export default function StockAuditListPage() {
 
   const createMutation = useCreateStockAudit();
   const searchProducts = useSearchInventoryProducts(productSearch).data || [];
+
+  useEffect(() => {
+    const loadWarehouses = async () => {
+      try {
+        const whRes = await warehouseService.getWarehouses();
+        const list = whRes.data?.data?.data || [];
+        setWarehouses(list);
+        const def = list.find((w) => w.isDefault) || list[0];
+        if (def) {
+          setFormData((p) => ({ ...p, warehouseId: def._id }));
+        }
+      } catch (err) {
+        console.warn('Lỗi tải kho kiểm kê:', err);
+      }
+    };
+    loadWarehouses();
+  }, []);
 
   const handleDownloadExcel = async (audit) => {
     try {
@@ -75,7 +99,9 @@ export default function StockAuditListPage() {
   };
 
   const handleOpenCreate = () => {
+    const def = warehouses.find((w) => w.isDefault) || warehouses[0];
     setFormData({
+      warehouseId: def ? def._id : '',
       note: '',
       items: [],
     });
@@ -211,18 +237,37 @@ export default function StockAuditListPage() {
 
       {/* Toolbar */}
       <Card className="rounded-[6px] border border-border p-4 shadow-xs">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            type="text"
-            placeholder="Tìm mã phiếu kiểm kê AUD, ghi chú..."
-            value={keyword}
-            onChange={(e) => {
-              setKeyword(e.target.value);
-              setPage(1);
-            }}
-            className="pl-9 h-9 text-xs rounded-[6px]"
-          />
+        <div className="flex flex-col sm:flex-row items-center gap-3">
+          <div className="relative flex-1 w-full">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Tìm mã phiếu kiểm kê AUD, ghi chú..."
+              value={keyword}
+              onChange={(e) => {
+                setKeyword(e.target.value);
+                setPage(1);
+              }}
+              className="pl-9 h-9 text-xs rounded-[6px]"
+            />
+          </div>
+          <div className="w-full sm:w-64">
+            <select
+              value={warehouseFilter}
+              onChange={(e) => {
+                setWarehouseFilter(e.target.value);
+                setPage(1);
+              }}
+              className="w-full h-9 px-3 text-xs bg-background rounded-[6px] border border-input focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+            >
+              <option value="">Tất cả kho hàng</option>
+              {warehouses.map((w) => (
+                <option key={w._id} value={w._id}>
+                  {w.name} {w.isDefault ? '(Kho mặc định)' : ''}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </Card>
 
@@ -233,6 +278,7 @@ export default function StockAuditListPage() {
             <thead className="bg-muted/60 text-[11px] font-bold text-foreground border-b border-border">
               <tr>
                 <th className="px-4 py-3.5 whitespace-nowrap">Mã Kiểm Kê</th>
+                <th className="px-4 py-3.5 whitespace-nowrap">Kho Kiểm Kê</th>
                 <th className="px-4 py-3.5 whitespace-nowrap">Số Mặt Hàng</th>
                 <th className="px-4 py-3.5 whitespace-nowrap">Tổng Chênh Lệch</th>
                 <th className="px-4 py-3.5 whitespace-nowrap">Ghi Chú / Lý Do</th>
@@ -243,13 +289,13 @@ export default function StockAuditListPage() {
             <tbody className="divide-y divide-border/60">
               {isLoading ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-xs text-muted-foreground">
+                  <td colSpan={7} className="py-12 text-center text-xs text-muted-foreground">
                     Đang tải danh sách phiếu kiểm kê...
                   </td>
                 </tr>
               ) : audits.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-xs text-muted-foreground">
+                  <td colSpan={7} className="py-12 text-center text-xs text-muted-foreground">
                     Chưa có phiếu kiểm kê nào
                   </td>
                 </tr>
@@ -257,6 +303,9 @@ export default function StockAuditListPage() {
                 audits.map((audit) => (
                   <tr key={audit._id} className="hover:bg-muted/30 transition-colors align-middle">
                     <td className="px-4 py-3 font-semibold text-primary font-mono whitespace-nowrap text-xs">{audit.auditNumber}</td>
+                    <td className="px-4 py-3 font-medium text-foreground whitespace-nowrap text-xs">
+                      {audit.warehouseId?.name || 'Kho Tổng Bình Tân'}
+                    </td>
                     <td className="px-4 py-3 font-mono text-muted-foreground whitespace-nowrap text-xs">{audit.items?.length || 0} mặt hàng</td>
                     <td className="px-4 py-3 font-semibold font-mono whitespace-nowrap text-xs">
                       <span
@@ -490,6 +539,21 @@ export default function StockAuditListPage() {
                   <div className="border-b border-border pb-3">
                     <span className="text-xs font-semibold text-muted-foreground">Mã phiếu kiểm kho:</span>
                     <p className="text-base font-bold font-mono text-primary">AUD-TỰ ĐỘNG</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Kho Kiểm Kê *</label>
+                    <select
+                      value={formData.warehouseId}
+                      onChange={(e) => setFormData({ ...formData, warehouseId: e.target.value })}
+                      className="w-full h-8 px-2.5 text-xs bg-background rounded-[6px] border border-input focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+                    >
+                      {warehouses.map((w) => (
+                        <option key={w._id} value={w._id}>
+                          {w.name} {w.isDefault ? '(Kho mặc định)' : ''}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   <div>
