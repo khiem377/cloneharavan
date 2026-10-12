@@ -122,12 +122,9 @@ export default function ChatTriggerButton({
           title="Trò chuyện cùng Trợ lý AI SHOP"
           aria-label="Mở trợ lý tư vấn SHOP"
         >
-          {/* Mobile Mascot: 52px gọn gàng, Desktop Mascot: 64px bắt mắt */}
-          <div className="block sm:hidden">
-            <MascotBot size={52} isWaving={true} />
-          </div>
-          <div className="hidden sm:block">
-            <MascotBot size={64} isWaving={true} />
+          {/* Mobile Mascot: 54px gọn gàng, Desktop Mascot: 68px bắt mắt */}
+          <div className="w-[54px] h-[62px] sm:w-[68px] sm:h-[78px] flex items-center justify-center">
+            <MascotBot size="100%" isWaving={true} />
           </div>
 
           {/* Huy hiệu trực tuyến online pulsing */}
