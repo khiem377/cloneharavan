@@ -12,10 +12,11 @@ export default function VisualSearchBanner({ visualInfo = null, onClear }) {
 
   if (!visualInfo) return null;
 
-  const { imageUrl, metadata } = visualInfo;
-  const category = metadata?.category;
-  const brand = metadata?.brand;
-  const color = metadata?.color;
+  const info = visualInfo?.detected || visualInfo?.metadata || {};
+  const category = info.category || info.productType;
+  const brand = info.brand;
+  const color = info.color;
+  const detectedText = info.detectedText;
 
   const handleFileChange = async (e) => {
     const file = e.target.files?.[0];
@@ -23,24 +24,36 @@ export default function VisualSearchBanner({ visualInfo = null, onClear }) {
 
     try {
       const data = await searchService.searchByImage(file);
-      if (typeof window !== 'undefined') {
-        const preview = URL.createObjectURL(file);
+      const preview = typeof window !== 'undefined' ? URL.createObjectURL(file) : null;
+      const detectedInfo = data?.detected || data?.metadata || {};
+
+      if (typeof window !== 'undefined' && preview) {
         sessionStorage.setItem(
           'visual_search_data',
           JSON.stringify({
             imageUrl: preview,
-            metadata: data.metadata,
+            metadata: detectedInfo,
+            detected: detectedInfo,
           })
         );
       }
-      const q = data.metadata?.category || data.metadata?.searchKeywords?.[0] || 'Tivi';
-      router.push(`/search?q=${encodeURIComponent(q)}&visual=1`);
+      const q =
+        detectedInfo.category ||
+        detectedInfo.productType ||
+        detectedInfo.detectedText ||
+        detectedInfo.brand ||
+        detectedInfo.searchKeywords?.[0] ||
+        '';
+      router.push(q ? `/search?q=${encodeURIComponent(q)}&visual=1` : `/search?visual=1`);
     } catch (err) {
       console.error(err);
     }
   };
 
-  const detectedInfo = [category, brand, color].filter(Boolean).join(' • ') || 'Sản phẩm tương đồng';
+  const detectedInfo =
+    [category, brand, detectedText ? `"${detectedText}"` : null, color]
+      .filter(Boolean)
+      .join(' • ') || 'Sản phẩm tương đồng';
 
   return (
     <Card className="p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border border-slate-200 bg-white rounded-[6px]">

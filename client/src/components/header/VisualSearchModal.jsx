@@ -30,24 +30,34 @@ export const VisualSearchModal = ({ isOpen, onClose }) => {
 
     try {
       const data = await searchService.searchByImage(file);
-      if (typeof window !== 'undefined') {
-        const preview = URL.createObjectURL(file);
+      const preview = typeof window !== 'undefined' ? URL.createObjectURL(file) : null;
+      const detectedInfo = data?.detected || data?.metadata || {};
+
+      if (typeof window !== 'undefined' && preview) {
         sessionStorage.setItem(
           'visual_search_data',
           JSON.stringify({
             imageUrl: preview,
-            metadata: data?.metadata || {},
+            metadata: detectedInfo,
+            detected: detectedInfo,
           })
         );
       }
 
       onClose();
       const detectedQuery =
-        data?.metadata?.category ||
-        data?.metadata?.searchKeywords?.[0] ||
-        'Tivi';
+        detectedInfo.category ||
+        detectedInfo.productType ||
+        detectedInfo.detectedText ||
+        detectedInfo.brand ||
+        detectedInfo.searchKeywords?.[0] ||
+        '';
 
-      router.push(`/search?q=${encodeURIComponent(detectedQuery)}&visual=1`);
+      if (detectedQuery) {
+        router.push(`/search?q=${encodeURIComponent(detectedQuery)}&visual=1`);
+      } else {
+        router.push(`/search?visual=1`);
+      }
     } catch (err) {
       console.error('Image search failed:', err);
       setError(

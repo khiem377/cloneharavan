@@ -26,9 +26,60 @@ const getCached = (hash) => {
 };
 const setCache = (hash, data) => _aiCache.set(hash, { data, ts: Date.now() });
 
-// Prompt ngắn gọn → AI trả lời nhanh hơn
-const PROMPT_INSTRUCTION = `Nhận diện sản phẩm điện máy trong ảnh, trả về JSON (không markdown):
-{"category":"Tivi/Tủ lạnh/Máy giặt/Máy lạnh/Loa/Nồi/Quạt/Lò vi sóng/Máy lọc không khí/...","brand":"Samsung/Sony/LG/... hoặc rỗng","model":"mã model nếu đọc được hoặc rỗng","color":"màu sắc","screenSize":"55 inch/300 lít/... hoặc rỗng","detectedText":"chữ/logo đọc được","searchKeywords":["3-4 từ khóa tiếng Việt"]}`;
+// Cache danh mục & thương hiệu từ DB (5 phút) để nạp ngữ cảnh vào AI Vision
+let _catalogCache = null;
+let _catalogCacheTime = 0;
+const getDynamicCatalogContext = async () => {
+  const now = Date.now();
+  if (_catalogCache && now - _catalogCacheTime < 5 * 60 * 1000) {
+    return _catalogCache;
+  }
+  try {
+    const [categories, brands] = await Promise.all([
+      Category.find({ isActive: { $ne: false } }).select('name slug').lean(),
+      Brand.find({ isActive: { $ne: false } }).select('name slug').lean(),
+    ]);
+    _catalogCache = {
+      categoryNames: categories.map((c) => c.name).filter(Boolean),
+      brandNames: brands.map((b) => b.name).filter(Boolean),
+    };
+    _catalogCacheTime = now;
+  } catch (err) {
+    console.error('Failed to load dynamic catalog context for visual search:', err);
+    _catalogCache = { categoryNames: [], brandNames: [] };
+  }
+  return _catalogCache;
+};
+
+const buildDynamicPrompt = (catalogContext) => {
+  const categoriesList = catalogContext.categoryNames.slice(0, 35).join(', ');
+  const brandsList = catalogContext.brandNames.slice(0, 35).join(', ');
+
+  return `Bạn là trợ lý AI phân tích và tìm kiếm sản phẩm thương mại điện tử qua hình ảnh.
+Hãy quan sát kỹ và nhận diện ảnh này một cách trung thực, linh hoạt theo đúng những gì xuất hiện trong ảnh:
+
+1. Đọc và nhận diện TOÀN BỘ chữ, logo, nhãn hiệu hoặc ký hiệu xuất hiện trong ảnh (detectedText). Ví dụ: OAK, Sony, Apple, mã số...
+2. Xác định loại vật thể/sản phẩm thực tế trong ảnh (productType): Đừng ép buộc, hãy gọi đúng tên vật thể (ví dụ: Loa, Bàn phím, Đồng hồ, Tivi, Giày, Áo thun, Tai nghe, Điện thoại, Logo thương hiệu...).
+3. So khớp với Danh mục sản phẩm hiện có trong cơ sở dữ liệu cửa hàng:
+   [${categoriesList}]
+   - Nếu sản phẩm thuộc hoặc gần nhất với danh mục nào ở trên, hãy điền vào "category".
+   - Nếu vật thể/ảnh không thuộc danh mục nào trong danh sách trên, hãy điền tên loại sản phẩm thực tế vào "category" hoặc để rỗng.
+4. So khớp với Thương hiệu có trong cửa hàng:
+   [${brandsList}]
+   - Nếu logo/chữ trong ảnh trùng hoặc tương tự, điền vào "brand". Nếu có thương hiệu riêng (như OAK, v.v.), điền tên thương hiệu đó.
+5. Trích xuất 3-4 từ khóa tìm kiếm tiếng Việt ("searchKeywords") sát nhất với ảnh để truy vấn sản phẩm tương đồng.
+
+Trả về DUY NHẤT một chuỗi JSON chuẩn (không dùng markdown codeblock, không thêm text):
+{
+  "productType": "loại sản phẩm thực tế trong ảnh",
+  "category": "danh mục phù hợp hoặc rỗng",
+  "brand": "thương hiệu nhận diện được hoặc rỗng",
+  "model": "mã model nếu đọc được hoặc rỗng",
+  "color": "màu sắc chủ đạo",
+  "detectedText": "tất cả chữ/logo đọc được trong ảnh",
+  "searchKeywords": ["từ khóa 1", "từ khóa 2", "từ khóa 3"]
+}`;
+};
 
 // Resize xuống 600px — đủ để AI nhận diện, giảm payload
 const compressImageForAI = async (buffer) => {
@@ -46,18 +97,39 @@ const analyzeImageWithGemini = async (buffer) => {
   const genAI = getGeminiClient();
   if (!genAI) throw new Error('GEMINI_API_KEY not configured');
 
-  const compressed = await compressImageForAI(buffer);
-  const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash-lite' });
-  const result = await model.generateContent([
-    PROMPT_INSTRUCTION,
-    { inlineData: { data: compressed.toString('base64'), mimeType: 'image/jpeg' } },
+  const [catalogContext, compressed] = await Promise.all([
+    getDynamicCatalogContext(),
+    compressImageForAI(buffer),
   ]);
 
-  const responseText = result.response.text();
-  const cleaned = responseText.replace(/```json/gi, '').replace(/```/g, '').trim();
-  const parsed = JSON.parse(cleaned);
-  setCache(hash, parsed);
-  return parsed;
+  const prompt = buildDynamicPrompt(catalogContext);
+  const candidateModels = [
+    'gemini-3.5-flash-lite',
+    'gemini-2.5-flash-lite',
+    'gemini-flash-latest',
+  ];
+
+  let lastError = null;
+  for (const modelName of candidateModels) {
+    try {
+      const model = genAI.getGenerativeModel({ model: modelName });
+      const result = await model.generateContent([
+        prompt,
+        { inlineData: { data: compressed.toString('base64'), mimeType: 'image/jpeg' } },
+      ]);
+
+      const responseText = result.response.text();
+      const cleaned = responseText.replace(/```json/gi, '').replace(/```/g, '').trim();
+      const parsed = JSON.parse(cleaned);
+      setCache(hash, parsed);
+      return parsed;
+    } catch (err) {
+      lastError = err;
+      console.warn(`Visual search with model ${modelName} failed, trying fallback:`, err.message);
+    }
+  }
+
+  throw new Error(`AI Vision analysis failed: ${lastError?.message}`);
 };
 
 const extractProductMetadataFromImage = async (buffer, mimeType) => {
@@ -256,16 +328,20 @@ const searchByImage = async (buffer, mimeType, options = {}) => {
   // Nếu không detect brand/model → limit chặt hơn (6 thay vì 12)
   const effectiveLimit = hasSpecificInfo ? limit : Math.min(limit, 6);
 
+  const detectedInfo = {
+    productType: metadata.productType || metadata.category || '',
+    category: category || '',
+    brand: brand || '',
+    model: model || '',
+    color: metadata.color || '',
+    screenSize: screenSize || '',
+    detectedText: detectedText || '',
+    searchKeywords: searchKeywords || [],
+  };
+
   return {
-    detected: {
-      category: category || '',
-      brand: brand || '',
-      model: model || '',
-      color: metadata.color || '',
-      screenSize: screenSize || '',
-      detectedText: detectedText || '',
-      searchKeywords: searchKeywords || [],
-    },
+    detected: detectedInfo,
+    metadata: detectedInfo,
     totalFound: results.length,
     products: results.slice(0, effectiveLimit),
   };
