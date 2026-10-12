@@ -3,7 +3,13 @@ const SupplierService = require('../services/supplier.service');
 const getSuppliers = async (req, res, next) => {
   try {
     const result = await SupplierService.getAllSuppliers(req.query);
-    res.json({ status: 'success', data: result.data, pagination: result.pagination });
+    res.json({
+      status: 'success',
+      data: result.data,
+      pagination: result.pagination,
+      counts: result.counts,
+      totalDebt: result.totalDebt,
+    });
   } catch (err) {
     next(err);
   }

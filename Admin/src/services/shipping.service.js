@@ -37,6 +37,30 @@ export const shippingService = {
     }
   },
 
+  // GHN v3 Địa chỉ mới (2 cấp: Tỉnh/Thành phố mới -> Phường/Xã mới)
+  getNewProvinces: async () => {
+    try {
+      const res = await api.get('/shipping/new-provinces');
+      return res.data?.data?.provinces || [];
+    } catch (err) {
+      console.error('Lỗi lấy danh sách tỉnh/thành mới:', err);
+      return [];
+    }
+  },
+
+  getNewWards: async (provinceId) => {
+    if (!provinceId) return [];
+    try {
+      const res = await api.get('/shipping/new-wards', {
+        params: { province_id: provinceId },
+      });
+      return res.data?.data?.wards || [];
+    } catch (err) {
+      console.error('Lỗi lấy danh sách phường/xã mới:', err);
+      return [];
+    }
+  },
+
   getServices: async ({ fromDistrictId, toDistrictId }) => {
     try {
       const res = await api.post('/shipping/services', {
