@@ -71,6 +71,20 @@ export const productService = {
       return [];
     }
   },
+
+  /**
+   * So sánh thông số các sản phẩm
+   */
+  async compareProducts(ids = []) {
+    if (!ids.length) return [];
+    try {
+      const res = await api.post('/products/compare', { ids });
+      return res.data?.data || [];
+    } catch (err) {
+      console.error('Client compareProducts error:', err?.message);
+      return [];
+    }
+  },
 };
 
 export default productService;

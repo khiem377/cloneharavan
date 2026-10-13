@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Minus, Plus, Trash2, AlertCircle, Loader2, Zap } from 'lucide-react';
+import { Minus, Plus, Trash2, AlertCircle, Loader2, Zap, Layers } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { confirm } from '@/components/ui/confirm-dialog';
@@ -39,10 +39,13 @@ export default function CartItemRow({
 
   const handleRemove = async () => {
     if (localUpdating || isUpdating) return;
+    const isCombo = Boolean(item.isComboItem && item.comboId);
     const isConfirmed = await confirm({
-      title: 'Xóa sản phẩm khỏi giỏ hàng?',
-      description: `Bạn có chắc chắn muốn xóa "${item.name || 'sản phẩm này'}" khỏi giỏ hàng?`,
-      confirmText: 'Xóa sản phẩm',
+      title: isCombo ? 'Xóa trọn bộ gói combo?' : 'Xóa sản phẩm khỏi giỏ hàng?',
+      description: isCombo
+        ? `Sản phẩm "${item.name}" nằm trong gói "${item.comboName || 'Combo'}". Việc xóa sản phẩm này sẽ xóa toàn bộ các sản phẩm thành phần trong gói combo để đảm bảo giá trị đơn hàng. Bạn có chắc chắn muốn xóa?`
+        : `Bạn có chắc chắn muốn xóa "${item.name || 'sản phẩm này'}" khỏi giỏ hàng?`,
+      confirmText: isCombo ? 'Xóa toàn bộ combo' : 'Xóa sản phẩm',
       cancelText: 'Hủy',
       variant: 'destructive',
     });
@@ -163,8 +166,15 @@ export default function CartItemRow({
                 return null;
               })()}
 
+              {/* Tag Mua theo Combo */}
+              {item.isComboItem && (
+                <div className="inline-flex items-center gap-1.5 mt-1 bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-bold px-2 py-0.5 rounded-[4px]">
+                  <span>Gói combo: {item.comboName || 'Gói tiết kiệm'} (Mua trọn bộ các món đi kèm)</span>
+                </div>
+              )}
+
               {/* Tag khuyến mãi kèm theo nếu có */}
-              {item.isFlashSale && (
+              {item.isFlashSale && !item.isComboItem && (
                 <div className="inline-block mt-1 bg-red-50 text-red-600 border border-red-200 text-[10px] font-bold px-1.5 py-0.5 rounded-[4px]">
                   Flash Sale giảm sốc
                 </div>

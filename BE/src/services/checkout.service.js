@@ -52,7 +52,7 @@ const calculateCheckout = async ({ cartItems = [], couponCode = null }) => {
 
       // Tìm thông tin sản phẩm / variant từ DB nếu chưa có
       let originalPrice = Number(item.originalPrice) || 0;
-      let sellingPrice = Number(item.unitPrice) || originalPrice;
+      let sellingPrice = item.isComboItem && item.unitPrice ? Number(item.unitPrice) : (Number(item.unitPrice) || originalPrice);
       let productName = item.productName || '';
       let sku = item.sku || '';
 
@@ -61,7 +61,9 @@ const calculateCheckout = async ({ cartItems = [], couponCode = null }) => {
           const variant = await ProductVariant.findById(vId).populate('productId');
           if (variant) {
             originalPrice = Number(variant.price) || 0;
-            sellingPrice = getSellingPrice(variant);
+            if (!item.isComboItem) {
+              sellingPrice = getSellingPrice(variant);
+            }
             productName = variant.productId?.name || '';
             sku = variant.sku || '';
           }
@@ -69,7 +71,9 @@ const calculateCheckout = async ({ cartItems = [], couponCode = null }) => {
           const prod = await Product.findById(pId);
           if (prod) {
             originalPrice = Number(prod.price) || 0;
-            sellingPrice = getSellingPrice(prod);
+            if (!item.isComboItem) {
+              sellingPrice = getSellingPrice(prod);
+            }
             productName = prod.name || '';
           }
         }
@@ -86,7 +90,7 @@ const calculateCheckout = async ({ cartItems = [], couponCode = null }) => {
       const fsPrice = matchedFsItem ? (matchedFsItem.flashSalePrice ?? matchedFsItem.flashPrice) : null;
       const fsStockRemaining = matchedFsItem ? Math.max(0, (matchedFsItem.stockLimit || 0) - (matchedFsItem.soldCount || 0)) : 0;
 
-      if (matchedFsItem && fsPrice !== null && fsPrice < sellingPrice && fsStockRemaining > 0) {
+      if (!item.isComboItem && matchedFsItem && fsPrice !== null && fsPrice < sellingPrice && fsStockRemaining > 0) {
         isFlashSale = true;
         unitPrice = fsPrice;
         flashSaleDiscount = (sellingPrice - fsPrice) * qty;

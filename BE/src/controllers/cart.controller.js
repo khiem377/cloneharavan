@@ -157,9 +157,24 @@ const validateCheckout = async (req, res, next) => {
   }
 };
 
+const addComboToCart = async (req, res, next) => {
+  try {
+    const { comboId, quantity = 1 } = req.body;
+    const result = await cartService.addComboToCart(req.cartOwner, { comboId, quantity });
+    res.status(200).json({
+      success: true,
+      message: 'Đã thêm trọn bộ combo vào giỏ hàng thành công',
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getCart,
   addToCart,
+  addComboToCart,
   updateCartItemQuantity,
   removeCartItem,
   removeCartItems,

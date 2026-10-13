@@ -88,7 +88,7 @@ export default function CartVoucherModal({ isOpen, onClose }) {
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-fadeIn select-none">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 animate-fadeIn select-none">
       <div
         className="bg-white border border-slate-200 rounded-[6px] w-full max-w-lg overflow-hidden shadow-xl flex flex-col max-h-[90vh] animate-scaleUp"
         onClick={(e) => e.stopPropagation()}

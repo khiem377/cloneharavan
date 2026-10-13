@@ -37,6 +37,30 @@ const cartItemSchema = new mongoose.Schema(
         colorCode: { type: String, default: '' },
       },
     ],
+    // Hỗ trợ mua theo gói Combo ưu đãi
+    comboId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Combo',
+      default: null,
+    },
+    comboName: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+    comboCode: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+    isComboItem: {
+      type: Boolean,
+      default: false,
+    },
+    comboPrice: {
+      type: Number,
+      default: null,
+    },
   },
   { _id: true, timestamps: true }
 );
