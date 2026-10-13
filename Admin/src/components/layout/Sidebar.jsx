@@ -162,92 +162,89 @@ const NAV_GROUPS = [
   },
 ];
 
-function NavGroupItem({ item }) {
+function NavSubMenuItem({ item, validChildren }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { state } = useSidebar();
   const isCollapsed = state === 'collapsed';
-  const hasPermission = useAuthStore((s) => s.hasPermission);
 
-  if (item.permission && !hasPermission(item.permission)) {
-    return null;
-  }
+  const childRoutes = validChildren.map((c) => c.to);
+  const isAnyActive = childRoutes.some((r) => location.pathname.startsWith(r));
+  const [open, setOpen] = useState(isAnyActive);
+  const Icon = item.icon;
+  const firstChild = validChildren[0]?.to ?? '/';
 
-  if (item.children) {
-    const validChildren = item.children.filter((c) => !c.permission || hasPermission(c.permission));
-    if (validChildren.length === 0) return null;
-
-    const childRoutes = validChildren.map((c) => c.to);
-    const isAnyActive = childRoutes.some((r) => location.pathname.startsWith(r));
-    const [open, setOpen] = useState(isAnyActive);
-    const Icon = item.icon;
-    const firstChild = validChildren[0]?.to ?? '/';
-
-    if (isCollapsed) {
-      return (
-        <SidebarMenuItem>
-          <SidebarMenuButton
-            isActive={isAnyActive}
-            onClick={() => navigate(firstChild)}
-            title={item.label}
-            className={cn(
-              "rounded-[6px] transition-colors active:scale-[0.98]",
-              isAnyActive && "bg-primary/10 text-primary font-medium"
-            )}
-          >
-            <Icon className="size-4 shrink-0" />
-            <span>{item.label}</span>
-          </SidebarMenuButton>
-        </SidebarMenuItem>
-      );
-    }
-
+  if (isCollapsed) {
     return (
       <SidebarMenuItem>
         <SidebarMenuButton
           isActive={isAnyActive}
-          onClick={() => setOpen((o) => !o)}
+          onClick={() => navigate(firstChild)}
+          title={item.label}
           className={cn(
-            "rounded-[6px] transition-colors active:scale-[0.98] font-normal text-sidebar-foreground",
+            "rounded-[6px] transition-colors active:scale-[0.98]",
             isAnyActive && "bg-primary/10 text-primary font-medium"
           )}
         >
-          <Icon className={cn("size-4 shrink-0 transition-colors", isAnyActive ? "text-primary" : "text-muted-foreground")} />
-          <span className="flex-1 text-left truncate">{item.label}</span>
-          <ChevronRightIcon
-            size={14}
-            className={cn('text-muted-foreground transition-transform duration-200 shrink-0', open && 'rotate-90 text-primary')}
-          />
+          <Icon className="size-4 shrink-0" />
+          <span>{item.label}</span>
         </SidebarMenuButton>
-
-        {open && (
-          <SidebarMenuSub className="border-l border-border/60 ml-4 pl-2 my-1 space-y-0.5">
-            {validChildren.map((child) => {
-              const CIcon = child.icon;
-              const isActive = location.pathname.startsWith(child.to);
-              return (
-                <SidebarMenuSubItem key={child.to}>
-                  <SidebarMenuSubButton
-                    isActive={isActive}
-                    onClick={() => navigate(child.to)}
-                    className={cn(
-                      "rounded-[6px] text-xs transition-colors py-1.5 active:scale-[0.98]",
-                      isActive
-                        ? "bg-primary text-primary-foreground font-medium shadow-xs"
-                        : "text-muted-foreground hover:text-foreground hover:bg-accent/60"
-                    )}
-                  >
-                    <CIcon className={cn("size-3.5 shrink-0", isActive ? "text-primary-foreground" : "text-muted-foreground")} />
-                    <span className="truncate">{child.label}</span>
-                  </SidebarMenuSubButton>
-                </SidebarMenuSubItem>
-              );
-            })}
-          </SidebarMenuSub>
-        )}
       </SidebarMenuItem>
     );
   }
+
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton
+        isActive={isAnyActive}
+        onClick={() => setOpen((o) => !o)}
+        className={cn(
+          "rounded-[6px] transition-colors active:scale-[0.98] font-normal text-sidebar-foreground",
+          isAnyActive && "bg-primary/10 text-primary font-medium"
+        )}
+      >
+        <Icon className={cn("size-4 shrink-0 transition-colors", isAnyActive ? "text-primary" : "text-muted-foreground")} />
+        <span className="flex-1 text-left truncate">{item.label}</span>
+        <ChevronRightIcon
+          size={14}
+          className={cn('text-muted-foreground transition-transform duration-200 shrink-0', open && 'rotate-90 text-primary')}
+        />
+      </SidebarMenuButton>
+
+      {open && (
+        <SidebarMenuSub className="border-l border-border/60 ml-4 pl-2 my-1 space-y-0.5">
+          {validChildren.map((child) => {
+            const CIcon = child.icon;
+            const isActive = location.pathname.startsWith(child.to);
+            return (
+              <SidebarMenuSubItem key={child.to}>
+                <SidebarMenuSubButton
+                  isActive={isActive}
+                  onClick={() => navigate(child.to)}
+                  className={cn(
+                    "rounded-[6px] text-xs transition-colors py-1.5 active:scale-[0.98]",
+                    isActive
+                      ? "bg-primary text-primary-foreground font-medium shadow-xs"
+                      : "text-muted-foreground hover:text-foreground hover:bg-accent/60"
+                  )}
+                >
+                  <CIcon className={cn("size-3.5 shrink-0", isActive ? "text-primary-foreground" : "text-muted-foreground")} />
+                  <span className="truncate">{child.label}</span>
+                </SidebarMenuSubButton>
+              </SidebarMenuSubItem>
+            );
+          })}
+        </SidebarMenuSub>
+      )}
+    </SidebarMenuItem>
+  );
+}
+
+function NavSingleItem({ item }) {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { state } = useSidebar();
+  const isCollapsed = state === 'collapsed';
 
   const Icon = item.icon;
   const isActive = item.to === '/dashboard'
@@ -272,6 +269,22 @@ function NavGroupItem({ item }) {
       </SidebarMenuButton>
     </SidebarMenuItem>
   );
+}
+
+function NavGroupItem({ item }) {
+  const hasPermission = useAuthStore((s) => s.hasPermission);
+
+  if (item.permission && !hasPermission(item.permission)) {
+    return null;
+  }
+
+  if (item.children) {
+    const validChildren = item.children.filter((c) => !c.permission || hasPermission(c.permission));
+    if (validChildren.length === 0) return null;
+    return <NavSubMenuItem item={item} validChildren={validChildren} />;
+  }
+
+  return <NavSingleItem item={item} />;
 }
 
 function UserFooterMenu({ onProfile, onChangePass }) {
@@ -431,7 +444,7 @@ export default function AppSidebar({ onProfile, onChangePass }) {
               <SidebarGroupContent className="pt-1">
                 <SidebarMenu className="space-y-0.5">
                   {visibleItems.map((item, i) => (
-                    <NavGroupItem key={item.to ?? i} item={item} />
+                    <NavGroupItem key={item.to || item.label || i} item={item} />
                   ))}
                 </SidebarMenu>
               </SidebarGroupContent>

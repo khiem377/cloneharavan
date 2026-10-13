@@ -21,7 +21,7 @@ export default function MediaUsageModal({ mediaItems, usages, onForceDelete, onC
   };
 
   return (
-    <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-lg rounded-2xl border border-border bg-card shadow-2xl overflow-hidden flex flex-col" style={{ maxHeight: '85vh' }}>
         <div className="flex items-start justify-between gap-3 px-5 py-4 border-b border-border shrink-0">
           <div className="flex items-center gap-3">

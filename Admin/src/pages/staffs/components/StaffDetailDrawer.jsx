@@ -31,7 +31,7 @@ export default function StaffDetailDrawer({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-none"
+      className="fixed inset-0 z-50 flex justify-end bg-black/60"
       onClick={onClose}
     >
       <div

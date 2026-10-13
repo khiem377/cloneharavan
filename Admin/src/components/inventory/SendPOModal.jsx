@@ -88,7 +88,7 @@ export default function SendPOModal({ isOpen, onClose, po, onSuccess }) {
 
   return (
     <>
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
         <div className="flex w-full max-w-2xl flex-col rounded-2xl border border-border bg-card shadow-2xl overflow-hidden text-card-foreground">
           {/* Header */}
           <div className="flex items-center justify-between border-b border-border bg-muted/40 px-6 py-4">
@@ -282,7 +282,7 @@ export default function SendPOModal({ isOpen, onClose, po, onSuccess }) {
 
       {/* Live Email HTML Preview Sub-Modal */}
       {showPreviewModal && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/70 p-4">
           <div className="flex h-[85vh] w-full max-w-4xl flex-col rounded-2xl border border-border bg-card shadow-2xl overflow-hidden">
             <div className="flex items-center justify-between border-b border-border bg-muted/40 px-6 py-3">
               <div className="flex items-center gap-2 text-sm font-bold text-foreground">

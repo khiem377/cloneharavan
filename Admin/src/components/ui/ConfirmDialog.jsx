@@ -15,7 +15,7 @@ export default function ConfirmDialog({
 
   const body = description || message;
   return (
-    <div className="fixed inset-0 z-[10100] flex items-center justify-center bg-black/40 backdrop-blur-xs p-4" onClick={onCancel}>
+    <div className="fixed inset-0 z-[10100] flex items-center justify-center bg-black/40 p-4" onClick={onCancel}>
       <div className="flex w-full max-w-sm flex-col overflow-hidden rounded-xl border border-border bg-background shadow-xl text-foreground" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
           <div className="flex items-center gap-2.5">

@@ -228,7 +228,7 @@ export default function ExcelPreviewModal({
 
   return (
     <div
-      className={`fixed inset-0 z-[9999] flex items-center justify-center bg-black/75 backdrop-blur-xs transition-all ${
+      className={`fixed inset-0 z-[9999] flex items-center justify-center bg-black/75 transition-all ${
         isFullscreen ? 'p-0' : 'p-4'
       }`}
     >
