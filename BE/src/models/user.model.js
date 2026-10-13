@@ -81,10 +81,10 @@ const userSchema = new mongoose.Schema(
     // =========================
     email: {
       type: String,
-      required: [true, 'Email is required'],
-      unique: true,
       lowercase: true,
       trim: true,
+      sparse: true,
+      default: undefined,
     },
 
     isEmailVerified: {
@@ -453,6 +453,17 @@ userSchema.methods.createAdminLoginOtp = function () {
   this.adminLoginOtpExpires = new Date(Date.now() + 5 * 60 * 1000);
   return otp;
 };
+
+userSchema.index(
+  { email: 1 },
+  {
+    unique: true,
+    sparse: true,
+    partialFilterExpression: { email: { $type: 'string' } },
+  }
+);
+userSchema.index({ role: 1, isActive: 1, createdAt: -1 });
+userSchema.index({ role: 1, createdAt: -1 });
 
 const User = mongoose.model('User', userSchema);
 module.exports = User;

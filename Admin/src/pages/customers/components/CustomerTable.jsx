@@ -135,10 +135,24 @@ export default function CustomerTable({
                   {isColumnVisible('contact') && (
                     <TableCell className="px-3 py-2">
                       <div className="flex flex-col gap-0.5 text-xs">
-                        <div className="flex items-center gap-1 text-foreground">
-                          <Mail className="size-3 text-muted-foreground shrink-0" />
-                          <span className="truncate max-w-[180px]">{user.email}</span>
-                        </div>
+                        {user.email ? (
+                          <div className="flex items-center gap-1 text-foreground">
+                            <Mail className="size-3 text-muted-foreground shrink-0" />
+                            <span className="truncate max-w-[180px]">{user.email}</span>
+                          </div>
+                        ) : user.zaloId ? (
+                          <div className="flex items-center gap-1 text-[#0068FF] font-medium text-[11px]">
+                            <span className="size-1.5 rounded-full bg-[#0068FF] shrink-0" />
+                            <span className="truncate max-w-[180px]">Zalo: {user.zaloName || user.zaloId}</span>
+                          </div>
+                        ) : user.tiktokId ? (
+                          <div className="flex items-center gap-1 text-foreground font-medium text-[11px]">
+                            <span className="size-1.5 rounded-full bg-foreground shrink-0" />
+                            <span className="truncate max-w-[180px]">TikTok: @{user.tiktokUsername || user.tiktokId}</span>
+                          </div>
+                        ) : (
+                          <span className="text-[10px] text-muted-foreground italic">Chưa có email</span>
+                        )}
                         {user.phone ? (
                           <div className="flex items-center gap-1 text-muted-foreground font-mono tabular-nums text-[11px]">
                             <Phone className="size-3 shrink-0" />

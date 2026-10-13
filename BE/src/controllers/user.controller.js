@@ -303,6 +303,22 @@ const resetPassword = async (req, res, next) => {
   }
 };
 
+const cleanSocialDummyEmails = require('../scripts/cleanSocialDummyEmails');
+
+const cleanSocialEmails = async (req, res, next) => {
+  try {
+    const result = await cleanSocialDummyEmails();
+    res.json({
+      status: 'success',
+      statusCode: 200,
+      message: result.message,
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   // Profile & Avatar
   getProfile,
@@ -326,5 +342,6 @@ module.exports = {
   getUserStats,
   bulkToggleStatus,
   resetPassword,
+  cleanSocialEmails,
 };
 

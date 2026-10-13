@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const axios = require('axios');
 const User = require('../models/user.model');
+const Permission = require('../models/permission.model');
 const { AppError } = require('../utils/AppError');
 const {
   generateAccessToken,
@@ -777,11 +778,13 @@ const loginWithTikTok = async (code, redirectUri = null, codeVerifier = null, is
   const tiktokOpenId = openId || userInfo?.open_id;
   const displayName = userInfo?.display_name || userInfo?.username || 'TikTok User';
   const avatarUrl = userInfo?.avatar_large_url || userInfo?.avatar_url || userInfo?.avatar_url_100 || null;
-  const syntheticEmail = `tiktok_${tiktokOpenId.toLowerCase()}@tiktok.user`;
 
-  // 3. Tìm User theo tiktokId hoặc syntheticEmail
+  // 3. Tìm User theo tiktokId (hoặc email synthetic cũ nếu chưa migrate)
   let user = await User.findOne({
-    $or: [{ tiktokId: tiktokOpenId }, { email: syntheticEmail }],
+    $or: [
+      { tiktokId: tiktokOpenId },
+      { email: `tiktok_${tiktokOpenId.toLowerCase()}@tiktok.user` },
+    ],
   });
 
   if (user) {
@@ -794,6 +797,11 @@ const loginWithTikTok = async (code, redirectUri = null, codeVerifier = null, is
       user.tiktokId = tiktokOpenId;
       hasChanges = true;
     }
+    // Gỡ bỏ email giả định tiktok_... nếu còn tồn tại
+    if (user.email && (user.email.endsWith('@tiktok.user') || user.email.startsWith('tiktok_'))) {
+      user.email = undefined;
+      hasChanges = true;
+    }
     if (userInfo?.username && user.tiktokUsername !== userInfo.username) {
       user.tiktokUsername = userInfo.username;
       hasChanges = true;
@@ -803,11 +811,7 @@ const loginWithTikTok = async (code, redirectUri = null, codeVerifier = null, is
       user.avatar = { url: avatarUrl };
       hasChanges = true;
     }
-    if (!user.isEmailVerified) {
-      user.isEmailVerified = true;
-      user.isAccountActivated = true;
-      hasChanges = true;
-    }
+    user.isAccountActivated = true;
 
     if (hasChanges) {
       await user.save({ validateBeforeSave: false });
@@ -821,15 +825,14 @@ const loginWithTikTok = async (code, redirectUri = null, codeVerifier = null, is
       );
     }
 
-    // Tạo tài khoản mới cho Khách hàng Client
+    // Tạo tài khoản mới cho Khách hàng Client: KHÔNG tạo email rác, lưu tham số liên kết tiktokId
     user = await User.create({
       fullName: displayName,
-      email: syntheticEmail,
       tiktokId: tiktokOpenId,
       tiktokUsername: userInfo?.username || null,
       authProvider: 'tiktok',
       avatar: avatarUrl ? { url: avatarUrl } : undefined,
-      isEmailVerified: true,
+      isEmailVerified: false,
       isAccountActivated: true,
       gender: 'other',
       role: 'user',
@@ -969,11 +972,13 @@ const loginWithZalo = async (code, redirectUri = null, codeVerifier = null, isAd
 
   const displayName = userInfo.name || 'Zalo User';
   const avatarUrl = userInfo.picture?.data?.url || userInfo.picture?.url || null;
-  const syntheticEmail = `zalo_${zaloId.toLowerCase()}@zalo.user`;
 
-  // 3. Phân biệt rõ ràng giữa Khách hàng và Nhân viên/Quản trị viên
+  // 3. Tìm User theo zaloId (hoặc email synthetic cũ nếu chưa migrate)
   let user = await User.findOne({
-    $or: [{ zaloId }, { email: syntheticEmail }],
+    $or: [
+      { zaloId },
+      { email: `zalo_${zaloId.toLowerCase()}@zalo.user` },
+    ],
   });
 
   if (user) {
@@ -986,6 +991,11 @@ const loginWithZalo = async (code, redirectUri = null, codeVerifier = null, isAd
       user.zaloId = zaloId;
       hasChanges = true;
     }
+    // Gỡ bỏ email giả định zalo_... nếu còn tồn tại
+    if (user.email && (user.email.endsWith('@zalo.user') || user.email.startsWith('zalo_'))) {
+      user.email = undefined;
+      hasChanges = true;
+    }
     if (displayName && user.zaloName !== displayName) {
       user.zaloName = displayName;
       hasChanges = true;
@@ -995,11 +1005,7 @@ const loginWithZalo = async (code, redirectUri = null, codeVerifier = null, isAd
       user.avatar = { url: avatarUrl };
       hasChanges = true;
     }
-    if (!user.isEmailVerified) {
-      user.isEmailVerified = true;
-      user.isAccountActivated = true;
-      hasChanges = true;
-    }
+    user.isAccountActivated = true;
 
     if (hasChanges) {
       await user.save({ validateBeforeSave: false });
@@ -1014,14 +1020,14 @@ const loginWithZalo = async (code, redirectUri = null, codeVerifier = null, isAd
     }
 
     // ✅ NẾU LÀ CLIENT KHÁCH HÀNG: Tự động khởi tạo tài khoản Khách hàng mua sắm (role: user)
+    // KHÔNG tạo email rác, lưu tham số liên kết zaloId
     user = await User.create({
       fullName: displayName,
-      email: syntheticEmail,
       zaloId,
       zaloName: displayName,
       authProvider: 'zalo',
       avatar: avatarUrl ? { url: avatarUrl } : undefined,
-      isEmailVerified: true,
+      isEmailVerified: false,
       isAccountActivated: true,
       gender: 'other',
       role: 'user',
@@ -1802,7 +1808,163 @@ const deletePasskey = async (userId, credentialId = null) => {
   return { message: 'Đã xóa khóa Passkey thành công!', passkeys: user.passkeys };
 };
 
+const isSuperAdminUser = (user) => {
+  const userRole = (user.role || '').toLowerCase();
+  const roleCode = (user.roleId?.code || '').toLowerCase();
+  const roleName = (user.roleId?.name || '').toLowerCase();
+  const userEmail = (user.email || '').toLowerCase();
 
+  return (
+    userRole === 'administrator' ||
+    userRole === 'admin' ||
+    userRole.includes('admin') ||
+    roleCode === 'administrator' ||
+    roleCode === 'admin' ||
+    roleName.includes('administrator') ||
+    roleName.includes('quản trị') ||
+    userEmail.startsWith('admin')
+  );
+};
+
+const getUserById = async (userId) => {
+  return User.findById(userId);
+};
+
+const getPopulatedAuthUser = async (userId, { clientIp, clientUserAgent, provider = null } = {}) => {
+  const updateData = {};
+  if (clientIp) {
+    updateData.lastLoginAt = new Date();
+    updateData.lastLoginIp = clientIp;
+    updateData.lastLoginUserAgent = clientUserAgent || 'Unknown';
+  }
+
+  const query = updateData.lastLoginAt
+    ? User.findByIdAndUpdate(userId, updateData, { returnDocument: 'after' })
+    : User.findById(userId);
+
+  const populatedUser = await query
+    .populate({ path: 'roleId', populate: { path: 'permissions', select: 'code name module' } })
+    .populate('customPermissions', 'code name module');
+
+  if (!populatedUser) throw new AppError('Không tìm thấy người dùng', 404);
+
+  const isSuperAdmin = isSuperAdminUser(populatedUser);
+  const permissions = isSuperAdmin
+    ? ['*']
+    : [...new Set([
+        ...(populatedUser.roleId?.permissions || []).map((p) => p.code),
+        ...(populatedUser.customPermissions || []).map((p) => p.code),
+      ])];
+
+  return {
+    _id: populatedUser._id,
+    fullName: populatedUser.fullName,
+    email: populatedUser.email,
+    phone: populatedUser.phone,
+    avatar: populatedUser.avatar,
+    gender: populatedUser.gender,
+    role: populatedUser.role,
+    roleId: populatedUser.roleId,
+    authProvider: populatedUser.authProvider || provider || 'local',
+    permissions,
+  };
+};
+
+const getUserProfileWithPermissions = async (userId, req = null) => {
+  const populatedUser = await User.findById(userId)
+    .select('+password')
+    .populate({ path: 'roleId', populate: { path: 'permissions', select: 'code name module' } })
+    .populate('customPermissions', 'code name module');
+
+  if (!populatedUser) throw new AppError('Không tìm thấy người dùng', 404);
+
+  const hasPassword = !!populatedUser.password;
+  const isSuperAdmin = isSuperAdminUser(populatedUser);
+  const permissions = isSuperAdmin
+    ? ['*']
+    : [...new Set([
+        ...(populatedUser.roleId?.permissions || []).map((p) => p.code),
+        ...(populatedUser.customPermissions || []).map((p) => p.code),
+      ])];
+
+  const userObj = populatedUser.toObject();
+  delete userObj.password;
+  userObj.hasPassword = hasPassword;
+  userObj.permissions = permissions;
+
+  if (req) {
+    recordUserSession(userId, req).catch(() => {});
+  }
+
+  return userObj;
+};
+
+const getUserPermissions = async (userId) => {
+  const populatedUser = await User.findById(userId)
+    .populate({
+      path: 'roleId',
+      populate: {
+        path: 'permissions',
+        match: { isActive: true },
+        select: 'code name module description',
+      },
+    })
+    .populate({
+      path: 'customPermissions',
+      match: { isActive: true },
+      select: 'code name module description',
+    });
+
+  if (!populatedUser) throw new AppError('Không tìm thấy người dùng', 404);
+
+  const roleDoc = populatedUser.roleId;
+  const isSuperAdmin = isSuperAdminUser(populatedUser);
+
+  let permissionDocs = [];
+  if (isSuperAdmin) {
+    permissionDocs = await Permission.find({ isActive: true }).sort({ module: 1, name: 1 });
+  } else {
+    const rolePerms = Array.isArray(roleDoc?.permissions) ? roleDoc.permissions : [];
+    const customPerms = Array.isArray(populatedUser.customPermissions) ? populatedUser.customPermissions : [];
+    const permMap = new Map();
+    [...rolePerms, ...customPerms].forEach((p) => {
+      if (p && p.code) {
+        permMap.set(p.code, {
+          _id: p._id,
+          name: p.name,
+          code: p.code,
+          module: p.module,
+          description: p.description,
+        });
+      }
+    });
+    permissionDocs = Array.from(permMap.values()).sort((a, b) => {
+      const modCompare = (a.module || '').localeCompare(b.module || '');
+      if (modCompare !== 0) return modCompare;
+      return (a.name || '').localeCompare(b.name || '');
+    });
+  }
+
+  const grouped = permissionDocs.reduce((acc, p) => {
+    const mod = p.module || 'Khác';
+    if (!acc[mod]) acc[mod] = [];
+    acc[mod].push(p);
+    return acc;
+  }, {});
+
+  return {
+    isSuperAdmin,
+    role: {
+      _id: roleDoc?._id || null,
+      name: roleDoc?.name || (isSuperAdmin ? 'Quản trị viên tối cao' : 'Nhân viên'),
+      code: roleDoc?.code || populatedUser.role || 'staff',
+    },
+    permissions: permissionDocs.map((p) => p.code),
+    permissionDetails: permissionDocs,
+    grouped,
+    count: permissionDocs.length,
+  };
+};
 
 module.exports = {
   COOKIE_OPTIONS,
@@ -1841,6 +2003,11 @@ module.exports = {
   generatePasskeyRegisterOptions,
   verifyPasskeyRegister,
   deletePasskey,
+  // User & Permission helpers
+  getUserById,
+  getPopulatedAuthUser,
+  getUserProfileWithPermissions,
+  getUserPermissions,
 };
 
 

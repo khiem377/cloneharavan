@@ -10,6 +10,47 @@ const User = require('../models/user.model');
 const Coupon = require('../models/coupon.model');
 const Comment = require('../models/comment.model');
 
+// ==========================================================================
+// In-Memory TTL Cache (Fast local caching, ready to swap to Redis later)
+// ==========================================================================
+class MemoryCache {
+  constructor(defaultTtlMs = 60000) {
+    this.cache = new Map();
+    this.defaultTtlMs = defaultTtlMs;
+  }
+
+  get(key) {
+    const item = this.cache.get(key);
+    if (!item) return null;
+    if (Date.now() > item.expiresAt) {
+      this.cache.delete(key);
+      return null;
+    }
+    return item.data;
+  }
+
+  set(key, data, ttlMs = this.defaultTtlMs) {
+    this.cache.set(key, {
+      data,
+      expiresAt: Date.now() + ttlMs,
+    });
+  }
+
+  delete(key) {
+    this.cache.delete(key);
+  }
+
+  clear() {
+    this.cache.clear();
+  }
+}
+
+const dashboardCache = new MemoryCache(60000); // 60s TTL cache
+
+const invalidateDashboardCache = () => {
+  dashboardCache.clear();
+};
+
 // ─ Helper: format bytes ───────────────────────────────────────────────
 const formatBytes = (bytes) => {
   if (!bytes || bytes === 0) return '0 B';
@@ -60,100 +101,116 @@ const buildDaySlots = (numDays) => {
   });
 };
 
+// Helper for growth %
+const growthPct = (cur, prev) => {
+  if (!prev) return cur > 0 ? 100 : 0;
+  return Math.round(((cur - prev) / prev) * 100);
+};
+
 // ==========================================================================
-// getOverviewStats — Main dashboard data (enhanced)
+// getOverviewStats — High-performance parallel aggregation with TTL cache
 // ==========================================================================
 const getOverviewStats = async (period = '30days') => {
+  const cacheKey = `overview_${period}`;
+  const cachedData = dashboardCache.get(cacheKey);
+  if (cachedData) {
+    return cachedData;
+  }
+
   const now = new Date();
-  const { start: periodStart, label: periodLabel } = parsePeriod(period);
-
-  // Previous period for delta comparison
-  const { days } = parsePeriod(period);
+  const { start: periodStart, label: periodLabel, days } = parsePeriod(period);
   const prevStart = new Date(periodStart.getTime() - days * 24 * 60 * 60 * 1000);
+  const sixMonthSlots = buildMonthSlots(6);
+  const sixMonthStart = sixMonthSlots[0].start;
 
+  // Execute ALL aggregate pipelines and collections in a SINGLE parallel batch
   const [
-    totalProducts,
-    publishedProducts,
-    lowStockProducts,
-    outOfStockProducts,
+    [productFacetRes],
+    [userFacetRes],
+    [blogFacetRes],
+    [mediaStatsRes],
     totalVariants,
     totalCategories,
     totalBrands,
-    totalBlogPosts,
-    publishedBlogPosts,
-    draftBlogPosts,
-    pendingBlogPosts,
-    totalMedia,
-    totalMediaBytesAgg,
     rawFolderCount,
     distinctMediaFolders,
-    // Customers
-    totalCustomers,
-    activeCustomers,
-    newCustomers,
-    prevNewCustomers,
-    // Blog delta
-    newBlogPosts,
-    prevNewBlogPosts,
-    newProducts,
-    prevNewProducts,
-    newMedia,
-    // Comments
     totalComments,
-    // Coupons
     totalCoupons,
     activeCoupons,
+    categoryDistributionRaw,
+    topProducts,
+    brandDistributionRaw,
+    userGrowthAgg,
+    productGrowthAgg,
+    recentProducts,
+    rawRecentBlogPosts,
+    recentCustomers,
   ] = await Promise.all([
-    Product.countDocuments({ isActive: true }),
-    Product.countDocuments({ isActive: true, status: 'published' }),
-    Product.countDocuments({ isActive: true, status: 'published', stock: { $gt: 0, $lte: 10 } }),
-    Product.countDocuments({ isActive: true, status: 'published', stock: { $lte: 0 } }),
+    // 1. Product Facet (Collapses 6 queries into 1 aggregation pipeline)
+    Product.aggregate([
+      {
+        $facet: {
+          total: [{ $match: { isActive: true } }, { $count: 'val' }],
+          published: [{ $match: { isActive: true, status: 'published' } }, { $count: 'val' }],
+          lowStock: [{ $match: { isActive: true, status: 'published', stock: { $gt: 0, $lte: 10 } } }, { $count: 'val' }],
+          outOfStock: [{ $match: { isActive: true, status: 'published', stock: { $lte: 0 } } }, { $count: 'val' }],
+          newProducts: [{ $match: { isActive: true, createdAt: { $gte: periodStart } } }, { $count: 'val' }],
+          prevNewProducts: [{ $match: { isActive: true, createdAt: { $gte: prevStart, $lt: periodStart } } }, { $count: 'val' }],
+        },
+      },
+    ]),
+
+    // 2. User Facet (Collapses 4 customer count queries into 1)
+    User.aggregate([
+      {
+        $facet: {
+          totalCustomers: [{ $match: { role: 'user' } }, { $count: 'val' }],
+          activeCustomers: [{ $match: { role: 'user', isActive: true } }, { $count: 'val' }],
+          newCustomers: [{ $match: { role: 'user', createdAt: { $gte: periodStart } } }, { $count: 'val' }],
+          prevNewCustomers: [{ $match: { role: 'user', createdAt: { $gte: prevStart, $lt: periodStart } } }, { $count: 'val' }],
+        },
+      },
+    ]),
+
+    // 3. Blog Facet (Collapses 6 blog queries into 1)
+    BlogPost.aggregate([
+      {
+        $facet: {
+          total: [{ $count: 'val' }],
+          published: [{ $match: { status: 'published' } }, { $count: 'val' }],
+          draft: [{ $match: { status: 'draft' } }, { $count: 'val' }],
+          pending: [{ $match: { status: 'pending' } }, { $count: 'val' }],
+          newBlogPosts: [{ $match: { createdAt: { $gte: periodStart } } }, { $count: 'val' }],
+          prevNewBlogPosts: [{ $match: { createdAt: { $gte: prevStart, $lt: periodStart } } }, { $count: 'val' }],
+        },
+      },
+    ]),
+
+    // 4. Media Facet (Collapses total bytes, total count and period deltas into 1)
+    Media.aggregate([
+      {
+        $facet: {
+          totals: [{ $group: { _id: null, total: { $sum: '$size' }, count: { $sum: 1 } } }],
+          newMedia: [{ $match: { createdAt: { $gte: periodStart } } }, { $count: 'val' }],
+        },
+      },
+    ]),
+
+    // 5. Individual small counts
     ProductVariant.countDocuments({ isActive: true }),
     Category.countDocuments({ isActive: true }),
     Brand.countDocuments({ isActive: true }),
-    BlogPost.countDocuments({}),
-    BlogPost.countDocuments({ status: 'published' }),
-    BlogPost.countDocuments({ status: 'draft' }),
-    BlogPost.countDocuments({ status: 'pending' }),
-    Media.countDocuments({}),
-    Media.aggregate([{ $group: { _id: null, total: { $sum: '$size' } } }]),
     Folder.countDocuments({}),
     Media.distinct('folderId'),
-    // Customers (role = 'user')
-    User.countDocuments({ role: 'user' }),
-    User.countDocuments({ role: 'user', isActive: true }),
-    User.countDocuments({ role: 'user', createdAt: { $gte: periodStart } }),
-    User.countDocuments({ role: 'user', createdAt: { $gte: prevStart, $lt: periodStart } }),
-    // Content deltas
-    BlogPost.countDocuments({ createdAt: { $gte: periodStart } }),
-    BlogPost.countDocuments({ createdAt: { $gte: prevStart, $lt: periodStart } }),
-    Product.countDocuments({ isActive: true, createdAt: { $gte: periodStart } }),
-    Product.countDocuments({ isActive: true, createdAt: { $gte: prevStart, $lt: periodStart } }),
-    Media.countDocuments({ createdAt: { $gte: periodStart } }),
-    // Comments
     Comment.countDocuments({}),
-    // Coupons
     Coupon.countDocuments({}),
     Coupon.countDocuments({
       isActive: true,
       $or: [{ endDate: { $gte: now } }, { endDate: null }, { endDate: { $exists: false } }],
     }),
-  ]);
 
-  const totalMediaBytes = totalMediaBytesAgg[0]?.total || 0;
-  const formattedMediaSize = formatBytes(totalMediaBytes);
-  const totalFolders = Math.max(rawFolderCount || 0, (distinctMediaFolders || []).filter(Boolean).length);
-
-  // Helper for growth %
-  const growthPct = (cur, prev) => {
-    if (!prev) return cur > 0 ? 100 : 0;
-    return Math.round(((cur - prev) / prev) * 100);
-  };
-
-  // ── Category Distribution ────────────────────────────────────────────
-  let categoryDistribution = [];
-  try {
-    const catAgg = await Product.aggregate([
+    // 6. Category Distribution (Top 8)
+    Product.aggregate([
       { $match: { isActive: true } },
       { $unwind: '$categories' },
       { $group: { _id: '$categories', count: { $sum: 1 } } },
@@ -162,32 +219,19 @@ const getOverviewStats = async (period = '30days') => {
       { $lookup: { from: 'categories', localField: '_id', foreignField: '_id', as: 'cat' } },
       { $unwind: { path: '$cat', preserveNullAndEmptyArrays: true } },
       { $project: { _id: 1, name: { $ifNull: ['$cat.name', 'Khác'] }, count: 1 } },
-    ]);
-    categoryDistribution = catAgg.map((item) => ({
-      _id: item._id,
-      name: item.name,
-      count: item.count,
-      percent: totalProducts > 0 ? Math.round((item.count / totalProducts) * 100) : 0,
-    }));
-  } catch (err) {
-    console.error('Category distribution error:', err);
-  }
+    ]).catch(() => []),
 
-  // ── Top Products by interactions/views ───────────────────────────────
-  let topProducts = [];
-  try {
-    topProducts = await Product.find({ isActive: true, status: 'published' })
+    // 7. Top Products by views
+    Product.find({ isActive: true, status: 'published' })
       .sort({ viewsCount: -1 })
       .limit(6)
       .select('name sku price salePrice thumbnail stock viewsCount brand')
       .populate('brand', 'name')
-      .lean();
-  } catch (e) {}
+      .lean()
+      .catch(() => []),
 
-  // ── Brand Distribution ───────────────────────────────────────────────
-  let brandDistribution = [];
-  try {
-    const brandAgg = await Product.aggregate([
+    // 8. Brand Distribution (Top 6)
+    Product.aggregate([
       { $match: { isActive: true, brand: { $ne: null } } },
       { $group: { _id: '$brand', count: { $sum: 1 } } },
       { $sort: { count: -1 } },
@@ -195,90 +239,124 @@ const getOverviewStats = async (period = '30days') => {
       { $lookup: { from: 'brands', localField: '_id', foreignField: '_id', as: 'b' } },
       { $unwind: { path: '$b', preserveNullAndEmptyArrays: true } },
       { $project: { _id: 1, name: { $ifNull: ['$b.name', 'Khác'] }, logo: '$b.logo', count: 1 } },
-    ]);
-    brandDistribution = brandAgg.map((item, i) => ({
-      _id: item._id,
-      name: item.name,
-      logo: item.logo,
-      count: item.count,
-      percent: totalProducts > 0 ? Math.round((item.count / totalProducts) * 100) : 0,
-    }));
-  } catch (e) {}
+    ]).catch(() => []),
 
-  // ── User Growth Trend (last 6 months) ───────────────────────────────
-  let userGrowthTrend = [];
-  try {
-    const slots = buildMonthSlots(6);
-    const userAgg = await User.aggregate([
-      { $match: { role: 'user', createdAt: { $gte: slots[0].start } } },
+    // 9. User Growth Trend (last 6 months)
+    User.aggregate([
+      { $match: { role: 'user', createdAt: { $gte: sixMonthStart } } },
       {
         $group: {
           _id: { year: { $year: '$createdAt' }, month: { $month: '$createdAt' } },
           count: { $sum: 1 },
         },
       },
-    ]);
-    const uMap = {};
-    userAgg.forEach((u) => { uMap[`${u._id.year}-${u._id.month}`] = u.count; });
-    userGrowthTrend = slots.map((s) => ({
-      month: s.label,
-      kh_moi: uMap[`${s.year}-${s.month}`] || 0,
-    }));
-  } catch (e) {}
+    ]).catch(() => []),
 
-  // ── Product Growth Trend (last 6 months) ────────────────────────────
-  let productGrowthTrend = [];
-  try {
-    const slots = buildMonthSlots(6);
-    const prodAgg = await Product.aggregate([
-      { $match: { isActive: true, createdAt: { $gte: slots[0].start } } },
+    // 10. Product Growth Trend (last 6 months)
+    Product.aggregate([
+      { $match: { isActive: true, createdAt: { $gte: sixMonthStart } } },
       {
         $group: {
           _id: { year: { $year: '$createdAt' }, month: { $month: '$createdAt' } },
           count: { $sum: 1 },
         },
       },
-    ]);
-    const pMap = {};
-    prodAgg.forEach((p) => { pMap[`${p._id.year}-${p._id.month}`] = p.count; });
-    productGrowthTrend = slots.map((s) => ({
-      month: s.label,
-      sp_moi: pMap[`${s.year}-${s.month}`] || 0,
-    }));
-  } catch (e) {}
+    ]).catch(() => []),
 
-  // ── Recent Products ──────────────────────────────────────────────────
-  const recentProducts = await Product.find({ isActive: true })
-    .sort({ createdAt: -1 })
-    .limit(5)
-    .select('name sku price salePrice thumbnail status stock brand viewsCount')
-    .populate('brand', 'name')
-    .lean();
+    // 11. Recent Products (Top 5)
+    Product.find({ isActive: true })
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .select('name sku price salePrice thumbnail status stock brand viewsCount')
+      .populate('brand', 'name')
+      .lean()
+      .catch(() => []),
 
-  // ── Recent Blog Posts ────────────────────────────────────────────────
-  const rawRecentBlogPosts = await BlogPost.find({})
-    .sort({ createdAt: -1 })
-    .limit(5)
-    .select('title slug status thumbnailUrl thumbnailMediaId viewsCount createdAt publishedAt')
-    .populate('thumbnailMediaId', 'url')
-    .lean();
+    // 12. Recent Blog Posts (Top 5)
+    BlogPost.find({})
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .select('title slug status thumbnailUrl thumbnailMediaId viewsCount createdAt publishedAt')
+      .populate('thumbnailMediaId', 'url')
+      .lean()
+      .catch(() => []),
 
-  const recentBlogPosts = rawRecentBlogPosts.map((post) => ({
+    // 13. Recent Customers (Top 5)
+    User.find({ role: 'user' })
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .select('fullName email phone avatar isActive createdAt authProvider zaloId tiktokId zaloName tiktokUsername')
+      .lean()
+      .catch(() => []),
+  ]);
+
+  // Extract from product facet
+  const totalProducts = productFacetRes?.total?.[0]?.val || 0;
+  const publishedProducts = productFacetRes?.published?.[0]?.val || 0;
+  const lowStockProducts = productFacetRes?.lowStock?.[0]?.val || 0;
+  const outOfStockProducts = productFacetRes?.outOfStock?.[0]?.val || 0;
+  const newProducts = productFacetRes?.newProducts?.[0]?.val || 0;
+  const prevNewProducts = productFacetRes?.prevNewProducts?.[0]?.val || 0;
+
+  // Extract from user facet
+  const totalCustomers = userFacetRes?.totalCustomers?.[0]?.val || 0;
+  const activeCustomers = userFacetRes?.activeCustomers?.[0]?.val || 0;
+  const newCustomers = userFacetRes?.newCustomers?.[0]?.val || 0;
+  const prevNewCustomers = userFacetRes?.prevNewCustomers?.[0]?.val || 0;
+
+  // Extract from blog facet
+  const totalBlogPosts = blogFacetRes?.total?.[0]?.val || 0;
+  const publishedBlogPosts = blogFacetRes?.published?.[0]?.val || 0;
+  const draftBlogPosts = blogFacetRes?.draft?.[0]?.val || 0;
+  const pendingBlogPosts = blogFacetRes?.pending?.[0]?.val || 0;
+  const newBlogPosts = blogFacetRes?.newBlogPosts?.[0]?.val || 0;
+  const prevNewBlogPosts = blogFacetRes?.prevNewBlogPosts?.[0]?.val || 0;
+
+  // Extract from media facet
+  const totalMedia = mediaStatsRes?.totals?.[0]?.count || 0;
+  const totalMediaBytes = mediaStatsRes?.totals?.[0]?.total || 0;
+  const newMedia = mediaStatsRes?.newMedia?.[0]?.val || 0;
+  const formattedMediaSize = formatBytes(totalMediaBytes);
+  const totalFolders = Math.max(rawFolderCount || 0, (distinctMediaFolders || []).filter(Boolean).length);
+
+  // Format distributions
+  const categoryDistribution = (categoryDistributionRaw || []).map((item) => ({
+    _id: item._id,
+    name: item.name,
+    count: item.count,
+    percent: totalProducts > 0 ? Math.round((item.count / totalProducts) * 100) : 0,
+  }));
+
+  const brandDistribution = (brandDistributionRaw || []).map((item) => ({
+    _id: item._id,
+    name: item.name,
+    logo: item.logo,
+    count: item.count,
+    percent: totalProducts > 0 ? Math.round((item.count / totalProducts) * 100) : 0,
+  }));
+
+  // Format growth trends
+  const uMap = {};
+  (userGrowthAgg || []).forEach((u) => { uMap[`${u._id.year}-${u._id.month}`] = u.count; });
+  const userGrowthTrend = sixMonthSlots.map((s) => ({
+    month: s.label,
+    kh_moi: uMap[`${s.year}-${s.month}`] || 0,
+  }));
+
+  const pMap = {};
+  (productGrowthAgg || []).forEach((p) => { pMap[`${p._id.year}-${p._id.month}`] = p.count; });
+  const productGrowthTrend = sixMonthSlots.map((s) => ({
+    month: s.label,
+    sp_moi: pMap[`${s.year}-${s.month}`] || 0,
+  }));
+
+  // Format blog posts thumbnails
+  const recentBlogPosts = (rawRecentBlogPosts || []).map((post) => ({
     ...post,
     thumbnailUrl: post.thumbnailUrl || post.thumbnailMediaId?.url || '',
   }));
 
-  // ── Recent New Customers ─────────────────────────────────────────────
-  let recentCustomers = [];
-  try {
-    recentCustomers = await User.find({ role: 'user' })
-      .sort({ createdAt: -1 })
-      .limit(5)
-      .select('fullName email phone avatar isActive createdAt')
-      .lean();
-  } catch (e) {}
-
-  return {
+  const result = {
     stats: {
       totalProducts,
       publishedProducts,
@@ -323,14 +401,24 @@ const getOverviewStats = async (period = '30days') => {
     recentCustomers,
     period,
   };
+
+  // Cache result for 60 seconds
+  dashboardCache.set(cacheKey, result, 60000);
+
+  return result;
 };
 
 // ==========================================================================
-// getInventoryDashboardStats
+// getInventoryDashboardStats — Parallel aggregation with TTL cache
 // ==========================================================================
 const getInventoryDashboardStats = async (range = '6months') => {
-  const now = new Date();
+  const cacheKey = `inventory_${range}`;
+  const cachedData = dashboardCache.get(cacheKey);
+  if (cachedData) {
+    return cachedData;
+  }
 
+  const now = new Date();
   let slots, groupByDay;
   if (range === '7days') {
     slots = buildDaySlots(7);
@@ -348,23 +436,35 @@ const getInventoryDashboardStats = async (range = '6months') => {
 
   const rangeStart = slots[0].start;
 
-  const movementAgg = await StockMovement.aggregate([
-    { $match: { createdAt: { $gte: rangeStart, $lte: now } } },
-    {
-      $group: {
-        _id: {
-          year:  { $year: '$createdAt' },
-          month: { $month: '$createdAt' },
-          ...(groupByDay && { day: { $dayOfMonth: '$createdAt' } }),
-          sign:  { $cond: [{ $gt: ['$changeQty', 0] }, 'nhap', 'xuat'] },
+  // Run stock movement aggregation and stock status facet in parallel
+  const [movementAgg, [stockFacetRes]] = await Promise.all([
+    StockMovement.aggregate([
+      { $match: { createdAt: { $gte: rangeStart, $lte: now } } },
+      {
+        $group: {
+          _id: {
+            year:  { $year: '$createdAt' },
+            month: { $month: '$createdAt' },
+            ...(groupByDay && { day: { $dayOfMonth: '$createdAt' } }),
+            sign:  { $cond: [{ $gt: ['$changeQty', 0] }, 'nhap', 'xuat'] },
+          },
+          total: { $sum: { $abs: '$changeQty' } },
         },
-        total: { $sum: { $abs: '$changeQty' } },
       },
-    },
+    ]),
+    Product.aggregate([
+      {
+        $facet: {
+          published: [{ $match: { isActive: true, status: 'published' } }, { $count: 'c' }],
+          lowStock: [{ $match: { isActive: true, status: 'published', stock: { $gt: 0, $lte: 10 } } }, { $count: 'c' }],
+          outOfStock: [{ $match: { isActive: true, status: 'published', stock: { $lte: 0 } } }, { $count: 'c' }],
+        },
+      },
+    ]),
   ]);
 
   const movMap = {};
-  for (const m of movementAgg) {
+  for (const m of (movementAgg || [])) {
     const key = groupByDay
       ? `${m._id.year}-${m._id.month}-${m._id.day}-${m._id.sign}`
       : `${m._id.year}-${m._id.month}-${m._id.sign}`;
@@ -388,17 +488,18 @@ const getInventoryDashboardStats = async (range = '6months') => {
     };
   });
 
-  const [published, lowStock, outOfStock] = await Promise.all([
-    Product.countDocuments({ isActive: true, status: 'published' }),
-    Product.countDocuments({ isActive: true, status: 'published', stock: { $gt: 0, $lte: 10 } }),
-    Product.countDocuments({ isActive: true, status: 'published', stock: { $lte: 0 } }),
-  ]);
+  const published = stockFacetRes?.published?.[0]?.c || 0;
+  const lowStock = stockFacetRes?.lowStock?.[0]?.c || 0;
+  const outOfStock = stockFacetRes?.outOfStock?.[0]?.c || 0;
 
-  return {
+  const result = {
     monthlyData,
     range,
     stockStatus: { published, lowStock, outOfStock },
   };
+
+  dashboardCache.set(cacheKey, result, 60000);
+  return result;
 };
 
 // ==========================================================================
@@ -406,7 +507,12 @@ const getInventoryDashboardStats = async (range = '6months') => {
 // ==========================================================================
 const searchGlobal = async (q) => {
   if (!q?.trim()) return { products: [], categories: [], brands: [], blogPosts: [] };
-  const regex = new RegExp(q.trim(), 'i');
+  const trimmed = q.trim();
+  const cacheKey = `search_${trimmed.toLowerCase()}`;
+  const cached = dashboardCache.get(cacheKey);
+  if (cached) return cached;
+
+  const regex = new RegExp(trimmed, 'i');
 
   const [products, categories, brands, blogPosts] = await Promise.all([
     Product.find({ isActive: true, $or: [{ name: regex }, { sku: regex }] })
@@ -420,11 +526,14 @@ const searchGlobal = async (q) => {
       .select('title slug status createdAt').limit(5).lean(),
   ]);
 
-  return { products, categories, brands, blogPosts };
+  const result = { products, categories, brands, blogPosts };
+  dashboardCache.set(cacheKey, result, 30000); // 30s cache for fast repetitive lookups
+  return result;
 };
 
 module.exports = {
   getOverviewStats,
   getInventoryDashboardStats,
   searchGlobal,
+  invalidateDashboardCache,
 };
