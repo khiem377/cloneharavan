@@ -4,7 +4,7 @@
  */
 import { useState, useRef, useEffect } from 'react';
 import { X, Loader2 } from '@/components/ui/Icons';
-import api from '@/lib/axios';
+import { chatbotService } from '@/services/chatbot.service';
 
 // CSS wave animation cho typing indicator
 const waveStyle = `
@@ -186,11 +186,9 @@ export default function ChatbotBubble() {
     setMessages(p => [...p, { id: botId, role: 'bot', text: '', streaming: true }]);
 
     try {
-      const BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
-      const res = await fetch(`${BASE}/chat/stream`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, sessionId: sessionIdRef.current }),
+      const res = await chatbotService.streamMessage({
+        message: text,
+        sessionId: sessionIdRef.current,
       });
 
       const reader = res.body.getReader();
@@ -245,7 +243,7 @@ export default function ChatbotBubble() {
 
   const reset = async () => {
     if (sessionId) {
-      await api.delete('/chat/session', { data: { sessionId } }).catch(() => { });
+      await chatbotService.deleteSession(sessionId).catch(() => { });
     }
     sessionIdRef.current = null;
     setSessionId(null);

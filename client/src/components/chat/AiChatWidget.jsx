@@ -36,6 +36,7 @@ export default function AiChatWidget() {
   const [sessionId, setSessionId] = useState(null);
 
   const sessionIdRef = useRef(null);
+  const messagesContainerRef = useRef(null);
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
   const abortCtrlRef = useRef(null);
@@ -109,8 +110,13 @@ export default function AiChatWidget() {
 
   // Tự động cuộn xuống cuối khi có tin nhắn mới hoặc đang stream
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    if (loading && messagesContainerRef.current) {
+      // Khi AI đang stream từng token (12ms), cuộn tức thì không animation tránh giật và quá tải compositor
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+    } else {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages, loading]);
 
   // Focus textarea khi mở chat widget
   useEffect(() => {
@@ -351,7 +357,10 @@ export default function AiChatWidget() {
           />
 
           {/* Vùng nội dung tin nhắn */}
-          <div className="flex-1 overflow-y-auto p-3.5 space-y-3 bg-[#f8fafc] text-xs sm:text-sm select-text">
+          <div
+            ref={messagesContainerRef}
+            className="flex-1 overflow-y-auto p-3.5 space-y-3 bg-[#f8fafc] text-xs sm:text-sm select-text"
+          >
             {messages.map((msg) => (
               <ChatMessageItem
                 key={msg.id}
