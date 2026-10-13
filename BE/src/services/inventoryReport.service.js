@@ -125,6 +125,9 @@ const getInventoryBalanceReport = async (query = {}) => {
     grandOutAmount += outAmount;
     grandClosingAmount += closingAmount;
 
+    const allocated = v.allocated || 0;
+    const availableStock = Math.max(0, closingQty - allocated);
+
     items.push({
       stt: sttCounter++,
       variantId: v._id,
@@ -140,6 +143,8 @@ const getInventoryBalanceReport = async (query = {}) => {
       outAmount,
       closingQty,
       closingAmount,
+      allocated,
+      availableStock,
     });
   });
 

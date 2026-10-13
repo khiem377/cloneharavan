@@ -39,5 +39,8 @@ const stockMovementSchema = new mongoose.Schema(
 
 stockMovementSchema.index({ variantId: 1, createdAt: -1 });
 stockMovementSchema.index({ referenceNumber: 1 });
+stockMovementSchema.index({ createdAt: -1, changeQty: 1 });
+stockMovementSchema.index({ warehouseId: 1, createdAt: -1 });
+stockMovementSchema.index({ productId: 1, createdAt: -1 });
 
 module.exports = mongoose.model('StockMovement', stockMovementSchema);

@@ -90,13 +90,7 @@ const downloadExcelSlip = async (req, res, next) => {
 
 const previewExcelSlip = async (req, res, next) => {
   try {
-    const tempPO = await PurchaseOrderService.createPurchaseOrder(
-      { ...req.body, status: 'draft' },
-      req.user._id
-    );
-    const { workbook } = await PurchaseOrderService.generateExcelSlip(tempPO._id);
-    const PurchaseOrderModel = require('../models/purchaseOrder.model');
-    await PurchaseOrderModel.findByIdAndDelete(tempPO._id);
+    const { workbook } = await PurchaseOrderService.previewExcelSlip(req.body, req.user._id);
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     await workbook.xlsx.write(res);

@@ -60,6 +60,7 @@ const errorHandler = (err, req, res, next) => {
 
   res.status(statusCode).json({
     status:     'error',
+    success:    false,
     statusCode,
     message,
     ...(err.inUsePosts  && { inUsePosts:  err.inUsePosts  }),
