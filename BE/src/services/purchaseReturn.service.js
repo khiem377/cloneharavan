@@ -9,6 +9,7 @@ const StockMovement = require('../models/stockMovement.model');
 const { uploadRawToCloudinary } = require('../config/cloudinary');
 const AppError = require('../utils/AppError');
 const { numberToWordsVN } = require('../utils/vnNumberToWords');
+const SupplierDebtService = require('./supplierDebt.service');
 
 class PurchaseReturnService {
   static async getPurchaseReturns({ page = 1, limit = 10, search = '', status = '', supplierId = '' }) {
@@ -167,6 +168,8 @@ class PurchaseReturnService {
     } catch (err) {
       console.error(`[Archive-Error] Upload PR ${returnNumber} to Cloudinary failed:`, err.message);
     }
+
+    await SupplierDebtService.syncFromPurchaseReturn(purchaseReturn);
 
     return purchaseReturn;
   }

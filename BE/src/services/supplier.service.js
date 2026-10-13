@@ -1,4 +1,5 @@
 const Supplier = require('../models/supplier.model');
+const SupplierDebt = require('../models/supplierDebt.model');
 const AppError = require('../utils/AppError');
 
 class SupplierService {
@@ -36,10 +37,25 @@ class SupplierService {
       ]),
     ]);
 
+    const supplierIds = data.map((s) => s._id);
+    const debts = await SupplierDebt.find({
+      supplierId: { $in: supplierIds },
+      status: { $in: ['pending', 'partially_paid'] },
+    })
+      .select('supplierId debtNumber referenceCode referenceType totalAmount paidAmount remainingAmount dueDate createdAt name')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const dataWithDebts = data.map((sup) => {
+      const sObj = sup.toObject();
+      sObj.unpaidDebts = debts.filter((d) => d.supplierId.toString() === sup._id.toString());
+      return sObj;
+    });
+
     const totalDebt = debtAgg[0]?.totalDebt || 0;
 
     return {
-      data,
+      data: dataWithDebts,
       pagination: {
         page: Number(page),
         limit: Number(limit),

@@ -10,6 +10,7 @@ const path = require('path');
 const fs = require('fs');
 const AppError = require('../utils/AppError');
 const { numberToWordsVN } = require('../utils/vnNumberToWords');
+const SupplierDebtService = require('./supplierDebt.service');
 
 class PurchaseOrderService {
     // 1. Lấy danh sách Đơn Nhập Kho
@@ -117,6 +118,7 @@ class PurchaseOrderService {
             po.receivedAt = new Date();
             await this.processInventoryIncrement(po, userId);
             await po.save();
+            await SupplierDebtService.syncFromPurchaseOrder(po);
         }
 
         return po;
@@ -147,6 +149,7 @@ class PurchaseOrderService {
             if (status === 'completed') {
                 po.receivedAt = new Date();
                 await this.processInventoryIncrement(po, userId);
+                await SupplierDebtService.syncFromPurchaseOrder(po);
             }
         }
 
@@ -434,6 +437,17 @@ class PurchaseOrderService {
         }
 
         return po;
+    }
+
+    // 8. Tạo và xuất Excel xem trước (không lưu lại PO rác)
+    static async previewExcelSlip(payload, userId) {
+        const tempPO = await this.createPurchaseOrder(
+            { ...payload, status: 'draft' },
+            userId
+        );
+        const { workbook } = await this.generateExcelSlip(tempPO._id);
+        await PurchaseOrder.findByIdAndDelete(tempPO._id);
+        return { workbook };
     }
 }
 
