@@ -420,6 +420,16 @@ export default function ProductListPage() {
                         })()}
                         <div className="flex items-center gap-1.5 flex-wrap min-w-0">
                           <span className="font-semibold text-foreground text-xs line-clamp-1 max-w-xs">{p.name}</span>
+                          {p.itemType === 'combo' && (
+                            <Badge variant="outline" className="text-[10px] bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20 px-1 py-0 rounded-[4px]">
+                              Combo
+                            </Badge>
+                          )}
+                          {p.allowNegativeStock && (
+                            <Badge variant="outline" className="text-[10px] bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20 px-1 py-0 rounded-[4px]" title="Cho phép bán tồn kho âm">
+                              Bán âm
+                            </Badge>
+                          )}
                           {p.isComposite && (
                             <Badge variant="outline" className="text-[10px] bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20 px-1 py-0 rounded-[4px]">
                               BOM

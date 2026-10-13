@@ -7,6 +7,8 @@ const Promotion = require('../models/promotion.model');
 const GiftProgram = require('../models/gift-program.model');
 const Coupon = require('../models/coupon.model');
 const FlashSale = require('../models/flashSale.model');
+const Warehouse = require('../models/warehouse.model');
+const ProductWarehouseStock = require('../models/productWarehouseStock.model');
 const { AppError } = require('../utils/AppError');
 const { slugify } = require('../utils/slugify');
 
@@ -76,6 +78,50 @@ const syncCachedPrice = async (productId) => {
     { _id: productId },
     { $set: { cachedPrice: dv.price ?? null, cachedSalePrice: dv.salePrice ?? null } }
   );
+};
+
+/**
+ * Khởi tạo tồn kho theo kho (ProductWarehouseStock) cho sản phẩm mới (Pancake style).
+ * Nếu warehouseId = 'all' hoặc null: gán tồn ban đầu vào kho mặc định, các kho khác khởi tạo 0.
+ * Nếu warehouseId là 1 kho cụ thể: gán tồn ban đầu vào kho đó, các kho khác khởi tạo 0.
+ */
+const syncInitialWarehouseStock = async (productId, variants = [], warehouseId = null, initialStock = 0) => {
+  try {
+    const activeWarehouses = await Warehouse.find({ status: 'active' }).select('_id isDefault').lean();
+    if (!activeWarehouses || activeWarehouses.length === 0) return;
+
+    let targetWarehouseId = warehouseId;
+    if (!targetWarehouseId || targetWarehouseId === 'all') {
+      const defaultWh = activeWarehouses.find((w) => w.isDefault) || activeWarehouses[0];
+      targetWarehouseId = defaultWh?._id?.toString();
+    } else {
+      targetWarehouseId = targetWarehouseId.toString();
+    }
+
+    const stockDocs = [];
+    for (const v of variants) {
+      if (!v?._id) continue;
+      for (const wh of activeWarehouses) {
+        const whIdStr = wh._id.toString();
+        const isTarget = whIdStr === targetWarehouseId;
+        const stockQty = isTarget ? (v.stock ?? initialStock ?? 0) : 0;
+
+        stockDocs.push({
+          warehouseId: wh._id,
+          productId,
+          variantId: v._id,
+          stock: Math.max(0, Number(stockQty) || 0),
+          allocated: 0,
+        });
+      }
+    }
+
+    if (stockDocs.length > 0) {
+      await ProductWarehouseStock.insertMany(stockDocs, { ordered: false }).catch(() => {});
+    }
+  } catch (err) {
+    console.error('Error syncing initial warehouse stock:', err.message);
+  }
 };
 
 /**
@@ -319,13 +365,26 @@ const createProduct = async (data) => {
     description: data.description, specifications: data.specifications,
     options: data.options, isFeatured: data.isFeatured, isHot: data.isHot,
     status: data.status, isActive: data.isActive,
+    supplierId: data.supplierId || null,
+    warehouseId: data.warehouseId && data.warehouseId !== 'all' ? data.warehouseId : null,
+    costPrice: data.costPrice || 0,
+    allowNegativeStock: data.allowNegativeStock === true,
+    hideNameOnPrint: data.hideNameOnPrint === true,
+    hideOnInvoice: data.hideOnInvoice === true,
+    weightBasedPricing: data.weightBasedPricing === true,
+    lowStockThreshold: data.lowStockThreshold !== undefined ? Number(data.lowStockThreshold) : 5,
+    keywords: Array.isArray(data.keywords) ? data.keywords : (data.keyword ? [data.keyword] : []),
+    weight: data.weight !== undefined ? Number(data.weight) : 0,
+    dimensions: data.dimensions || { length: 0, width: 0, height: 0 },
+    giftProduct: data.giftProduct || null,
   });
 
   // Default Variant
-  await createDefaultVariant(
+  const defaultVar = await createDefaultVariant(
     product._id, productCode, data.price, data.salePrice, data.stock, data.unit || 'Cái'
   );
 
+  let insertedVariants = [];
   // Biến thể chi tiết — batch SKU generation (1 query) + insertMany (1 round trip)
   if (Array.isArray(data.variants) && data.variants.length > 0) {
     // Batch generate tất cả SKUs trong 1 DB call thay vì N sequential calls
@@ -339,11 +398,17 @@ const createProduct = async (data) => {
         salePrice: item.salePrice ?? data.salePrice ?? null,
         costPrice: item.costPrice ?? data.costPrice ?? null,
         stock: item.stock ?? 0, unit: item.unit || data.unit || 'Cái',
+        weight: item.weight ?? data.weight ?? 0,
+        dimensions: item.dimensions || data.dimensions || { length: 0, width: 0, height: 0 },
         position: i, isActive: true,
       };
     });
-    await ProductVariant.insertMany(variantDocs);
+    insertedVariants = await ProductVariant.insertMany(variantDocs);
   }
+
+  // Khởi tạo tồn kho theo kho (ProductWarehouseStock) cho Default Variant và tất cả các biến thể
+  const allVariantsToSync = [defaultVar, ...(insertedVariants || [])].filter(Boolean);
+  await syncInitialWarehouseStock(product._id, allVariantsToSync, data.warehouseId, data.stock);
 
   // Sync cachedPrice và search tokens song song
   await Promise.all([
@@ -354,6 +419,7 @@ const createProduct = async (data) => {
   const result = await Product.findById(product._id)
     .populate('categories', 'name slug parentId')
     .populate('brand', 'name slug logo')
+    .populate('warehouseId', 'name code isDefault')
     .lean();
 
   const dv = await ProductVariant.findOne({ productId: product._id, isDefault: true })
@@ -588,6 +654,7 @@ const getProductById = async (idOrSlug) => {
   const product = await Product.findOne(isObjectId ? { _id: idOrSlug } : { slug: idOrSlug })
     .populate('categories', 'name slug parentId')
     .populate('brand', 'name slug logo')
+    .populate('warehouseId', 'name code isDefault')
     .lean();
   if (!product) throw new AppError('Không tìm thấy sản phẩm', 404);
 
@@ -746,15 +813,30 @@ const updateProduct = async (id, data) => {
     await syncCachedPrice(id);
   }
 
-  const { thumbnailMediaId, imageMediaIds, price, salePrice, stock, ...rest } = data;
+    const { thumbnailMediaId, imageMediaIds, price, salePrice, stock, warehouseId, ...rest } = data;
+  if (warehouseId !== undefined) {
+    product.warehouseId = warehouseId && warehouseId !== 'all' ? warehouseId : null;
+  }
   Object.assign(product, rest);
   await product.save();
+
+  if (warehouseId && warehouseId !== 'all' && stock !== undefined) {
+    const dv = await getDefaultVariant(id);
+    if (dv) {
+      await ProductWarehouseStock.updateOne(
+        { productId: id, variantId: dv._id, warehouseId },
+        { $set: { stock: Math.max(0, Number(stock) || 0) } },
+        { upsert: true }
+      );
+    }
+  }
 
   await syncProductSmartTokens(product._id);
 
   const result = await Product.findById(product._id)
     .populate('categories', 'name slug parentId')
     .populate('brand', 'name slug logo')
+    .populate('warehouseId', 'name code isDefault')
     .lean();
 
   const dv2 = await ProductVariant.findOne({ productId: product._id, isDefault: true })

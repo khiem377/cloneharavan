@@ -257,7 +257,7 @@ const searchByImage = async (buffer, mimeType, options = {}) => {
     let modelCodeHits = 0;
     codelikeTokens.forEach((token) => {
       if (productNameLower.includes(token.toLowerCase()) ||
-          (product.slug || '').includes(token.toLowerCase())) {
+        (product.slug || '').includes(token.toLowerCase())) {
         modelCodeHits++;
       }
     });

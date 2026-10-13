@@ -348,7 +348,7 @@ function BulkBar({ onSetAll }) {
 /* ─── Generate confirm dialog ─── */
 function GenerateConfirmDialog({ existingCount, newCount, onReplace, onAppend, onCancel }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="flex w-full max-w-sm flex-col rounded-xl border border-border bg-background p-5 shadow-2xl text-foreground gap-4">
         <div>
           <h3 className="text-sm font-semibold mb-1">Đã có {existingCount} biến thể</h3>
@@ -375,7 +375,7 @@ function GenerateConfirmDialog({ existingCount, newCount, onReplace, onAppend, o
 /* ─── Delete confirm dialog ─── */
 function DeleteConfirmDialog({ message, onConfirm, onCancel }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="flex w-full max-w-sm flex-col rounded-xl border border-border bg-background p-5 shadow-2xl text-foreground gap-4">
         <h3 className="text-sm font-semibold">Xác nhận xóa</h3>
         <p className="text-sm text-muted-foreground">{message}</p>

@@ -7,6 +7,7 @@ import { useMediaByIds } from '@/hooks/useMedia';
 import { useCategories } from '@/hooks/useCategories';
 import { useAllBrands } from '@/hooks/useBrands';
 import { useSuppliers } from '@/hooks/useSuppliers';
+import { useWarehouses } from '@/hooks/useInventory';
 import RichTextEditor from '@/components/ui/RichTextEditor';
 import MediaPickerModal from '@/components/ui/MediaPickerModal';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -18,6 +19,7 @@ import ProductVariantsGeneratorCard from './components/ProductVariantsGeneratorC
 import ProductSpecsEditorCard from './components/ProductSpecsEditorCard';
 import ProductMediaCard from './components/ProductMediaCard';
 import ProductClassificationSidebar from './components/ProductClassificationSidebar';
+import ProductRetailOperationsCard from './components/ProductRetailOperationsCard';
 
 const DEFAULT_FORM = {
   name: '',
@@ -42,6 +44,16 @@ const DEFAULT_FORM = {
   thumbnailUrl: '',
   imageMediaIds: [],
   imageUrls: [],
+  // Pancake retail operations
+  allowNegativeStock: false,
+  hideNameOnPrint: false,
+  hideOnInvoice: false,
+  weightBasedPricing: false,
+  lowStockThreshold: 5,
+  keywords: [],
+  weight: 0,
+  dimensions: { length: 0, width: 0, height: 0 },
+  warehouseId: 'all',
 };
 
 /**
@@ -61,6 +73,7 @@ export default function ProductFormPage() {
   const { data: brands = [] } = useAllBrands();
   const { data: supplierRes = {} } = useSuppliers({ limit: 100 });
   const suppliers = supplierRes.data || supplierRes.suppliers || [];
+  const { data: warehouses = [] } = useWarehouses();
 
   // Batch-fetch media objects
   const allMediaIds = useMemo(
@@ -183,6 +196,16 @@ export default function ProductFormPage() {
         thumbnailUrl: thumbUrl,
         imageMediaIds: imgMediaIds,
         imageUrls: imgUrls,
+        // Pancake retail operations
+        allowNegativeStock: Boolean(p.allowNegativeStock),
+        hideNameOnPrint: Boolean(p.hideNameOnPrint),
+        hideOnInvoice: Boolean(p.hideOnInvoice),
+        weightBasedPricing: Boolean(p.weightBasedPricing),
+        lowStockThreshold: p.lowStockThreshold ?? 5,
+        keywords: p.keywords || [],
+        weight: p.weight ?? 0,
+        dimensions: p.dimensions || { length: 0, width: 0, height: 0 },
+        warehouseId: p.warehouseId?._id || p.warehouseId || 'all',
       });
     }
   }, [isEdit, productData]);
@@ -291,6 +314,16 @@ export default function ProductFormPage() {
       thumbnailUrl: form.thumbnailUrl || undefined,
       imageMediaIds: form.imageMediaIds.filter(Boolean),
       imageUrls: form.imageUrls.filter(Boolean),
+      // Pancake retail operations
+      allowNegativeStock: Boolean(form.allowNegativeStock),
+      hideNameOnPrint: Boolean(form.hideNameOnPrint),
+      hideOnInvoice: Boolean(form.hideOnInvoice),
+      weightBasedPricing: Boolean(form.weightBasedPricing),
+      lowStockThreshold: Number(form.lowStockThreshold) || 5,
+      keywords: form.keywords || [],
+      weight: Number(form.weight) || 0,
+      dimensions: form.dimensions || { length: 0, width: 0, height: 0 },
+      warehouseId: form.warehouseId || 'all',
     };
 
     if (!isEdit && hasVariants && generatedVariants.length > 0) {
@@ -301,6 +334,8 @@ export default function ProductFormPage() {
         price: Number(v.price || 0),
         salePrice: Number(v.salePrice || 0),
         stock: Number(v.stock || 0),
+        weight: Number(form.weight) || 0,
+        dimensions: form.dimensions || { length: 0, width: 0, height: 0 },
       }));
     }
 
@@ -387,6 +422,11 @@ export default function ProductFormPage() {
             setDiscountMode={setDiscountMode}
           />
 
+          <ProductRetailOperationsCard
+            form={form}
+            setField={setField}
+          />
+
           {!isEdit && (
             <ProductVariantsGeneratorCard
               hasVariants={hasVariants}
@@ -445,6 +485,7 @@ export default function ProductFormPage() {
             categories={categories}
             brands={brands}
             suppliers={suppliers}
+            warehouses={warehouses}
           />
         </div>
       </div>

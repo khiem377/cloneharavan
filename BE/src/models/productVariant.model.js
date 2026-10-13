@@ -95,6 +95,16 @@ const productVariantSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    weight: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    dimensions: {
+      length: { type: Number, default: 0, min: 0 },
+      width: { type: Number, default: 0, min: 0 },
+      height: { type: Number, default: 0, min: 0 },
+    },
     // Override fields — null = kế thừa từ sản phẩm cha
     nameOverride: { type: String, default: null },
     descriptionOverride: { type: String, default: null },
@@ -147,6 +157,8 @@ productVariantSchema.pre('save', function () {
 
 productVariantSchema.index({ productId: 1, sku: 1 });
 productVariantSchema.index({ productId: 1, isDefault: 1 });
+productVariantSchema.index({ sku: 1 });
+productVariantSchema.index({ isActive: 1, stock: 1 });
 
 const ProductVariant = mongoose.model('ProductVariant', productVariantSchema);
 module.exports = ProductVariant;
