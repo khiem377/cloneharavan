@@ -13,7 +13,7 @@ export default function LocationDetailModal({
   const totalStock = items.reduce((acc, i) => acc + (i.stock || 0), 0);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-[1px]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="w-full max-w-lg rounded-[6px] border border-border bg-card p-5 shadow-xl space-y-4 animate-in fade-in zoom-in-95">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border pb-3">

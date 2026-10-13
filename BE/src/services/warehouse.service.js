@@ -6,6 +6,17 @@ const AppError = require('../utils/AppError');
 
 class WarehouseService {
   /**
+   * Lấy danh sách nhân viên đủ điều kiện gán quyền quản lý kho
+   */
+  static async getStaffCandidates() {
+    const User = require('../models/user.model');
+    return User.find({
+      role: { $in: ['inventory_manager', 'staff', 'manager'] },
+      isActive: true,
+    }).select('_id fullName email phone role');
+  }
+
+  /**
    * Lấy danh sách kho hàng kèm thống kê tổng tồn kho và số mặt hàng
    */
   static async getWarehouses({ keyword = '', status = '', page = 1, limit = 50 }, user = null) {

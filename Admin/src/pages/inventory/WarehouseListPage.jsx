@@ -1,38 +1,26 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   Warehouse as WarehouseIcon,
   Plus,
-  Search,
-  MapPin,
-  Phone,
-  Layers,
   Save,
   Trash2,
   Star,
   Loader2,
   Package,
   Building2,
-  Check,
   Users,
-  UserCheck,
-  X,
-  RefreshCw,
-  ShieldCheck,
 } from 'lucide-react';
 import { warehouseService } from '@/services/warehouse.service';
 import { shippingService } from '@/services/shipping.service';
 import { toast } from '@/providers/ToastProvider';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import SearchableSelect from '@/components/ui/SearchableSelect';
-import DataTablePagination from '@/components/ui/DataTablePagination';
 import { cn } from '@/lib/utils';
+import WarehouseSidebarList from './components/WarehouseSidebarList';
+import WarehouseFormSettings from './components/WarehouseFormSettings';
+import WarehouseStockTab from './components/WarehouseStockTab';
+import WarehouseStaffTab from './components/WarehouseStaffTab';
 
 export default function WarehouseListPage() {
-  const navigate = useNavigate();
   const [warehouses, setWarehouses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -494,118 +482,21 @@ export default function WarehouseListPage() {
       {/* Master-Detail Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
         {/* Left Column: Warehouse List (4 Cols) */}
-        <div className="lg:col-span-4 rounded-[6px] border border-border bg-card overflow-hidden">
-          {/* List Search Bar */}
-          <div className="p-3 border-b border-border bg-muted/20">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
-              <input
-                type="text"
-                placeholder="Tìm theo tên, mã, địa chỉ..."
-                value={searchKeyword}
-                onChange={(e) => setSearchKeyword(e.target.value)}
-                className="w-full h-8 pl-8 pr-3 text-xs bg-background rounded-[6px] border border-border focus:outline-none focus:ring-1 focus:ring-primary"
-              />
-            </div>
-          </div>
-
-          {/* List Items */}
-          <div className="divide-y divide-border max-h-[calc(100vh-220px)] overflow-y-auto">
-            {loading ? (
-              <div className="p-8 text-center text-xs text-muted-foreground flex flex-col items-center gap-2">
-                <Loader2 className="size-4 animate-spin text-primary" />
-                <span>Đang tải danh sách kho...</span>
-              </div>
-            ) : filteredWarehouses.length === 0 ? (
-              <div className="p-8 text-center text-xs text-muted-foreground">
-                Không tìm thấy kho hàng nào
-              </div>
-            ) : (
-              filteredWarehouses.map((wh) => {
-                const isSelected = wh._id === selectedWarehouseId && !isCreatingNew;
-                return (
-                  <div
-                    key={wh._id}
-                    onClick={() => handleSelectWarehouse(wh)}
-                    className={cn(
-                      'p-3.5 cursor-pointer transition-colors relative',
-                      isSelected
-                        ? 'bg-primary/5 border-l-4 border-l-primary'
-                        : 'hover:bg-muted/40'
-                    )}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-semibold text-xs text-foreground truncate">
-                            {wh.name}
-                          </span>
-                          {wh.isDefault && (
-                            <Badge variant="default" className="text-[10px] h-4 px-1.5 gap-0.5 rounded-[4px]">
-                              <Star size={9} className="fill-current" /> Mặc định
-                            </Badge>
-                          )}
-                          <span
-                            className={cn(
-                              'text-[10px] px-1.5 py-0.5 rounded-[4px] font-mono',
-                              wh.status === 'active'
-                                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                                : 'bg-muted text-muted-foreground'
-                            )}
-                          >
-                            {wh.code}
-                          </span>
-                        </div>
-
-                        {wh.phone && (
-                          <div className="flex items-center gap-1 text-[11px] text-muted-foreground mt-1">
-                            <Phone size={11} />
-                            <span className="tabular-nums font-mono">{wh.phone}</span>
-                          </div>
-                        )}
-
-                        <div className="flex items-start gap-1 text-[11px] text-muted-foreground mt-1 line-clamp-2">
-                          <MapPin size={11} className="shrink-0 mt-0.5" />
-                          <span>{wh.address?.fullAddress || 'Chưa thiết lập địa chỉ chi tiết'}</span>
-                        </div>
-
-                        {/* Stock & SKU & Staff Count Pills */}
-                        <div className="mt-2.5 flex items-center gap-2 pt-2 border-t border-border/40 text-[11px]">
-                          <span className="text-muted-foreground">
-                            Tồn kho:{' '}
-                            <strong className="font-mono tabular-nums text-foreground">
-                              {Number(wh.totalStock || 0).toLocaleString()}
-                            </strong>
-                          </span>
-                          <span className="text-border">•</span>
-                          <span className="text-muted-foreground">
-                            Mặt hàng:{' '}
-                            <strong className="font-mono tabular-nums text-foreground">
-                              {Number(wh.totalSKUs || 0)}
-                            </strong>
-                          </span>
-                          <span className="text-border">•</span>
-                          <span className="text-muted-foreground flex items-center gap-1 font-medium text-primary">
-                            <Users size={11} />
-                            <strong className="font-mono tabular-nums">
-                              {wh.assignedStaffIds?.length || 0}
-                            </strong> nv
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </div>
+        <WarehouseSidebarList
+          searchKeyword={searchKeyword}
+          setSearchKeyword={setSearchKeyword}
+          loading={loading}
+          filteredWarehouses={filteredWarehouses}
+          selectedWarehouseId={selectedWarehouseId}
+          isCreatingNew={isCreatingNew}
+          onSelectWarehouse={handleSelectWarehouse}
+        />
 
         {/* Right Column: Warehouse Detail & Form (8 Cols) */}
-        <div className="lg:col-span-8 rounded-[6px] border border-border bg-card overflow-hidden">
+        <div className="lg:col-span-8 rounded-[6px] border border-border bg-card">
           <form onSubmit={handleSubmit}>
             {/* Form Top Header */}
-            <div className="px-5 py-3.5 border-b border-border bg-muted/10 flex items-center justify-between gap-3">
+            <div className="px-5 py-3.5 border-b border-border bg-muted/10 rounded-t-[6px] flex items-center justify-between gap-3">
               <div>
                 <h2 className="text-sm font-bold text-foreground flex items-center gap-2">
                   <WarehouseIcon className="size-4 text-primary" />
@@ -708,589 +599,60 @@ export default function WarehouseListPage() {
 
             {/* Tab: Cài đặt thông tin kho */}
             {activeTab === 'settings' && (
-              <div className="p-5 space-y-6">
-                {/* 1. Thông tin chung */}
-                <div>
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-1.5">
-                    <Building2 size={14} className="text-primary" />
-                    Thông tin chung
-                  </h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold text-foreground">
-                        Tên kho hàng <span className="text-destructive">*</span>
-                      </Label>
-                      <Input
-                        type="text"
-                        required
-                        placeholder="Ví dụ: Kho Tổng Bình Tân"
-                        value={form.name}
-                        onChange={(e) => setForm({ ...form, name: e.target.value })}
-                        className="h-9 text-xs rounded-[6px]"
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold text-foreground">
-                        Mã kho <span className="text-destructive">*</span>
-                      </Label>
-                      <Input
-                        type="text"
-                        required
-                        placeholder="KHO-BINHTAN"
-                        value={form.code}
-                        onChange={(e) =>
-                          setForm({ ...form, code: e.target.value.toUpperCase().trim() })
-                        }
-                        className="h-9 text-xs font-mono uppercase rounded-[6px]"
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold text-foreground">
-                        Số điện thoại liên hệ
-                      </Label>
-                      <Input
-                        type="tel"
-                        placeholder="0987654321"
-                        value={form.phone}
-                        onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                        className="h-9 text-xs font-mono tabular-nums rounded-[6px]"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="mt-3.5 flex items-center gap-6">
-                    <label className="flex items-center gap-2 text-xs font-semibold text-foreground cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={form.isDefault}
-                        onChange={(e) => setForm({ ...form, isDefault: e.target.checked })}
-                        className="rounded-[4px] border-border text-primary focus:ring-primary size-4"
-                      />
-                      <span>Đặt làm kho mặc định của hệ thống</span>
-                    </label>
-
-                    <label className="flex items-center gap-2 text-xs font-semibold text-foreground cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={form.status === 'active'}
-                        onChange={(e) =>
-                          setForm({ ...form, status: e.target.checked ? 'active' : 'inactive' })
-                        }
-                        className="rounded-[4px] border-border text-primary focus:ring-primary size-4"
-                      />
-                      <span>Trạng thái hoạt động</span>
-                    </label>
-                  </div>
-                </div>
-
-                {/* 2. Địa chỉ kho hàng (3-level GHN Selector chuẩn như Client) */}
-                <div className="pt-4 border-t border-border">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-1.5">
-                    <MapPin size={14} className="text-primary" />
-                    Địa chỉ kho hàng (Chuẩn hóa bưu chính GHN)
-                  </h3>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold text-foreground">
-                        Tỉnh / Thành phố <span className="text-destructive">*</span>
-                      </Label>
-                      <SearchableSelect
-                        options={provinces.map((p) => ({
-                          value: p.ProvinceID,
-                          label: p.ProvinceName,
-                        }))}
-                        value={form.address.provinceId}
-                        onChange={handleProvinceChange}
-                        placeholder="Chọn Tỉnh / Thành"
-                        disabled={loadingProvinces}
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold text-foreground">
-                        Quận / Huyện <span className="text-destructive">*</span>
-                      </Label>
-                      <SearchableSelect
-                        options={districts.map((d) => ({
-                          value: d.DistrictID,
-                          label: d.DistrictName,
-                        }))}
-                        value={form.address.districtId}
-                        onChange={handleDistrictChange}
-                        placeholder={
-                          !form.address.provinceId
-                            ? 'Chọn tỉnh/thành trước'
-                            : 'Chọn Quận / Huyện'
-                        }
-                        disabled={loadingDistricts || !form.address.provinceId}
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold text-foreground">
-                        Phường / Xã <span className="text-destructive">*</span>
-                      </Label>
-                      <SearchableSelect
-                        options={wards.map((w) => ({
-                          value: w.WardCode,
-                          label: w.WardName,
-                        }))}
-                        value={form.address.wardCode}
-                        onChange={handleWardChange}
-                        placeholder={
-                          !form.address.districtId
-                            ? 'Chọn quận/huyện trước'
-                            : 'Chọn Phường / Xã'
-                        }
-                        disabled={loadingWards || !form.address.districtId}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="mt-3 space-y-1.5">
-                    <Label className="text-xs font-semibold text-foreground">
-                      Địa chỉ chi tiết (Số nhà, tên đường, toà nhà...)
-                    </Label>
-                    <Input
-                      type="text"
-                      placeholder="Ví dụ: 38-40 Đường 21A, Tòa nhà T (QTSC9)..."
-                      value={form.address.detailAddress}
-                      onChange={(e) =>
-                        setForm({
-                          ...form,
-                          address: { ...form.address, detailAddress: e.target.value },
-                        })
-                      }
-                      className="h-9 text-xs rounded-[6px]"
-                    />
-                  </div>
-
-                  {/* Preview Địa chỉ chuẩn */}
-                  {fullAddressPreview && (
-                    <div className="mt-3 p-3 rounded-[6px] bg-muted/40 border border-border flex items-start gap-2 text-xs">
-                      <MapPin size={14} className="text-primary shrink-0 mt-0.5" />
-                      <div className="space-y-0.5">
-                        <span className="font-semibold text-foreground">
-                          Địa chỉ hoàn chỉnh hiển thị trên chứng từ:
-                        </span>
-                        <p className="text-muted-foreground">{fullAddressPreview}</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* 3. Nhân viên phụ trách kho (Phân quyền truy cập) */}
-                <div className="pt-2 border-t border-border">
-                  <div className="flex items-center justify-between mb-3">
-                    <div>
-                      <h3 className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                        <Users size={14} className="text-primary" />
-                        Nhân viên phụ trách kho
-                      </h3>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">
-                        Nhân viên được phân công vào kho này sẽ có quyền truy cập, theo dõi tồn kho và xử lý phiếu xuất nhập của riêng kho này.
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Select to assign staff */}
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mb-3">
-                    <div className="flex-1">
-                      <SearchableSelect
-                        options={staffCandidates
-                          .filter((s) => !form.assignedStaffIds.includes(s._id))
-                          .map((s) => ({
-                            value: s._id,
-                            label: `${s.fullName || s.name || 'Nhân viên'} (${s.email}) — [${s.role}]`,
-                          }))}
-                        value=""
-                        onChange={(val) => {
-                          if (val) handleAssignStaff(val);
-                        }}
-                        placeholder="Chọn nhân viên để gán vào kho này..."
-                        disabled={loadingStaff}
-                      />
-                    </div>
-                  </div>
-
-                  {/* List of currently assigned staff */}
-                  {form.assignedStaffIds.length === 0 ? (
-                    <div className="rounded-[6px] border border-dashed border-border p-3.5 text-center text-xs text-muted-foreground bg-muted/20">
-                      Chưa có nhân viên nào được chỉ định phụ trách kho này. (Quản trị viên có toàn quyền xem tất cả các kho).
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {form.assignedStaffIds.map((staffId) => {
-                        const selectedWh = warehouses.find((w) => w._id === selectedWarehouseId);
-                        const staffObj =
-                          staffCandidates.find((s) => s._id === staffId) ||
-                          (selectedWh?.assignedStaffIds || []).find((s) => (s._id || s) === staffId);
-                        const name = staffObj?.fullName || staffObj?.name || 'Nhân viên';
-                        const email = staffObj?.email || '';
-                        const role = staffObj?.role || 'staff';
-                        const phone = staffObj?.phone || '';
-
-                        return (
-                          <div
-                            key={staffId}
-                            className="flex items-center justify-between p-2.5 rounded-[6px] border border-border bg-background shadow-xs text-xs"
-                          >
-                            <div className="flex items-center gap-2.5 min-w-0">
-                              <div className="size-7 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-[11px] shrink-0">
-                                {name.charAt(0).toUpperCase()}
-                              </div>
-                              <div className="min-w-0">
-                                <div className="font-semibold text-foreground truncate flex items-center gap-1.5">
-                                  <span>{name}</span>
-                                  <Badge variant="outline" className="text-[10px] px-1 py-0 uppercase rounded-[4px]">
-                                    {role}
-                                  </Badge>
-                                </div>
-                                <div className="text-[11px] text-muted-foreground truncate">
-                                  {email} {phone ? `• ${phone}` : ''}
-                                </div>
-                              </div>
-                            </div>
-
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveStaff(staffId)}
-                              className="text-muted-foreground hover:text-destructive p-1 rounded hover:bg-muted transition-colors cursor-pointer"
-                              title="Gỡ nhân viên khỏi kho"
-                            >
-                              <X size={14} />
-                            </button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-
-                {/* 4. Tạm ẩn cấu hình Sơ đồ ô / kệ lưu trữ (Bin Locations) - sẽ triển khai trong tương lai chung với Bản đồ 2D */}
-              </div>
+              <WarehouseFormSettings
+                form={form}
+                setForm={setForm}
+                provinces={provinces}
+                loadingProvinces={loadingProvinces}
+                districts={districts}
+                loadingDistricts={loadingDistricts}
+                wards={wards}
+                loadingWards={loadingWards}
+                handleProvinceChange={handleProvinceChange}
+                handleDistrictChange={handleDistrictChange}
+                handleWardChange={handleWardChange}
+                fullAddressPreview={fullAddressPreview}
+                staffCandidates={staffCandidates}
+                loadingStaff={loadingStaff}
+                handleAssignStaff={handleAssignStaff}
+                handleRemoveStaff={handleRemoveStaff}
+                warehouses={warehouses}
+                selectedWarehouseId={selectedWarehouseId}
+              />
             )}
 
-            {/* Tab: Bảng tồn kho của riêng kho này (Xem toàn bộ 336 mặt hàng, tìm kiếm, phân trang) */}
+            {/* Tab: Bảng tồn kho của riêng kho này */}
             {activeTab === 'stock' && (
-              <div className="p-5 space-y-4">
-                {/* Summary 3 Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div className="p-3.5 rounded-[6px] border border-border bg-background shadow-xs">
-                    <span className="text-[11px] font-medium text-muted-foreground">Tổng mặt hàng trong kho</span>
-                    <div className="mt-1 flex items-baseline gap-1.5">
-                      <span className="text-xl font-bold font-mono tabular-nums text-foreground">
-                        {stockTotal || warehouses.find((w) => w._id === selectedWarehouseId)?.totalSKUs || 0}
-                      </span>
-                      <span className="text-xs text-muted-foreground">mặt hàng (SKU)</span>
-                    </div>
-                  </div>
-
-                  <div className="p-3.5 rounded-[6px] border border-border bg-background shadow-xs">
-                    <span className="text-[11px] font-medium text-muted-foreground">Tổng tồn kho thực tế</span>
-                    <div className="mt-1 flex items-baseline gap-1.5">
-                      <span className="text-xl font-bold font-mono tabular-nums text-emerald-600 dark:text-emerald-400">
-                        {Number(
-                          stockSummary?.totalStock ?? warehouses.find((w) => w._id === selectedWarehouseId)?.totalStock ?? 0
-                        ).toLocaleString()}
-                      </span>
-                      <span className="text-xs text-muted-foreground">cái / sản phẩm</span>
-                    </div>
-                  </div>
-
-                  <div className="p-3.5 rounded-[6px] border border-border bg-background shadow-xs">
-                    <span className="text-[11px] font-medium text-muted-foreground">Tồn khả dụng xuất bán</span>
-                    <div className="mt-1 flex items-baseline gap-1.5">
-                      <span className="text-xl font-bold font-mono tabular-nums text-primary">
-                        {Number(
-                          Math.max(
-                            0,
-                            (stockSummary?.totalStock ?? warehouses.find((w) => w._id === selectedWarehouseId)?.totalStock ?? 0) -
-                              (stockSummary?.totalAllocated ?? warehouses.find((w) => w._id === selectedWarehouseId)?.totalAllocated ?? 0)
-                          )
-                        ).toLocaleString()}
-                      </span>
-                      <span className="text-xs text-muted-foreground">cái (đã trừ giữ chỗ)</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Search & Actions Bar */}
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground size-3.5" />
-                    <Input
-                      type="text"
-                      placeholder="Tìm theo tên sản phẩm, mã SKU hoặc vị trí trong kho này..."
-                      value={stockKeyword}
-                      onChange={(e) => {
-                        setStockKeyword(e.target.value);
-                        setStockPage(1);
-                      }}
-                      className="h-8 pl-8 text-xs rounded-[6px]"
-                    />
-                    {stockKeyword && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setStockKeyword('');
-                          setStockPage(1);
-                        }}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-xs"
-                      >
-                        <X size={12} />
-                      </button>
-                    )}
-                  </div>
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => fetchWarehouseStock(selectedWarehouseId, stockPage, stockPageSize, stockKeyword)}
-                    disabled={loadingStock}
-                    className="h-8 text-xs rounded-[6px] shrink-0"
-                  >
-                    <RefreshCw size={13} className={cn('mr-1.5', loadingStock && 'animate-spin')} />
-                    Làm mới tồn kho
-                  </Button>
-                </div>
-
-                {/* Table */}
-                {loadingStock ? (
-                  <div className="p-12 text-center text-xs text-muted-foreground flex flex-col items-center justify-center gap-2">
-                    <Loader2 className="size-5 animate-spin text-primary" />
-                    <span>Đang tải danh sách tồn kho {form.name}...</span>
-                  </div>
-                ) : warehouseStock.length === 0 ? (
-                  <div className="p-12 text-center text-xs text-muted-foreground border border-dashed border-border rounded-[6px] bg-muted/10">
-                    {stockKeyword
-                      ? `Không tìm thấy mặt hàng nào khớp với từ khoá "${stockKeyword}" trong kho này.`
-                      : 'Kho này hiện chưa có mặt hàng nào có dữ liệu tồn kho.'}
-                  </div>
-                ) : (
-                  <div className="rounded-[6px] border border-border overflow-hidden bg-background">
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-xs">
-                        <thead className="bg-muted/40 border-b border-border text-foreground font-bold text-[11px]">
-                          <tr>
-                            <th className="py-2.5 px-3 text-left">Sản phẩm & Biến thể</th>
-                            <th className="py-2.5 px-3 text-left">Mã SKU</th>
-                            <th className="py-2.5 px-3 text-left">Vị trí ô/kệ</th>
-                            <th className="py-2.5 px-3 text-right">Tồn thực tế</th>
-                            <th className="py-2.5 px-3 text-right">Đang giữ chỗ</th>
-                            <th className="py-2.5 px-3 text-right">Khả dụng</th>
-                            <th className="py-2.5 px-3 text-right">Giá bán</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-border">
-                          {warehouseStock.map((item) => {
-                            const available = Math.max(0, (item.stock || 0) - (item.allocated || 0));
-                            const thumb = item.productId?.thumbnail?.url || item.productId?.thumbnail;
-                            return (
-                              <tr key={item._id} className="hover:bg-muted/20 transition-colors">
-                                <td className="py-2.5 px-3">
-                                  <div className="flex items-center gap-2.5">
-                                    {thumb ? (
-                                      <img
-                                        src={thumb}
-                                        alt=""
-                                        className="size-8 rounded-[4px] object-cover border border-border shrink-0"
-                                      />
-                                    ) : (
-                                      <div className="size-8 rounded-[4px] bg-muted border border-border flex items-center justify-center shrink-0">
-                                        <Package size={14} className="text-muted-foreground" />
-                                      </div>
-                                    )}
-                                    <div className="min-w-0">
-                                      <div className="font-semibold text-foreground line-clamp-1">
-                                        {item.productId?.name || 'Sản phẩm'}
-                                      </div>
-                                      <div className="text-[11px] text-muted-foreground truncate">
-                                        {item.productId?.brand?.name && `${item.productId.brand.name} • `}
-                                        {item.variantId?.displayName || 'Mặc định'}
-                                      </div>
-                                    </div>
-                                  </div>
-                                </td>
-                                <td className="py-2.5 px-3 font-mono font-bold text-primary whitespace-nowrap">
-                                  {item.variantId?.sku || '---'}
-                                </td>
-                                <td className="py-2.5 px-3 whitespace-nowrap">
-                                  <span className="font-mono text-[11px] px-1.5 py-0.5 rounded-[4px] bg-muted text-muted-foreground border border-border">
-                                    {item.binLocation || 'A-01-01'}
-                                  </span>
-                                </td>
-                                <td className="py-2.5 px-3 text-right font-mono font-bold tabular-nums text-foreground whitespace-nowrap">
-                                  {Number(item.stock || 0).toLocaleString()}
-                                </td>
-                                <td className="py-2.5 px-3 text-right font-mono tabular-nums text-muted-foreground whitespace-nowrap">
-                                  {Number(item.allocated || 0).toLocaleString()}
-                                </td>
-                                <td className="py-2.5 px-3 text-right font-mono font-bold tabular-nums text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
-                                  {available.toLocaleString()}
-                                </td>
-                                <td className="py-2.5 px-3 text-right font-mono tabular-nums text-foreground whitespace-nowrap">
-                                  {item.variantId?.price
-                                    ? `${Number(item.variantId.price).toLocaleString('vi-VN')} đ`
-                                    : '---'}
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    {/* Pagination */}
-                    <div className="p-3 border-t border-border bg-muted/20">
-                      <DataTablePagination
-                        page={stockPage}
-                        pageSize={stockPageSize}
-                        total={stockTotal}
-                        totalPages={Math.ceil((stockTotal || 1) / stockPageSize)}
-                        onPageChange={(newPage) => setStockPage(newPage)}
-                        onPageSizeChange={(newSize) => {
-                          setStockPageSize(newSize);
-                          setStockPage(1);
-                        }}
-                        pageSizeOptions={[20, 50, 100, 350]}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
+              <WarehouseStockTab
+                stockTotal={stockTotal}
+                stockSummary={stockSummary}
+                selectedWarehouseId={selectedWarehouseId}
+                warehouses={warehouses}
+                stockKeyword={stockKeyword}
+                setStockKeyword={setStockKeyword}
+                setStockPage={setStockPage}
+                fetchWarehouseStock={fetchWarehouseStock}
+                loadingStock={loadingStock}
+                warehouseStock={warehouseStock}
+                form={form}
+                stockPage={stockPage}
+                stockPageSize={stockPageSize}
+                setStockPageSize={setStockPageSize}
+              />
             )}
 
             {/* Tab: Phân công nhân viên phụ trách kho */}
             {activeTab === 'staff' && (
-              <div className="p-5 space-y-4">
-                <div className="p-4 rounded-[6px] border border-border bg-background shadow-xs">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-border">
-                    <div>
-                      <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
-                        <Users size={16} className="text-primary" />
-                        Danh sách nhân viên quản lý & vận hành: {form.name || 'Kho hàng'}
-                      </h3>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        Nhân viên được gán vào đây sẽ được cấp quyền theo dõi tồn kho, lập và duyệt các chứng từ Nhập kho (PNK), Xuất kho (PXK), Kiểm kho và Chuyển kho nội bộ tại chi nhánh này.
-                      </p>
-                    </div>
-
-                    <Badge variant="outline" className="h-6 px-2.5 text-xs font-mono tabular-nums self-start sm:self-auto">
-                      {form.assignedStaffIds?.length || 0} nhân sự
-                    </Badge>
-                  </div>
-
-                  {/* Thanh chọn nhân viên gán vào kho */}
-                  <div className="mb-4">
-                    <Label className="text-xs font-semibold text-foreground mb-1.5 block">
-                      Thêm nhân viên vào kho này
-                    </Label>
-                    <div className="max-w-xl">
-                      <SearchableSelect
-                        options={staffCandidates
-                          .filter((s) => !form.assignedStaffIds.includes(s._id))
-                          .map((s) => ({
-                            value: s._id,
-                            label: `${s.fullName || s.name || 'Nhân viên'} (${s.email}) — [${s.role || 'staff'}]`,
-                          }))}
-                        value=""
-                        onChange={(val) => {
-                          if (val) handleAssignStaff(val);
-                        }}
-                        placeholder="Tìm theo tên hoặc email nhân viên để thêm..."
-                        disabled={loadingStaff}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Danh sách thẻ nhân viên */}
-                  {form.assignedStaffIds.length === 0 ? (
-                    <div className="rounded-[6px] border border-dashed border-border p-8 text-center bg-muted/10">
-                      <Users size={32} className="mx-auto text-muted-foreground/50 mb-2" />
-                      <p className="text-xs font-semibold text-foreground">Chưa có nhân viên nào được phân công riêng cho kho này</p>
-                      <p className="text-[11px] text-muted-foreground mt-1 max-w-md mx-auto">
-                        Tài khoản Quản trị viên (Admin) vẫn có toàn quyền kiểm soát kho. Bạn có thể chọn nhân sự ở ô phía trên để phân quyền thủ kho hoặc nhân viên vận hành.
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {form.assignedStaffIds.map((staffId) => {
-                        const selectedWh = warehouses.find((w) => w._id === selectedWarehouseId);
-                        const staffObj =
-                          staffCandidates.find((s) => s._id === staffId) ||
-                          (selectedWh?.assignedStaffIds || []).find((s) => (s._id || s) === staffId);
-                        const name = staffObj?.fullName || staffObj?.name || 'Nhân viên';
-                        const email = staffObj?.email || '';
-                        const role = staffObj?.role || 'staff';
-                        const phone = staffObj?.phone || '';
-
-                        return (
-                          <div
-                            key={staffId}
-                            className="p-3 rounded-[6px] border border-border bg-card hover:border-primary/40 transition-colors shadow-2xs flex flex-col justify-between"
-                          >
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="flex items-center gap-2.5 min-w-0">
-                                <div className="size-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0">
-                                  {name.charAt(0).toUpperCase()}
-                                </div>
-                                <div className="min-w-0">
-                                  <div className="font-semibold text-xs text-foreground truncate">
-                                    {name}
-                                  </div>
-                                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 mt-0.5 uppercase rounded-[4px]">
-                                    {role}
-                                  </Badge>
-                                </div>
-                              </div>
-
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveStaff(staffId)}
-                                className="text-muted-foreground hover:text-destructive p-1 rounded hover:bg-muted transition-colors cursor-pointer shrink-0"
-                                title="Gỡ nhân viên khỏi kho này"
-                              >
-                                <X size={14} />
-                              </button>
-                            </div>
-
-                            <div className="mt-2.5 pt-2 border-t border-border/50 text-[11px] text-muted-foreground space-y-0.5">
-                              <div className="truncate flex items-center gap-1">
-                                <span>📧</span> {email || 'Chưa có email'}
-                              </div>
-                              {phone && (
-                                <div className="tabular-nums font-mono flex items-center gap-1">
-                                  <span>📞</span> {phone}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  <div className="mt-4 pt-3 border-t border-border flex items-center justify-between">
-                    <span className="text-[11px] text-muted-foreground">
-                      * Nhớ bấm nút <strong>"Lưu kho"</strong> ở góc trên bên phải để áp dụng thay đổi.
-                    </span>
-                    <Button
-                      type="submit"
-                      variant="default"
-                      size="sm"
-                      disabled={saving}
-                    >
-                      {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
-                      <span>Lưu phân công nhân viên</span>
-                    </Button>
-                  </div>
-                </div>
-              </div>
+              <WarehouseStaffTab
+                form={form}
+                staffCandidates={staffCandidates}
+                loadingStaff={loadingStaff}
+                handleAssignStaff={handleAssignStaff}
+                handleRemoveStaff={handleRemoveStaff}
+                warehouses={warehouses}
+                selectedWarehouseId={selectedWarehouseId}
+                saving={saving}
+              />
             )}
           </form>
         </div>

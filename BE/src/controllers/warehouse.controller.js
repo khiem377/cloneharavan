@@ -10,12 +10,7 @@ exports.getWarehouses = catchAsync(async (req, res) => {
 });
 
 exports.getStaffCandidates = catchAsync(async (req, res) => {
-  const User = require('../models/user.model');
-  const staff = await User.find({
-    role: { $in: ['administrator', 'admin', 'manager', 'staff', 'inventory_manager'] },
-    isActive: true,
-  }).select('_id fullName email phone role');
-
+  const staff = await WarehouseService.getStaffCandidates();
   res.status(200).json({
     status: 'success',
     data: staff,
