@@ -10,7 +10,7 @@ import ChatOrderLookup from './ChatOrderLookup';
 import MascotBot from './MascotBot';
 import { computeTightBubbleLayout } from '@/utils/pretextLayout';
 
-export default function ChatMessageItem({
+const ChatMessageItem = React.memo(function ChatMessageItem({
   msg,
   loading,
   onSelectOrderTracking,
@@ -161,4 +161,6 @@ export default function ChatMessageItem({
       </div>
     </div>
   );
-}
+});
+
+export default ChatMessageItem;

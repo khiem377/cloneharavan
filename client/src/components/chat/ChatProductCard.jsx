@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { trackingService } from '@/services/tracking.service';
 
 export default function ChatProductCard({ product, onSelect }) {
   if (!product) return null;
@@ -73,7 +74,16 @@ export default function ChatProductCard({ product, onSelect }) {
             )}
             <Link
               href={`/products/${product.slug || product._id}`}
-              onClick={onSelect}
+              onClick={() => {
+                if (product._id) {
+                  trackingService.recordInteraction({
+                    productId: product._id,
+                    interactionType: 'product_detail',
+                    context: { source: 'ai_chatbot', position: 'chat_recommendation' },
+                  });
+                }
+                if (typeof onSelect === 'function') onSelect();
+              }}
               className="text-xs sm:text-[13px] font-semibold text-slate-900 line-clamp-2 hover:text-[#284ea1] transition-colors leading-snug"
             >
               {product.name}

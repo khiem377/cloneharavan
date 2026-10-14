@@ -1,20 +1,43 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Send, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export default function ChatInput({
-  input,
+  input = '',
   setInput,
-  loading,
+  loading = false,
   onSendMessage,
   textareaRef,
 }) {
+  const [localText, setLocalText] = useState(input || '');
+  const isComposingRef = useRef(false);
+
+  // Đồng bộ khi có prompt được chọn từ bên ngoài (Quick prompt)
+  useEffect(() => {
+    if (input !== undefined && input !== localText) {
+      setLocalText(input);
+    }
+  }, [input]);
+
+  const handleSubmit = (e) => {
+    if (e) e.preventDefault();
+    if (loading || !localText.trim() || isComposingRef.current) return;
+    const msg = localText;
+    setLocalText('');
+    if (setInput) setInput('');
+    onSendMessage(msg);
+  };
+
   const handleKeyDown = (e) => {
+    // Chống khựng/nuốt chữ tiếng Việt khi đang gõ IME (Unikey, EVKey, bộ gõ OS)
+    if (isComposingRef.current || e.nativeEvent?.isComposing || e.keyCode === 229) {
+      return;
+    }
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      onSendMessage();
+      handleSubmit();
     }
   };
 
@@ -25,19 +48,21 @@ export default function ChatInput({
         paddingBottom: 'max(0.625rem, env(safe-area-inset-bottom, 0.625rem))',
       }}
     >
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          onSendMessage();
-        }}
-        className="flex items-end gap-2"
-      >
+      <form onSubmit={handleSubmit} className="flex items-end gap-2">
         <div className="flex-1 relative rounded-[6px] border border-slate-300 focus-within:border-[#284ea1] bg-slate-50 transition-colors">
           <textarea
             ref={textareaRef}
             rows={1}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
+            value={localText}
+            onChange={(e) => {
+              setLocalText(e.target.value);
+            }}
+            onCompositionStart={() => {
+              isComposingRef.current = true;
+            }}
+            onCompositionEnd={() => {
+              isComposingRef.current = false;
+            }}
             onKeyDown={handleKeyDown}
             placeholder="Hỏi về sản phẩm, giá bán, khuyến mãi..."
             className="w-full text-xs sm:text-[13px] bg-transparent text-slate-800 placeholder:text-slate-400 p-2.5 outline-hidden resize-none max-h-24 leading-normal"
@@ -47,7 +72,7 @@ export default function ChatInput({
 
         <Button
           type="submit"
-          disabled={loading || !input.trim()}
+          disabled={loading || !localText.trim()}
           className="w-10 h-10 rounded-full bg-[#284ea1] hover:bg-[#1e3b82] text-white flex items-center justify-center shrink-0 transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer active:scale-95 shadow-2xs p-0"
           title="Gửi tin nhắn"
         >

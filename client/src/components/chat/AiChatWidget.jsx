@@ -260,7 +260,11 @@ export default function AiChatWidget() {
     }
   };
 
-  const handleSelectOrderTracking = () => {
+  const handleCloseOnSelectProduct = React.useCallback(() => {
+    setIsOpen(false);
+  }, []);
+
+  const handleSelectOrderTracking = React.useCallback(() => {
     const nowTime = new Date().toLocaleTimeString('vi-VN', {
       hour: '2-digit',
       minute: '2-digit',
@@ -283,9 +287,9 @@ export default function AiChatWidget() {
 
     setMessages((prev) => [...prev, userMsg, botMsg]);
     if (soundEnabled) playChime();
-  };
+  }, [soundEnabled]);
 
-  const handleSelectOnlineShopping = () => {
+  const handleSelectOnlineShopping = React.useCallback(() => {
     const nowTime = new Date().toLocaleTimeString('vi-VN', {
       hour: '2-digit',
       minute: '2-digit',
@@ -308,7 +312,7 @@ export default function AiChatWidget() {
 
     setMessages((prev) => [...prev, userMsg, botMsg]);
     if (soundEnabled) playChime();
-  };
+  }, [soundEnabled]);
 
   const handleResetSession = async () => {
     if (loading) return;
@@ -368,7 +372,7 @@ export default function AiChatWidget() {
                 loading={loading}
                 onSelectOrderTracking={handleSelectOrderTracking}
                 onSelectOnlineShopping={handleSelectOnlineShopping}
-                onSelectProduct={() => setIsOpen(false)}
+                onSelectProduct={handleCloseOnSelectProduct}
               />
             ))}
             <div ref={messagesEndRef} />
@@ -385,7 +389,7 @@ export default function AiChatWidget() {
             input={input}
             setInput={setInput}
             loading={loading}
-            onSendMessage={() => handleSendMessage()}
+            onSendMessage={(msg) => handleSendMessage(msg)}
             textareaRef={textareaRef}
           />
         </div>

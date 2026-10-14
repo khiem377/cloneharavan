@@ -104,9 +104,10 @@ const analyzeImageWithGemini = async (buffer) => {
 
   const prompt = buildDynamicPrompt(catalogContext);
   const candidateModels = [
+    'gemini-3.5-flash',
+    'gemini-3.8-flash',
     'gemini-3.5-flash-lite',
     'gemini-2.5-flash-lite',
-    'gemini-flash-latest',
   ];
 
   let lastError = null;

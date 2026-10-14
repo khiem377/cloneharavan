@@ -25,15 +25,15 @@ const Promotion       = require('../models/promotion.model');
 const GiftProgram     = require('../models/gift-program.model');
 const ChatSession     = require('../models/chatSession.model');
 const UserInteraction = require('../models/userInteraction.model');
+const { buildUserProfile } = require('./recommendation.service');
 
 // ─── Gemini AI Init ───────────────────────────────────────────────────────────
 let _genAI = null;
-let _workingGeminiModel = 'gemini-2.5-flash';
+let _workingGeminiModel = 'gemini-3.5-flash';
 const GEMINI_MODELS = [
-  'gemini-2.5-flash',
-  'gemini-2.5-flash-lite',
-  'gemini-flash-latest',
-  'gemini-flash-lite-latest',
+  'gemini-3.5-flash',
+  'gemini-3.5-flash-lite',
+  'gemini-3.8-flash',
 ];
 
 const getGeminiClient = () => {
@@ -278,28 +278,282 @@ const getRecentBrowsingContext = async (sessionId, userId = null) => {
   }
 };
 
+// ─── AI AGENTIC REASONING (Tự suy luận ý định, ngữ cảnh & tiếng lóng 100%) ───
+const reasonCustomerIntent = async (message = '', { history = [], profile = {}, allCategories = [], allBrands = [] } = {}) => {
+  const clean = message.toLowerCase().trim();
+
+  // 1. Fast-path: Chào hỏi đơn thuần (0ms)
+  const isGreetingOnly =
+    /^(dạ\s*)?(hi|hello|helo|chào|xin chào|kính chào|alo|cảm ơn|thanks|thank you|ok|oke|oki|okie|xong|tạm biệt|bye|bye bye|ê|shop ơi|ad ơi|admin ơi|em ơi|anh ơi|chị ơi)([\s,.-]+(bạn|shop|ad|admin|em|anh|chị|ơi|ạ|nha|nhé|nè|nhen|cả nhà|mọi người|với))*[\s?!.,]*$/i.test(clean) ||
+    /^(cho (em|mình|tôi|anh|chị) hỏi( với| chút| xíu| một câu)?|hỏi tí|hỏi xíu|shop ơi cho hỏi|tư vấn giúp( mình| em| anh| chị)?|shop có đó không|có ai trực không|cần hỗ trợ|cần tư vấn|bên mình có bán gì|shop bán những gì)[\s?!.,]*$/i.test(clean);
+  if (isGreetingOnly) {
+    return {
+      isGreetingOnly: true,
+      isOrderInquiry: false,
+      category: null,
+      brand: null,
+      targetPrice: null,
+      minPrice: null,
+      maxPrice: null,
+      searchKeywords: '',
+      reasoningNote: 'Khách chào hỏi xã giao',
+    };
+  }
+
+  // 2. Fast-path: Tra cứu đơn hàng (0ms)
+  const isOrderInquiry = /(đơn hàng|tra cứu đơn|kiểm tra đơn|xem đơn|tình trạng đơn|mã vận đơn|khi nào giao|ship hàng|vận chuyển)/i.test(clean);
+  if (isOrderInquiry) {
+    return {
+      isGreetingOnly: false,
+      isOrderInquiry: true,
+      category: null,
+      brand: null,
+      targetPrice: null,
+      minPrice: null,
+      maxPrice: null,
+      searchKeywords: '',
+      reasoningNote: 'Khách hỏi tra cứu đơn hàng',
+    };
+  }
+
+  // 3. AI Reasoning (Gemini Flash-Lite -> Flash -> Flash-Lite fallback)
+  const catNames = (allCategories || []).map((c) => c.name || c).filter(Boolean);
+  const brandNames = (allBrands || []).map((b) => b.name || b).filter(Boolean);
+
+  const recentHistorySummary = (history || [])
+    .slice(-3)
+    .map((h) => `${h.role === 'user' ? 'Khách' : 'Bot'}: ${h.content}`)
+    .join('\n');
+
+  const prompt = `Bạn là hệ thống suy luận ý định (NLU & Reasoning) cho website thương mại điện tử điện máy SHOP.
+Nhiệm vụ: Phân tích câu nói của khách hàng (có thể chứa tiếng lóng Việt Nam, từ địa phương, tiếng lóng tiền tệ: củ, củ khoai, củ tỏi, cành, chai, lít, xị, dế, dế gập, máy cỏ, 1 ngựa, pin trâu, máy giặt êm...):
+Lịch sử hội thoại gần đây:
+${recentHistorySummary || '(Chưa có)'}
+
+Câu mới của khách: "${message}"
+
+Danh mục cửa hàng hiện có: ${JSON.stringify(catNames)}
+Thương hiệu cửa hàng hiện có: ${JSON.stringify(brandNames)}
+
+Quy tắc suy luận:
+1. Hiểu ngữ cảnh đời sống Việt Nam: "củ khoai", "củ tỏi", "cành", "chai" = triệu VNĐ khi mua đồ công nghệ/điện tử. "lít", "xị" = trăm nghìn VNĐ. "dế" = điện thoại, "dế gập" = điện thoại gập (Z Flip/Fold). "máy cỏ" = điện thoại cơ bản phím bấm. "1 ngựa" = điều hòa 1 HP (9.000 BTU). "tv" / "tivi" / "vô tuyến" = Tivi.
+2. Nếu khách nói "tầm X" hoặc "khoảng X", hãy tự động suy luận khoảng giá minPrice = X * 0.85 và maxPrice = X * 1.2.
+3. Nếu khách nói "dưới X", minPrice = null, maxPrice = X. Nếu khách nói "trên X", minPrice = X, maxPrice = null.
+4. Chọn 1 "category" chuẩn duy nhất từ danh mục của cửa hàng (hoặc null nếu không xác định).
+5. Trả về DUY NHẤT một chuỗi JSON hợp lệ:
+{
+  "isGreetingOnly": boolean,
+  "isOrderInquiry": boolean,
+  "category": string hoặc null,
+  "brand": string hoặc null,
+  "targetPrice": number hoặc null,
+  "minPrice": number hoặc null,
+  "maxPrice": number hoặc null,
+  "searchKeywords": string,
+  "reasoningNote": string
+}`;
+
+  const genAI = getGeminiClient();
+  if (genAI) {
+    const reasoningModels = ['gemini-3.5-flash-lite', 'gemini-3.5-flash', 'gemini-3.8-flash'];
+    for (const mName of reasoningModels) {
+      try {
+        const m = genAI.getGenerativeModel({
+          model: mName,
+          generationConfig: { responseMimeType: 'application/json', temperature: 0.1 }
+        });
+        const res = await m.generateContent(prompt);
+        const parsed = JSON.parse(res.response.text());
+        if (parsed) {
+          return parsed;
+        }
+      } catch (err) {
+        console.warn(`[reasonCustomerIntent ${mName} Failed]:`, err.message);
+      }
+    }
+  }
+
+  // Graceful fallback nếu không thể gọi AI
+  return fallbackRegexIntent(clean, { history, profile, allCategories, allBrands });
+};
+
+const fallbackRegexIntent = (clean, { history = [], profile = {}, allCategories = [], allBrands = [] } = {}) => {
+  const { minPrice, maxPrice } = parsePriceFilter(clean);
+  let category = null;
+  if (/(\btv\b|tivi|ti vi|smart tv)/i.test(clean)) category = 'Tivi';
+  else if (/(điện thoại|dien thoai|smartphone|galaxy|iphone)/i.test(clean)) category = 'Điện thoại';
+  else if (/(laptop|macbook)/i.test(clean)) category = 'Laptop';
+  else if (/(máy tính bảng|tablet|ipad)/i.test(clean)) category = 'Máy tính bảng';
+  else if (/(tủ lạnh|tu lanh)/i.test(clean)) category = 'Tủ lạnh';
+  else if (/(máy giặt|may giat)/i.test(clean)) category = 'Máy giặt';
+  else if (/(điều hòa|dieu hoa|máy lạnh)/i.test(clean)) category = 'Điều hòa';
+  else if (/(loa|soundbar|tai nghe)/i.test(clean)) category = 'Âm thanh';
+  else if (/(đồng hồ|smartwatch)/i.test(clean)) category = 'Đồng hồ';
+
+  let brand = null;
+  for (const b of allBrands) {
+    if (clean.includes((b.name || '').toLowerCase())) {
+      brand = b.name;
+      break;
+    }
+  }
+
+  return {
+    isGreetingOnly: false,
+    isOrderInquiry: false,
+    category,
+    brand,
+    targetPrice: null,
+    minPrice,
+    maxPrice,
+    searchKeywords: category || '',
+    reasoningNote: 'Fallback regex parsing',
+  };
+};
+
+// ─── TÍNH ĐIỂM ĐỘ TƯƠNG THÍCH SẢN PHẨM (RELEVANCE SCORING) ───────────────────
+const scoreProductRelevance = (p, ctx = {}) => {
+  const {
+    clean = '',
+    rawTokens = [],
+    isPhoneQuery = false,
+    isLaptopQuery = false,
+    isTabletQuery = false,
+    isTvQuery = false,
+    isFridgeQuery = false,
+    isWashingQuery = false,
+    isAcQuery = false,
+    isAudioQuery = false,
+    isWatchQuery = false,
+    matchedBrands = [],
+  } = ctx;
+
+  const pName = (p.name || '').toLowerCase();
+  const brandName = (p.brand?.name || p.brand || '').toString().toLowerCase();
+  const catNames = (p.categories || []).map((c) => (c.name || '').toLowerCase()).join(' ');
+
+  let score = 0;
+
+  // 1. Khớp thương hiệu (Brand match)
+  if (matchedBrands && matchedBrands.length > 0) {
+    const isBrand = matchedBrands.some((b) => {
+      const bName = (b.name || '').toLowerCase();
+      return brandName.includes(bName) || pName.includes(bName);
+    });
+    if (isBrand) {
+      score += 100;
+    } else {
+      score -= 300; // Phạt nặng nếu hỏi hãng này mà sản phẩm thuộc hãng khác
+    }
+  }
+
+  // 2. Khớp ngành hàng chính xác (Category & Keyword Intent)
+  if (isPhoneQuery) {
+    if (/(điện thoại|smartphone|galaxy s\d+|galaxy z|iphone|redmi|xiaomi 14)/i.test(pName) || /(điện thoại|smartphone|phone|mobile)/i.test(catNames)) {
+      score += 150;
+    }
+    if (/^điện thoại/i.test(pName)) {
+      score += 50; // Ưu tiên hàng đầu cho các sản phẩm có tiền tố chuẩn "Điện thoại ..."
+    }
+    // Trừ điểm triệt để các sản phẩm không phải điện thoại (máy tính bảng, tablet, tab, đồng hồ, tai nghe, âm thanh, phụ kiện,...)
+    if (/(đồng hồ|watch|smartwatch|tai nghe|earbuds|airpods|headphone|loa\b|soundbar|\btab\b|galaxy tab|tab s|tablet|ipad|máy tính bảng|tivi|tủ lạnh|máy giặt|điều hòa|cáp sạc|ốp lưng|bao da)/i.test(pName) || /(tablet|máy tính bảng|đồng hồ|tai nghe|phụ kiện)/i.test(catNames)) {
+      score -= 1000;
+    }
+  } else if (isLaptopQuery) {
+    if (/(laptop|macbook|máy tính xách tay)/i.test(pName) || /laptop/i.test(catNames)) {
+      score += 150;
+    }
+    if (/(đồng hồ|tai nghe|tivi|điện thoại|máy giặt|tủ lạnh)/i.test(pName)) {
+      score -= 1000;
+    }
+  } else if (isTabletQuery) {
+    if (/(máy tính bảng|tablet|ipad|galaxy tab|tab s)/i.test(pName) || /tablet|máy tính bảng/i.test(catNames)) {
+      score += 150;
+    }
+    if (/(đồng hồ|tai nghe|tivi|điện thoại|máy giặt|tủ lạnh)/i.test(pName)) {
+      score -= 1000;
+    }
+  } else if (isTvQuery) {
+    if (/(tivi|smart tv|qled|oled|ti vi|4k tv)/i.test(pName) || /tivi|tv/i.test(catNames)) {
+      score += 150;
+    }
+    if (/(điện thoại|laptop|tai nghe|máy giặt|tủ lạnh)/i.test(pName)) {
+      score -= 1000;
+    }
+  } else if (isWatchQuery) {
+    if (/(đồng hồ|smartwatch|apple watch|galaxy watch)/i.test(pName) || /(đồng hồ|smartwatch)/i.test(catNames)) {
+      score += 150;
+    }
+    if (/(điện thoại|laptop|tivi|tai nghe|máy giặt)/i.test(pName)) {
+      score -= 1000;
+    }
+  } else if (isAudioQuery) {
+    if (/(loa|soundbar|tai nghe|airpods|headphone|earbuds)/i.test(pName) || /loa|âm thanh|tai nghe/i.test(catNames)) {
+      score += 150;
+    }
+    if (/(điện thoại|laptop|tivi|máy giặt|tủ lạnh)/i.test(pName)) {
+      score -= 1000;
+    }
+  } else if (isFridgeQuery) {
+    if (/(tủ lạnh|tủ đông|tủ mát|side by side)/i.test(pName) || /tủ lạnh/i.test(catNames)) {
+      score += 150;
+    }
+    if (/(tivi|máy giặt|điều hòa|điện thoại)/i.test(pName)) {
+      score -= 1000;
+    }
+  } else if (isWashingQuery) {
+    if (/(máy giặt|máy sấy)/i.test(pName) || /máy giặt/i.test(catNames)) {
+      score += 150;
+    }
+    if (/(tivi|tủ lạnh|điều hòa|điện thoại)/i.test(pName)) {
+      score -= 1000;
+    }
+  } else if (isAcQuery) {
+    if (/(điều hòa|máy lạnh)/i.test(pName) || /điều hòa|máy lạnh/i.test(catNames)) {
+      score += 150;
+    }
+    if (/(tivi|tủ lạnh|máy giặt|điện thoại)/i.test(pName)) {
+      score -= 1000;
+    }
+  }
+
+  // 3. Khớp các từ khóa dòng máy (Model keywords: ultra, fold, flip, s24, pro max, 5g, plus, v.v.)
+  if (rawTokens && rawTokens.length > 0) {
+    for (const token of rawTokens) {
+      if (token.length >= 2 && pName.includes(token)) {
+        score += 30;
+      }
+    }
+  }
+
+  // 4. Ưu tiên hàng còn trong kho
+  if (p.stock > 0) {
+    score += 25;
+  }
+
+  // 5. Ưu tiên sản phẩm đang có chương trình giảm giá thật hoặc flash sale
+  if (p.isFlashSale || p.hasRealDiscount) {
+    score += 15;
+  }
+
+  return score;
+};
+
 // ─── REAL-TIME MONGODB RAG FETCH ──────────────────────────────────────────────
 const fetchProductContext = async (message = '', { history = [], profile = {}, sessionId = '', userId = null, currentProductSlug = null, currentUrl = null } = {}) => {
   try {
     const clean = message.toLowerCase().trim();
+    const { allBrands, allCategories } = await getTaxonomyData();
 
-    // 1. Kiểm tra yêu cầu tra cứu đơn hàng
-    const isOrderInquiry = /(đơn hàng|tra cứu đơn|kiểm tra đơn|xem đơn|tình trạng đơn|mã vận đơn|khi nào giao|ship hàng|vận chuyển)/i.test(clean);
-    if (isOrderInquiry) {
-      return {
-        text: '(Khách hàng đang hỏi về tra cứu hoặc kiểm tra đơn hàng. Hãy xưng "em" và gọi "anh/chị". Hướng dẫn lễ phép: Anh/chị có thể xem danh sách và trạng thái chi tiết tất cả đơn hàng đã đặt tại mục "Đơn hàng của tôi" trong trang Tài khoản (/tai-khoan?tab=orders). Hoặc anh/chị có thể cung cấp Mã đơn hàng và Số điện thoại đặt hàng ngay tại đây để em hỗ trợ kiểm tra trực tiếp giúp mình ạ.)',
-        products: [],
-        coupons: [],
-        updatedProfile: profile,
-      };
-    }
+    // 1. TỰ SUY LUẬN Ý ĐỊNH, NGỮ CẢNH & TIẾNG LÓNG BẰNG AI REASONING (Zero Hardcoding)
+    const intent = await reasonCustomerIntent(message, {
+      history,
+      profile,
+      allCategories,
+      allBrands,
+    });
 
-    // 2. Kiểm tra chào hỏi xã giao (Tuyệt đối KHÔNG tự ý gợi ý sản phẩm khi khách chỉ mới chào hỏi)
-    const isGreetingOnly =
-      /^(dạ\s*)?(hi|hello|helo|chào|xin chào|kính chào|alo|cảm ơn|thanks|thank you|ok|oke|oki|okie|xong|tạm biệt|bye|bye bye|ê|shop ơi|ad ơi|admin ơi|em ơi|anh ơi|chị ơi)([\s,.-]+(bạn|shop|ad|admin|em|anh|chị|ơi|ạ|nha|nhé|nè|nhen|cả nhà|mọi người|với))*[\s?!.,]*$/i.test(clean) ||
-      /^(cho (em|mình|tôi|anh|chị) hỏi( với| chút| xíu| một câu)?|hỏi tí|hỏi xíu|shop ơi cho hỏi|tư vấn giúp( mình| em| anh| chị)?|shop có đó không|có ai trực không|cần hỗ trợ|cần tư vấn|bên mình có bán gì|shop bán những gì)[\s?!.,]*$/i.test(clean);
-
-    if (isGreetingOnly) {
+    if (intent.isGreetingOnly) {
       return {
         text: '(Khách hàng đang chào hỏi / giao tiếp xã giao. Hãy chào lại lễ phép, xưng "em" và gọi "anh/chị", tự giới thiệu em là chuyên viên tư vấn bán hàng của SHOP và hỏi xem anh/chị cần hỗ trợ tìm kiếm sản phẩm nào hay cần tư vấn thông tin gì hôm nay ạ. TUYỆT ĐỐI KHÔNG tự ý liệt kê hay gợi ý danh sách sản phẩm nào khi khách chưa hỏi sản phẩm cụ thể.)',
         products: [],
@@ -308,18 +562,16 @@ const fetchProductContext = async (message = '', { history = [], profile = {}, s
       };
     }
 
-    // 3. Yêu cầu hỗ trợ chung
-    const isGeneralHelp = /^(hỗ trợ mua hàng|tư vấn mua hàng|mua hàng trực tuyến|cần tư vấn|bán gì|có gì bán|tư vấn giúp)$/i.test(clean);
-    if (isGeneralHelp) {
+    if (intent.isOrderInquiry) {
       return {
-        text: '(Khách hàng cần hỗ trợ tư vấn mua hàng trực tuyến. Hãy xưng "em" và gọi "anh/chị". Chào đón lễ phép, giới thiệu: "Dạ bên em chuyên cung cấp Điện thoại thông minh, Laptop, Tivi, Tủ lạnh, Máy giặt, Điều hòa và Thiết bị âm thanh chính hãng 100%. Anh/chị đang quan tâm đến dòng sản phẩm, thương hiệu hoặc mức ngân sách nào để em tư vấn chi tiết cho mình ạ?". Tuyệt đối KHÔNG xưng "mình", KHÔNG gọi "bạn".)',
+        text: '(Khách hàng đang hỏi về tra cứu hoặc kiểm tra đơn hàng. Hãy xưng "em" và gọi "anh/chị". Hướng dẫn lễ phép: Anh/chị có thể xem danh sách và trạng thái chi tiết tất cả đơn hàng đã đặt tại mục "Đơn hàng của tôi" trong trang Tài khoản (/tai-khoan?tab=orders). Hoặc anh/chị có thể cung cấp Mã đơn hàng và Số điện thoại đặt hàng ngay tại đây để em hỗ trợ kiểm tra trực tiếp giúp mình ạ.)',
         products: [],
         coupons: [],
         updatedProfile: profile,
       };
     }
 
-    // 4. Nhận diện sản phẩm khách đang xem trực tiếp trên màn hình
+    // 2. Nhận diện sản phẩm khách đang xem trực tiếp trên màn hình
     let resolvedProductSlug = currentProductSlug;
     if (!resolvedProductSlug && currentUrl && currentUrl.includes('/products/')) {
       resolvedProductSlug = currentUrl.split('/products/')[1]?.split('?')[0]?.split('/')[0] || null;
@@ -338,140 +590,72 @@ const fetchProductContext = async (message = '', { history = [], profile = {}, s
       }
     }
 
-    const recentUserMessages = (history || [])
-      .filter((h) => h.role === 'user')
-      .slice(-3)
-      .map((h) => h.content.toLowerCase())
-      .join(' ');
-
-    let { minPrice, maxPrice } = parsePriceFilter(clean);
-    if (minPrice === null && maxPrice === null && clean.split(/\s+/).length <= 4) {
-      const prevPrice = parsePriceFilter(recentUserMessages);
-      if (prevPrice.minPrice !== null || prevPrice.maxPrice !== null) {
-        if (!/(bỏ giá|tầm giá khác|ko cần giá|không cần giá|mức giá khác)/i.test(clean)) {
-          minPrice = prevPrice.minPrice;
-          maxPrice = prevPrice.maxPrice;
-        }
-      } else if (profile.budgetMin !== null || profile.budgetMax !== null) {
-        minPrice = profile.budgetMin;
-        maxPrice = profile.budgetMax;
+    // 3. Tích hợp User Profile từ cỗ máy Recommendation (Real-time Profile)
+    let userBrowsingProfile = null;
+    try {
+      if (typeof buildUserProfile === 'function' && (userId || sessionId)) {
+        userBrowsingProfile = await buildUserProfile(userId, sessionId);
       }
+    } catch (e) {
+      // non-blocking
     }
+
+    // 4. Giải mã các thuộc tính đã suy luận bởi AI
+    const resolvedCategory = intent.category || null;
+    const resolvedBrand = intent.brand || null;
+    let minPrice = intent.minPrice;
+    let maxPrice = intent.maxPrice;
     const hasPriceFilter = minPrice !== null || maxPrice !== null;
+    const reasoningNote = intent.reasoningNote || '';
 
-    const cleanNoPrice = clean
-      .replace(/(?:từ\s*)?\d+(?:[.,]\d+)?\s*(?:-|đến|tới|\.\.)\s*\d+(?:[.,]\d+)?\s*(?:triệu|tr|củ|trđ|m)/gi, ' ')
-      .replace(/(?:dưới|<|<=|không quá|nhỏ hơn|tối đa|trên|>|>=|hơn|từ|tầm|khoảng|cỡ|loanh quanh)\s*\d+(?:[.,]\d+)?\s*(?:triệu|tr|củ|trđ|m)(?:\s*trở lên)?/gi, ' ')
-      .replace(/\d+\s*(?:triệu|tr|củ|trđ|m)/gi, ' ')
-      .replace(/\b\d+\b/g, ' ');
+    const isPhoneQuery   = resolvedCategory === 'Điện thoại';
+    const isLaptopQuery  = resolvedCategory === 'Laptop';
+    const isTabletQuery  = resolvedCategory === 'Máy tính bảng';
+    const isTvQuery      = resolvedCategory === 'Tivi';
+    const isFridgeQuery  = resolvedCategory === 'Tủ lạnh';
+    const isWashingQuery = resolvedCategory === 'Máy giặt';
+    const isAcQuery      = resolvedCategory === 'Điều hòa';
+    const isAudioQuery   = resolvedCategory === 'Âm thanh';
+    const isWatchQuery   = resolvedCategory === 'Đồng hồ';
 
-    // 5. Phân tích danh mục (Ngành hàng) chính xác tuyệt đối
-    const directPhoneQuery = /(điện thoại|dien thoai|đt|dt|smartphone|galaxy|iphone|z flip|z fold|s24|s23|s22|s21|redmi|xiaomi|oppo|vivo|realme|infinix|tecno)/i.test(clean);
-    const directLaptopQuery = /(laptop|máy tính xách tay|may tinh xach tay|macbook|thinkpad|zenbook|vivobook|legion|ideapad|pavilion|spectre|gram)/i.test(clean);
-    const directTabletQuery = /(máy tính bảng|may tinh bang|tablet|ipad|galaxy tab|tab s)/i.test(clean);
-    const directTvQuery = /(\btv\b|tivi|ti vi|smart tv|qled|oled|4k tv|tivi led|google tivi|android tivi)/i.test(clean);
-    const directFridgeQuery = /(tủ lạnh|tu lanh|tủ đông|tủ mát|side by side)/i.test(clean);
-    const directWashingQuery = /(máy giặt|may giat|máy sấy|may say)/i.test(clean);
-    const directAcQuery = /(điều hòa|dieu hoa|máy lạnh|may lanh)/i.test(clean);
-    const directAudioQuery = /(loa|soundbar|tai nghe|loa thanh|dàn âm thanh|tai nghe bluetooth|earbuds|headphone)/i.test(clean);
-    const directWatchQuery = /(đồng hồ thông minh|dong ho thong minh|smartwatch|apple watch|galaxy watch)/i.test(clean);
-
-    const hasExplicitCategoryInCurrentMsg =
-      directPhoneQuery || directLaptopQuery || directTabletQuery ||
-      directTvQuery || directFridgeQuery || directWashingQuery ||
-      directAcQuery || directAudioQuery || directWatchQuery;
-
-    // CHỐNG BẪY NGỮ CẢNH: Tuyệt đối KHÔNG thừa kế danh mục cũ nếu câu hiện tại đã nói rõ danh mục!
-    const canInheritCategory = !hasExplicitCategoryInCurrentMsg && clean.split(/\s+/).length <= 4;
-
-    const isPhoneQuery = directPhoneQuery || (canInheritCategory && /(điện thoại|dien thoai|smartphone|galaxy|iphone)/i.test(recentUserMessages));
-    const isLaptopQuery = directLaptopQuery || (canInheritCategory && /(laptop|macbook|máy tính xách tay)/i.test(recentUserMessages));
-    const isTabletQuery = directTabletQuery || (canInheritCategory && /(máy tính bảng|tablet|ipad)/i.test(recentUserMessages));
-    const isTvQuery = directTvQuery || (canInheritCategory && /(\btv\b|tivi|ti vi|smart tv)/i.test(recentUserMessages));
-    const isFridgeQuery = directFridgeQuery || (canInheritCategory && /(tủ lạnh|tu lanh|tủ đông)/i.test(recentUserMessages));
-    const isWashingQuery = directWashingQuery || (canInheritCategory && /(máy giặt|may giat|máy sấy)/i.test(recentUserMessages));
-    const isAcQuery = directAcQuery || (canInheritCategory && /(điều hòa|dieu hoa|máy lạnh)/i.test(recentUserMessages));
-    const isAudioQuery = directAudioQuery || (canInheritCategory && /(loa|soundbar|tai nghe)/i.test(recentUserMessages));
-    const isWatchQuery = directWatchQuery || (canInheritCategory && /(đồng hồ|smartwatch)/i.test(recentUserMessages));
-
-    const ignore = new Set([
-      'có', 'ko', 'không', 'mã', 'giá', 'shop', 'chốt', 'tư', 'vấn', 'bạn', 'mình', 'tôi',
-      'cái', 'con', 'chiếc', 'à', 'nhé', 'nha', 'tầm', 'dưới', 'chào', 'hello', 'hi', 'alo',
-      'tìm', 'xem', 'mua', 'cho', 'nào', 'gì', 'được', 'hỗ', 'trợ', 'tuyến', 'triệu', 'khoảng',
-      'trên', 'cần', 'loại', 'mẫu', 'mấy', 'bao', 'nhiêu', 'ơi', 'với', 'hỏi', 'bên', 'em', 'hàng'
-    ]);
-
-    const rawTokens = cleanNoPrice
-      .replace(/[?!.,;:()\[\]"']/g, ' ')
-      .split(/\s+/)
-      .filter((w) => w.length >= 2 && !ignore.has(w));
-
-    const { allBrands, allCategories } = await getTaxonomyData();
-
-    // 6. Nhận diện thương hiệu chính xác từ câu hỏi hiện tại
-    let matchedBrands = allBrands.filter((b) => {
-      const bName = (b.name || '').toLowerCase();
-      if (!bName) return false;
-      return clean.includes(bName) || rawTokens.some((t) => bName === t || (t.length >= 3 && bName.includes(t)));
-    });
-
-    const isBrandExplicitInCurrentMsg = matchedBrands.length > 0;
-
-    if (matchedBrands.length === 0 && clean.split(/\s+/).length <= 3 && profile.preferredBrands?.length > 0) {
+    // Nhận diện thương hiệu
+    let matchedBrands = [];
+    if (resolvedBrand) {
+      matchedBrands = allBrands.filter((b) => {
+        const bName = (b.name || '').toLowerCase();
+        return bName === resolvedBrand.toLowerCase() || bName.includes(resolvedBrand.toLowerCase()) || resolvedBrand.toLowerCase().includes(bName);
+      });
+    }
+    if (matchedBrands.length === 0 && profile.preferredBrands?.length > 0 && clean.split(/\s+/).length <= 3) {
       matchedBrands = allBrands.filter((b) => profile.preferredBrands.includes(b.name));
     }
-
     const matchedBrandIds = matchedBrands.map((b) => b._id);
 
-    const matchedCategories = allCategories.filter((c) => {
-      const cName = (c.name || '').toLowerCase();
-      if (isPhoneQuery && /(điện thoại|smartphone|phone|mobile)/i.test(cName)) return true;
-      if (isLaptopQuery && /(laptop|máy tính)/i.test(cName)) return true;
-      if (isTabletQuery && /(máy tính bảng|tablet|ipad)/i.test(cName)) return true;
-      if (isTvQuery && /tivi|tv|smart tv/i.test(cName)) return true;
-      if (isFridgeQuery && /tủ lạnh|tu lanh/i.test(cName)) return true;
-      if (isWashingQuery && /máy giặt|may giat/i.test(cName)) return true;
-      if (isAcQuery && /điều hòa|máy lạnh/i.test(cName)) return true;
-      if (isAudioQuery && /loa|âm thanh/i.test(cName)) return true;
-      if (isWatchQuery && /(đồng hồ|smartwatch)/i.test(cName)) return true;
-      return rawTokens.some((t) => cName.includes(t));
-    });
+    // Nhận diện danh mục
+    let matchedCategories = [];
+    if (resolvedCategory) {
+      matchedCategories = allCategories.filter((c) => {
+        const cName = (c.name || '').toLowerCase();
+        return cName === resolvedCategory.toLowerCase() || cName.includes(resolvedCategory.toLowerCase()) || resolvedCategory.toLowerCase().includes(cName);
+      });
+    }
     const matchedCategoryIds = matchedCategories.map((c) => c._id);
 
-    const updatedProfile = { ...profile };
-    if (isBrandExplicitInCurrentMsg) {
-      const bNames = matchedBrands.map((b) => b.name);
-      updatedProfile.preferredBrands = bNames;
-    }
-    if (isPhoneQuery) {
-      updatedProfile.preferredCategories = ['Điện thoại'];
-      updatedProfile.lastTopic = 'Điện thoại';
-    } else if (isLaptopQuery) {
-      updatedProfile.preferredCategories = ['Laptop'];
-      updatedProfile.lastTopic = 'Laptop';
-    } else if (isTabletQuery) {
-      updatedProfile.preferredCategories = ['Máy tính bảng'];
-      updatedProfile.lastTopic = 'Máy tính bảng';
-    } else if (isTvQuery) {
-      updatedProfile.preferredCategories = ['Tivi'];
-      updatedProfile.lastTopic = 'Tivi';
-    } else if (isFridgeQuery) {
-      updatedProfile.preferredCategories = ['Tủ lạnh'];
-      updatedProfile.lastTopic = 'Tủ lạnh';
-    } else if (isWashingQuery) {
-      updatedProfile.preferredCategories = ['Máy giặt'];
-      updatedProfile.lastTopic = 'Máy giặt';
-    } else if (isAcQuery) {
-      updatedProfile.preferredCategories = ['Điều hòa'];
-      updatedProfile.lastTopic = 'Điều hòa';
-    } else if (isAudioQuery) {
-      updatedProfile.preferredCategories = ['Âm thanh'];
-      updatedProfile.lastTopic = 'Âm thanh';
-    } else if (isWatchQuery) {
-      updatedProfile.preferredCategories = ['Đồng hồ'];
-      updatedProfile.lastTopic = 'Đồng hồ';
-    }
+    // Từ khóa sạch đã được AI chuẩn hóa (loại bỏ tiếng lóng tiền tệ/đời sống như "khoai", "cành")
+    const rawTokens = (intent.searchKeywords || '')
+      .toLowerCase()
+      .replace(/[?!.,;:()\[\]"']/g, ' ')
+      .split(/\s+/)
+      .filter((w) => w.length >= 2);
 
+    const updatedProfile = { ...profile };
+    if (matchedBrands.length > 0) {
+      updatedProfile.preferredBrands = matchedBrands.map((b) => b.name);
+    }
+    if (resolvedCategory) {
+      updatedProfile.preferredCategories = [resolvedCategory];
+      updatedProfile.lastTopic = resolvedCategory;
+    }
     if (minPrice !== null) updatedProfile.budgetMin = minPrice;
     if (maxPrice !== null) updatedProfile.budgetMax = maxPrice;
     updatedProfile.inquiryCount = (updatedProfile.inquiryCount || 0) + 1;
@@ -496,11 +680,15 @@ const fetchProductContext = async (message = '', { history = [], profile = {}, s
         $and: [
           {
             $or: [
-              { name: /(điện thoại|galaxy|iphone|smartphone|z flip|z fold|s24|s23|s22|s21|redmi|xiaomi|oppo|vivo|realme|infinix|tecno)/i },
+              { name: /(điện thoại|smartphone|iphone|z flip|z fold|s24|s23|s22|s21|redmi|xiaomi 14)/i },
               ...(matchedCategoryIds.length > 0 ? [{ categories: { $in: matchedCategoryIds } }] : []),
             ],
           },
-          { name: { $not: /(tivi|smart tv|tủ lạnh|máy giặt|điều hòa|soundbar|loa thanh|máy hút bụi|dyson)/i } },
+          {
+            name: {
+              $not: /(đồng hồ|watch|smartwatch|tai nghe|headphone|earbuds|airpods|buds|\btab\b|galaxy tab|tab s|tablet|ipad|máy tính bảng|tivi|smart tv|tủ lạnh|máy giặt|điều hòa|soundbar|loa thanh|máy hút bụi|dyson)/i,
+            },
+          },
         ],
       });
     } else if (isLaptopQuery) {
@@ -913,8 +1101,8 @@ const fetchProductContext = async (message = '', { history = [], profile = {}, s
     if (isPhoneQuery) {
       candidatePool = candidatePool.filter((p) => {
         const n = (p.name || '').toLowerCase();
-        if (/(tivi|smart tv|tủ lạnh|máy giặt|điều hòa|loa thanh|soundbar|máy hút bụi|dyson)/i.test(n)) return false;
-        return /(điện thoại|galaxy|iphone|smartphone|z flip|z fold|s24|s23|s22|s21|redmi|xiaomi|oppo|vivo|realme|infinix|tecno)/i.test(n) ||
+        if (/(đồng hồ|watch|smartwatch|tai nghe|headphone|earbuds|airpods|buds|\btab\b|galaxy tab|tab s|tablet|ipad|máy tính bảng|tivi|smart tv|tủ lạnh|máy giặt|điều hòa|loa thanh|soundbar|máy hút bụi|dyson)/i.test(n)) return false;
+        return /(điện thoại|smartphone|iphone|z flip|z fold|s24|s23|s22|s21|redmi|xiaomi 14)/i.test(n) ||
           p.categories?.some((c) => /(điện thoại|smartphone|phone|mobile)/i.test(c.name || ''));
       });
     } else if (isLaptopQuery) {
@@ -967,7 +1155,7 @@ const fetchProductContext = async (message = '', { history = [], profile = {}, s
     // CHỈ giữ lại sản phẩm của thương hiệu đó.
     if (matchedBrands.length > 0) {
       const brandMatched = candidatePool.filter((p) => {
-        const pBrand = (p.brand || '').toLowerCase();
+        const pBrand = (p.brand?.name || p.brand || '').toString().toLowerCase();
         const pName = (p.name || '').toLowerCase();
         return matchedBrands.some((b) => {
           const bName = (b.name || '').toLowerCase();
@@ -979,6 +1167,29 @@ const fetchProductContext = async (message = '', { history = [], profile = {}, s
         candidatePool = brandMatched;
       }
     }
+
+    const queryContextForScore = {
+      clean,
+      rawTokens,
+      isPhoneQuery,
+      isLaptopQuery,
+      isTabletQuery,
+      isTvQuery,
+      isFridgeQuery,
+      isWashingQuery,
+      isAcQuery,
+      isAudioQuery,
+      isWatchQuery,
+      matchedBrands,
+    };
+
+    // Sắp xếp toàn bộ candidatePool theo độ tương thích thực tế cao nhất
+    candidatePool.sort((a, b) => {
+      const scoreB = scoreProductRelevance(b, queryContextForScore);
+      const scoreA = scoreProductRelevance(a, queryContextForScore);
+      if (scoreB !== scoreA) return scoreB - scoreA;
+      return (b.stock > 0 ? 1 : 0) - (a.stock > 0 ? 1 : 0);
+    });
 
     // Nếu khách đang ở trang một sản phẩm cụ thể, đưa sản phẩm đó vào đầu candidatePool
     if (currentViewedProduct) {
@@ -1035,7 +1246,12 @@ const fetchProductContext = async (message = '', { history = [], profile = {}, s
       const priceRangeLabel = `${minPrice ? (minPrice / 1e6) + ' triệu' : ''}${minPrice && maxPrice ? ' đến ' : ''}${maxPrice ? (maxPrice / 1e6) + ' triệu' : ''}`;
 
       if (inRange.length > 0) {
-        inRange.sort((a, b) => (b.stock > 0 ? 1 : 0) - (a.stock > 0 ? 1 : 0));
+        inRange.sort((a, b) => {
+          const scoreB = scoreProductRelevance(b, queryContextForScore);
+          const scoreA = scoreProductRelevance(a, queryContextForScore);
+          if (scoreB !== scoreA) return scoreB - scoreA;
+          return (b.stock > 0 ? 1 : 0) - (a.stock > 0 ? 1 : 0);
+        });
         matchedProducts = inRange;
         priceNoteForPrompt = `(KHO HÀNG CÓ ${inRange.length} SẢN PHẨM PHÙ HỢP CÓ GIÁ BÁN THỰC TẾ ĐÚNG TRONG TẦM GIÁ ${priceRangeLabel}. HÃY TƯ VẤN CÁC SẢN PHẨM NÀY, NÊU RÕ GIÁ BÁN THỰC TẾ VÀ CÁC LỰA CHỌN PHIÊN BẢN KÈM THEO.)`;
       } else {
@@ -1047,6 +1263,12 @@ const fetchProductContext = async (message = '', { history = [], profile = {}, s
     }
 
     const lines = [];
+
+    if (reasoningNote) {
+      lines.push('=== SUY LUẬN Ý ĐỊNH & NGỮ NGHĨA TỰ NHIÊN (AGENTIC REASONING) ===');
+      lines.push(`- Ý định & Tiếng lóng nhận diện: "${reasoningNote}"`);
+      lines.push('=> Khách hàng dùng ngôn ngữ tự nhiên/tiếng lóng đời thường. Hãy phản hồi thật tự nhiên, duyên dáng, thân thiện, tư vấn đúng sản phẩm và tầm giá khách mong muốn mà không bắt bẻ câu chữ.\n');
+    }
 
     if (updatedProfile.preferredBrands?.length > 0 || updatedProfile.lastTopic) {
       lines.push('=== HỒ SƠ & THÓI QUEN KHÁCH HÀNG (CUSTOMER PREFERENCES) ===');
@@ -1069,7 +1291,9 @@ const fetchProductContext = async (message = '', { history = [], profile = {}, s
       lines.push(`=> Khách hàng đang đứng tại trang chi tiết sản phẩm này. Nếu câu hỏi liên quan hoặc khách hỏi "máy này", "sản phẩm này", hãy tư vấn chính xác và nhiệt tình!\n`);
     }
 
-    const displayProducts = matchedProducts.length > 0 ? matchedProducts : candidatePool.slice(0, 5);
+    const displayProducts = (matchedProducts.length > 0 ? matchedProducts : candidatePool)
+      .filter((p) => scoreProductRelevance(p, queryContextForScore) >= 0)
+      .slice(0, 5);
 
     displayProducts.forEach((p, i) => {
       let priceDetail = '';
@@ -1122,8 +1346,10 @@ const fetchProductContext = async (message = '', { history = [], profile = {}, s
       });
     }
 
-    // CHỈ hiển thị product cards khi có sản phẩm khớp với câu hỏi của khách
-    const finalProductsForUI = (matchedProducts.length > 0 ? matchedProducts : candidatePool).slice(0, 3);
+    // CHỈ hiển thị product cards khi có sản phẩm khớp với câu hỏi của khách (loại bỏ hoàn toàn sản phẩm điểm âm)
+    const finalProductsForUI = (matchedProducts.length > 0 ? matchedProducts : candidatePool)
+      .filter((p) => scoreProductRelevance(p, queryContextForScore) >= 0)
+      .slice(0, 3);
 
     return {
       text: lines.join('\n'),
@@ -1146,6 +1372,7 @@ QUY TẮC BẮT BUỘC:
 2. Tốc độ & Độ súc tích: Đi thẳng vào sản phẩm phù hợp nhất với yêu cầu của khách. Nêu rõ tên sản phẩm, giá bán thực tế và các phiên bản kích thước/màu sắc đang sẵn hàng. Trả lời súc tích trong 2-3 đoạn ngắn, không viết dông dài.
 3. Định dạng: Dùng gạch đầu dòng (-) rõ ràng, dễ nhìn. Tuyệt đối KHÔNG dùng bảng biểu Markdown (|...|), KHÔNG dùng emoji.
 4. Trung thực với kho hàng: Chỉ tư vấn thông tin dựa trên dữ liệu kho hàng thực tế bên dưới.
+5. Thấu hiểu tiếng lóng & ngôn ngữ tự nhiên: Khách có thể dùng từ ngữ đời thường, tiếng lóng Việt Nam (như "củ khoai", "cành", "chai" chỉ triệu đồng; "lít", "xị" chỉ trăm nghìn; "dế", "dế gập" chỉ điện thoại; "máy cỏ" chỉ máy phím bấm; "1 ngựa" chỉ điều hòa 1 HP...). Hãy trò chuyện một cách cởi mở, tự nhiên, chuẩn xác theo đúng ý của khách mà không bao giờ bắt bẻ từ ngữ.
 
 DỮ LIỆU KHO HÀNG THỰC TẾ:
 ${dbDataContext || '(Chưa có dữ liệu kho)'}`;

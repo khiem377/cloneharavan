@@ -26,4 +26,4 @@ class ApiError extends AppError {
 module.exports = AppError;
 module.exports.AppError = AppError;
 module.exports.ApiError = ApiError;
-module.exports.default = AppError;
+module.exports.default = AppError;
