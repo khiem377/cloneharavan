@@ -1,6 +1,7 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
+import { Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import Header from '@/components/header/Header';
 import Footer from '@/components/layout/Footer';
@@ -23,9 +24,13 @@ export default function LayoutShell({ children, initialFooterMenu }) {
       {!isAuthPage && <Header />}
       <main className="flex-1 w-full max-w-full overflow-x-hidden">{children}</main>
       {!isAuthPage && <Footer initialMenu={initialFooterMenu} />}
-      {!isAuthPage && <QuickViewModal />}
-      {!isAuthPage && <CompareBar />}
-      {!isAuthPage && <AiChatWidget />}
+      {!isAuthPage && (
+        <Suspense fallback={null}>
+          <QuickViewModal />
+          <CompareBar />
+          <AiChatWidget />
+        </Suspense>
+      )}
     </>
   );
 }
