@@ -109,6 +109,8 @@ class PurchaseOrderService {
             items: formattedItems,
             totalQuantity,
             totalAmount,
+            paidAmount: 0,
+            paymentStatus: 'unpaid',
             note: note || '',
             deliveryDate: deliveryDate ? new Date(deliveryDate) : null,
             createdById: userId,
@@ -448,6 +450,66 @@ class PurchaseOrderService {
         const { workbook } = await this.generateExcelSlip(tempPO._id);
         await PurchaseOrder.findByIdAndDelete(tempPO._id);
         return { workbook };
+    }
+
+    // 9. Xác nhận thanh toán trực tiếp cho Đơn Mua Hàng / Nhập Kho (P2P Standard)
+    static async recordPOPayment(id, payload, userId) {
+        const po = await PurchaseOrder.findById(id).populate('supplierId');
+        if (!po) throw new AppError('Đơn mua hàng không tồn tại', 404);
+
+        if (po.status === 'cancelled') {
+            throw new AppError('Không thể thanh toán cho đơn hàng đã bị hủy', 400);
+        }
+
+        const payAmount = Number(payload.amount);
+        if (!payAmount || payAmount <= 0) {
+            throw new AppError('Số tiền thanh toán phải lớn hơn 0', 400);
+        }
+
+        const currentPaid = Number(po.paidAmount || 0);
+        const remainingAmount = Math.max(0, (po.totalAmount || 0) - currentPaid);
+
+        if (payAmount > remainingAmount) {
+            throw new AppError(
+                `Số tiền thanh toán (${payAmount.toLocaleString('vi-VN')}đ) vượt quá số tiền còn cần trả (${remainingAmount.toLocaleString('vi-VN')}đ)`,
+                400
+            );
+        }
+
+        // Đảm bảo khoản công nợ của PO đã tồn tại trong SupplierDebt
+        let debt = await SupplierDebtService.syncFromPurchaseOrder(po);
+        if (!debt) {
+            throw new AppError('Không tìm thấy hoặc không thể tạo bản ghi công nợ cho đơn hàng này', 500);
+        }
+
+        // Thực hiện thanh toán công nợ qua SupplierDebtService (tạo phiếu chi & trừ nợ NCC)
+        const supplierIdToPay = po.supplierId?._id || po.supplierId;
+        const paymentResult = await SupplierDebtService.payDebt(
+            supplierIdToPay,
+            debt._id,
+            {
+                amount: payAmount,
+                warehouseId: payload.warehouseId || po.warehouseId,
+                paymentMethod: payload.paymentMethod || 'bank_transfer',
+                voucherType: 'payment',
+                description: payload.description || `Thanh toán cho Đơn nhập hàng ${po.poNumber}`,
+                note: payload.note || '',
+                accountingRecorded: payload.accountingRecorded !== false,
+            },
+            { _id: userId }
+        );
+
+        // Cập nhật trạng thái thanh toán trên PO
+        po.paidAmount = currentPaid + payAmount;
+        po.paymentStatus = po.paidAmount >= po.totalAmount ? 'paid' : 'partially_paid';
+        await po.save();
+
+        return {
+            po,
+            transaction: paymentResult.transaction,
+            debt: paymentResult.debt,
+            currentSupplierDebt: paymentResult.currentSupplierDebt,
+        };
     }
 }
 

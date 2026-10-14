@@ -37,6 +37,19 @@ export const useUpdatePurchaseOrderStatus = () => {
   });
 };
 
+export const useRecordPOPayment = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }) => inventoryService.recordPOPayment(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: PO_KEY });
+      qc.invalidateQueries({ queryKey: ['suppliers'] });
+      qc.invalidateQueries({ queryKey: ['supplier-debts'] });
+      qc.invalidateQueries({ queryKey: ['supplier-debt-transactions'] });
+    },
+  });
+};
+
 // Stock Exports
 export const useStockExports = (params) =>
   useQuery({

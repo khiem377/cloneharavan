@@ -9,6 +9,7 @@ const ExcelJS = require('exceljs');
 const path = require('path');
 const fs = require('fs');
 const { numberToWordsVN } = require('../utils/vnNumberToWords');
+const SupplierDebtService = require('./supplierDebt.service');
 
 /**
  * Tự sinh mã Phiếu Nhập Kho (PNK-YYYYMMDD-XXX)
@@ -173,6 +174,7 @@ const createStockReceiving = async (data, userId) => {
   po.status = allCompleted ? 'completed' : 'partial_received';
   if (allCompleted) po.receivedAt = new Date();
   await po.save();
+  await SupplierDebtService.syncFromPurchaseOrder(po);
 
   // 4. Lưu Phiếu Nhập Kho PNK
   const receiving = await StockReceiving.create({

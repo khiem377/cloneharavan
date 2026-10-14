@@ -39,8 +39,8 @@ export default function StockReceivingCreatePage() {
           warehouseService.getWarehouses(),
         ]);
         const orders = res.data?.orders || res.data?.data || [];
-        const eligibleStatuses = ['inspecting', 'arrived', 'in_transit', 'partial_received'];
-        setPurchaseOrders(orders.filter((o) => eligibleStatuses.includes(o.status)));
+        const eligibleStatuses = ['sent', 'in_transit', 'arrived', 'inspecting', 'partial_received'];
+        setPurchaseOrders(orders.filter((o) => eligibleStatuses.includes(o.status) || o._id === poIdFromUrl));
 
         const whList = whRes.data?.data?.data || [];
         setWarehouses(whList);

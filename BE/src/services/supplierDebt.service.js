@@ -163,6 +163,21 @@ class SupplierDebtService {
     debt.status = debt.remainingAmount === 0 ? 'paid' : 'partially_paid';
     await debt.save();
 
+    // Đồng bộ ngược lại PurchaseOrder nếu công nợ này phát sinh từ PO
+    if (debt.referenceType === 'purchase_order' && debt.referenceId) {
+      try {
+        const PurchaseOrder = mongoose.model('PurchaseOrder');
+        await PurchaseOrder.findByIdAndUpdate(debt.referenceId, {
+          $set: {
+            paidAmount: debt.paidAmount,
+            paymentStatus: debt.remainingAmount === 0 ? 'paid' : (debt.paidAmount > 0 ? 'partially_paid' : 'unpaid'),
+          },
+        });
+      } catch (syncErr) {
+        console.warn('Failed to sync PO paymentStatus from debt:', syncErr.message);
+      }
+    }
+
     // 2. Cập nhật dư nợ tổng của nhà cung cấp
     if (debt.debtType === 'payable') {
       supplier.debt = Math.max(0, (supplier.debt || 0) - payAmount);
@@ -302,16 +317,18 @@ class SupplierDebtService {
    * Tự động sinh công nợ từ Đơn Nhập Hàng (Purchase Order) khi tạo / nhập kho
    */
   static async syncFromPurchaseOrder(po) {
-    if (!po || !po.supplierId || !po.totalAmount) return;
+    if (!po || !po.supplierId || !po.totalAmount) return null;
 
     try {
-      const existing = await SupplierDebt.findOne({
+      let debt = await SupplierDebt.findOne({
         referenceType: 'purchase_order',
         referenceId: po._id,
       });
 
-      if (!existing) {
-        await SupplierDebt.create({
+      if (!debt) {
+        const paid = Number(po.paidAmount || 0);
+        const rem = Math.max(0, po.totalAmount - paid);
+        debt = await SupplierDebt.create({
           supplierId: po.supplierId,
           warehouseId: po.warehouseId || null,
           name: `Đơn nhập hàng #${po.poNumber || po._id.toString().slice(-6).toUpperCase()}`,
@@ -321,10 +338,10 @@ class SupplierDebtService {
           referenceModel: 'PurchaseOrder',
           referenceCode: po.poNumber || '',
           totalAmount: po.totalAmount,
-          paidAmount: 0,
-          remainingAmount: po.totalAmount,
+          paidAmount: paid,
+          remainingAmount: rem,
           dueDate: po.deliveryDate || null,
-          status: 'pending',
+          status: rem === 0 ? 'paid' : (paid > 0 ? 'partially_paid' : 'pending'),
           note: po.note || '',
           createdById: po.createdById || null,
         });
@@ -332,13 +349,15 @@ class SupplierDebtService {
         // Tăng công nợ & tổng mua cho nhà cung cấp
         await Supplier.findByIdAndUpdate(po.supplierId, {
           $inc: {
-            debt: po.totalAmount,
+            debt: rem,
             totalPurchase: po.totalAmount,
           },
         });
       }
+      return debt;
     } catch (err) {
       console.error('Error syncing supplier debt from PO:', err.message);
+      return null;
     }
   }
 

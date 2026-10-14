@@ -129,6 +129,34 @@ const sendPOToSupplier = async (req, res, next) => {
   }
 };
 
+const recordPOPayment = async (req, res, next) => {
+  try {
+    const result = await PurchaseOrderService.recordPOPayment(
+      req.params.id,
+      req.body,
+      req.user._id
+    );
+
+    recordAuditLog({
+      req,
+      user: req.user,
+      action: 'UPDATE',
+      module: 'PURCHASE_ORDER',
+      targetId: result.po._id,
+      targetName: `${result.po.poNumber} — Thanh toán ${Number(req.body.amount || 0).toLocaleString('vi-VN')}đ`,
+      newData: result,
+    }).catch(() => {});
+
+    res.json({
+      status: 'success',
+      data: result,
+      message: 'Xác nhận thanh toán đơn nhập kho thành công',
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   getPurchaseOrders,
   getPurchaseOrderById,
@@ -138,5 +166,6 @@ module.exports = {
   previewExcelSlip,
   previewPOEmail,
   sendPOToSupplier,
+  recordPOPayment,
 };
 
