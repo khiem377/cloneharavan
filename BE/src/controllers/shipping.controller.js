@@ -133,6 +133,60 @@ const getPostMergerAddress = async (req, res, next) => {
   }
 };
 
+const ghtkService = require('../services/ghtk.service');
+
+/**
+ * GET /api/v1/shipping/ghtk/provinces
+ * Proxy GHTK public province API kèm old_provinces
+ */
+const getGhtkProvinces = async (req, res, next) => {
+  try {
+    const provinces = await ghtkService.getProvinces();
+    res.json({
+      success: true,
+      data: provinces,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * GET /api/v1/shipping/ghtk/wards?province_id=...
+ * Proxy GHTK public ward API kèm old_wards
+ */
+const getGhtkWards = async (req, res, next) => {
+  try {
+    const { province_id, provinceId } = req.query;
+    const pid = province_id || provinceId;
+    const wards = await ghtkService.getWards(pid);
+    res.json({
+      success: true,
+      data: wards,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * GET /api/v1/shipping/ghtk/level4?province=...&district=...&ward_street=...&address=...
+ */
+const getGhtkLevel4Address = async (req, res, next) => {
+  try {
+    const { province, district, ward_street, address } = req.query;
+    const result = await ghtkService.getAddressLevel4({
+      province,
+      district,
+      ward_street,
+      address,
+    });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   getProvinces,
   getDistricts,
@@ -140,4 +194,7 @@ module.exports = {
   getNewProvinces,
   getNewWards,
   getPostMergerAddress,
+  getGhtkProvinces,
+  getGhtkWards,
+  getGhtkLevel4Address,
 };

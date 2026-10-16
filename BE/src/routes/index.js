@@ -42,6 +42,7 @@ const chatbotRoutes = require('./chatbot.routes');
 const upsellRoutes = require('./upsell.routes');
 const commentRoutes = require('./comment.routes');
 const shippingRoutes = require('./shipping.routes');
+const storeSettingRoutes = require('./storeSetting.routes');
 
 router.use('/auth', authRoutes);
 router.use('/users', userRoutes);
@@ -85,6 +86,7 @@ router.use('/upsell', upsellRoutes);
 router.use('/comments', commentRoutes);
 router.use('/cart', cartRoutes);
 router.use('/orders', orderRoutes);
+router.use('/settings', storeSettingRoutes);
 
 
 module.exports = router;

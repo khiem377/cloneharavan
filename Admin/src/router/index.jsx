@@ -32,6 +32,7 @@ import UnusedMediaPage from '@/pages/media/UnusedMediaPage';
 import CustomerListPage from '@/pages/customers/CustomerListPage';
 import StaffListPage from '@/pages/staffs/StaffListPage';
 import AdminProfilePage from '@/pages/profile/AdminProfilePage';
+import SettingsPage from '@/pages/settings/SettingsPage';
 
 // Inventory / Kho & Cung ứng
 import SupplierListPage from '@/pages/inventory/SupplierListPage';
@@ -111,7 +112,7 @@ const router = createBrowserRouter([
                     { path: 'staffs', element: <PermissionGuard requiredPermission="role.assign"><StaffListPage /></PermissionGuard> },
                     { path: 'roles', element: <PermissionGuard requiredPermission="role.manage"><RoleListPage /></PermissionGuard> },
                     { path: 'audit-logs', element: <PermissionGuard requiredPermission="audit_log.view"><AuditLogListPage /></PermissionGuard> },
-                    { path: 'settings', element: <PermissionGuard requiredPermission="role.manage"><ComingSoonPage title="Cài đặt hệ thống" /></PermissionGuard> },
+                    { path: 'settings', element: <SettingsPage /> },
 
                     // ── Kho & Cung Ứng ─────────────────────────────────────────────────────────────────────
                     { path: 'warehouses',              element: <PermissionGuard requiredPermission="purchase_order.view"><WarehouseListPage /></PermissionGuard> },

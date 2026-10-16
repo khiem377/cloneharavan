@@ -156,8 +156,8 @@ const NAV_GROUPS = [
       { to: '/staffs', icon: ShieldCheck, label: 'Nhân viên & Quản trị', permission: 'role.assign' },
       { to: '/roles', icon: RolePermissionNavIcon, label: 'Vai trò & Phân quyền', permission: 'role.manage' },
       { to: '/menus', icon: MenuNavIcon, label: 'Cấu hình Menu', permission: 'menu.manage' },
+      { to: '/settings', icon: SettingsIcon, label: 'Cài đặt hệ thống' },
       { to: '/audit-logs', icon: StockHistoryNavIcon, label: 'Nhật ký thao tác', permission: 'audit_log.view' },
-      { to: '/settings', icon: SettingsIcon, label: 'Cài đặt hệ thống', permission: 'role.manage' },
     ],
   },
 ];
