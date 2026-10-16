@@ -27,17 +27,26 @@ Kịch bản khởi tạo / làm mới bộ dữ liệu CSV chuẩn trong thư m
 python generate_dataset.py
 ```
 
-### 2. `matrix_factorization.py`
-Mô hình thuật toán AI Machine Learning chính:
-* Tự động đọc dữ liệu từ `data/interactions.csv` và `data/products.csv` (hoặc kết nối live MongoDB nếu khả dụng).
-* Xây dựng ma trận tương tác User-Product $R_{m \times n}$.
-* Thực hiện phân rã giá trị đơn lẻ **SVD (Singular Value Decomposition)** thông qua `numpy.linalg.svd`.
-* Dự đoán điểm số yêu thích của từng User đối với tất cả sản phẩm.
-* Xuất file kết quả dự đoán ra `data/recommendations_output.csv` và tự động đẩy dữ liệu dự đoán vào MongoDB collection `personalizedrecommendations`.
+### 2. `matrix_factorization.py` (entry) + package `recsys/`
+Mô hình gợi ý cá nhân hóa: **Implicit ALS** (thuần numpy) + time-decay + tín hiệu âm. Ô chưa tương tác được coi là "chưa biết", không phải "không thích".
+
+| Module | Vai trò |
+|---|---|
+| `recsys/config.py` | Đọc `MONGO_URI` từ biến môi trường hoặc `BE/.env`. Không có URI mặc định. |
+| `recsys/weights.py` | Trọng số hành vi và time-decay (half-life 7 ngày, bỏ dữ liệu quá 90 ngày). |
+| `recsys/data_loader.py` | Nạp tương tác từ MongoDB, dự phòng CSV (bỏ dòng hỏng). |
+| `recsys/interaction_matrix.py` | Gom tương tác thành ma trận thưa bằng numpy. |
+| `recsys/als.py` | Huấn luyện ALS. |
+| `recsys/recommend.py` | Top-N theo lô (`argpartition`), loại sản phẩm đã mua / điểm âm. |
+| `recsys/evaluate.py` | Hold-out leave-one-out: HitRate@K, NDCG@K so với baseline phổ biến. |
+| `recsys/exporter.py` | Xuất CSV và ghi MongoDB bằng `bulk_write`. |
 
 ```bash
-python matrix_factorization.py
+python matrix_factorization.py            # chạy kèm đánh giá hold-out
+python matrix_factorization.py --no-eval  # bỏ bước đánh giá
 ```
+
+Thiếu `MONGO_URI` thì chạy bằng CSV và không ghi MongoDB.
 
 ### 3. `sync_dataset_to_db.py`
 Kịch bản đồng bộ dữ liệu từ các file CSV trong `data/` vào MongoDB database (`cloneharavan`), đảm bảo Node.js Backend API có ngay dữ liệu sản phẩm, user và nhật ký tương tác thực tế.

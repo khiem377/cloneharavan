@@ -16,26 +16,7 @@ try:
 except ImportError:
     HAS_PYMONGO = False
 
-BASE_DIR = os.path.dirname(__file__)
-DATA_DIR = os.path.join(BASE_DIR, 'data')
-
-def _load_env_file(env_path):
-    if not os.path.exists(env_path):
-        return
-    try:
-        with open(env_path, 'r', encoding='utf-8') as f:
-            for line in f:
-                line = line.strip()
-                if line and not line.startswith('#') and '=' in line:
-                    k, v = line.split('=', 1)
-                    k, v = k.strip(), v.strip().strip("'\"")
-                    if k and k not in os.environ:
-                        os.environ[k] = v
-    except Exception:
-        pass
-
-_load_env_file(os.path.abspath(os.path.join(BASE_DIR, '..', '.env')))
-MONGO_URI = os.getenv('MONGO_URI', 'mongodb://localhost:27017/cloneharavan')
+from recsys.config import DATA_DIR, get_mongo_uri
 
 def sync_csv_to_mongodb():
     print("==========================================================================")
@@ -46,7 +27,7 @@ def sync_csv_to_mongodb():
         print("[WARNING] Thư viện 'pymongo' chưa được cài đặt. Run: pip install pymongo")
         return
 
-    client = MongoClient(MONGO_URI)
+    client = MongoClient(get_mongo_uri(required=True))
     db = client.get_database()
     print(f"-> Connected to MongoDB: {db.name}")
 
