@@ -11,6 +11,7 @@ const {
   getGhtkProvinces,
   getGhtkWards,
   getGhtkLevel4Address,
+  calculateFee,
 } = require('../controllers/shipping.controller');
 
 // ==========================================
@@ -39,5 +40,12 @@ router.get('/ghtk/wards', getGhtkWards);
 
 // 6. Tra cứu địa chỉ đặc biệt cấp 4 (Tòa nhà, hẻm, đường, chung cư...)
 router.get('/ghtk/level4', getGhtkLevel4Address);
+
+// ==========================================
+// TÍNH PHÍ VẬN CHUYỂN GHN (SHIPPING FEE)
+// ==========================================
+// Hỗ trợ cả POST (chuẩn RESTful) và GET (tra cứu nhanh)
+router.post('/fee', calculateFee);
+router.get('/fee', calculateFee);
 
 module.exports = router;

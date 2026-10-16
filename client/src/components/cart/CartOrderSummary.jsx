@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import useCartStore from '@/store/cartStore';
 
 export default function CartOrderSummary({
   cart = {},
@@ -58,24 +59,34 @@ export default function CartOrderSummary({
     }
   };
 
-  const subtotalOriginal = Number(cart.subtotalOriginal) || Number(cart.subtotal) || 0;
+  const { getSelectedOriginalSubtotal, getSelectedCouponDiscount } = useCartStore();
+
+  const selectedItems = (cart.items || []).filter((item) =>
+    selectedItemIds.includes(item._id)
+  );
+
+  const subtotalOriginal =
+    selectedItems.length > 0
+      ? (getSelectedOriginalSubtotal ? getSelectedOriginalSubtotal() : selectedSubtotal)
+      : Number(cart.subtotalOriginal) || Number(cart.subtotal) || 0;
+
   const subtotalEffective =
     selectedSubtotal > 0
       ? selectedSubtotal
       : cart.subtotal !== undefined
-      ? Number(cart.subtotal)
-      : subtotalOriginal;
+        ? Number(cart.subtotal)
+        : subtotalOriginal;
+
   const productSavings = Math.max(0, subtotalOriginal - subtotalEffective);
   const hasProductDiscount = productSavings > 0;
 
-  const couponDiscount = Number(cart.couponDiscount) || 0;
+  const couponDiscount =
+    getSelectedCouponDiscount ? getSelectedCouponDiscount() : Number(cart.couponDiscount) || 0;
   const hasCoupon = Boolean(cart.couponCode) && couponDiscount > 0;
 
   const finalTotal =
-    selectedSubtotal > 0
-      ? Math.max(0, selectedSubtotal - couponDiscount)
-      : cart.finalTotal !== undefined
-      ? Number(cart.finalTotal)
+    selectedCount === 0
+      ? 0
       : Math.max(0, subtotalEffective - couponDiscount);
   const totalSavings = productSavings + couponDiscount;
 
@@ -141,7 +152,7 @@ export default function CartOrderSummary({
         <div className="flex justify-between items-center text-slate-600">
           <span>Phí vận chuyển:</span>
           <span className="font-semibold text-emerald-600 text-xs sm:text-sm">
-            Miễn phí
+            ...
           </span>
         </div>
       </div>

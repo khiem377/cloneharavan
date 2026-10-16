@@ -147,11 +147,11 @@ const getAllFlashSales = async (query = {}) => {
     FlashSale.find(filter)
       .populate({
         path: 'items.productId',
-        select: 'name slug thumbnail price salePrice stock sold images',
+        select: 'name slug thumbnail price salePrice stock sold images brand categories options',
       })
       .populate({
         path: 'items.variantId',
-        select: 'nameOverride sku thumbnail price salePrice stock sold attributes',
+        select: 'name displayName sku thumbnail price salePrice stock sold attributes isDefault',
       })
       .sort(sort)
       .skip(skip)
@@ -178,7 +178,7 @@ const getFlashSaleById = async (idOrSlug) => {
   const flashSale = await FlashSale.findOne(query)
     .populate({
       path: 'items.productId',
-      select: 'name slug thumbnail price salePrice stock sold images brand categories',
+      select: 'name slug thumbnail price salePrice stock sold images brand categories options',
       populate: [
         { path: 'brand', select: 'name logo' },
         { path: 'categories', select: 'name slug' },
@@ -186,7 +186,7 @@ const getFlashSaleById = async (idOrSlug) => {
     })
     .populate({
       path: 'items.variantId',
-      select: 'nameOverride sku thumbnail price salePrice stock sold attributes',
+      select: 'name displayName sku thumbnail price salePrice stock sold attributes isDefault',
     });
 
   if (!flashSale) throw new AppError('Không tìm thấy chương trình Flash Sale', 404);
@@ -202,7 +202,7 @@ const getActiveFlashSale = async () => {
   })
     .populate({
       path: 'items.productId',
-      select: 'name slug thumbnail price salePrice stock sold images brand categories',
+      select: 'name slug thumbnail price salePrice stock sold images brand categories options',
       populate: [
         { path: 'brand', select: 'name logo' },
         { path: 'categories', select: 'name slug' },
@@ -210,7 +210,7 @@ const getActiveFlashSale = async () => {
     })
     .populate({
       path: 'items.variantId',
-      select: 'nameOverride sku thumbnail price salePrice stock sold attributes',
+      select: 'name displayName sku thumbnail price salePrice stock sold attributes isDefault',
     })
     .sort({ startDate: 1 });
 

@@ -137,8 +137,10 @@ export default function CartItemRow({
                   return ['mặc định', 'mac dinh', 'default', 'default title', 'tiêu chuẩn', 'tieu chuan'].includes(t);
                 };
 
-                const validAttributes = Array.isArray(item.attributes)
+                const validAttributes = Array.isArray(item.attributes) && item.attributes.length > 0
                   ? item.attributes.filter((attr) => !isDefaultVal(attr.value) && !isDefaultVal(attr.name))
+                  : Array.isArray(item.selectedAttributes)
+                  ? item.selectedAttributes.filter((attr) => !isDefaultVal(attr.value) && !isDefaultVal(attr.name))
                   : [];
 
                 if (validAttributes.length > 0) {

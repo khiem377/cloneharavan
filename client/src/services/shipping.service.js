@@ -77,6 +77,26 @@ export const shippingService = {
       return null;
     }
   },
+
+  /**
+   * Tính phí vận chuyển GHN thực tế (POST /api/v1/shipping/fee)
+   */
+  calculateFee: async ({ toDistrictId, toWardCode, weight, insuranceValue, fromDistrictId } = {}) => {
+    if (!toDistrictId || !toWardCode) return null;
+    try {
+      const res = await api.post('/shipping/fee', {
+        toDistrictId: Number(toDistrictId),
+        toWardCode: String(toWardCode),
+        weight: Number(weight) || 500,
+        insuranceValue: Number(insuranceValue) || 0,
+        fromDistrictId: fromDistrictId ? Number(fromDistrictId) : undefined,
+      });
+      return res.data?.data || null;
+    } catch (err) {
+      console.warn('Lỗi tính phí ship GHN:', err.response?.data || err.message);
+      return err.response?.data?.data || null;
+    }
+  },
 };
 
 export default shippingService;

@@ -102,15 +102,28 @@ const resolveVariantAndProduct = async ({ productId, variantId, sku }) => {
   }
 
   // Tự động phân giải biến thể khi chỉ có productId:
+  // Ưu tiên chọn biến thể có thuộc tính thực tế (attributes có giá trị hợp lệ, không phải dummy rỗng):
+  const isDefaultText = (t) => {
+    if (!t) return true;
+    const s = String(t).trim().toLowerCase();
+    return ['mặc định', 'mac dinh', 'default', 'default title', 'tiêu chuẩn', 'tieu chuan'].includes(s);
+  };
+  const realVariants = allVariants.filter(
+    (v) =>
+      Array.isArray(v.attributes) &&
+      v.attributes.some((a) => a && !isDefaultText(a.value) && !isDefaultText(a.name))
+  );
+  const candidates = realVariants.length > 0 ? realVariants : allVariants;
+
   // - Ưu tiên A: Biến thể mặc định (isDefault: true) còn hàng khả dụng
   // - Ưu tiên B: Biến thể đầu tiên còn hàng khả dụng
   // - Ưu tiên C: Biến thể mặc định hoặc biến thể đầu tiên
-  let selectedVariant = allVariants.find((v) => v.isDefault && getAvailableStock(v) > 0);
+  let selectedVariant = candidates.find((v) => v.isDefault && getAvailableStock(v) > 0);
   if (!selectedVariant) {
-    selectedVariant = allVariants.find((v) => getAvailableStock(v) > 0);
+    selectedVariant = candidates.find((v) => getAvailableStock(v) > 0);
   }
   if (!selectedVariant) {
-    selectedVariant = allVariants.find((v) => v.isDefault) || allVariants[0];
+    selectedVariant = candidates.find((v) => v.isDefault) || candidates[0];
   }
 
   return { product: targetProduct, variant: selectedVariant };
@@ -261,7 +274,7 @@ const formatAndValidateCart = async (cartDoc) => {
   const validatedItems = [];
 
   for (const item of cartDoc.items) {
-    const variant = await ProductVariant.findById(item.variantId);
+    let variant = await ProductVariant.findById(item.variantId);
     const product = await Product.findById(item.productId);
 
     // 1. Sản phẩm hoặc biến thể bị xóa khỏi hệ thống
@@ -291,6 +304,33 @@ const formatAndValidateCart = async (cartDoc) => {
         subtotal: (item.priceAtAdded || 0) * item.quantity,
       });
       continue;
+    }
+
+    // Tự động chữa lành (auto-heal) nếu item trong giỏ từng bị gán nhầm biến thể dummy rỗng
+    // trong khi sản phẩm thực tế có các biến thể thuộc tính hợp lệ:
+    const isDefaultTextVal = (t) => {
+      if (!t) return true;
+      const s = String(t).trim().toLowerCase();
+      return ['mặc định', 'mac dinh', 'default', 'default title', 'tiêu chuẩn', 'tieu chuan'].includes(s);
+    };
+    const hasValidVariantAttrs =
+      Array.isArray(variant.attributes) &&
+      variant.attributes.some((a) => a && !isDefaultTextVal(a.value) && !isDefaultTextVal(a.name));
+
+    if (!hasValidVariantAttrs && product) {
+      const allProductVars = await ProductVariant.find({ productId: product._id }).sort({ isDefault: -1, position: 1 });
+      const realVar = allProductVars.find(
+        (v) =>
+          Array.isArray(v.attributes) &&
+          v.attributes.some((a) => a && !isDefaultTextVal(a.value) && !isDefaultTextVal(a.name))
+      );
+      if (realVar) {
+        variant = realVar;
+        item.variantId = realVar._id;
+        item.sku = realVar.sku || item.sku;
+        item.selectedAttributes = realVar.attributes || [];
+        hasCartMutation = true;
+      }
     }
 
     // 2. Sản phẩm tạm ngưng kinh doanh

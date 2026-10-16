@@ -293,7 +293,7 @@ export const QuickViewModal = () => {
       sku: selectedVariant?.sku,
       quantity,
     };
-    await addToCart(payload);
+    await addToCart(payload, { isBuyNow: true });
     closeQuickView();
     router.push('/cart');
   };

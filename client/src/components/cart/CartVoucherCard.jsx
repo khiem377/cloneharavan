@@ -6,13 +6,16 @@ import CartVoucherModal from './CartVoucherModal';
 import { Button } from '@/components/ui/button';
 
 export default function CartVoucherCard() {
-  const { cart, removeCoupon, isUpdating } = useCartStore();
+  const { cart, removeCoupon, isUpdating, getSelectedCouponDiscount, getSelectedSubtotal } = useCartStore();
   const [modalOpen, setModalOpen] = useState(false);
 
   const formatPrice = (val) =>
     new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val || 0);
 
-  const hasAppliedCoupon = Boolean(cart?.couponCode);
+  const effectiveCouponDiscount = getSelectedCouponDiscount
+    ? getSelectedCouponDiscount()
+    : Number(cart?.couponDiscount) || 0;
+  const hasAppliedCoupon = Boolean(cart?.couponCode) && effectiveCouponDiscount > 0;
 
   return (
     <>
@@ -24,7 +27,7 @@ export default function CartVoucherCard() {
               <span>Voucher giảm giá</span>
               {hasAppliedCoupon && (
                 <span className="text-[10px] font-mono tabular-nums bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded-[4px] font-bold">
-                  -{formatPrice(cart.couponDiscount || 0)}
+                  -{formatPrice(effectiveCouponDiscount)}
                 </span>
               )}
             </div>
@@ -74,7 +77,13 @@ export default function CartVoucherCard() {
       </div>
 
       {/* MODAL TRA CỨU & ÁP DỤNG VOUCHER */}
-      <CartVoucherModal isOpen={modalOpen} onClose={() => setModalOpen(false)} />
+      <CartVoucherModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        appliedCode={cart?.couponCode}
+        appliedDiscount={effectiveCouponDiscount}
+        orderSubtotal={getSelectedSubtotal ? getSelectedSubtotal() : undefined}
+      />
     </>
   );
 }

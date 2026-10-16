@@ -3,6 +3,7 @@ const { AppError } = require('../utils/AppError');
 const { uploadToCloudinary, deleteFromCloudinary } = require('../config/cloudinary');
 const sseService = require('./sse.service');
 const { escapeRegex } = require('../middleware/sanitize.middleware');
+const ghnService = require('./ghn.service');
 
 // ==========================================
 // 1. AVATAR MANAGEMENT
@@ -143,6 +144,22 @@ const getUserAddresses = async (userId) => {
 };
 
 /**
+ * Lấy địa chỉ mặc định của user (nếu chưa có thì trả về hasDefault: false)
+ */
+const getDefaultAddress = async (userId) => {
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new AppError('Không tìm thấy người dùng', 404);
+  }
+  const defaultAddr = user.addresses.find((addr) => addr.isDefault === true) || null;
+  return {
+    hasDefault: Boolean(defaultAddr),
+    address: defaultAddr,
+    addressesCount: user.addresses.length,
+  };
+};
+
+/**
  * Thêm địa chỉ mới
  * - Nếu là địa chỉ đầu tiên hoặc isDefault = true -> set làm mặc định
  */
@@ -161,6 +178,22 @@ const addAddress = async (userId, addressData) => {
     addressData.isDefault = true;
   } else {
     addressData.isDefault = false;
+  }
+
+  // Tự động phân giải mã GHN nếu chưa có
+  if ((!addressData.districtId || !addressData.wardCode) && addressData.province && addressData.ward) {
+    try {
+      const resolved = await ghnService.resolveAddressGhnCodes({
+        province: addressData.province,
+        district: addressData.district,
+        ward: addressData.ward,
+      });
+      if (resolved?.districtId && resolved?.wardCode) {
+        addressData.provinceId = resolved.provinceId;
+        addressData.districtId = resolved.districtId;
+        addressData.wardCode = resolved.wardCode;
+      }
+    } catch (_) {}
   }
 
   user.addresses.push(addressData);
@@ -200,6 +233,22 @@ const updateAddress = async (userId, addressId, updateData) => {
   if (updateData.wardCode !== undefined) address.wardCode = updateData.wardCode;
   if (updateData.detailAddress !== undefined) address.detailAddress = updateData.detailAddress;
   if (updateData.isDefault !== undefined) address.isDefault = updateData.isDefault;
+
+  // Tự động phân giải mã GHN nếu sửa địa chỉ mà thiếu mã
+  if ((!address.districtId || !address.wardCode) && address.province && address.ward) {
+    try {
+      const resolved = await ghnService.resolveAddressGhnCodes({
+        province: address.province,
+        district: address.district,
+        ward: address.ward,
+      });
+      if (resolved?.districtId && resolved?.wardCode) {
+        address.provinceId = resolved.provinceId;
+        address.districtId = resolved.districtId;
+        address.wardCode = resolved.wardCode;
+      }
+    } catch (_) {}
+  }
 
   await user.save();
   return address;
@@ -672,6 +721,7 @@ module.exports = {
   updateUserProfile,
   // Addresses
   getUserAddresses,
+  getDefaultAddress,
   addAddress,
   updateAddress,
   deleteAddress,
