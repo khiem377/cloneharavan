@@ -2,6 +2,7 @@ const User = require('../models/user.model');
 const { AppError } = require('../utils/AppError');
 const { uploadToCloudinary, deleteFromCloudinary } = require('../config/cloudinary');
 const sseService = require('./sse.service');
+const { escapeRegex } = require('../middleware/sanitize.middleware');
 
 // ==========================================
 // 1. AVATAR MANAGEMENT
@@ -304,7 +305,7 @@ const getAllUsers = async (query = {}) => {
   const filter = {};
 
   if (q) {
-    const searchRegex = { $regex: q.trim(), $options: 'i' };
+    const searchRegex = { $regex: escapeRegex(q.trim()), $options: 'i' };
     filter.$or = [
       { fullName: searchRegex },
       { email: searchRegex },
@@ -365,11 +366,30 @@ const getAllUsers = async (query = {}) => {
     });
   });
 
+  // Lấy thống kê đơn hàng (orderCount, totalSpent) cho danh sách người dùng
+  const Order = require('../models/order.model');
+  const userIds = users.map((u) => u._id);
+  const orderStats = await Order.aggregate([
+    { $match: { userId: { $in: userIds }, orderStatus: { $ne: 'CANCELLED' } } },
+    {
+      $group: {
+        _id: '$userId',
+        orderCount: { $sum: 1 },
+        totalSpent: { $sum: { $ifNull: ['$pricing.totalAmount', 0] } },
+      },
+    },
+  ]);
+  const orderStatsMap = new Map();
+  orderStats.forEach((st) => orderStatsMap.set(st._id.toString(), st));
+
   const enrichedUsers = users.map((u) => {
     const uObj = u.toObject();
     if (!uObj.assignedWarehouseId && staffWhMap.has(uObj._id.toString())) {
       uObj.assignedWarehouseId = staffWhMap.get(uObj._id.toString());
     }
+    const st = orderStatsMap.get(uObj._id.toString());
+    uObj.orderCount = st ? st.orderCount : 0;
+    uObj.totalSpent = st ? st.totalSpent : 0;
     return uObj;
   });
 
@@ -395,7 +415,23 @@ const getUserById = async (id) => {
     .populate('customPermissions', 'name code module description')
     .populate('assignedWarehouseId', 'name code isDefault');
   if (!user) throw new AppError('Không tìm thấy người dùng', 404);
-  return user;
+
+  const uObj = user.toObject();
+  const Order = require('../models/order.model');
+  const stats = await Order.aggregate([
+    { $match: { userId: user._id, orderStatus: { $ne: 'CANCELLED' } } },
+    {
+      $group: {
+        _id: '$userId',
+        orderCount: { $sum: 1 },
+        totalSpent: { $sum: { $ifNull: ['$pricing.totalAmount', 0] } },
+      },
+    },
+  ]);
+  uObj.orderCount = stats[0]?.orderCount || 0;
+  uObj.totalSpent = stats[0]?.totalSpent || 0;
+
+  return uObj;
 };
 
 /**

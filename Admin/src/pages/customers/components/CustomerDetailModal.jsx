@@ -17,10 +17,15 @@ const formatDate = (dateStr) => {
   }
 };
 
+const formatCurrency = (amount) => {
+  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount || 0);
+};
+
 export default function CustomerDetailModal({ user, onClose, onToggleStatus }) {
   if (!user) return null;
 
   const initials = (user.fullName?.[0] || user.email?.[0] || '?').toUpperCase();
+  const avgOrderValue = user.orderCount > 0 ? Math.round((user.totalSpent || 0) / user.orderCount) : 0;
 
   return (
     <div
@@ -70,11 +75,41 @@ export default function CustomerDetailModal({ user, onClose, onToggleStatus }) {
                 >
                   {user.isActive ? 'Hoạt động' : 'Đã khóa'}
                 </span>
+                {user.totalSpent >= 5000000 && (
+                  <span className="inline-flex items-center rounded-[4px] px-2 py-0.5 text-[10px] font-semibold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-mono">
+                    ★ VIP
+                  </span>
+                )}
               </div>
               <p className="text-xs text-muted-foreground font-mono truncate mt-0.5">{user.email}</p>
               <p className="text-[11px] text-muted-foreground font-mono tabular-nums mt-1">
                 Tham gia: {formatDate(user.createdAt)}
               </p>
+            </div>
+          </div>
+
+          {/* Purchasing KPI */}
+          <div className="space-y-2">
+            <h4 className="text-xs font-semibold uppercase font-mono text-muted-foreground">Thống kê mua sắm</h4>
+            <div className="grid grid-cols-3 gap-2.5 text-xs">
+              <div className="p-3 rounded-[6px] border border-border bg-secondary/30">
+                <span className="text-muted-foreground block text-[11px]">Tổng chi tiêu</span>
+                <span className="font-mono tabular-nums font-bold text-foreground text-sm mt-0.5 block">
+                  {formatCurrency(user.totalSpent)}
+                </span>
+              </div>
+              <div className="p-3 rounded-[6px] border border-border bg-secondary/30">
+                <span className="text-muted-foreground block text-[11px]">Số đơn hàng</span>
+                <span className="font-mono tabular-nums font-bold text-foreground text-sm mt-0.5 block">
+                  {user.orderCount || 0} đơn
+                </span>
+              </div>
+              <div className="p-3 rounded-[6px] border border-border bg-secondary/30">
+                <span className="text-muted-foreground block text-[11px]">Trung bình / đơn</span>
+                <span className="font-mono tabular-nums font-bold text-foreground text-sm mt-0.5 block">
+                  {formatCurrency(avgOrderValue)}
+                </span>
+              </div>
             </div>
           </div>
 
