@@ -21,8 +21,6 @@ router.get('/similar/:productId', controller.getSimilarProducts);
 
 
 router.post('/compute-item-cf', protect, controller.computeItemCF);
-router.get('/sync-csv', controller.syncInteractionsCsv);
-router.post('/sync-csv', controller.syncInteractionsCsv);
 router.post('/run-python-svd', controller.triggerPythonSVD);
 router.get('/run-python-svd', controller.triggerPythonSVD);
 

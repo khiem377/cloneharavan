@@ -9,7 +9,6 @@ import sys
 
 # python-services/
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DATA_DIR = os.path.join(BASE_DIR, 'data')
 ENV_PATH = os.path.abspath(os.path.join(BASE_DIR, '..', '.env'))
 
 _env_loaded = False
