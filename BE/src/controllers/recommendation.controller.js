@@ -27,6 +27,25 @@ const recordInteraction = async (req, res, next) => {
   }
 };
 
+// ── POST /api/recommendations/interactions/batch ──────────────────────────
+// Nhận tối đa 50 event / request, ghi 1 lần insertMany
+const recordInteractionsBatch = async (req, res, next) => {
+  try {
+    const userId = req.user?._id || null;
+    const sessionId = req.body?.sessionId || req.headers['x-session-id'] || '';
+    const events = req.body?.events;
+
+    if (!Array.isArray(events)) {
+      return res.status(400).json({ status: 'error', message: 'events phải là một mảng' });
+    }
+
+    const data = await recommendationService.recordUserInteractionsBatch({ userId, sessionId, events });
+    res.json({ status: 'success', message: 'Đã ghi nhận tương tác người dùng', data });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // ── GET /api/recommendations/personalized ─────────────────────────────────
 // 7-layer hybrid engine: SVD + Content + ItemCF + Trending
 const getPersonalizedRecommendations = async (req, res, next) => {
@@ -144,6 +163,7 @@ const triggerPythonSVD = async (req, res, next) => {
 
 module.exports = {
   recordInteraction,
+  recordInteractionsBatch,
   getPersonalizedRecommendations,
   getSessionBasedRecommendations,
   getTrendingRecommendations,
