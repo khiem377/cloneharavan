@@ -25,8 +25,9 @@ const checkoutCOD = async (req, res, next) => {
 const cancelOrder = async (req, res, next) => {
   try {
     const userId = req.user._id;
+    const userRole = req.user?.role || 'user';
     const { reason } = req.body;
-    const order = await orderService.cancelOrder(req.params.id, userId, reason);
+    const order = await orderService.cancelOrder(req.params.id, userId, reason, userRole);
     res.json({
       success: true,
       message: 'Đã hủy đơn hàng thành công, tồn kho giữ chỗ đã được hoàn lại',
@@ -44,7 +45,8 @@ const cancelOrder = async (req, res, next) => {
 const getOrderById = async (req, res, next) => {
   try {
     const userId = req.user._id;
-    const order = await orderService.getOrderById(req.params.id, userId);
+    const userRole = req.user?.role || 'user';
+    const order = await orderService.getOrderById(req.params.id, userId, userRole);
     res.json({
       success: true,
       data: order,
