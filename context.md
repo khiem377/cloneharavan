@@ -4,6 +4,8 @@
 > **Phiên bản tài liệu**: 2.0 (Toàn diện cho cả Backend, Admin Panel và Client Storefront)  
 > **Mục đích**: Làm kim chỉ nam kiến trúc, hướng dẫn chia file, phân lớp trách nhiệm (Separation of Concerns), luồng dữ liệu và quy chuẩn code cho toàn bộ lập trình viên.
 
+> **Đính chính (2026-10-16)**: Một số mục dưới đây được viết từ sớm. Stack thật theo package.json: BE Express 5 + Mongoose 9 + Zod 4 (không Joi, không Helmet, không rate-limit package, chưa có Redis); Admin React 19 + Vite 8 + React Router 7 + Tailwind 4; Client Next 16 + React 19 + Tailwind 4. DB là MongoDB Atlas (remote). Tóm tắt bối cảnh và quyết định mới nhất nằm ở `AGENTS.md` (mục 5) và `docs/progress.md`.
+
 ---
 
 ## 📑 Mục Lục
@@ -48,7 +50,7 @@ cloneharavan/
 ├── BE/               — Backend API REST + AI Engine (Node.js + Express + MongoDB) -> Port: 5000
 │   └── python-services/ — Python ML Scripts & CSV Recommendation Datasets
 ├── Admin/            — Dashboard Quản trị Doanh nghiệp (React + Vite + Tailwind)   -> Port: 5173
-├── client/           — Storefront Bán hàng Khách hàng (Next.js 14 App Router)       -> Port: 3000
+├── client/           — Storefront Bán hàng Khách hàng (Next.js 16 App Router)       -> Port: 3000
 └── docs/             — Tài liệu kỹ thuật & đặc tả nghiệp vụ chi tiết
 ```
 
@@ -58,8 +60,8 @@ cloneharavan/
 | :--- | :--- | :--- | :--- |
 | **Backend REST Core** | Express.js / Node.js | `http://localhost:5000` | Xử lý nghiệp vụ, xác thực, API, AI RAG, Database |
 | **Admin Dashboard** | React + Vite + Tailwind | `http://localhost:5173` | Giao diện quản trị PIM, Kho vận, OMS, CMS, RBAC |
-| **Client Storefront** | Next.js 14 App Router | `http://localhost:3000` | Giao diện mua sắm, giỏ hàng, tìm kiếm, chatbot, tài khoản |
-| **Database** | MongoDB (Mongoose) | `mongodb://localhost:27017` | Lưu trữ dữ liệu sản phẩm, đơn hàng, người dùng, kho |
+| **Client Storefront** | Next.js 16 App Router | `http://localhost:3000` | Giao diện mua sắm, giỏ hàng, tìm kiếm, chatbot, tài khoản |
+| **Database** | MongoDB (Mongoose) | `MongoDB Atlas (URI trong BE/.env)` | Lưu trữ dữ liệu sản phẩm, đơn hàng, người dùng, kho |
 | **Cloud Storage** | Cloudinary CDN | Cloud Storage | Lưu trữ và phân phối hình ảnh/video sản phẩm & blog |
 | **Logistics Gateway** | GHN API v2/v3 | `https://dev-online-gateway.ghn.vn` | Tính phí vận chuyển, tạo mã vận đơn tự động |
 | **AI LLM Gateway** | Groq SDK (Llama 3) / Gemini | Cloud Inference | Phục vụ Chatbot RAG và trích xuất ý định tìm kiếm |
@@ -75,7 +77,7 @@ cloneharavan/
 - **Database & ODM**: MongoDB, Mongoose (Mọi Schema đều có `{ timestamps: true }`)
 - **Authentication**: JWT (Access Token ngắn hạn + Refresh Token HttpOnly Cookie), WebAuthn (Passkeys FIDO2), TOTP 2FA (Speakeasy / QR Code)
 - **File Upload**: Multer (Memory Storage) -> Cloudinary Stream Upload
-- **Validation**: Joi Schema Validator
+- **Validation**: Zod 4 Schema Validator
 - **Excel Processing**: ExcelJS
 - **Email Service**: Nodemailer (SMTP Server)
 - **AI & Streaming**: Groq SDK, Google Generative AI (`@google/generative-ai`), Server-Sent Events (SSE)
@@ -96,7 +98,7 @@ BE/
 │   ├── sync_dataset_to_db.py   — Đồng bộ dữ liệu tương tác vào MongoDB
 │   └── upsell_engine.py    — Thuật toán khai phá luật kết hợp mua kèm (Association Rules)
 └── src/
-    ├── app.js              — Cấu hình Express app, CORS, Helmet, Rate Limit, Mount API routes
+    ├── app.js              — Cấu hình Express app, CORS, security headers thủ công (không Helmet/rate-limit), Mount API routes
     ├── config/             — Cấu hình bên thứ 3 và cơ sở dữ liệu
     │   ├── db.js           — Kết nối MongoDB Mongoose
     │   ├── cloudinary.js   — Khởi tạo Cloudinary SDK
@@ -123,9 +125,9 @@ BE/
     │   ├── cartSession.middleware.js  — Quản lý Guest Cart Session ID qua cookie
     │   ├── error.middleware.js        — Bắt lỗi tập trung (Global Error Handler)
     │   ├── upload.middleware.js       — Multer memory storage xử lý file upload
-    │   ├── validate.middleware.js     — Chặn và validate request body/query bằng Joi
+    │   ├── validate.middleware.js     — Chặn và validate request body/query bằng Zod
     │   └── sanitize.middleware.js     — Làm sạch dữ liệu đầu vào chống XSS / Injection
-    ├── validators/         — 14 Joi Validation Schemas
+    ├── validators/         — Zod Validation Schemas
     │   ├── auth.validator.js, product.validator.js, promotion.validator.js...
     ├── utils/              — Hàm tiện ích dùng chung
     │   ├── AppError.js            — Custom Error class chứa statusCode
@@ -293,9 +295,9 @@ Toàn bộ lỗi được bắt tự động bởi `middleware/error.middleware.
 ## 3. Kiến Trúc & Chuẩn Chia File Admin Panel (`Admin`)
 
 ### 3.1 Tech Stack Admin
-- **Framework**: React 18, Vite
+- **Framework**: React 19, Vite 8
 - **Styling**: Tailwind CSS
-- **Routing**: React Router DOM v6
+- **Routing**: React Router DOM v7
 - **State Management**: Zustand (`store/authStore.js`), React Context (`providers/`)
 - **Icons**: Lucide React + Bộ Icon SVG chuyên dụng (`components/ui/Icons.jsx`)
 - **Charts & Visualization**: Recharts (Area, Bar, Donut charts)
@@ -422,8 +424,8 @@ Tuân thủ nghiêm ngặt theo bộ quy chuẩn cốt lõi:
 ## 4. Kiến Trúc & Chuẩn Chia File Client Storefront (`client`)
 
 ### 4.1 Tech Stack Client
-- **Framework**: Next.js 14 (App Router)
-- **Language**: JavaScript (React 18)
+- **Framework**: Next.js 16 (App Router)
+- **Language**: JavaScript (React 19)
 - **Styling**: Tailwind CSS
 - **State Management**: Zustand với `persist` middleware (Lưu giỏ hàng, xác thực, danh sách so sánh)
 - **Data Fetching**: Hybrid (Next.js Server-side `fetch` / `serverAxios` kết hợp Client-side Axios)
@@ -441,7 +443,7 @@ client/
 ├── next.config.mjs
 ├── tailwind.config.js
 └── src/
-    ├── app/                — Next.js 14 App Router Directory
+    ├── app/                — Next.js 16 App Router Directory
     │   ├── layout.jsx      — Root Layout: Header, Footer, AiChatWidget, CompareBar, StoreProvider
     │   ├── page.jsx        — Trang chủ Homepage (SSR + Client Sections)
     │   ├── globals.css     — Global Styles, Tailwind imports, CSS Variables
