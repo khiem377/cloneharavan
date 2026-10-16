@@ -308,6 +308,36 @@ export default function ProductListPage() {
         </div>
       </div>
 
+      {/* Quick Status Chips */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
+        <span className="text-muted-foreground font-medium shrink-0">Lọc nhanh:</span>
+        {[
+          { label: 'Tất cả', value: '' },
+          { label: 'Công khai', value: 'published' },
+          { label: 'Bản nháp', value: 'draft' },
+          { label: 'Hết hàng', value: 'out_of_stock' },
+        ].map((chip) => {
+          const isActive = filterStatus === chip.value;
+          return (
+            <button
+              key={chip.value}
+              type="button"
+              onClick={() => {
+                setFilterStatus(chip.value);
+                setPage(1);
+              }}
+              className={`px-3 py-1 rounded-[6px] text-xs font-medium border transition-colors cursor-pointer active:scale-[0.98] ${
+                isActive
+                  ? 'bg-primary text-primary-foreground border-primary font-semibold shadow-xs'
+                  : 'bg-card text-muted-foreground border-border hover:bg-muted/60 hover:text-foreground'
+              }`}
+            >
+              {chip.label}
+            </button>
+          );
+        })}
+      </div>
+
       {selected.length > 0 && (
         <div className="flex items-center flex-wrap gap-2 px-3.5 py-2.5 rounded-[6px] border border-primary/30 bg-primary/5">
           <CheckSquare size={14} className="text-primary shrink-0" />
@@ -671,6 +701,57 @@ export default function ProductListPage() {
           product={bomProduct}
           onSuccess={() => refetch()}
         />
+      )}
+
+      {/* Floating Bottom Bulk Bar for scrolled users */}
+      {selected.length > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-card border border-border shadow-2xl rounded-[8px] px-4 py-2.5 flex items-center gap-3 animate-in slide-in-from-bottom-4 duration-200">
+          <div className="flex items-center gap-2 text-xs font-semibold text-foreground pr-2 border-r border-border">
+            <CheckSquare size={15} className="text-primary shrink-0" />
+            <span>Đã chọn <span className="text-primary font-mono font-bold">{selected.length}</span></span>
+          </div>
+
+          <Can do="product.edit">
+            <Button
+              variant="outline"
+              size="xs"
+              className="rounded-[6px] text-xs font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-300 hover:bg-emerald-500/20 h-8"
+              onClick={() => setBulkStatusConfirm('published')}
+              disabled={bulkStatusMut.isPending}
+            >
+              <Globe size={13} className="mr-1" /> Xuất bản
+            </Button>
+            <Button
+              variant="outline"
+              size="xs"
+              className="rounded-[6px] text-xs font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-300 hover:bg-amber-500/20 h-8"
+              onClick={() => setBulkStatusConfirm('draft')}
+              disabled={bulkStatusMut.isPending}
+            >
+              <FileText size={13} className="mr-1" /> Chuyển Nháp
+            </Button>
+          </Can>
+
+          <Can do="product.delete">
+            <Button
+              variant="destructive"
+              size="xs"
+              className="rounded-[6px] text-xs font-semibold h-8"
+              onClick={() => setBulkDeleteConfirm(true)}
+            >
+              <Trash2 size={13} className="mr-1" /> Xóa
+            </Button>
+          </Can>
+
+          <Button
+            variant="ghost"
+            size="xs"
+            className="text-xs text-muted-foreground hover:text-foreground h-8 rounded-[6px]"
+            onClick={() => setSelected([])}
+          >
+            Bỏ chọn
+          </Button>
+        </div>
       )}
     </div>
   );

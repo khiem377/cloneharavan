@@ -20,12 +20,16 @@ export function useColumnVisibility(storageKey, defaultColumns = []) {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          // Always ensure 'alwaysVisible' columns are present
+          const allKnownIds = new Set(defaultColumns.map((c) => c.id));
+          const validSaved = parsed.filter((id) => allKnownIds.has(id));
           const alwaysVisibleKeys = defaultColumns
             .filter((col) => col.alwaysVisible)
             .map((col) => col.id);
-          const combined = Array.from(new Set([...parsed, ...alwaysVisibleKeys]));
-          return combined;
+          const defaultVisibleKeys = defaultColumns
+            .filter((col) => col.defaultVisible !== false)
+            .map((col) => col.id);
+          const newKeys = defaultVisibleKeys.filter((id) => !parsed.includes(id));
+          return Array.from(new Set([...validSaved, ...alwaysVisibleKeys, ...newKeys]));
         }
       }
     } catch (e) {

@@ -369,10 +369,39 @@ export default function CouponPage() {
                         {item.minOrderValue > 0 ? formatCurrency(item.minOrderValue) : '0đ'}
                       </TableCell>
 
-                      <TableCell className="py-2">
-                        <span className="text-xs font-mono tabular-nums text-foreground">
-                          {item.usedCount} {item.usageLimit ? `/ ${item.usageLimit}` : '(∞)'}
-                        </span>
+                      <TableCell className="py-2 min-w-[140px]">
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center justify-between text-xs font-mono tabular-nums text-foreground">
+                            <span>{item.usedCount || 0} {item.usageLimit ? `/ ${item.usageLimit}` : 'lượt'}</span>
+                            {item.usageLimit ? (
+                              <span className={`text-[10px] font-semibold ${
+                                ((item.usedCount || 0) / item.usageLimit) >= 0.9
+                                  ? 'text-rose-500'
+                                  : ((item.usedCount || 0) / item.usageLimit) >= 0.7
+                                  ? 'text-amber-500'
+                                  : 'text-muted-foreground'
+                              }`}>
+                                {Math.min(100, Math.round(((item.usedCount || 0) / item.usageLimit) * 100))}%
+                              </span>
+                            ) : (
+                              <span className="text-[10px] text-emerald-500 font-semibold font-sans">Vô hạn</span>
+                            )}
+                          </div>
+                          {item.usageLimit && (
+                            <div className="w-full h-1.5 rounded-full bg-muted overflow-hidden">
+                              <div
+                                className={`h-full rounded-full transition-all ${
+                                  ((item.usedCount || 0) / item.usageLimit) >= 0.9
+                                    ? 'bg-rose-500'
+                                    : ((item.usedCount || 0) / item.usageLimit) >= 0.7
+                                    ? 'bg-amber-500'
+                                    : 'bg-primary'
+                                }`}
+                                style={{ width: `${Math.min(100, Math.round(((item.usedCount || 0) / item.usageLimit) * 100))}%` }}
+                              />
+                            </div>
+                          )}
+                        </div>
                       </TableCell>
 
                       <TableCell className="py-2 text-[11px] text-muted-foreground font-mono tabular-nums whitespace-nowrap">

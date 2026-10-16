@@ -4,7 +4,12 @@ import { CommonOptionsProvider } from './CommonOptionsProvider';
 
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: { retry: 1, refetchOnWindowFocus: false },
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+      staleTime: 5 * 60 * 1000, // 5 phút không coi dữ liệu là cũ
+      gcTime: 15 * 60 * 1000,    // Giữ cache trong 15 phút
+    },
   },
 });
 
