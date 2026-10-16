@@ -461,6 +461,34 @@ const syncProductSmartTokens = async (productId) => {
   }
 };
 
+const PRODUCT_LIST_MAX_LIMIT = 100; // API cong khai
+const PRODUCT_LIST_ADMIN_MAX_LIMIT = 1000; // Admin: dropdown can lay toan bo
+const PRODUCT_SORT_WHITELIST = new Set([
+  'createdAt', 'updatedAt', 'name', 'sold', 'viewsCount', 'cachedPrice', 'stock', 'sku', 'productCode',
+]);
+
+const escapeRegex = (str) => String(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+// Escape regex de tranh ReDoS / loi cu phap; van giu hanh vi tim chua (contains), khong phan biet hoa thuong
+const buildKeywordOr = (keyword) => {
+  const safe = escapeRegex(String(keyword).trim().slice(0, 100));
+  return [
+    { name: { $regex: safe, $options: 'i' } },
+    { sku: { $regex: safe, $options: 'i' } },
+    { productCode: { $regex: safe, $options: 'i' } },
+  ];
+};
+
+// Gioi han limit, whitelist sortBy, chuan hoa page
+const normalizeListParams = ({ page, limit, sortBy, sortOrder, maxLimit = PRODUCT_LIST_MAX_LIMIT }) => {
+  const pageNum = Math.max(1, parseInt(page, 10) || 1);
+  const limitNum = Math.min(maxLimit, Math.max(1, parseInt(limit, 10) || 20));
+  const sortField = PRODUCT_SORT_WHITELIST.has(sortBy) ? sortBy : 'createdAt';
+  const sort = { [sortField]: sortOrder === 'asc' ? 1 : -1 };
+  if (sortField !== 'createdAt') sort._id = -1; // tie-breaker de phan trang on dinh
+  return { pageNum, limitNum, sort };
+};
+
 const getAllProducts = async (query = {}) => {
   const {
     keyword, category, brand, minPrice, maxPrice,
@@ -470,11 +498,7 @@ const getAllProducts = async (query = {}) => {
 
   const filter = { isActive: true, status };
 
-  if (keyword) filter.$or = [
-    { name: { $regex: keyword, $options: 'i' } },
-    { sku: { $regex: keyword, $options: 'i' } },
-    { productCode: { $regex: keyword, $options: 'i' } },
-  ];
+  if (keyword) filter.$or = buildKeywordOr(keyword);
   if (category) {
     const ids = await getCategoryIds(category);
     if (ids && ids.length > 0) {
@@ -504,9 +528,7 @@ const getAllProducts = async (query = {}) => {
   if (minPrice) filter.cachedPrice = { $gte: Number(minPrice) };
   if (maxPrice) filter.cachedPrice = { ...(filter.cachedPrice || {}), $lte: Number(maxPrice) };
 
-  const pageNum = Math.max(1, parseInt(page, 10));
-  const limitNum = Math.max(1, parseInt(limit, 10));
-  const sort = { [sortBy]: sortOrder === 'asc' ? 1 : -1 };
+  const { pageNum, limitNum, sort } = normalizeListParams({ page, limit, sortBy, sortOrder });
 
   const [products, total] = await Promise.all([
     Product.find(filter)
@@ -559,11 +581,7 @@ const getAllProductsAdmin = async (query = {}) => {
   } = query;
 
   const filter = {};
-  if (keyword) filter.$or = [
-    { name: { $regex: keyword, $options: 'i' } },
-    { sku: { $regex: keyword, $options: 'i' } },
-    { productCode: { $regex: keyword, $options: 'i' } },
-  ];
+  if (keyword) filter.$or = buildKeywordOr(keyword);
   if (category) {
     const ids = await getCategoryIds(category);
     if (ids && ids.length > 0) filter.categories = { $in: ids };
@@ -572,9 +590,7 @@ const getAllProductsAdmin = async (query = {}) => {
   if (status) filter.status = status;
   if (isActive !== undefined) filter.isActive = isActive === 'true';
 
-  const pageNum = Math.max(1, parseInt(page, 10));
-  const limitNum = Math.max(1, parseInt(limit, 10));
-  const sort = { [sortBy]: sortOrder === 'asc' ? 1 : -1 };
+  const { pageNum, limitNum, sort } = normalizeListParams({ page, limit, sortBy, sortOrder, maxLimit: PRODUCT_LIST_ADMIN_MAX_LIMIT });
 
   const [products, total] = await Promise.all([
     Product.find(filter)

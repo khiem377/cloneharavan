@@ -275,6 +275,8 @@ productSchema.index({ brand: 1, isActive: 1 });
 productSchema.index({ isActive: 1, status: 1, viewsCount: -1 });
 productSchema.index({ isActive: 1, cachedPrice: 1 });
 productSchema.index({ supplierId: 1 });
+productSchema.index({ isActive: 1, status: 1, sold: -1 });
+productSchema.index({ categories: 1, isActive: 1, status: 1, createdAt: -1 });
 
 const Product = mongoose.model('Product', productSchema);
 module.exports = Product;
