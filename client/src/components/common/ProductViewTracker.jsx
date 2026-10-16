@@ -41,9 +41,14 @@ export default function ProductViewTracker({ product }) {
     // Tính thời gian xem trang (dwell time) khi rời trang
     const handleLeave = () => {
       if (!startTimeRef.current || hasFiredLeave) return;
+
+      // Dưới 1s thường là StrictMode (dev) mount/unmount liên tiếp, không phải bounce thật
+      const elapsedMs = Date.now() - startTimeRef.current;
+      if (elapsedMs < 1000) return;
+
       hasFiredLeave = true;
 
-      const dwellSeconds = Math.round((Date.now() - startTimeRef.current) / 1000);
+      const dwellSeconds = Math.round(elapsedMs / 1000);
       const categoryId = product.categories?.[0]?._id || product.categories?.[0] || null;
       const brandId = product.brand?._id || product.brand || null;
 
