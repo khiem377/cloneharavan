@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import Link from 'next/link';
 import useCartStore from '@/store/cartStore';
 import CartCheckoutSteps from './CartCheckoutSteps';
@@ -9,8 +9,6 @@ import CartItemList from './CartItemList';
 import CartGiftItems from './CartGiftItems';
 import CartVoucherCard from './CartVoucherCard';
 import CartOrderSummary from './CartOrderSummary';
-import CartFixedBottomBar from './CartFixedBottomBar';
-import CartVoucherModal from './CartVoucherModal';
 import CartEmptyState from './CartEmptyState';
 import { Button } from '@/components/ui/button';
 
@@ -30,15 +28,11 @@ export default function CartView() {
     toggleSelectAll,
     removeSelectedItems,
     getSelectedSubtotal,
-    getSelectedCouponDiscount,
     updateQuantity,
     removeItem,
     clearCart,
     validateCheckout,
   } = useCartStore();
-
-  const [showVoucherModal, setShowVoucherModal] = useState(false);
-
 
   // Tải giỏ hàng lần đầu khi mount
   useEffect(() => {
@@ -47,9 +41,6 @@ export default function CartView() {
 
   const selectedCount = selectedItemIds ? selectedItemIds.length : 0;
   const selectedSubtotal = getSelectedSubtotal ? getSelectedSubtotal() : 0;
-  const selectedCouponDiscount = getSelectedCouponDiscount
-    ? getSelectedCouponDiscount()
-    : Number(cart.couponDiscount) || 0;
 
   const formatPrice = (val) =>
     new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val || 0);
@@ -92,7 +83,7 @@ export default function CartView() {
   }
 
   return (
-    <div className="bg-slate-50/60 min-h-[100dvh] pb-36 sm:pb-44">
+    <div className="bg-slate-50/60 min-h-[100dvh] pb-10 sm:pb-12">
       <div className="container mx-auto px-3 sm:px-4 2xl:px-8 py-3 sm:py-5 2xl:py-8 max-w-7xl 2xl:max-w-[1536px]">
         {/* BREADCRUMB */}
         <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs 2xl:text-sm text-slate-500 mb-3 sm:mb-4">
@@ -168,27 +159,6 @@ export default function CartView() {
           </div>
         </div>
       </div>
-
-      {/* THANH GHIM ĐÁY TOÀN TRANG (FIXED BOTTOM BAR CHUẨN SHOPEE) */}
-      <CartFixedBottomBar
-        items={items}
-        selectedItemIds={selectedItemIds}
-        onToggleSelectAll={toggleSelectAll}
-        onRemoveSelected={removeSelectedItems}
-        onOpenVoucherModal={() => setShowVoucherModal(true)}
-        appliedCouponCode={cart.couponCode}
-        couponDiscount={selectedCouponDiscount}
-        isUpdating={isUpdating}
-      />
-
-      {/* MODAL DANH SÁCH VOUCHER */}
-      <CartVoucherModal
-        isOpen={showVoucherModal}
-        onClose={() => setShowVoucherModal(false)}
-        appliedCode={cart.couponCode}
-        appliedDiscount={selectedCouponDiscount}
-        orderSubtotal={selectedSubtotal > 0 ? selectedSubtotal : (cart.subtotal || 0)}
-      />
     </div>
   );
 }

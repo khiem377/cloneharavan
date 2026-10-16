@@ -17,25 +17,9 @@ except ImportError:
     print("[ERROR] pymongo not installed. Run: pip install pymongo")
     sys.exit(1)
 
-BASE_DIR = os.path.dirname(__file__)
+from recsys.config import get_mongo_uri
 
-def _load_env_file(env_path):
-    if not os.path.exists(env_path):
-        return
-    try:
-        with open(env_path, 'r', encoding='utf-8') as f:
-            for line in f:
-                line = line.strip()
-                if line and not line.startswith('#') and '=' in line:
-                    k, v = line.split('=', 1)
-                    k, v = k.strip(), v.strip().strip("'\"")
-                    if k and k not in os.environ:
-                        os.environ[k] = v
-    except Exception:
-        pass
-
-_load_env_file(os.path.abspath(os.path.join(BASE_DIR, '..', '.env')))
-MONGO_URI = os.getenv('MONGO_URI', 'mongodb://localhost:27017/cloneharavan')
+TIER_BULK_BATCH = 1000
 
 TIER1_MIN_RATIO = 1.05
 TIER1_MAX_RATIO = 4.0
@@ -130,13 +114,16 @@ def build_tier2_suggestions(current_product, current_max_price, all_products_in_
 
         price_diff = cached_price - current_max_price
 
+        # Chuẩn hóa về [0,1] để các yếu tố cùng thang: gần giá hơn thì điểm cao hơn,
+        # cộng thêm thương hiệu / nổi bật / hot. Trước đây số hạng giá (x1e6) lấn át hoàn toàn.
+        closeness = 1.0 / (1.0 + price_diff / max(current_max_price, 1.0))
         brand_id = str(p.get('brand', '')) if p.get('brand') else ''
         current_brand = str(current_product.get('brand', '')) if current_product.get('brand') else ''
         same_brand_bonus = 0.3 if brand_id == current_brand and brand_id else 0.0
 
-        is_featured = 1.0 if p.get('isFeatured') else 0.0
-        is_hot = 0.5 if p.get('isHot') else 0.0
-        score = same_brand_bonus + is_featured + is_hot + (1.0 / max(price_diff, 1)) * 1e6
+        is_featured = 0.3 if p.get('isFeatured') else 0.0
+        is_hot = 0.2 if p.get('isHot') else 0.0
+        score = closeness + same_brand_bonus + is_featured + is_hot
 
         candidates.append({
             'productId': str(p['_id']),
@@ -161,7 +148,7 @@ def run_upsell_engine():
     print("UPSELL ENGINE — 2-Tier Ladder Up-sell Batch")
     print("=" * 70)
 
-    client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
+    client = MongoClient(get_mongo_uri(required=True), serverSelectionTimeoutMS=5000)
     db = client.get_database()
 
     print("-> Loading products...")
@@ -210,6 +197,22 @@ def run_upsell_engine():
     bulk_ops = []
     processed = 0
     skipped = 0
+    category_cache = {}  # product_id -> danh sách sản phẩm cùng danh mục (gộp 1 lần)
+    tier2_cache = {}     # (product_id, giá) -> gợi ý tier 2
+
+    def get_category_products(product_id, current_product):
+        cached = category_cache.get(product_id)
+        if cached is not None:
+            return cached
+        merged, seen_pids = [], set()
+        for cat_id in current_product.get('categories', []):
+            for cp in products_by_category.get(str(cat_id), []):
+                cpid = str(cp['_id'])
+                if cpid not in seen_pids:
+                    seen_pids.add(cpid)
+                    merged.append(cp)
+        category_cache[product_id] = merged
+        return merged
 
     for v in variants:
         variant_id = str(v['_id'])
@@ -226,22 +229,15 @@ def run_upsell_engine():
         tier2 = []
         if len(tier1) == 0:
             current_price = get_effective_price(v)
-            category_ids = current_product.get('categories', [])
-            category_products = []
-            seen_pids = set()
-            for cat_id in category_ids:
-                for cp in products_by_category.get(str(cat_id), []):
-                    cpid = str(cp['_id'])
-                    if cpid not in seen_pids:
-                        seen_pids.add(cpid)
-                        category_products.append(cp)
-
-            tier2 = build_tier2_suggestions(
-                current_product,
-                current_price,
-                category_products,
-                product_id,
-            )
+            cache_key = (product_id, current_price)
+            if cache_key not in tier2_cache:
+                tier2_cache[cache_key] = build_tier2_suggestions(
+                    current_product,
+                    current_price,
+                    get_category_products(product_id, current_product),
+                    product_id,
+                )
+            tier2 = tier2_cache[cache_key]
 
         doc = {
             'variantId': ObjectId(variant_id),
@@ -286,9 +282,13 @@ def run_upsell_engine():
         )
         processed += 1
 
+    upserted = modified = 0
+    for i in range(0, len(bulk_ops), TIER_BULK_BATCH):
+        result = db.upsellsuggestions.bulk_write(bulk_ops[i:i + TIER_BULK_BATCH], ordered=False)
+        upserted += result.upserted_count
+        modified += result.modified_count
     if bulk_ops:
-        result = db.upsellsuggestions.bulk_write(bulk_ops, ordered=False)
-        print(f"-> Upserted: {result.upserted_count} | Modified: {result.modified_count}")
+        print(f"-> Upserted: {upserted} | Modified: {modified}")
 
     db.upsellsuggestions.create_index([('variantId', 1)], unique=True)
     db.upsellsuggestions.create_index([('productId', 1)])

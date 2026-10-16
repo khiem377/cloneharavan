@@ -69,8 +69,8 @@ export default function ProductViewTracker({ product }) {
             brandId,
           },
         });
-      } else if (dwellSeconds < 2 && dwellSeconds >= 0) {
-        // Thoát trang quá nhanh (< 2s) -> Tín hiệu ngầm tiêu cực (bounce)
+      } else if (dwellSeconds < 3 && dwellSeconds >= 0) {
+        // Thoát trang quá nhanh (< 3s) -> Tín hiệu ngầm tiêu cực (bounce)
         trackingService.recordInteraction({
           productId,
           interactionType: 'view_bounce',

@@ -103,15 +103,8 @@ export default function ProductCard({ product, onProductClick }) {
   const compared = isCompared(product._id || product.id);
 
   const handleCardClick = () => {
+    // Không ghi 'view' ở đây: trang chi tiết (ProductViewTracker) đã ghi product_detail + dwell time
     onProductClick?.(product);
-    const pId = product._id || product.id;
-    if (pId) {
-      trackingService.recordInteraction({
-        productId: pId,
-        interactionType: 'view',
-        context: { source: 'product_card_click' },
-      });
-    }
   };
 
   const handleQuickViewClick = (e) => {

@@ -5,6 +5,7 @@ const { optionalAuth, protect } = require('../middleware/auth.middleware');
 
 
 router.post('/interactions', optionalAuth, controller.recordInteraction);
+router.post('/interactions/batch', optionalAuth, controller.recordInteractionsBatch);
 
 
 router.get('/personalized', optionalAuth, controller.getPersonalizedRecommendations);

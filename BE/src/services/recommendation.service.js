@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const mongoose = require('mongoose');
 const UserInteraction = require('../models/userInteraction.model');
 const PersonalizedRecommendation = require('../models/personalizedRecommendation.model');
 const ItemSimilarity = require('../models/itemSimilarity.model');
@@ -730,6 +731,27 @@ const buildRecommendReason = (product) => {
 // CSV REAL-TIME PIPELINE — Bắt ngay lập tức và ghi trực tiếp vào interactions.csv
 // ═══════════════════════════════════════════════════════════════════════════════
 
+const CSV_HEADER = 'interaction_id,user_id,session_id,product_id,event_type,weight,timestamp\n';
+
+const formatInteractionCsvRow = (interaction) => {
+  const intId = interaction._id
+    ? `INT-${interaction._id.toString().slice(-6).toUpperCase()}`
+    : `INT-${Date.now().toString().slice(-6)}`;
+  const userId = interaction.userId ? interaction.userId.toString() : '';
+  const sessionId = interaction.sessionId || '';
+  const productId = interaction.productId ? (interaction.productId._id || interaction.productId).toString() : '';
+  const eventType = interaction.interactionType || 'view';
+  const weight = typeof interaction.weight === 'number'
+    ? interaction.weight.toFixed(1)
+    : (INTERACTION_WEIGHTS[eventType] || 1.0).toFixed(1);
+
+  const d = interaction.timestamp ? new Date(interaction.timestamp) : new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  const timestampStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+
+  return `${intId},${userId},${sessionId},${productId},${eventType},${weight},${timestampStr}\n`;
+};
+
 const appendInteractionToCsv = (interaction) => {
   try {
     const dir = path.dirname(INTERACTIONS_CSV_PATH);
@@ -738,30 +760,31 @@ const appendInteractionToCsv = (interaction) => {
     }
 
     if (!fs.existsSync(INTERACTIONS_CSV_PATH)) {
-      const header = 'interaction_id,user_id,session_id,product_id,event_type,weight,timestamp\n';
-      fs.writeFileSync(INTERACTIONS_CSV_PATH, header, 'utf8');
+      fs.writeFileSync(INTERACTIONS_CSV_PATH, CSV_HEADER, 'utf8');
     }
 
-    const intId = interaction._id
-      ? `INT-${interaction._id.toString().slice(-6).toUpperCase()}`
-      : `INT-${Date.now().toString().slice(-6)}`;
-    const userId = interaction.userId ? interaction.userId.toString() : '';
-    const sessionId = interaction.sessionId || '';
-    const productId = interaction.productId ? (interaction.productId._id || interaction.productId).toString() : '';
-    const eventType = interaction.interactionType || 'view';
-    const weight = typeof interaction.weight === 'number'
-      ? interaction.weight.toFixed(1)
-      : (INTERACTION_WEIGHTS[eventType] || 1.0).toFixed(1);
-
-    const d = interaction.timestamp ? new Date(interaction.timestamp) : new Date();
-    const pad = (n) => String(n).padStart(2, '0');
-    const timestampStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-
-    const row = `${intId},${userId},${sessionId},${productId},${eventType},${weight},${timestampStr}\n`;
     // Ghi tức thì xuống đĩa cứng (synchronous) đảm bảo Real-time 100%
-    fs.appendFileSync(INTERACTIONS_CSV_PATH, row, 'utf8');
+    fs.appendFileSync(INTERACTIONS_CSV_PATH, formatInteractionCsvRow(interaction), 'utf8');
   } catch (err) {
     console.error('[Recommendation] appendInteractionToCsv error:', err.message);
+  }
+};
+
+/**
+ * Ghi nhiều interaction vào CSV bằng 1 lần appendFile bất đồng bộ (không chặn event loop).
+ */
+const appendInteractionsToCsvAsync = async (interactions) => {
+  if (!interactions || interactions.length === 0) return;
+  try {
+    const dir = path.dirname(INTERACTIONS_CSV_PATH);
+    await fs.promises.mkdir(dir, { recursive: true });
+    if (!fs.existsSync(INTERACTIONS_CSV_PATH)) {
+      await fs.promises.writeFile(INTERACTIONS_CSV_PATH, CSV_HEADER, 'utf8');
+    }
+    const rows = interactions.map(formatInteractionCsvRow).join('');
+    await fs.promises.appendFile(INTERACTIONS_CSV_PATH, rows, 'utf8');
+  } catch (err) {
+    console.error('[Recommendation] appendInteractionsToCsvAsync error:', err.message);
   }
 };
 
@@ -1041,6 +1064,93 @@ const recordUserInteraction = async (data = {}) => {
   }
 
   return interaction;
+};
+
+const MAX_BATCH_SIZE = 50;
+
+/**
+ * Ghi nhiều interaction trong 1 request: 1 insertMany + 1 appendFile bất đồng bộ.
+ * Event không hợp lệ hoặc trùng bị bỏ qua, không làm hỏng cả lô.
+ * @returns {Promise<{received:number, saved:number}>}
+ */
+const recordUserInteractionsBatch = async ({ userId, sessionId, events } = {}) => {
+  if (!Array.isArray(events) || events.length === 0) return { received: 0, saved: 0 };
+  if (!sessionId && !userId) return { received: events.length, saved: 0 };
+
+  const list = events.slice(0, MAX_BATCH_SIZE);
+  const now = Date.now();
+  const docs = [];
+
+  for (const ev of list) {
+    const { productId, interactionType = 'view', dwellTime = 0, context = {}, occurredAt } = ev || {};
+    if (!productId || !mongoose.isValidObjectId(productId)) continue;
+
+    const baseWeight = INTERACTION_WEIGHTS[interactionType];
+    if (baseWeight === undefined) continue;
+
+    if (['product_detail', 'view', 'view_deep', 'view_bounce'].includes(interactionType)) {
+      const dedupKey = `${userId || sessionId}_${productId}_${interactionType}`;
+      const lastSeen = recentInteractionsDedup.get(dedupKey);
+      if (lastSeen && now - lastSeen < 1500) continue;
+      recentInteractionsDedup.set(dedupKey, now);
+    }
+
+    // Giữ thời điểm thực tế của event (client queue có độ trễ), chặn timestamp tương lai/quá cũ
+    const ts = Number(occurredAt);
+    const timestamp = Number.isFinite(ts) && ts <= now && now - ts < 24 * 60 * 60 * 1000
+      ? new Date(ts)
+      : new Date(now);
+
+    const validId = (v) => (v && mongoose.isValidObjectId(v) ? v : null);
+    docs.push({
+      userId: userId || null,
+      sessionId: sessionId || '',
+      productId,
+      interactionType,
+      weight: baseWeight,
+      dwellTime: Math.max(0, Number(dwellTime) || 0),
+      context: {
+        device: ['mobile', 'desktop', 'tablet'].includes(context.device) ? context.device : 'unknown',
+        source: String(context.source || 'unknown').slice(0, 200),
+        position: context.position || null,
+        searchKeyword: String(context.searchKeyword || '').slice(0, 200),
+        categoryId: validId(context.categoryId),
+        brandId: validId(context.brandId),
+        priceRangeMin: context.priceRangeMin || null,
+        priceRangeMax: context.priceRangeMax || null,
+      },
+      timestamp,
+    });
+  }
+
+  if (recentInteractionsDedup.size > 2000) {
+    for (const [k, v] of recentInteractionsDedup.entries()) {
+      if (now - v > 5000) recentInteractionsDedup.delete(k);
+    }
+  }
+
+  if (docs.length === 0) return { received: list.length, saved: 0 };
+
+  let saved;
+  try {
+    saved = await UserInteraction.insertMany(docs, { ordered: false });
+  } catch (err) {
+    console.error('[Recommendation] recordUserInteractionsBatch insertMany error:', err.message);
+    return { received: list.length, saved: 0 };
+  }
+
+  // CSV + counter chạy nền, không chặn response
+  appendInteractionsToCsvAsync(saved);
+  try {
+    const { incrementInteractionCounter } = require('../utils/cronJobs');
+    if (typeof incrementInteractionCounter === 'function') {
+      for (let i = 0; i < saved.length; i++) incrementInteractionCounter();
+    }
+  } catch (cronErr) {
+    // Ignore if cronJobs is not initialized yet
+  }
+
+  return { received: list.length, saved: saved.length };
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1373,6 +1483,7 @@ const mergeSessionInteractions = async (sessionId, userId) => {
 
 module.exports = {
   recordUserInteraction,
+  recordUserInteractionsBatch,
   syncAllInteractionsToCsv,
   mergeSessionInteractions,
   getPersonalizedRecommendations,

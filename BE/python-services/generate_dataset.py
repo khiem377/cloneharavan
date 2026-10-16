@@ -23,23 +23,9 @@ BASE_DIR = os.path.dirname(__file__)
 DATA_DIR = os.path.join(BASE_DIR, 'data')
 os.makedirs(DATA_DIR, exist_ok=True)
 
-def _load_env_file(env_path):
-    if not os.path.exists(env_path):
-        return
-    try:
-        with open(env_path, 'r', encoding='utf-8') as f:
-            for line in f:
-                line = line.strip()
-                if line and not line.startswith('#') and '=' in line:
-                    k, v = line.split('=', 1)
-                    k, v = k.strip(), v.strip().strip("'\"")
-                    if k and k not in os.environ:
-                        os.environ[k] = v
-    except Exception:
-        pass
+from recsys.config import get_mongo_uri
 
-_load_env_file(os.path.abspath(os.path.join(BASE_DIR, '..', '.env')))
-MONGO_URI = os.getenv('MONGO_URI', 'mongodb://localhost:27017/cloneharavan')
+MONGO_URI = get_mongo_uri()  # None nếu chưa cấu hình -> dùng JSON/CSV fallback
 
 # Đường dẫn tới file JSON export từ MongoDB Compass (nằm ở root project)
 _ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -147,7 +133,7 @@ FALLBACK_USERS = [
 
 def load_products_from_mongo_or_fallback():
     products = []
-    if HAS_PYMONGO:
+    if HAS_PYMONGO and MONGO_URI:
         try:
             client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=2000)
             db = client.get_database()
@@ -179,7 +165,7 @@ def load_products_from_mongo_or_fallback():
 
 def load_users_from_mongo_or_fallback():
     users = []
-    if HAS_PYMONGO:
+    if HAS_PYMONGO and MONGO_URI:
         try:
             client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=2000)
             db = client.get_database()
