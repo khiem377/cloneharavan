@@ -4,6 +4,7 @@ import React, { useMemo } from 'react';
 import Link from 'next/link';
 import { Badge } from '../ui/badge';
 import { Tag as TagIcon } from 'lucide-react';
+import { sanitizeHtml } from '@/utils/sanitizeHtml';
 
 const injectHeadingIds = (html) => {
   if (!html) return '';
@@ -24,7 +25,7 @@ const injectHeadingIds = (html) => {
 };
 
 export const BlogDetailContent = ({ content = '', tags = [] }) => {
-  const processedContent = useMemo(() => injectHeadingIds(content), [content]);
+  const processedContent = useMemo(() => sanitizeHtml(injectHeadingIds(content)), [content]);
 
   return (
     <div className="w-full">

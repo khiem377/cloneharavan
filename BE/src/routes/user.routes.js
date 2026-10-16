@@ -63,7 +63,7 @@ router.post('/addresses/sync-order', protect, validate(addressSchema), syncOrder
 // ==========================================
 // 3. ADMIN MANAGEMENT (RBAC Protected)
 // ==========================================
-router.post('/clean-social-emails', protect, cleanSocialEmails);
+router.post('/clean-social-emails', protect, requirePermission('user.edit'), cleanSocialEmails);
 router.get('/stats', protect, requirePermission('user.view'), getUserStats);
 router.patch('/bulk-status', protect, requirePermission('user.edit'), bulkToggleStatus);
 router.post('/admin', protect, requirePermission('user.create'), validate(createAdminSchema), createAdmin);

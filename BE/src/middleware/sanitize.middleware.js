@@ -30,4 +30,6 @@ const sanitizeInput = (req, res, next) => {
   next();
 };
 
-module.exports = { sanitizeInput, sanitizeValue };
+const escapeRegex = (str = '') => String(str || '').replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+
+module.exports = { sanitizeInput, sanitizeValue, escapeRegex };

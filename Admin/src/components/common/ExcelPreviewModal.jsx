@@ -6,6 +6,7 @@ import {
 } from '@/components/ui/Icons';
 import { toast } from '@/providers/ToastProvider';
 import api from '@/lib/axios';
+import { sanitizeHtml } from '@/utils/sanitizeHtml';
 
 export default function ExcelPreviewModal({
   isOpen,
@@ -337,7 +338,7 @@ export default function ExcelPreviewModal({
                   transition: 'transform 0.15s ease-out',
                 }}
                 className="excel-web-paper border border-slate-300 dark:border-slate-700 rounded-lg p-8 sm:p-10 bg-white text-slate-900 shadow-xl max-w-4xl w-full overflow-x-auto"
-                dangerouslySetInnerHTML={{ __html: htmlContent }}
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(htmlContent) }}
               />
             </div>
           )}

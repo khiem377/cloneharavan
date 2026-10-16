@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/table';
 import { toast } from '@/providers/ToastProvider';
 import * as XLSX from 'xlsx';
+import { sanitizeHtml } from '@/utils/sanitizeHtml';
 
 function formatVND(val) {
   if (!val && val !== 0) return '';
@@ -666,7 +667,7 @@ export default function PurchaseOrderCreatePage() {
               ) : (
                 <div
                   className="excel-wizard-preview border border-border rounded-[6px] p-4 bg-card text-foreground"
-                  dangerouslySetInnerHTML={{ __html: excelHtml }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(excelHtml) }}
                 />
               )}
             </div>

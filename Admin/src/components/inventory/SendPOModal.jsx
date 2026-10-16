@@ -5,6 +5,7 @@ import {
 import { inventoryService } from '@/services/inventory.service';
 import { toast } from '@/providers/ToastProvider';
 import SearchableSelect from '@/components/ui/SearchableSelect';
+import { sanitizeHtml } from '@/utils/sanitizeHtml';
 
 export default function SendPOModal({ isOpen, onClose, po, onSuccess }) {
   const [activeTab, setActiveTab] = useState('email'); // 'email' | 'manual'
@@ -306,7 +307,7 @@ export default function SendPOModal({ isOpen, onClose, po, onSuccess }) {
               ) : (
                 <div
                   className="mx-auto bg-white rounded-xl shadow border border-border overflow-hidden"
-                  dangerouslySetInnerHTML={{ __html: previewHtml }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(previewHtml) }}
                 />
               )}
             </div>

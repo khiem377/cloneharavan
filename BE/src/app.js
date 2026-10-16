@@ -8,6 +8,18 @@ const { startCronJobs } = require('./utils/cronJobs');
 
 const app = express();
 
+// Ẩn thông tin framework máy chủ (chống bot scanner)
+app.disable('x-powered-by');
+
+// Native HTTP Security Headers (An toàn tuyệt đối cho In ấn & Thiết bị Barcode)
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('X-XSS-Protection', '0');
+  next();
+});
+
 // AI Predictive Search Engine v2 loaded
 
 // Storefront client origins
@@ -17,9 +29,6 @@ const CLIENT_ORIGINS = [
   'http://localhost:3000',
   'http://localhost:3001',
   'http://127.0.0.1:3000',
-  'https://ba7596453f41f6.lhr.life',
-  'https://80952fadaa029c.lhr.life',
-  'https://ed8f7256f96495.lhr.life'
 ];
 
 // Admin dashboard origins
@@ -33,7 +42,6 @@ const ALLOWED_ORIGINS = [...CLIENT_ORIGINS, ...ADMIN_ORIGINS].filter(Boolean);
 
 app.use(cors({
   origin: (origin, cb) => {
-
     if (!origin || ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
     cb(new Error(`CORS: origin "${origin}" không được phép`));
   },
@@ -41,8 +49,9 @@ app.use(cors({
 }));
 const { sanitizeInput } = require('./middleware/sanitize.middleware');
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Anti-DDoS payload limits (tránh JSON bombs gây tràn heap memory)
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 app.use(sanitizeInput);
 app.use('/uploads', express.static('public/uploads', { maxAge: '30d' }));
