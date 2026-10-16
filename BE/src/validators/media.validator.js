@@ -1,7 +1,7 @@
 const { z } = require('zod');
 
 const uploadMediaSchema = z.object({
-  folderId: z.string().min(1, 'Vui lòng chọn folder'),
+  folderId: z.string().optional(),
 });
 
 // Xóa bulk — có thêm force flag
