@@ -3,7 +3,7 @@
  * Chuẩn Netflix/Amazon: không chạy tay, tự động theo lịch
  *
  * Jobs:
- * 1. Python SVD/ALS batch    — mỗi 4 giờ
+ * 1. Python ALS batch        — mỗi 4 giờ
  * 2. Item-CF matrix compute  — mỗi 6 giờ
  * 3. Interaction threshold   — trigger khi đủ 100 interactions mới
  */
@@ -30,26 +30,51 @@ const getNodeCron = () => {
   return _nodeCron;
 };
 
+// ── ALS batch: khoá chạy + cooldown ──────────────────────────────────────────────────────────
+let _alsRunning = false;
+let _alsLastStartedAt = 0;
+const ALS_MIN_INTERVAL_MS = 10 * 60 * 1000; // tối thiểu 10 phút giữa 2 lần chạy
+const ALS_STALE_MS = 12 * 60 * 60 * 1000; // kết quả cũ hơn 12h thì chạy lại lúc boot
+
+const canStartAls = () => !_alsRunning && Date.now() - _alsLastStartedAt >= ALS_MIN_INTERVAL_MS;
+
 // ── Interaction counter trigger ──────────────────────────────────────────────
 let _newInteractionCount = 0;
-const INTERACTION_TRIGGER = 100; // trigger Python SVD khi đủ N interactions mới
+const INTERACTION_TRIGGER = 100; // trigger Python ALS khi đủ N interactions mới
 
-const incrementInteractionCounter = () => {
-  _newInteractionCount++;
-  if (_newInteractionCount >= INTERACTION_TRIGGER) {
-    _newInteractionCount = 0;
-    runPythonSVDBatch().catch(() => { }); // fire-and-forget
-  }
+const incrementInteractionCounter = (n = 1) => {
+  _newInteractionCount += n;
+  if (_newInteractionCount < INTERACTION_TRIGGER) return;
+  // Đang chạy / còn trong cooldown: giữ nguyên bộ đếm, lần event sau sẽ thử lại
+  if (!canStartAls()) return;
+  _newInteractionCount = 0;
+  runAlsBatch().catch(() => { }); // fire-and-forget
 };
 
-// ── Python SVD Batch ───────────────────────────────────────────────────────────────────────────
-const runPythonSVDBatch = () => {
+// ── Python ALS Batch ───────────────────────────────────────────────────────────────────────────
+/**
+ * Chạy matrix_factorization.py. Không chạy chồng và có cooldown.
+ * @returns {Promise<{started:boolean, reason?:string}>}
+ */
+const runAlsBatch = () => {
+  if (_alsRunning) {
+    cronLog.warn('PythonALS', 'Bỏ qua: batch trước vẫn đang chạy.');
+    return Promise.resolve({ started: false, reason: 'running' });
+  }
+  if (Date.now() - _alsLastStartedAt < ALS_MIN_INTERVAL_MS) {
+    cronLog.warn('PythonALS', 'Bỏ qua: còn trong thời gian cooldown.');
+    return Promise.resolve({ started: false, reason: 'cooldown' });
+  }
+
+  _alsRunning = true;
+  _alsLastStartedAt = Date.now();
+
   return new Promise((resolve) => {
     const scriptPath = path.join(__dirname, '../../python-services/matrix_factorization.py');
     const pythonScriptDir = path.dirname(scriptPath);
     const pythonExecutable = process.env.PYTHON_PATH || (process.platform === 'win32' ? 'python' : 'python3');
 
-    cronLog.info('PythonSVD', 'Starting batch...');
+    cronLog.info('PythonALS', 'Starting batch...');
 
     execFile(
       pythonExecutable,
@@ -61,17 +86,38 @@ const runPythonSVDBatch = () => {
         env: { ...process.env, PYTHONIOENCODING: 'utf-8' },
       },
       (err, stdout, stderr) => {
+        _alsRunning = false;
         if (err) {
-          cronLog.error('PythonSVD', err);
-          if (stderr) cronLog.warn('PythonSVD', `stderr: ${stderr.slice(0, 300)}`);
+          cronLog.error('PythonALS', err);
+          if (stderr) cronLog.warn('PythonALS', `stderr: ${stderr.slice(0, 300)}`);
         } else {
-          cronLog.info('PythonSVD', 'Completed successfully.');
-          if (stdout) console.log('[CronJobs][PythonSVD] stdout:', stdout.slice(0, 500));
+          cronLog.info('PythonALS', 'Completed successfully.');
+          if (stdout) console.log('[CronJobs][PythonALS] stdout:', stdout.slice(0, 500));
         }
-        resolve();
+        resolve({ started: true });
       }
     );
   });
+};
+
+/**
+ * Lúc boot: chạy ALS nếu chưa có kết quả hoặc kết quả đã cũ, tránh phải chờ tới mốc cron kế tiếp.
+ */
+const runAlsIfStale = async () => {
+  try {
+    const PersonalizedRecommendation = require('../models/personalizedRecommendation.model');
+    const latest = await PersonalizedRecommendation.findOne()
+      .sort({ lastCalculatedAt: -1 })
+      .select('lastCalculatedAt')
+      .lean();
+    const age = latest?.lastCalculatedAt ? Date.now() - new Date(latest.lastCalculatedAt).getTime() : Infinity;
+    if (age > ALS_STALE_MS) {
+      cronLog.info('PythonALS', latest ? 'Kết quả gợi ý đã cũ, chạy lại lúc khởi động.' : 'Chưa có kết quả gợi ý, chạy lúc khởi động.');
+      await runAlsBatch();
+    }
+  } catch (err) {
+    cronLog.error('PythonALS', err);
+  }
 };
 
 const runUpsellBatch = () => {
@@ -150,11 +196,11 @@ const startCronJobs = () => {
   const cron = getNodeCron();
   if (!cron) return;
 
-  // Python SVD: every 4 hours (mỗi 4 tiếng)
+  // Python ALS: every 4 hours (mỗi 4 tiếng)
   cron.schedule('0 */4 * * *', () => {
-    runPythonSVDBatch().catch(() => { });
+    runAlsBatch().catch(() => { });
   });
-  console.log('[CronJobs] Python SVD scheduled: every 4 hours');
+  console.log('[CronJobs] Python ALS scheduled: every 4 hours');
 
   // Item-CF: every 6 hours (mỗi 6 tiếng)
   cron.schedule('0 */6 * * *', () => {
@@ -198,13 +244,14 @@ const startCronJobs = () => {
     runItemCFBatch().catch(() => { });
     autoHideExpiredBanners().catch(() => { });
     runUpsellBatch().catch(() => { });
+    runAlsIfStale().catch(() => { });
   }, 3000);
 };
 
 module.exports = {
   startCronJobs,
   incrementInteractionCounter,
-  runPythonSVDBatch,
+  runAlsBatch,
   runItemCFBatch,
   runUpsellBatch,
 };

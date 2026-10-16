@@ -12,9 +12,9 @@ from recsys.config import setup_utf8_output
 setup_utf8_output()
 
 from recsys.als import train_als  # noqa: E402
-from recsys.data_loader import load_interactions, load_product_titles  # noqa: E402
+from recsys.data_loader import load_interactions  # noqa: E402
 from recsys.evaluate import evaluate  # noqa: E402
-from recsys.exporter import export_csv, sync_mongo  # noqa: E402
+from recsys.exporter import sync_mongo  # noqa: E402
 from recsys.interaction_matrix import build_interaction_data  # noqa: E402
 from recsys.recommend import iter_top_n  # noqa: E402
 
@@ -66,13 +66,8 @@ def run(top_n=15, do_eval=True):
             (data.prod_keys[i], float(s)) for i, s in zip(item_idx, scores)
         ]
 
-    titles = load_product_titles()
-    exported = export_csv(recommendations, titles)
-    print(f'-> Đã xuất {exported} gợi ý ra [data/recommendations_output.csv]')
-
     synced = sync_mongo(recommendations)
-    if synced is not None:
-        print(f'-> Đã đồng bộ {synced} document vào MongoDB.')
+    print(f'-> Đã đồng bộ {synced} document vào MongoDB (personalizedrecommendations).')
 
     print(f'-> Hoàn tất trong {time.time() - started:.2f}s cho {len(recommendations)} user')
     print(LINE)

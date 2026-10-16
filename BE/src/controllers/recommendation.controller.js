@@ -132,29 +132,24 @@ const computeItemCF = async (req, res, next) => {
   }
 };
 
-// ── GET/POST /api/recommendations/sync-csv ────────────────────────────────
-const syncInteractionsCsv = async (req, res, next) => {
-  try {
-    const cleanMock = req.query.cleanMock !== 'false';
-    const result = await recommendationService.syncAllInteractionsToCsv({ cleanMock });
-    res.json({
-      status: 'success',
-      message: 'Đã đồng bộ 100% tương tác thực tế từ MongoDB sang interactions.csv',
-      data: result,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
 // ── POST /api/recommendations/run-python-svd ─────────────────────────────
+// URL giữ nguyên tên cũ để tương thích; thực tế chạy batch Implicit ALS
 const triggerPythonSVD = async (req, res, next) => {
   try {
-    const { runPythonSVDBatch } = require('../utils/cronJobs');
-    await runPythonSVDBatch();
+    const { runAlsBatch } = require('../utils/cronJobs');
+    const result = await runAlsBatch();
+    if (!result.started) {
+      return res.json({
+        status: 'success',
+        message: result.reason === 'running'
+          ? 'Batch ALS đang chạy, bỏ qua lần kích hoạt này.'
+          : 'Batch ALS vừa chạy gần đây (cooldown 10 phút), bỏ qua lần kích hoạt này.',
+        data: result,
+      });
+    }
     res.json({
       status: 'success',
-      message: 'Đã kích hoạt chạy mô hình SVD Machine Learning Python thành công.',
+      message: 'Đã chạy batch Implicit ALS thành công.',
     });
   } catch (error) {
     next(error);
@@ -169,6 +164,5 @@ module.exports = {
   getTrendingRecommendations,
   getSimilarProducts,
   computeItemCF,
-  syncInteractionsCsv,
   triggerPythonSVD,
 };
