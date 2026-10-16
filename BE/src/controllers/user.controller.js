@@ -63,7 +63,10 @@ const updateAvatar = async (req, res, next) => {
       status: 'success',
       statusCode: 200,
       message: 'Đổi ảnh đại diện thành công',
-      data: { avatar: user.avatar },
+      data: {
+        avatar: user.avatar,
+        user,
+      },
     });
   } catch (error) {
     next(error);

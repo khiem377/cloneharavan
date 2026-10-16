@@ -76,6 +76,10 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [loginError, setLoginError] = useState(null);
+  const [isLocked, setIsLocked] = useState(false);
+  const [lockCountdown, setLockCountdown] = useState(0);
+  const [unlockTime, setUnlockTime] = useState('');
 
   useEffect(() => {
     const handleReset = () => setLoading(false);
@@ -92,19 +96,50 @@ export default function LoginPage() {
     };
   }, []);
 
+  // Đồng hồ đếm ngược mở khóa tài khoản
+  useEffect(() => {
+    let timer;
+    if (isLocked && lockCountdown > 0) {
+      timer = setInterval(() => {
+        setLockCountdown((prev) => {
+          if (prev <= 1) {
+            setIsLocked(false);
+            setLoginError('Tài khoản đã được mở khóa. Bạn có thể đăng nhập lại.');
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [isLocked, lockCountdown]);
+
+  const formatCountdown = (sec) => {
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    if (loginError && !isLocked) {
+      setLoginError(null);
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isLocked) return;
+
     if (!formData.email || !formData.password) {
       toast.error('Vui lòng nhập đầy đủ email và mật khẩu');
       return;
     }
 
     setLoading(true);
+    setLoginError(null);
+
     try {
       const sessionId = anonymousId || getOrCreateAnonymousId();
       const res = await authService.login({
@@ -126,10 +161,33 @@ export default function LoginPage() {
         toast.error(res.message || 'Đăng nhập không thành công');
       }
     } catch (err) {
-      toast.error(
+      const status = err.response?.status;
+      const msg =
         err.response?.data?.message ||
-        'Email hoặc mật khẩu không chính xác. Vui lòng thử lại.'
-      );
+        'Email hoặc mật khẩu không chính xác. Vui lòng thử lại.';
+
+      if (status === 429) {
+        const remainingSec = err.response?.data?.remainingSeconds || 300;
+        const lockUntilDate = err.response?.data?.lockUntil
+          ? new Date(err.response.data.lockUntil)
+          : new Date(Date.now() + remainingSec * 1000);
+
+        const timeStr = lockUntilDate.toLocaleTimeString('vi-VN', {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false,
+        });
+
+        setIsLocked(true);
+        setLockCountdown(remainingSec);
+        setUnlockTime(timeStr);
+        setLoginError(msg);
+      } else if (msg.includes('lần thử')) {
+        setLoginError(msg);
+      }
+
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -150,6 +208,48 @@ export default function LoginPage() {
         <Suspense fallback={null}>
           <LoginNoticeBanner />
         </Suspense>
+
+        {/* Lockout or Attempts Warning Alert */}
+        {loginError && (
+          <div
+            className={`rounded-[6px] p-3 text-xs border ${
+              isLocked
+                ? 'bg-red-50 border-red-200 text-red-900'
+                : 'bg-amber-50 border-amber-200 text-amber-900'
+            }`}
+          >
+            <div className="flex items-start gap-2.5">
+              {isLocked ? (
+                <ShieldAlert className="size-4 shrink-0 text-red-600 mt-0.5" />
+              ) : (
+                <AlertTriangle className="size-4 shrink-0 text-amber-600 mt-0.5" />
+              )}
+              <div className="flex flex-col gap-1.5 w-full">
+                <span className="font-semibold leading-relaxed">{loginError}</span>
+                {isLocked && (
+                  <div className="flex flex-col gap-1 pt-1.5 border-t border-red-200/70 text-[11px] text-red-800">
+                    {lockCountdown > 0 && (
+                      <div className="flex items-center justify-between">
+                        <span>Thời gian chờ mở khóa:</span>
+                        <span className="font-mono font-bold text-xs tabular-nums text-red-700 bg-red-100/80 px-1.5 py-0.5 rounded-[4px]">
+                          {formatCountdown(lockCountdown)}
+                        </span>
+                      </div>
+                    )}
+                    {unlockTime && (
+                      <div className="flex items-center justify-between text-slate-600">
+                        <span>Thời điểm đăng nhập lại:</span>
+                        <span className="font-mono font-semibold tabular-nums text-slate-900">
+                          {unlockTime}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         <CardContent className="p-0 space-y-4">
           <form onSubmit={handleSubmit} method="POST" className="space-y-4">
@@ -219,7 +319,7 @@ export default function LoginPage() {
 
             <Button
               type="submit"
-              disabled={loading}
+              disabled={loading || isLocked}
               className="w-full h-10 bg-[#e30019] hover:bg-[#c40015] text-white font-bold text-xs rounded-[6px] shadow-xs active:scale-[0.98] transition disabled:opacity-50"
             >
               {loading ? (
@@ -227,6 +327,8 @@ export default function LoginPage() {
                   <Loader2 size={15} className="animate-spin mr-2" />
                   <span>Đang đăng nhập...</span>
                 </>
+              ) : isLocked ? (
+                <span className="font-mono tabular-nums">Tạm khóa ({formatCountdown(lockCountdown)})</span>
               ) : (
                 <span>Đăng nhập</span>
               )}

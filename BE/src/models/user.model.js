@@ -218,6 +218,24 @@ const userSchema = new mongoose.Schema(
     },
 
     // =========================
+    // IN-CODE SECURITY LOCK & COOLDOWN
+    // =========================
+    failedLoginAttempts: {
+      type: Number,
+      default: 0,
+    },
+
+    lockUntil: {
+      type: Date,
+      default: null,
+    },
+
+    lastPasswordResetRequest: {
+      type: Date,
+      default: null,
+    },
+
+    // =========================
     // AUTHENTICATION & SESSIONS
     // =========================
     refreshToken: {
@@ -373,6 +391,8 @@ const ARGON2_OPTIONS = {
 
 userSchema.pre('save', async function () {
   if (!this.isModified('password') || !this.password) return;
+  // Tránh băm lại nếu chuỗi password đã là hash argon2 hợp lệ
+  if (this.password.startsWith('$argon2')) return;
   this.password = await argon2.hash(this.password, ARGON2_OPTIONS);
 });
 
@@ -394,8 +414,10 @@ userSchema.methods.matchPassword = async function (enteredPassword) {
     const isMatch = await bcrypt.compare(enteredPassword, this.password);
     if (isMatch) {
       try {
-        this.password = enteredPassword;
-        await this.save();
+        // Nâng cấp ngầm sang Argon2 an toàn bằng updateOne để không làm dirty instance
+        const upgradedHash = await argon2.hash(enteredPassword, ARGON2_OPTIONS);
+        await this.constructor.updateOne({ _id: this._id }, { $set: { password: upgradedHash } });
+        this.password = upgradedHash;
       } catch (e) {}
     }
     return isMatch;

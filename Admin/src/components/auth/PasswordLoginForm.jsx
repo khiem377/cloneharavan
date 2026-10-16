@@ -20,10 +20,17 @@ export default function PasswordLoginForm({
   setShowPass,
   isLoading,
   isPasskeyLoading,
+  isLocked = false,
+  lockCountdown = 0,
   onSubmit,
   onPasskeyLogin,
   onSwitchToOtp,
 }) {
+  const formatCountdown = (sec) => {
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  };
   return (
     <div className="flex flex-col gap-4">
       <form onSubmit={onSubmit} className="flex flex-col gap-3.5" noValidate>
@@ -75,14 +82,16 @@ export default function PasswordLoginForm({
         {/* Submit Primary Button */}
         <Button
           type="submit"
-          disabled={isLoading}
-          className="mt-1 h-10 w-full rounded-[6px] font-semibold text-xs shadow-xs transition-transform active:scale-[0.98] cursor-pointer bg-foreground text-background hover:bg-foreground/90"
+          disabled={isLoading || isLocked}
+          className="mt-1 h-10 w-full rounded-[6px] font-semibold text-xs shadow-xs transition-transform active:scale-[0.98] cursor-pointer bg-foreground text-background hover:bg-foreground/90 disabled:opacity-50"
         >
           {isLoading ? (
             <>
               <Loader2 className="size-4 animate-spin mr-2" />
               <span>Đang đăng nhập...</span>
             </>
+          ) : isLocked ? (
+            <span className="font-mono tabular-nums">Tạm khóa ({formatCountdown(lockCountdown || 0)})</span>
           ) : (
             <span>Đăng nhập hệ thống</span>
           )}
