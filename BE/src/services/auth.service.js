@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const axios = require('axios');
 const User = require('../models/user.model');
+const Permission = require('../models/permission.model');
 const { AppError } = require('../utils/AppError');
 const {
   generateAccessToken,
@@ -61,11 +62,171 @@ const registerUser = async (data) => {
   return User.create(data);
 };
 
-const loginUser = async (email, password) => {
-  const user = await User.findOne({ email }).select('+password');
-  const isValid = user && (await user.matchPassword(password));
+// So sánh chuỗi thời gian bất biến (Constant-time comparison) chống Timing Attack
+const safeStringCompare = (a = '', b = '') => {
+  const strA = String(a || '');
+  const strB = String(b || '');
+  const bufA = Buffer.from(strA);
+  const bufB = Buffer.from(strB);
+  if (bufA.length !== bufB.length) return false;
+  return crypto.timingSafeEqual(bufA, bufB);
+};
 
-  if (!isValid) throw new AppError('Email hoặc mật khẩu không chính xác', 401);
+// Chuẩn hóa địa chỉ IP
+const normalizeIp = (rawIp) => {
+  let ip = (rawIp || '127.0.0.1').replace('::ffff:', '').trim();
+  if (ip === '::1' || ip === 'localhost') return '127.0.0.1';
+  return ip;
+};
+
+/**
+ * Trích xuất định danh thiết bị (Device Fingerprint + IP)
+ * Kết hợp IP mạng + User-Agent trình duyệt + Client Session/Device ID
+ */
+const getDeviceFingerprint = (req) => {
+  const rawIp =
+    req?.headers?.['x-forwarded-for']?.split(',')[0]?.trim() ||
+    req?.ip ||
+    req?.socket?.remoteAddress ||
+    '127.0.0.1';
+  const clientIp = normalizeIp(rawIp);
+  const clientUA = req?.headers?.['user-agent'] || 'Unknown';
+  const clientSessionId =
+    req?.headers?.['x-session-id'] ||
+    req?.headers?.['x-device-id'] ||
+    req?.cookies?.sessionId ||
+    req?.body?.sessionId ||
+    '';
+
+  const rawFingerprint = `${clientIp}::${clientUA}::${clientSessionId}`;
+  const fingerprint = crypto.createHash('sha256').update(rawFingerprint).digest('hex').slice(0, 16);
+
+  return {
+    clientIp,
+    clientUA,
+    clientSessionId,
+    fingerprint,
+  };
+};
+
+// Lưu vết số lần nhập sai và thời gian khóa theo từng thiết bị: [email::deviceFingerprint]
+// Cấu trúc: Map<string, { attempts: number, lockUntil: Date | null, lastAttempt: number }>
+const deviceLoginAttempts = new Map();
+
+// Tự động dọn rác các record hết hạn sau 15 phút
+const cleanExpiredDeviceAttempts = () => {
+  const now = Date.now();
+  for (const [key, data] of deviceLoginAttempts.entries()) {
+    if (data.lockUntil && data.lockUntil.getTime() < now && now - data.lastAttempt > 15 * 60 * 1000) {
+      deviceLoginAttempts.delete(key);
+    } else if (!data.lockUntil && now - data.lastAttempt > 15 * 60 * 1000) {
+      deviceLoginAttempts.delete(key);
+    }
+  }
+};
+setInterval(cleanExpiredDeviceAttempts, 5 * 60 * 1000).unref();
+
+// Helper xóa toàn bộ vết khóa của một email khi đăng nhập thành công
+const clearDeviceLoginAttempts = (email) => {
+  if (!email) return;
+  const prefix = `${email.toLowerCase().trim()}::`;
+  for (const key of deviceLoginAttempts.keys()) {
+    if (key.startsWith(prefix)) {
+      deviceLoginAttempts.delete(key);
+    }
+  }
+};
+
+const loginUser = async (email, password, req = null) => {
+  const normalizedEmail = (email || '').toLowerCase().trim();
+  const user = await User.findOne({ email: normalizedEmail }).select('+password');
+
+  if (!user) {
+    throw new AppError('Email hoặc mật khẩu không chính xác', 401);
+  }
+
+  // 1. Nhận diện thiết bị (Device Fingerprint + IP) của người đang gửi request
+  const { fingerprint } = getDeviceFingerprint(req);
+  const attemptKey = `${normalizedEmail}::${fingerprint}`;
+  const deviceAttempt = deviceLoginAttempts.get(attemptKey);
+
+  // 2. Kiểm tra xem THIẾT BỊ NÀY có đang bị khóa 5 phút vì sai pass 5 lần không
+  if (deviceAttempt?.lockUntil && deviceAttempt.lockUntil.getTime() > Date.now()) {
+    const remainingSeconds = Math.max(1, Math.ceil((deviceAttempt.lockUntil.getTime() - Date.now()) / 1000));
+    const unlockTimeStr = deviceAttempt.lockUntil.toLocaleTimeString('vi-VN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    });
+    throw new AppError(
+      `Thiết bị này đã nhập sai mật khẩu 5 lần liên tiếp. Tạm khóa đăng nhập 5 phút trên thiết bị. Thời gian mở lại: ${unlockTimeStr}.`,
+      429,
+      {
+        lockUntil: deviceAttempt.lockUntil,
+        remainingSeconds,
+      }
+    );
+  }
+
+  // 3. Kiểm tra mật khẩu
+  const isValid = await user.matchPassword(password);
+
+  if (!isValid) {
+    const currentAttempts = (deviceAttempt?.attempts || 0) + 1;
+    const now = Date.now();
+
+    if (currentAttempts >= 5) {
+      const lockUntil = new Date(now + 5 * 60 * 1000); // Khóa 5 phút riêng cho thiết bị này
+      deviceLoginAttempts.set(attemptKey, {
+        attempts: 0,
+        lockUntil,
+        lastAttempt: now,
+      });
+
+      const unlockTimeStr = lockUntil.toLocaleTimeString('vi-VN', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+      });
+
+      throw new AppError(
+        `Bạn đã nhập sai mật khẩu 5 lần liên tiếp. Thiết bị tạm khóa 5 phút. Thời gian mở lại: ${unlockTimeStr}.`,
+        429,
+        {
+          lockUntil,
+          remainingSeconds: 300,
+        }
+      );
+    } else {
+      deviceLoginAttempts.set(attemptKey, {
+        attempts: currentAttempts,
+        lockUntil: null,
+        lastAttempt: now,
+      });
+
+      const remainingAttempts = 5 - currentAttempts;
+      throw new AppError(
+        `Email hoặc mật khẩu không chính xác. Bạn còn ${remainingAttempts} lần thử trên thiết bị này trước khi bị tạm khóa 5 phút.`,
+        401,
+        {
+          remainingAttempts,
+        }
+      );
+    }
+  }
+
+  // 4. Mật khẩu ĐÚNG: Xóa toàn bộ vết khóa của thiết bị này
+  deviceLoginAttempts.delete(attemptKey);
+
+  // Nếu trong DB có cờ lock cũ của User thì cũng xóa sạch
+  if (user.failedLoginAttempts > 0 || user.lockUntil) {
+    user.failedLoginAttempts = 0;
+    user.lockUntil = null;
+    await user.save({ validateBeforeSave: false });
+  }
+
   if (!user.isActive) throw new AppError('Tài khoản đã bị vô hiệu hóa', 403);
 
   return user;
@@ -80,12 +241,6 @@ const rotateRefreshToken = async (token) => {
   }
 
   return user;
-};
-
-const normalizeIp = (rawIp) => {
-  let ip = (rawIp || '127.0.0.1').replace('::ffff:', '').trim();
-  if (ip === '::1' || ip === 'localhost') return '127.0.0.1';
-  return ip;
 };
 
 /**
@@ -107,6 +262,7 @@ const recordUserSession = async (userId, req, explicitSessionId = null) => {
       crypto.randomUUID();
 
     const deviceInfo = parseDeviceInfo(clientUA, clientIp);
+    const loc = await lookupGeoLocation(clientIp);
 
     const user = await User.findById(userId);
     if (!user) return sessionId;
@@ -128,6 +284,7 @@ const recordUserSession = async (userId, req, explicitSessionId = null) => {
       user.sessions[existingIndex].browser = deviceInfo.browser;
       user.sessions[existingIndex].os = deviceInfo.os;
       user.sessions[existingIndex].sessionId = sessionId;
+      user.sessions[existingIndex].location = loc || user.sessions[existingIndex].location || 'Hồ Chí Minh, Việt Nam';
     } else {
       user.sessions.unshift({
         sessionId,
@@ -136,15 +293,15 @@ const recordUserSession = async (userId, req, explicitSessionId = null) => {
         browser: deviceInfo.browser,
         os: deviceInfo.os,
         ip: deviceInfo.ip,
+        location: loc || 'Hồ Chí Minh, Việt Nam',
         userAgent: clientUA,
         lastActiveAt: new Date(),
         createdAt: new Date(),
       });
     }
 
-    // Giữ tối đa 20 phiên gần nhất
-    if (user.sessions.length > 20) {
-      user.sessions = user.sessions.slice(0, 20);
+    if (user.sessions.length > 10) {
+      user.sessions = user.sessions.slice(-10);
     }
 
     await user.save({ validateBeforeSave: false });
@@ -195,6 +352,18 @@ const getUserSessions = async (userId, currentSessionId, clientIp, clientUA) => 
     });
   }
 
+  // Đảm bảo mọi session đều có location
+  userSessions.forEach((s) => {
+    if (!s.location) {
+      s.location = loc || 'Hồ Chí Minh, Việt Nam';
+    }
+  });
+
+  // Giữ tối đa 10 phiên gần nhất
+  if (userSessions.length > 10) {
+    userSessions = userSessions.slice(-10);
+  }
+
   user.sessions = userSessions;
   await user.save({ validateBeforeSave: false });
 
@@ -206,6 +375,7 @@ const getUserSessions = async (userId, currentSessionId, clientIp, clientUA) => 
       sObj.sessionId === activeSessionId;
     return {
       ...sObj,
+      location: sObj.location || loc || 'Hồ Chí Minh, Việt Nam',
       isCurrent: !!isMatched,
     };
   });
@@ -280,7 +450,7 @@ const logoutOtherSessions = async (userId, currentSessionId, clientIp, clientUA)
       message: 'Bạn đã đăng xuất khỏi các thiết bị khác.',
       timestamp: Date.now(),
     });
-  } catch (_) {}
+  } catch (_) { }
 
   return { message: 'Đã đăng xuất khỏi tất cả các thiết bị khác thành công' };
 };
@@ -345,11 +515,25 @@ const logoutUser = async (userId) => {
  * Quên mật khẩu - Tạo reset token và gửi email
  */
 const forgotPassword = async (email) => {
-  const user = await User.findOne({ email });
+  const normalizedEmail = (email || '').toLowerCase().trim();
+  const user = await User.findOne({ email: normalizedEmail });
   if (!user) {
     throw new AppError('Không tìm thấy tài khoản với email này', 404);
   }
 
+  // Chống Spam gửi email liên tục (Cooldown 60 giây)
+  if (user.lastPasswordResetRequest) {
+    const elapsedSeconds = Math.floor((Date.now() - user.lastPasswordResetRequest.getTime()) / 1000);
+    if (elapsedSeconds < 60) {
+      const waitSeconds = 60 - elapsedSeconds;
+      throw new AppError(
+        `Bạn vừa yêu cầu đặt lại mật khẩu. Vui lòng kiểm tra hộp thư hoặc chờ ${waitSeconds} giây để gửi lại.`,
+        429
+      );
+    }
+  }
+
+  user.lastPasswordResetRequest = new Date();
   const resetToken = user.createPasswordResetToken();
   await user.save({ validateBeforeSave: false });
 
@@ -471,7 +655,7 @@ const verifyPhoneOtp = async (userId, otp) => {
 
   if (
     !user.phoneOtp ||
-    user.phoneOtp !== hashedOtp ||
+    !safeStringCompare(user.phoneOtp, hashedOtp) ||
     !user.phoneOtpExpires ||
     user.phoneOtpExpires < Date.now()
   ) {
@@ -481,6 +665,13 @@ const verifyPhoneOtp = async (userId, otp) => {
   user.isPhoneVerified = true;
   user.phoneOtp = undefined;
   user.phoneOtpExpires = undefined;
+
+  // Tự động mở khóa tài khoản nếu đang bị khóa
+  if (user.failedLoginAttempts > 0 || user.lockUntil) {
+    user.failedLoginAttempts = 0;
+    user.lockUntil = null;
+  }
+
   await user.save({ validateBeforeSave: false });
 
   return user;
@@ -490,11 +681,14 @@ const verifyPhoneOtp = async (userId, otp) => {
  * Đăng ký tài khoản Admin (qua secret key hoặc khi chưa có admin nào trong DB)
  */
 const registerAdmin = async (data) => {
-  const configuredSecret = process.env.ADMIN_SECRET_KEY || 'admin_secret_key_haravan_2026';
+  const configuredSecret = process.env.ADMIN_SECRET_KEY;
+  if (!configuredSecret) {
+    throw new AppError('Chức năng đăng ký Admin tạm khóa do chưa cấu hình ADMIN_SECRET_KEY trong môi trường', 403);
+  }
 
   const existingAdminCount = await User.countDocuments({ role: 'admin' });
   if (existingAdminCount > 0) {
-    if (!data.adminSecretKey || data.adminSecretKey !== configuredSecret) {
+    if (!data.adminSecretKey || !safeStringCompare(data.adminSecretKey, configuredSecret)) {
       throw new AppError('Mã bí mật tạo Admin (adminSecretKey) không chính xác hoặc bị thiếu', 403);
     }
   }
@@ -609,6 +803,14 @@ const loginWithGoogle = async (credential, isAdminRequest = false) => {
     throw new AppError('Tài khoản của bạn không có quyền truy cập trang quản trị', 403);
   }
 
+  // Đăng nhập Google thành công: Tự động mở khóa nếu trước đó bị ai gõ sai mật khẩu
+  clearDeviceLoginAttempts(user.email);
+  if (user.failedLoginAttempts > 0 || user.lockUntil) {
+    user.failedLoginAttempts = 0;
+    user.lockUntil = null;
+    await user.save({ validateBeforeSave: false });
+  }
+
   return user;
 };
 
@@ -625,6 +827,35 @@ const generatePkcePair = (length = 43) => {
   }
   const challenge = crypto.createHash('sha256').update(verifier).digest('base64url');
   return { verifier, challenge };
+};
+
+/**
+ * Định dạng thông báo lỗi OAuth (Zalo/TikTok) thành thông điệp tiếng Việt thân thiện, dễ hiểu
+ */
+const formatOAuthErrorMessage = (rawError, provider = 'Zalo') => {
+  if (!rawError) return `Đăng nhập ${provider} thất bại. Vui lòng thử lại!`;
+  const errStr = typeof rawError === 'string' ? rawError : JSON.stringify(rawError);
+  const lower = errStr.toLowerCase();
+
+  if (lower.includes('code verifier') || lower.includes('invalid code verifier') || lower.includes('pkce')) {
+    return 'Phiên xác thực bảo mật đã hết hạn hoặc không khớp. Vui lòng quay lại trang đăng nhập và thử lại!';
+  }
+  if (lower.includes('invalid_grant') || lower.includes('code has expired') || lower.includes('expired') || lower.includes('used') || lower.includes('invalid authorization code')) {
+    return 'Mã xác thực đã hết hạn hoặc đã được sử dụng. Vui lòng thực hiện đăng nhập lại!';
+  }
+  if (lower.includes('access_denied') || lower.includes('cancel') || lower.includes('user_denied')) {
+    return `Bạn đã từ chối hoặc hủy cấp quyền đăng nhập với ${provider}.`;
+  }
+  if (lower.includes('redirect_uri') || lower.includes('redirect uri')) {
+    return 'Địa chỉ chuyển hướng xác thực không hợp lệ hoặc chưa được đăng ký trong cấu hình.';
+  }
+  if (lower.includes('invalid_client') || lower.includes('app_id') || lower.includes('app secret')) {
+    return 'Thông tin ứng dụng xác thực chưa chính xác. Vui lòng liên hệ quản trị viên hệ thống!';
+  }
+  if (/[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(errStr)) {
+    return errStr;
+  }
+  return `Xác thực ${provider} không thành công. Vui lòng thử lại!`;
 };
 
 /**
@@ -656,7 +887,7 @@ const getTikTokAuthUrl = (state = 'tiktok_auth', redirectUri = null, clientCodeC
   const encodedScope = encodeURIComponent(scope);
   const encodedState = encodeURIComponent(state);
 
-  const url = `https://www.tiktok.com/v2/auth/authorize/?client_key=${clientKey}&scope=${encodedScope}&response_type=code&redirect_uri=${encodedRedirect}&state=${encodedState}&code_challenge=${codeChallenge}&code_challenge_method=S256`;
+  const url = `https://www.tiktok.com/v2/auth/authorize/?client_key=${clientKey}&scope=${encodedScope}&response_type=code&redirect_uri=${encodedRedirect}&state=${encodedState}&code_challenge=${codeChallenge}&code_challenge_method=S256&disable_auto_auth=1`;
 
   return {
     url,
@@ -708,11 +939,12 @@ const loginWithTikTok = async (code, redirectUri = null, codeVerifier = null, is
     });
   } catch (err) {
     console.error('TikTok OAuth Token Error:', err.response?.data || err.message);
-    const errorMsg =
+    const rawMsg =
       err.response?.data?.error_description ||
       err.response?.data?.error?.message ||
-      'Không thể xác thực mã ủy quyền với TikTok. Vui lòng thử lại!';
-    throw new AppError(errorMsg, 400);
+      err.response?.data?.message ||
+      err.message;
+    throw new AppError(formatOAuthErrorMessage(rawMsg, 'TikTok'), 400);
   }
 
   const tokenData = tokenRes.data?.data || tokenRes.data;
@@ -720,11 +952,11 @@ const loginWithTikTok = async (code, redirectUri = null, codeVerifier = null, is
   const openId = tokenData?.open_id;
 
   if (!accessToken || !openId) {
-    const errorMsg =
+    const rawMsg =
       tokenRes.data?.error?.message ||
       tokenRes.data?.message ||
       'Không thể nhận access token từ TikTok';
-    throw new AppError(errorMsg, 400);
+    throw new AppError(formatOAuthErrorMessage(rawMsg, 'TikTok'), 400);
   }
 
   // 2. Lấy thông tin người dùng từ TikTok User Info API
@@ -747,11 +979,13 @@ const loginWithTikTok = async (code, redirectUri = null, codeVerifier = null, is
   const tiktokOpenId = openId || userInfo?.open_id;
   const displayName = userInfo?.display_name || userInfo?.username || 'TikTok User';
   const avatarUrl = userInfo?.avatar_large_url || userInfo?.avatar_url || userInfo?.avatar_url_100 || null;
-  const syntheticEmail = `tiktok_${tiktokOpenId.toLowerCase()}@tiktok.user`;
 
-  // 3. Tìm User theo tiktokId hoặc syntheticEmail
+  // 3. Tìm User theo tiktokId (hoặc email synthetic cũ nếu chưa migrate)
   let user = await User.findOne({
-    $or: [{ tiktokId: tiktokOpenId }, { email: syntheticEmail }],
+    $or: [
+      { tiktokId: tiktokOpenId },
+      { email: `tiktok_${tiktokOpenId.toLowerCase()}@tiktok.user` },
+    ],
   });
 
   if (user) {
@@ -764,6 +998,11 @@ const loginWithTikTok = async (code, redirectUri = null, codeVerifier = null, is
       user.tiktokId = tiktokOpenId;
       hasChanges = true;
     }
+    // Gỡ bỏ email giả định tiktok_... nếu còn tồn tại
+    if (user.email && (user.email.endsWith('@tiktok.user') || user.email.startsWith('tiktok_'))) {
+      user.email = undefined;
+      hasChanges = true;
+    }
     if (userInfo?.username && user.tiktokUsername !== userInfo.username) {
       user.tiktokUsername = userInfo.username;
       hasChanges = true;
@@ -773,11 +1012,7 @@ const loginWithTikTok = async (code, redirectUri = null, codeVerifier = null, is
       user.avatar = { url: avatarUrl };
       hasChanges = true;
     }
-    if (!user.isEmailVerified) {
-      user.isEmailVerified = true;
-      user.isAccountActivated = true;
-      hasChanges = true;
-    }
+    user.isAccountActivated = true;
 
     if (hasChanges) {
       await user.save({ validateBeforeSave: false });
@@ -791,15 +1026,14 @@ const loginWithTikTok = async (code, redirectUri = null, codeVerifier = null, is
       );
     }
 
-    // Tạo tài khoản mới cho Khách hàng Client
+    // Tạo tài khoản mới cho Khách hàng Client: KHÔNG tạo email rác, lưu tham số liên kết tiktokId
     user = await User.create({
       fullName: displayName,
-      email: syntheticEmail,
       tiktokId: tiktokOpenId,
       tiktokUsername: userInfo?.username || null,
       authProvider: 'tiktok',
       avatar: avatarUrl ? { url: avatarUrl } : undefined,
-      isEmailVerified: true,
+      isEmailVerified: false,
       isAccountActivated: true,
       gender: 'other',
       role: 'user',
@@ -810,6 +1044,14 @@ const loginWithTikTok = async (code, redirectUri = null, codeVerifier = null, is
   // Kiểm tra quyền nếu là Admin request
   if (isAdminRequest && user.role === 'user') {
     throw new AppError('Tài khoản của bạn không có quyền truy cập trang quản trị', 403);
+  }
+
+  // Đăng nhập TikTok thành công: Tự động mở khóa nếu trước đó bị ai gõ sai mật khẩu
+  clearDeviceLoginAttempts(user.email);
+  if (user.failedLoginAttempts > 0 || user.lockUntil) {
+    user.failedLoginAttempts = 0;
+    user.lockUntil = null;
+    await user.save({ validateBeforeSave: false });
   }
 
   return user;
@@ -895,17 +1137,17 @@ const loginWithZalo = async (code, redirectUri = null, codeVerifier = null, isAd
     });
   } catch (err) {
     console.error('Zalo OAuth Token Request Error:', err.response?.data || err.message);
-    const errorMsg =
+    const rawMsg =
       err.response?.data?.message ||
       err.response?.data?.error_description ||
-      'Không thể kết nối đến máy chủ Zalo OAuth. Vui lòng thử lại!';
-    throw new AppError(errorMsg, 400);
+      err.message;
+    throw new AppError(formatOAuthErrorMessage(rawMsg, 'Zalo'), 400);
   }
 
   const tokenData = tokenRes.data || {};
   if (tokenData.error && tokenData.error !== 0) {
-    const errorMsg = tokenData.message || tokenData.error_name || `Lỗi Zalo OAuth: ${tokenData.error}`;
-    throw new AppError(errorMsg, 400);
+    const rawMsg = tokenData.message || tokenData.error_name || `Lỗi Zalo OAuth: ${tokenData.error}`;
+    throw new AppError(formatOAuthErrorMessage(rawMsg, 'Zalo'), 400);
   }
 
   const accessToken = tokenData.access_token;
@@ -939,11 +1181,13 @@ const loginWithZalo = async (code, redirectUri = null, codeVerifier = null, isAd
 
   const displayName = userInfo.name || 'Zalo User';
   const avatarUrl = userInfo.picture?.data?.url || userInfo.picture?.url || null;
-  const syntheticEmail = `zalo_${zaloId.toLowerCase()}@zalo.user`;
 
-  // 3. Phân biệt rõ ràng giữa Khách hàng và Nhân viên/Quản trị viên
+  // 3. Tìm User theo zaloId (hoặc email synthetic cũ nếu chưa migrate)
   let user = await User.findOne({
-    $or: [{ zaloId }, { email: syntheticEmail }],
+    $or: [
+      { zaloId },
+      { email: `zalo_${zaloId.toLowerCase()}@zalo.user` },
+    ],
   });
 
   if (user) {
@@ -956,6 +1200,11 @@ const loginWithZalo = async (code, redirectUri = null, codeVerifier = null, isAd
       user.zaloId = zaloId;
       hasChanges = true;
     }
+    // Gỡ bỏ email giả định zalo_... nếu còn tồn tại
+    if (user.email && (user.email.endsWith('@zalo.user') || user.email.startsWith('zalo_'))) {
+      user.email = undefined;
+      hasChanges = true;
+    }
     if (displayName && user.zaloName !== displayName) {
       user.zaloName = displayName;
       hasChanges = true;
@@ -965,11 +1214,7 @@ const loginWithZalo = async (code, redirectUri = null, codeVerifier = null, isAd
       user.avatar = { url: avatarUrl };
       hasChanges = true;
     }
-    if (!user.isEmailVerified) {
-      user.isEmailVerified = true;
-      user.isAccountActivated = true;
-      hasChanges = true;
-    }
+    user.isAccountActivated = true;
 
     if (hasChanges) {
       await user.save({ validateBeforeSave: false });
@@ -984,14 +1229,14 @@ const loginWithZalo = async (code, redirectUri = null, codeVerifier = null, isAd
     }
 
     // ✅ NẾU LÀ CLIENT KHÁCH HÀNG: Tự động khởi tạo tài khoản Khách hàng mua sắm (role: user)
+    // KHÔNG tạo email rác, lưu tham số liên kết zaloId
     user = await User.create({
       fullName: displayName,
-      email: syntheticEmail,
       zaloId,
       zaloName: displayName,
       authProvider: 'zalo',
       avatar: avatarUrl ? { url: avatarUrl } : undefined,
-      isEmailVerified: true,
+      isEmailVerified: false,
       isAccountActivated: true,
       gender: 'other',
       role: 'user',
@@ -1002,6 +1247,14 @@ const loginWithZalo = async (code, redirectUri = null, codeVerifier = null, isAd
   // 🛑 KIỂM TRA PHÂN QUYỀN CHẶT CHẼ: Khách hàng thường (role === 'user') không được đăng nhập vào hệ thống Admin
   if (isAdminRequest && user.role === 'user') {
     throw new AppError('Tài khoản của bạn là tài khoản Khách hàng, không có quyền truy cập trang quản trị shop!', 403);
+  }
+
+  // Đăng nhập Zalo thành công: Tự động mở khóa nếu trước đó bị ai gõ sai mật khẩu
+  clearDeviceLoginAttempts(user.email);
+  if (user.failedLoginAttempts > 0 || user.lockUntil) {
+    user.failedLoginAttempts = 0;
+    user.lockUntil = null;
+    await user.save({ validateBeforeSave: false });
   }
 
   return user;
@@ -1094,17 +1347,17 @@ const linkZaloAccount = async (userId, code, redirectUri = null, codeVerifier = 
     });
   } catch (err) {
     console.error('Zalo Link Token Error:', err.response?.data || err.message);
-    const errorMsg =
+    const rawMsg =
       err.response?.data?.message ||
       err.response?.data?.error_description ||
-      'Không thể kết nối đến máy chủ Zalo OAuth. Vui lòng thử lại!';
-    throw new AppError(errorMsg, 400);
+      err.message;
+    throw new AppError(formatOAuthErrorMessage(rawMsg, 'Zalo'), 400);
   }
 
   const tokenData = tokenRes.data || {};
   if (tokenData.error && tokenData.error !== 0) {
-    const errorMsg = tokenData.message || tokenData.error_name || `Lỗi Zalo OAuth: ${tokenData.error}`;
-    throw new AppError(errorMsg, 400);
+    const rawMsg = tokenData.message || tokenData.error_name || `Lỗi Zalo OAuth: ${tokenData.error}`;
+    throw new AppError(formatOAuthErrorMessage(rawMsg, 'Zalo'), 400);
   }
 
   const accessToken = tokenData.access_token;
@@ -1201,11 +1454,11 @@ const linkTikTokAccount = async (userId, code, redirectUri = null, codeVerifier 
     });
   } catch (err) {
     console.error('TikTok Link Token Error:', err.response?.data || err.message);
-    const errorMsg =
+    const rawMsg =
       err.response?.data?.error_description ||
       err.response?.data?.error?.message ||
-      'Không thể xác thực mã ủy quyền với TikTok. Vui lòng thử lại!';
-    throw new AppError(errorMsg, 400);
+      err.message;
+    throw new AppError(formatOAuthErrorMessage(rawMsg, 'TikTok'), 400);
   }
 
   const tokenData = tokenRes.data?.data || tokenRes.data;
@@ -1213,11 +1466,11 @@ const linkTikTokAccount = async (userId, code, redirectUri = null, codeVerifier 
   const openId = tokenData?.open_id;
 
   if (!accessToken || !openId) {
-    const errorMsg =
+    const rawMsg =
       tokenRes.data?.error?.message ||
       tokenRes.data?.message ||
       'Không thể nhận access token từ TikTok';
-    throw new AppError(errorMsg, 400);
+    throw new AppError(formatOAuthErrorMessage(rawMsg, 'TikTok'), 400);
   }
 
   // 2. Lấy thông tin người dùng từ TikTok User Info API
@@ -1469,16 +1722,23 @@ const verifyAdminLoginOtp = async (email, otp) => {
 
   if (
     !user.adminLoginOtp ||
-    user.adminLoginOtp !== hashedOtp ||
+    !safeStringCompare(user.adminLoginOtp, hashedOtp) ||
     !user.adminLoginOtpExpires ||
     user.adminLoginOtpExpires < Date.now()
   ) {
     throw new AppError('Mã OTP không chính xác hoặc đã hết hạn. Vui lòng lấy mã mới!', 400);
   }
 
-  // Clear OTP sau khi sử dụng
+  // Clear OTP sau khi sử dụng và tự động mở khóa mật khẩu
   user.adminLoginOtp = undefined;
   user.adminLoginOtpExpires = undefined;
+
+  clearDeviceLoginAttempts(user.email);
+  if (user.failedLoginAttempts > 0 || user.lockUntil) {
+    user.failedLoginAttempts = 0;
+    user.lockUntil = null;
+  }
+
   await user.save({ validateBeforeSave: false });
 
   return user;
@@ -1498,7 +1758,7 @@ const getWebAuthnRpConfig = (req) => {
     try {
       const u = new URL(originHeader);
       parsedOrigin = u.origin;
-    } catch (_) {}
+    } catch (_) { }
   }
 
   const allowedOrigins = [
@@ -1645,6 +1905,14 @@ const verifyPasskeyLogin = async ({ email, response, credentialId, clientDataJSO
 
   user.passkeyChallenge = undefined;
   user.passkeyChallengeExpires = undefined;
+
+  // Đăng nhập bằng vân tay/Passkey thành công: Tự động mở khóa password
+  clearDeviceLoginAttempts(user.email);
+  if (user.failedLoginAttempts > 0 || user.lockUntil) {
+    user.failedLoginAttempts = 0;
+    user.lockUntil = null;
+  }
+
   await user.save({ validateBeforeSave: false });
 
   return user;
@@ -1772,7 +2040,163 @@ const deletePasskey = async (userId, credentialId = null) => {
   return { message: 'Đã xóa khóa Passkey thành công!', passkeys: user.passkeys };
 };
 
+const isSuperAdminUser = (user) => {
+  const userRole = (user.role || '').toLowerCase();
+  const roleCode = (user.roleId?.code || '').toLowerCase();
+  const roleName = (user.roleId?.name || '').toLowerCase();
+  const userEmail = (user.email || '').toLowerCase();
 
+  return (
+    userRole === 'administrator' ||
+    userRole === 'admin' ||
+    userRole.includes('admin') ||
+    roleCode === 'administrator' ||
+    roleCode === 'admin' ||
+    roleName.includes('administrator') ||
+    roleName.includes('quản trị') ||
+    userEmail.startsWith('admin')
+  );
+};
+
+const getUserById = async (userId) => {
+  return User.findById(userId);
+};
+
+const getPopulatedAuthUser = async (userId, { clientIp, clientUserAgent, provider = null } = {}) => {
+  const updateData = {};
+  if (clientIp) {
+    updateData.lastLoginAt = new Date();
+    updateData.lastLoginIp = clientIp;
+    updateData.lastLoginUserAgent = clientUserAgent || 'Unknown';
+  }
+
+  const query = updateData.lastLoginAt
+    ? User.findByIdAndUpdate(userId, updateData, { returnDocument: 'after' })
+    : User.findById(userId);
+
+  const populatedUser = await query
+    .populate({ path: 'roleId', populate: { path: 'permissions', select: 'code name module' } })
+    .populate('customPermissions', 'code name module');
+
+  if (!populatedUser) throw new AppError('Không tìm thấy người dùng', 404);
+
+  const isSuperAdmin = isSuperAdminUser(populatedUser);
+  const permissions = isSuperAdmin
+    ? ['*']
+    : [...new Set([
+      ...(populatedUser.roleId?.permissions || []).map((p) => p.code),
+      ...(populatedUser.customPermissions || []).map((p) => p.code),
+    ])];
+
+  return {
+    _id: populatedUser._id,
+    fullName: populatedUser.fullName,
+    email: populatedUser.email,
+    phone: populatedUser.phone,
+    avatar: populatedUser.avatar,
+    gender: populatedUser.gender,
+    role: populatedUser.role,
+    roleId: populatedUser.roleId,
+    authProvider: populatedUser.authProvider || provider || 'local',
+    permissions,
+  };
+};
+
+const getUserProfileWithPermissions = async (userId, req = null) => {
+  const populatedUser = await User.findById(userId)
+    .select('+password')
+    .populate({ path: 'roleId', populate: { path: 'permissions', select: 'code name module' } })
+    .populate('customPermissions', 'code name module');
+
+  if (!populatedUser) throw new AppError('Không tìm thấy người dùng', 404);
+
+  const hasPassword = !!populatedUser.password;
+  const isSuperAdmin = isSuperAdminUser(populatedUser);
+  const permissions = isSuperAdmin
+    ? ['*']
+    : [...new Set([
+      ...(populatedUser.roleId?.permissions || []).map((p) => p.code),
+      ...(populatedUser.customPermissions || []).map((p) => p.code),
+    ])];
+
+  const userObj = populatedUser.toObject();
+  delete userObj.password;
+  userObj.hasPassword = hasPassword;
+  userObj.permissions = permissions;
+
+  if (req) {
+    recordUserSession(userId, req).catch(() => { });
+  }
+
+  return userObj;
+};
+
+const getUserPermissions = async (userId) => {
+  const populatedUser = await User.findById(userId)
+    .populate({
+      path: 'roleId',
+      populate: {
+        path: 'permissions',
+        match: { isActive: true },
+        select: 'code name module description',
+      },
+    })
+    .populate({
+      path: 'customPermissions',
+      match: { isActive: true },
+      select: 'code name module description',
+    });
+
+  if (!populatedUser) throw new AppError('Không tìm thấy người dùng', 404);
+
+  const roleDoc = populatedUser.roleId;
+  const isSuperAdmin = isSuperAdminUser(populatedUser);
+
+  let permissionDocs = [];
+  if (isSuperAdmin) {
+    permissionDocs = await Permission.find({ isActive: true }).sort({ module: 1, name: 1 });
+  } else {
+    const rolePerms = Array.isArray(roleDoc?.permissions) ? roleDoc.permissions : [];
+    const customPerms = Array.isArray(populatedUser.customPermissions) ? populatedUser.customPermissions : [];
+    const permMap = new Map();
+    [...rolePerms, ...customPerms].forEach((p) => {
+      if (p && p.code) {
+        permMap.set(p.code, {
+          _id: p._id,
+          name: p.name,
+          code: p.code,
+          module: p.module,
+          description: p.description,
+        });
+      }
+    });
+    permissionDocs = Array.from(permMap.values()).sort((a, b) => {
+      const modCompare = (a.module || '').localeCompare(b.module || '');
+      if (modCompare !== 0) return modCompare;
+      return (a.name || '').localeCompare(b.name || '');
+    });
+  }
+
+  const grouped = permissionDocs.reduce((acc, p) => {
+    const mod = p.module || 'Khác';
+    if (!acc[mod]) acc[mod] = [];
+    acc[mod].push(p);
+    return acc;
+  }, {});
+
+  return {
+    isSuperAdmin,
+    role: {
+      _id: roleDoc?._id || null,
+      name: roleDoc?.name || (isSuperAdmin ? 'Quản trị viên tối cao' : 'Nhân viên'),
+      code: roleDoc?.code || populatedUser.role || 'staff',
+    },
+    permissions: permissionDocs.map((p) => p.code),
+    permissionDetails: permissionDocs,
+    grouped,
+    count: permissionDocs.length,
+  };
+};
 
 module.exports = {
   COOKIE_OPTIONS,
@@ -1811,6 +2235,11 @@ module.exports = {
   generatePasskeyRegisterOptions,
   verifyPasskeyRegister,
   deletePasskey,
+  // User & Permission helpers
+  getUserById,
+  getPopulatedAuthUser,
+  getUserProfileWithPermissions,
+  getUserPermissions,
 };
 
 

@@ -6,6 +6,17 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   compress: true,
+  allowedDevOrigins: [
+    'ba7596453f41f6.lhr.life',
+    '80952fadaa029c.lhr.life',
+    'ed8f7256f96495.lhr.life',
+    '*.lhr.life',
+    '*.localhost.run',
+    '*.ngrok-free.app',
+    '*.ngrok.io',
+    '127.0.0.1',
+    'localhost',
+  ],
   experimental: {
     optimizePackageImports: [
       'lucide-react',
@@ -25,6 +36,18 @@ const nextConfig: NextConfig = {
         pathname: '/**',
       },
     ],
+  },
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+        ],
+      },
+    ];
   },
   async rewrites() {
     return [

@@ -49,6 +49,12 @@ const productSchema = new mongoose.Schema(
       ref: 'Supplier',
       default: null,
     },
+    warehouseId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Warehouse',
+      default: null,
+      index: true,
+    },
     // price / salePrice / stock: deprecated — giờ nằm ở Default Variant
     // Giữ lại để không break data cũ, không bắt buộc
     price: {
@@ -130,8 +136,49 @@ const productSchema = new mongoose.Schema(
     },
     itemType: {
       type: String,
-      enum: ['merchandise', 'finished_good', 'raw_material', 'service'],
+      enum: ['merchandise', 'finished_good', 'raw_material', 'service', 'combo'],
       default: 'merchandise',
+    },
+    // Vận hành bán lẻ thực chiến (Pancake Standard)
+    allowNegativeStock: {
+      type: Boolean,
+      default: false,
+    },
+    hideNameOnPrint: {
+      type: Boolean,
+      default: false,
+    },
+    hideOnInvoice: {
+      type: Boolean,
+      default: false,
+    },
+    weightBasedPricing: {
+      type: Boolean,
+      default: false,
+    },
+    lowStockThreshold: {
+      type: Number,
+      default: 5,
+      min: 0,
+    },
+    keywords: [{
+      type: String,
+      trim: true,
+    }],
+    weight: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    dimensions: {
+      length: { type: Number, default: 0, min: 0 },
+      width: { type: Number, default: 0, min: 0 },
+      height: { type: Number, default: 0, min: 0 },
+    },
+    giftProduct: {
+      productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', default: null },
+      variantId: { type: mongoose.Schema.Types.ObjectId, ref: 'ProductVariant', default: null },
+      note: { type: String, default: '' },
     },
     status: {
       type: String,
@@ -154,6 +201,42 @@ const productSchema = new mongoose.Schema(
         ],
       },
     ],
+    // Sản phẩm cấu thành (BOM / Composite / Assembly Kits)
+    isComposite: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    bomItems: [
+      {
+        productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
+        variantId: { type: mongoose.Schema.Types.ObjectId, ref: 'ProductVariant', default: null },
+        quantity: { type: Number, required: true, default: 1, min: 1 },
+        costPrice: { type: Number, default: 0 },
+      },
+    ],
+    // Bảng giá bán sỉ theo bậc số lượng (Tiered Wholesale Pricing)
+    wholesaleTiers: [
+      {
+        minQuantity: { type: Number, required: true, min: 2 },
+        price: { type: Number, required: true, min: 0 },
+        discountPercent: { type: Number, default: 0 },
+      },
+    ],
+    // Quản lý lô hàng & Hạn sử dụng (Batch / Expiry Tracking)
+    batchNumber: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+    manufacturingDate: {
+      type: Date,
+      default: null,
+    },
+    expiryDate: {
+      type: Date,
+      default: null,
+    },
     searchTokens: [{ type: String, index: true }],
   },
   { timestamps: true }
@@ -185,6 +268,15 @@ productSchema.pre('save', async function () {
 });
 
 productSchema.index({ name: 'text', sku: 'text' });
+productSchema.index({ isActive: 1, status: 1, createdAt: -1 });
+productSchema.index({ isActive: 1, status: 1, stock: 1 });
+productSchema.index({ categories: 1, isActive: 1, status: 1 });
+productSchema.index({ brand: 1, isActive: 1 });
+productSchema.index({ isActive: 1, status: 1, viewsCount: -1 });
+productSchema.index({ isActive: 1, cachedPrice: 1 });
+productSchema.index({ supplierId: 1 });
+productSchema.index({ isActive: 1, status: 1, sold: -1 });
+productSchema.index({ categories: 1, isActive: 1, status: 1, createdAt: -1 });
 
 const Product = mongoose.model('Product', productSchema);
 module.exports = Product;

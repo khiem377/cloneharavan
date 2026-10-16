@@ -6,6 +6,7 @@ import {
 import { useStockExports, useCreateStockExport } from '@/hooks/useInventory';
 import { useSearchInventoryProducts } from '@/hooks/useProducts';
 import { inventoryService } from '@/services/inventory.service';
+import { warehouseService } from '@/services/warehouse.service';
 import DataTablePagination from '@/components/ui/DataTablePagination';
 import { toast } from '@/providers/ToastProvider';
 import ExcelPreviewModal from '@/components/common/ExcelPreviewModal';
@@ -30,9 +31,13 @@ export default function StockExportListPage() {
   const [previewDownloadUrl, setPreviewDownloadUrl] = useState('');
   const [previewTitle, setPreviewTitle] = useState('');
 
+  // Warehouse State
+  const [warehouses, setWarehouses] = useState([]);
+
   // Form State
   const [formData, setFormData] = useState({
     type: 'sale',
+    warehouseId: '',
     recipientName: '',
     recipientPhone: '',
     recipientAddress: '',
@@ -53,6 +58,23 @@ export default function StockExportListPage() {
 
   const createMutation = useCreateStockExport();
   const searchProducts = useSearchInventoryProducts(productSearch).data || [];
+
+  React.useEffect(() => {
+    const loadWarehouses = async () => {
+      try {
+        const whRes = await warehouseService.getWarehouses();
+        const list = whRes.data?.data?.data || [];
+        setWarehouses(list);
+        const def = list.find((w) => w.isDefault) || list[0];
+        if (def) {
+          setFormData((p) => ({ ...p, warehouseId: def._id }));
+        }
+      } catch (err) {
+        console.warn('Lỗi tải kho:', err);
+      }
+    };
+    loadWarehouses();
+  }, []);
 
   const handleDownloadExcel = async (exportItem) => {
     try {
@@ -189,6 +211,27 @@ export default function StockExportListPage() {
     }
   };
 
+  const renderTypeBadge = (type) => {
+    switch (type) {
+      case 'sale':
+        return <span className="inline-flex items-center px-2 py-0.5 rounded-[4px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold text-[11px]">Bán hàng</span>;
+      case 'transfer':
+        return <span className="inline-flex items-center px-2 py-0.5 rounded-[4px] bg-blue-500/10 text-blue-600 dark:text-blue-400 font-semibold text-[11px]">Chuyển kho</span>;
+      case 'internal_use':
+        return <span className="inline-flex items-center px-2 py-0.5 rounded-[4px] bg-purple-500/10 text-purple-600 dark:text-purple-400 font-semibold text-[11px]">Tiêu dùng nội bộ</span>;
+      case 'damage_expired':
+        return <span className="inline-flex items-center px-2 py-0.5 rounded-[4px] bg-destructive/10 text-destructive font-semibold text-[11px]">Hủy / Hết hạn</span>;
+      case 'sample_gift':
+        return <span className="inline-flex items-center px-2 py-0.5 rounded-[4px] bg-amber-500/10 text-amber-600 dark:text-amber-400 font-semibold text-[11px]">Hàng mẫu / Quà</span>;
+      case 'return_supplier':
+        return <span className="inline-flex items-center px-2 py-0.5 rounded-[4px] bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-semibold text-[11px]">Trả NCC</span>;
+      case 'audit_deficit':
+        return <span className="inline-flex items-center px-2 py-0.5 rounded-[4px] bg-rose-500/10 text-rose-600 dark:text-rose-400 font-semibold text-[11px]">Hao hụt kiểm kê</span>;
+      default:
+        return <span className="inline-flex items-center px-2 py-0.5 rounded-[4px] bg-muted text-muted-foreground font-semibold text-[11px]">Xuất khác</span>;
+    }
+  };
+
   return (
     <div className="space-y-6 p-6 antialiased">
       {/* Header */}
@@ -235,6 +278,7 @@ export default function StockExportListPage() {
             <thead>
               <tr className="border-b border-border bg-muted/60 font-bold text-foreground text-[11px]">
                 <th className="px-4 py-3.5 whitespace-nowrap">Mã Lệnh Xuất</th>
+                <th className="px-4 py-3.5 whitespace-nowrap">Kho Xuất</th>
                 <th className="px-4 py-3.5 whitespace-nowrap">Loại Xuất</th>
                 <th className="px-4 py-3.5 whitespace-nowrap">Trạng Thái Thực Hiện</th>
                 <th className="px-4 py-3.5 whitespace-nowrap">Người Nhận / Địa Chỉ</th>
@@ -247,13 +291,13 @@ export default function StockExportListPage() {
             <tbody className="divide-y divide-border">
               {isLoading ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-xs text-muted-foreground">
+                  <td colSpan={9} className="py-12 text-center text-xs text-muted-foreground">
                     Đang tải danh sách lệnh xuất kho...
                   </td>
                 </tr>
               ) : exportsList.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-xs text-muted-foreground">
+                  <td colSpan={9} className="py-12 text-center text-xs text-muted-foreground">
                     Chưa có lệnh xuất kho nào trong hệ thống
                   </td>
                 </tr>
@@ -262,13 +306,10 @@ export default function StockExportListPage() {
                   <tr key={item._id} className="hover:bg-muted/30 transition-colors align-middle">
                     <td className="px-4 py-3 font-semibold text-primary font-mono whitespace-nowrap text-xs">{item.exportNumber}</td>
                     <td className="px-4 py-3 font-medium text-foreground whitespace-nowrap text-xs">
-                      {item.type === 'sale'
-                        ? 'Bán hàng'
-                        : item.type === 'transfer'
-                        ? 'Chuyển kho'
-                        : item.type === 'return_supplier'
-                        ? 'Trả NCC'
-                        : 'Xuất khác'}
+                      {item.warehouseId?.name || 'Kho Tổng'}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-xs">
+                      {renderTypeBadge(item.type)}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">{renderStatusBadge(item.status)}</td>
                     <td className="px-4 py-3 text-xs">
@@ -338,6 +379,10 @@ export default function StockExportListPage() {
               {/* Left Content Area */}
               <div className="flex-1 p-6 space-y-4 overflow-y-auto border-r border-border">
                 <div className="grid grid-cols-2 gap-4 rounded-[6px] border border-border bg-card p-4 text-xs shadow-2xs">
+                  <div>
+                    <span className="text-muted-foreground">Kho xuất hàng:</span>
+                    <p className="font-bold text-primary">{selectedExport.warehouseId?.name || 'Kho Tổng Bình Tân'}</p>
+                  </div>
                   <div>
                     <span className="text-muted-foreground">Người nhận:</span>
                     <p className="font-bold text-foreground">{selectedExport.recipientName || 'Khách lẻ'}</p>
@@ -452,13 +497,31 @@ export default function StockExportListPage() {
             </div>
 
             <form onSubmit={handleSubmitCreate} className="space-y-4">
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
+                <div>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-1">Kho Xuất Hàng *</label>
+                  <select
+                    value={formData.warehouseId}
+                    onChange={(e) => setFormData({ ...formData, warehouseId: e.target.value })}
+                    className="w-full h-8 px-2.5 text-xs bg-background rounded-[6px] border border-input focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+                  >
+                    {warehouses.map((w) => (
+                      <option key={w._id} value={w._id}>
+                        {w.name} {w.isDefault ? '(Kho mặc định)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
                 <div>
                   <label className="block text-xs font-semibold text-muted-foreground mb-1">Loại Xuất Kho</label>
                   <SearchableSelect
                     options={[
                       { label: 'Xuất bán hàng', value: 'sale' },
                       { label: 'Xuất chuyển kho nội bộ', value: 'transfer' },
+                      { label: 'Xuất tiêu dùng nội bộ', value: 'internal_use' },
+                      { label: 'Xuất hủy / Hao hụt / Hết hạn', value: 'damage_expired' },
+                      { label: 'Xuất hàng mẫu / Quà tặng sự kiện', value: 'sample_gift' },
+                      { label: 'Xuất trả nhà cung cấp', value: 'return_supplier' },
                       { label: 'Xuất khác', value: 'other' },
                     ]}
                     value={formData.type}
@@ -473,7 +536,7 @@ export default function StockExportListPage() {
                     type="text"
                     value={formData.recipientName}
                     onChange={(e) => setFormData({ ...formData, recipientName: e.target.value })}
-                    className="w-full rounded-[6px] border border-input bg-background px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+                    className="w-full h-8 rounded-[6px] border border-input bg-background px-3 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
                   />
                 </div>
                 <div>
@@ -482,7 +545,7 @@ export default function StockExportListPage() {
                     type="text"
                     value={formData.recipientPhone}
                     onChange={(e) => setFormData({ ...formData, recipientPhone: e.target.value })}
-                    className="w-full rounded-[6px] border border-input bg-background px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+                    className="w-full h-8 rounded-[6px] border border-input bg-background px-3 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
                   />
                 </div>
               </div>

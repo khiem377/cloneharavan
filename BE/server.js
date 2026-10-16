@@ -271,18 +271,86 @@ const ensureAdminRolesAndPermissions = async () => {
   }
 };
 
-const { fixAllProductCategoriesAndImages } = require('./src/services/productCatalogFix.service');
+const cleanupZeroStockForNonDefaultWarehouses = async () => {
+  try {
+    const Warehouse = require('./src/models/warehouse.model');
+    const ProductWarehouseStock = require('./src/models/productWarehouseStock.model');
+    const nonDefaultWarehouses = await Warehouse.find({ isDefault: { $ne: true } }).select('_id');
+    const nonDefaultIds = nonDefaultWarehouses.map((w) => w._id);
+    if (nonDefaultIds.length > 0) {
+      const res = await ProductWarehouseStock.deleteMany({
+        warehouseId: { $in: nonDefaultIds },
+        stock: { $lte: 0 },
+        allocated: { $lte: 0 },
+      });
+      if (res.deletedCount > 0) {
+        console.log(`[WarehouseClean] Đã dọn dẹp ${res.deletedCount} bản ghi tồn kho rỗng (stock=0) của các kho phụ`);
+      }
+    }
+  } catch (err) {
+    console.warn('[WarehouseClean] Warning:', err.message);
+  }
+};
 
 connectDB().then(async () => {
-  await initElasticsearch();
-  await assignCategoriesToProducts();
-  // await fixAllProductCategoriesAndImages();
-  await ensureSamsungVariants();
-  await ensureAdminRolesAndPermissions();
+  try {
+    await initElasticsearch();
+  } catch (e) {
+    console.warn('[Elasticsearch] Warning:', e.message);
+  }
 
-  app.listen(PORT, () => {
+  try {
+    await assignCategoriesToProducts();
+  } catch (e) {
+    console.warn('[CategoryAssigner] Warning:', e.message);
+  }
+
+  try {
+    await ensureSamsungVariants();
+  } catch (e) {
+    console.warn('[VariantSeeder] Warning:', e.message);
+  }
+
+  try {
+    await ensureAdminRolesAndPermissions();
+  } catch (e) {
+    console.warn('[AdminSync] Warning:', e.message);
+  }
+
+  try {
+    await cleanupZeroStockForNonDefaultWarehouses();
+  } catch (e) {
+    console.warn('[WarehouseClean] Warning:', e.message);
+  }
+
+  try {
+    const assignStaffWarehouses = require('./scripts/assign_staff_warehouses');
+    await assignStaffWarehouses();
+  } catch (e) {
+    console.warn('[WarehouseInit] Warning:', e.message);
+  }
+
+  try {
+    const { downloadCarrierLogos } = require('./src/scripts/downloadCarrierLogos');
+    await downloadCarrierLogos();
+  } catch (err) {
+    console.warn('[downloadCarrierLogos] Error:', err.message);
+  }
+
+  const server = app.listen(PORT, () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);
     console.log(`📦 Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`⚡ Real-time Interaction Pipeline Active`);
+
+    // Pre-warm corpus tim kiem de request dau tien khong phai cho build (~1.6s)
+    require('./src/utils/dynamicSearchCorpus')
+      .getStoreCorpus()
+      .catch((err) => console.warn('[SearchCorpus] Pre-warm failed:', err.message));
   });
+  // Slowloris DDoS Mitigation: Đóng kết nối nếu client treo gửi headers hoặc body quá 60s
+  server.headersTimeout = 65000;
+  server.requestTimeout = 60000;
+}).catch((err) => {
+  console.error('❌ Failed to connect to DB and start server:', err);
 });
+

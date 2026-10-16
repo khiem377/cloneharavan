@@ -46,10 +46,16 @@ export default function ProductUpsell({
       })
       .map((v) => {
         const vPrice = Number(v.salePrice || v.price || 0);
+        const validAttrs = v.attributes?.filter(a => {
+          const val = String(a.value || '').trim().toLowerCase();
+          return !['mặc định', 'mac dinh', 'default', 'default title', 'tiêu chuẩn', 'tieu chuan'].includes(val);
+        });
         const name =
-          v.attributes?.length > 0
-            ? v.attributes.map((a) => a.value).join(' - ')
-            : v.displayName || v.sku || 'Bản cao hơn';
+          validAttrs?.length > 0
+            ? validAttrs.map((a) => a.value).join(' - ')
+            : v.displayName && !['mặc định', 'mac dinh', 'default', 'default title'].includes(String(v.displayName).toLowerCase().trim())
+              ? v.displayName
+              : 'Bản nâng cấp';
         return {
           variantId: v._id || v.id,
           variantObj: v,

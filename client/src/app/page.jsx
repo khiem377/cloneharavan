@@ -9,9 +9,11 @@ import HomeCategoryShowcase from '@/components/home/HomeCategoryShowcase';
 import HomeRecommendationFeed from '@/components/home/HomeRecommendationFeed';
 import HomeTechNews from '@/components/home/HomeTechNews';
 import HomeNewsletterBanner from '@/components/home/HomeNewsletterBanner';
+import HomeComboSection from '@/components/home/HomeComboSection';
 import ScrollReveal from '@/components/common/ScrollReveal';
 
 import flashSaleService from '@/services/flashSale.service';
+import comboService from '@/services/combo.service';
 import couponService from '@/services/coupon.service';
 import brandServerService from '@/services/brand.server.service';
 import productServerService from '@/services/product.server.service';
@@ -25,6 +27,7 @@ export default async function HomePage() {
   const [
     activeSale, 
     coupons, 
+    combos,
     brands, 
     categoriesTree, 
     recommendations,
@@ -36,6 +39,7 @@ export default async function HomePage() {
   ] = await Promise.all([
     flashSaleService.getServerActiveFlashSale(),
     couponService.getServerActiveCoupons(10),
+    comboService.getServerCombos(),
     brandServerService.getBrands(),
     categoryService.getServerCategoryTree(),
     recommendationServerService.getPersonalized(10),
@@ -102,7 +106,14 @@ export default async function HomePage() {
         />
       </ScrollReveal>
 
-      {/* 5. Dịch vụ & Voucher dạng vé (SVG Punch Holes, Không Icon thừa) */}
+      {/* 5. COMBO SIÊU TIẾT KIỆM (Gói sản phẩm ghép đôi giảm sâu) */}
+      {combos && combos.length > 0 && (
+        <ScrollReveal>
+          <HomeComboSection combos={combos} />
+        </ScrollReveal>
+      )}
+
+      {/* 6. Dịch vụ & Voucher dạng vé (SVG Punch Holes, Không Icon thừa) */}
       <ScrollReveal immediate={true}>
         <HomeServiceAndCoupons initialCoupons={coupons} />
       </ScrollReveal>

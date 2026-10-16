@@ -1,4 +1,5 @@
 const axios = require('axios');
+const Warehouse = require('../models/warehouse.model');
 
 const cache = {
   provinces: null,
@@ -440,6 +441,266 @@ const lookupGhnPostMergerAddress = async ({
   };
 };
 
+/**
+ * Tính phí vận chuyển thực tế từ GHN API
+ * - Lấy fromDistrictId từ Warehouse mặc định (nếu không truyền)
+ * - Gọi trực tiếp GHN /v2/shipping-order/fee
+ * - Nếu GHN trả về phí thực tế: isEstimated = false, source = 'GHN'
+ * - Nếu GHN lỗi / timeout: isEstimated = true, ghi rõ lỗi, không giả mạo phí GHN thật
+ */
+const calculateShippingFee = async ({
+  toDistrictId,
+  toWardCode,
+  fromDistrictId = null,
+  weight = 500,
+  length = 20,
+  width = 15,
+  height = 10,
+  insuranceValue = 0,
+  allowEstimatedFallback = true,
+} = {}) => {
+  const toDid = Number(toDistrictId);
+  const toWcode = String(toWardCode || '').trim();
+
+  if (!toDid || !toWcode) {
+    return {
+      success: false,
+      fee: null,
+      isEstimated: false,
+      source: 'VALIDATION_ERROR',
+      message: 'Thiếu thông tin địa chỉ nhận hàng: toDistrictId và toWardCode là bắt buộc để tính phí vận chuyển',
+    };
+  }
+
+  // 1. Xác định quận/huyện kho gửi hàng
+  let finalFromDistrictId = fromDistrictId ? Number(fromDistrictId) : null;
+  let warehouseName = '';
+
+  if (!finalFromDistrictId) {
+    try {
+      const defaultWarehouse = await Warehouse.findOne({ isDefault: true, status: 'active' }).lean();
+      if (defaultWarehouse && defaultWarehouse.address?.districtId) {
+        finalFromDistrictId = defaultWarehouse.address.districtId;
+        warehouseName = defaultWarehouse.name;
+      } else {
+        const anyActiveWarehouse = await Warehouse.findOne({ status: 'active' }).lean();
+        if (anyActiveWarehouse && anyActiveWarehouse.address?.districtId) {
+          finalFromDistrictId = anyActiveWarehouse.address.districtId;
+          warehouseName = anyActiveWarehouse.name;
+        }
+      }
+    } catch (whErr) {
+      console.warn('[GHN Service] Không thể truy vấn Warehouse mặc định:', whErr.message);
+    }
+  }
+
+  // Fallback cấu hình kho từ .env nếu DB chưa có
+  if (!finalFromDistrictId) {
+    finalFromDistrictId = Number(process.env.GHN_FROM_DISTRICT_ID) || 1458; // 1458: Bình Tân HCM
+  }
+
+  const token = process.env.GHN_API_TOKEN || process.env.GHN_TOKEN;
+  const shopId = process.env.GHN_SHOP_ID;
+
+  if (!token) {
+    if (allowEstimatedFallback) {
+      return {
+        success: true,
+        fee: 30000,
+        isEstimated: true,
+        requiresConfirmation: true,
+        source: 'ESTIMATED_FALLBACK',
+        message: 'Chưa cấu hình GHN_API_TOKEN. Phí vận chuyển 30,000đ là phí ước tính tạm thời.',
+        fromDistrictId: finalFromDistrictId,
+        toDistrictId: toDid,
+        toWardCode: toWcode,
+      };
+    }
+    return {
+      success: false,
+      fee: null,
+      isEstimated: true,
+      source: 'CONFIG_MISSING',
+      message: 'Chưa cấu hình GHN API Token',
+    };
+  }
+
+  // 2. Chuẩn bị payload gọi GHN
+  const sanitizedWeight = Math.max(100, Math.min(Number(weight) || 500, 50000));
+  const sanitizedInsurance = Math.max(0, Math.min(Number(insuranceValue) || 0, 5000000));
+
+  const payload = {
+    from_district_id: finalFromDistrictId,
+    service_type_id: 2, // Gói chuẩn E-Commerce
+    to_district_id: toDid,
+    to_ward_code: toWcode,
+    height: Math.max(1, Number(height) || 10),
+    length: Math.max(1, Number(length) || 20),
+    width: Math.max(1, Number(width) || 15),
+    weight: sanitizedWeight,
+    insurance_value: sanitizedInsurance,
+  };
+
+  try {
+    const res = await axios.post(`${getBaseUrl()}/v2/shipping-order/fee`, payload, {
+      headers: getGhnHeaders(),
+      timeout: 8000,
+    });
+
+    if (res.data && res.data.code === 200 && res.data.data) {
+      const ghnData = res.data.data;
+      return {
+        success: true,
+        fee: ghnData.total || ghnData.service_fee || 0,
+        serviceFee: ghnData.service_fee || 0,
+        insuranceFee: ghnData.insurance_fee || 0,
+        isEstimated: false,
+        source: 'GHN',
+        fromDistrictId: finalFromDistrictId,
+        warehouseName,
+        toDistrictId: toDid,
+        toWardCode: toWcode,
+        message: 'Tính cước vận chuyển GHN thành công',
+      };
+    }
+
+    throw new Error(res.data?.message || 'GHN không trả về phí vận chuyển hợp lệ');
+  } catch (err) {
+    const ghnErrMsg = err.response?.data?.message || err.message;
+    console.warn(`[GHN Service] Lỗi tính cước GHN từ district ${finalFromDistrictId} tới ${toDid}:`, ghnErrMsg);
+
+    if (allowEstimatedFallback) {
+      // Ước tính cước tạm thời nhưng BẮT BUỘC gắn cờ isEstimated: true và thông báo rõ ràng
+      const isSameDistrict = finalFromDistrictId === toDid;
+      const estimatedFee = isSameDistrict ? 22000 : 35000;
+
+      return {
+        success: true,
+        fee: estimatedFee,
+        isEstimated: true,
+        requiresConfirmation: true,
+        source: 'ESTIMATED_FALLBACK',
+        fromDistrictId: finalFromDistrictId,
+        toDistrictId: toDid,
+        toWardCode: toWcode,
+        ghnError: ghnErrMsg,
+        message: `Không thể kết nối cước GHN thời gian thực (${ghnErrMsg}). Phí hiển thị là cước ước tính tạm thời (${estimatedFee.toLocaleString('vi-VN')} đ), vui lòng thử lại trước khi hoàn tất đơn.`,
+      };
+    }
+
+    return {
+      success: false,
+      fee: null,
+      isEstimated: true,
+      source: 'GHN_ERROR',
+      fromDistrictId: finalFromDistrictId,
+      toDistrictId: toDid,
+      toWardCode: toWcode,
+      error: ghnErrMsg,
+      message: `Lỗi tính cước từ đơn vị vận chuyển GHN: ${ghnErrMsg}`,
+    };
+  }
+};
+
+/**
+ * Tự động phân giải ProvinceID, DistrictID, WardCode từ chuỗi văn bản Tỉnh, Quận, Phường
+ */
+const resolveAddressGhnCodes = async ({ province = '', district = '', ward = '' }) => {
+  if (!province && !district && !ward) return null;
+
+  try {
+    const provs = await getProvinces();
+    if (!Array.isArray(provs) || provs.length === 0) return null;
+
+    const normProv = normalizeVnString(cleanAdminPrefix(province));
+    let matchedP = provs.find((p) => {
+      const pNorm = normalizeVnString(cleanAdminPrefix(p.ProvinceName));
+      if (pNorm === normProv) return true;
+      if (Array.isArray(p.NameExtension)) {
+        return p.NameExtension.some((ext) => normalizeVnString(cleanAdminPrefix(ext)) === normProv);
+      }
+      return false;
+    });
+
+    if (!matchedP && normProv) {
+      matchedP = provs.find((p) => {
+        const pNorm = normalizeVnString(p.ProvinceName);
+        return pNorm.includes(normProv) || normProv.includes(pNorm);
+      });
+    }
+
+    if (!matchedP) return null;
+
+    const pid = matchedP.ProvinceID;
+    const dists = await getDistricts(pid);
+    if (!Array.isArray(dists) || dists.length === 0) {
+      return { provinceId: pid, provinceName: matchedP.ProvinceName, districtId: null, wardCode: null };
+    }
+
+    const normDist = normalizeVnString(cleanAdminPrefix(district));
+    let matchedD = dists.find((d) => {
+      const dNorm = normalizeVnString(cleanAdminPrefix(d.DistrictName));
+      if (dNorm === normDist) return true;
+      if (Array.isArray(d.NameExtension)) {
+        return d.NameExtension.some((ext) => normalizeVnString(cleanAdminPrefix(ext)) === normDist);
+      }
+      return false;
+    });
+
+    if (!matchedD && normDist) {
+      matchedD = dists.find((d) => {
+        const dNorm = normalizeVnString(d.DistrictName);
+        return dNorm.includes(normDist) || normDist.includes(dNorm);
+      });
+    }
+
+    if (!matchedD) {
+      return { provinceId: pid, provinceName: matchedP.ProvinceName, districtId: null, wardCode: null };
+    }
+
+    const did = matchedD.DistrictID;
+    const wards = await getWards(did);
+    if (!Array.isArray(wards) || wards.length === 0) {
+      return {
+        provinceId: pid,
+        provinceName: matchedP.ProvinceName,
+        districtId: did,
+        districtName: matchedD.DistrictName,
+        wardCode: null,
+      };
+    }
+
+    const normWard = normalizeVnString(cleanAdminPrefix(ward));
+    let matchedW = wards.find((w) => {
+      const wNorm = normalizeVnString(cleanAdminPrefix(w.WardName));
+      if (wNorm === normWard) return true;
+      if (Array.isArray(w.NameExtension)) {
+        return w.NameExtension.some((ext) => normalizeVnString(cleanAdminPrefix(ext)) === normWard);
+      }
+      return false;
+    });
+
+    if (!matchedW && normWard) {
+      matchedW = wards.find((w) => {
+        const wNorm = normalizeVnString(w.WardName);
+        return wNorm.includes(normWard) || normWard.includes(wNorm);
+      });
+    }
+
+    return {
+      provinceId: pid,
+      provinceName: matchedP.ProvinceName,
+      districtId: did,
+      districtName: matchedD.DistrictName,
+      wardCode: matchedW ? String(matchedW.WardCode) : null,
+      wardName: matchedW ? matchedW.WardName : null,
+    };
+  } catch (err) {
+    console.warn('[GHN Service] resolveAddressGhnCodes error:', err.message);
+    return null;
+  }
+};
+
 module.exports = {
   getProvinces,
   getDistricts,
@@ -447,4 +708,6 @@ module.exports = {
   getNewProvinces,
   getNewWards,
   lookupGhnPostMergerAddress,
+  calculateShippingFee,
+  resolveAddressGhnCodes,
 };

@@ -1,5 +1,3 @@
-const User = require('../models/user.model');
-const Permission = require('../models/permission.model');
 const { AppError } = require('../utils/AppError');
 const {
   buildTokenResponse,
@@ -38,6 +36,11 @@ const {
   generatePasskeyRegisterOptions,
   verifyPasskeyRegister,
   deletePasskey,
+  // User & Permission helpers
+  getUserById,
+  getPopulatedAuthUser,
+  getUserProfileWithPermissions,
+  getUserPermissions,
 } = require('../services/auth.service');
 const { mergeSessionInteractions } = require('../services/recommendation.service');
 
@@ -76,7 +79,7 @@ const register = async (req, res, next) => {
 const login = async (req, res, next) => {
   try {
     const { email, password, sessionId, rememberMe } = req.body;
-    const user = await loginUser(email, password);
+    const user = await loginUser(email, password, req);
     const { accessToken, refreshToken } = await buildTokenResponse(user, res, !!rememberMe);
 
     // Merge guest session interactions vào userId (fire-and-forget)
@@ -85,39 +88,7 @@ const login = async (req, res, next) => {
     const clientIp = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip || req.socket?.remoteAddress;
     const clientUserAgent = req.headers['user-agent'] || 'Unknown';
 
-    const populatedUser = await User.findByIdAndUpdate(
-      user._id,
-      {
-        lastLoginAt: new Date(),
-        lastLoginIp: clientIp,
-        lastLoginUserAgent: clientUserAgent,
-      },
-      { returnDocument: 'after' }
-    )
-      .populate({ path: 'roleId', populate: { path: 'permissions', select: 'code name module' } })
-      .populate('customPermissions', 'code name module');
-
-    const userRole = (populatedUser.role || '').toLowerCase();
-    const roleCode = (populatedUser.roleId?.code || '').toLowerCase();
-    const roleName = (populatedUser.roleId?.name || '').toLowerCase();
-    const userEmail = (populatedUser.email || '').toLowerCase();
-
-    const isSuperAdmin =
-      userRole === 'administrator' ||
-      userRole === 'admin' ||
-      userRole.includes('admin') ||
-      roleCode === 'administrator' ||
-      roleCode === 'admin' ||
-      roleName.includes('administrator') ||
-      roleName.includes('quản trị') ||
-      userEmail.startsWith('admin');
-
-    const permissions = isSuperAdmin 
-      ? ['*']
-      : [...new Set([
-          ...(populatedUser.roleId?.permissions || []).map(p => p.code),
-          ...(populatedUser.customPermissions || []).map(p => p.code)
-        ])];
+    const authUser = await getPopulatedAuthUser(user._id, { clientIp, clientUserAgent });
 
     res.json({
       status: 'success',
@@ -126,18 +97,7 @@ const login = async (req, res, next) => {
       data: {
         accessToken,
         refreshToken,
-        user: {
-          _id: populatedUser._id,
-          fullName: populatedUser.fullName,
-          email: populatedUser.email,
-          phone: populatedUser.phone,
-          avatar: populatedUser.avatar,
-          gender: populatedUser.gender,
-          role: populatedUser.role,
-          roleId: populatedUser.roleId,
-          authProvider: populatedUser.authProvider || 'local',
-          permissions,
-        },
+        user: authUser,
       },
     });
   } catch (error) {
@@ -157,39 +117,7 @@ const googleLogin = async (req, res, next) => {
     const clientIp = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip || req.socket?.remoteAddress;
     const clientUserAgent = req.headers['user-agent'] || 'Unknown';
 
-    const populatedUser = await User.findByIdAndUpdate(
-      user._id,
-      {
-        lastLoginAt: new Date(),
-        lastLoginIp: clientIp,
-        lastLoginUserAgent: clientUserAgent,
-      },
-      { returnDocument: 'after' }
-    )
-      .populate({ path: 'roleId', populate: { path: 'permissions', select: 'code name module' } })
-      .populate('customPermissions', 'code name module');
-
-    const userRole = (populatedUser.role || '').toLowerCase();
-    const roleCode = (populatedUser.roleId?.code || '').toLowerCase();
-    const roleName = (populatedUser.roleId?.name || '').toLowerCase();
-    const userEmail = (populatedUser.email || '').toLowerCase();
-
-    const isSuperAdmin =
-      userRole === 'administrator' ||
-      userRole === 'admin' ||
-      userRole.includes('admin') ||
-      roleCode === 'administrator' ||
-      roleCode === 'admin' ||
-      roleName.includes('administrator') ||
-      roleName.includes('quản trị') ||
-      userEmail.startsWith('admin');
-
-    const permissions = isSuperAdmin 
-      ? ['*']
-      : [...new Set([
-          ...(populatedUser.roleId?.permissions || []).map(p => p.code),
-          ...(populatedUser.customPermissions || []).map(p => p.code)
-        ])];
+    const authUser = await getPopulatedAuthUser(user._id, { clientIp, clientUserAgent, provider: 'google' });
 
     res.json({
       status: 'success',
@@ -198,18 +126,7 @@ const googleLogin = async (req, res, next) => {
       data: {
         accessToken,
         refreshToken,
-        user: {
-          _id: populatedUser._id,
-          fullName: populatedUser.fullName,
-          email: populatedUser.email,
-          phone: populatedUser.phone,
-          avatar: populatedUser.avatar,
-          gender: populatedUser.gender,
-          role: populatedUser.role,
-          roleId: populatedUser.roleId,
-          authProvider: populatedUser.authProvider || 'google',
-          permissions,
-        },
+        user: authUser,
       },
     });
   } catch (error) {
@@ -243,39 +160,7 @@ const tiktokLogin = async (req, res, next) => {
     const clientIp = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip || req.socket?.remoteAddress;
     const clientUserAgent = req.headers['user-agent'] || 'Unknown';
 
-    const populatedUser = await User.findByIdAndUpdate(
-      user._id,
-      {
-        lastLoginAt: new Date(),
-        lastLoginIp: clientIp,
-        lastLoginUserAgent: clientUserAgent,
-      },
-      { returnDocument: 'after' }
-    )
-      .populate({ path: 'roleId', populate: { path: 'permissions', select: 'code name module' } })
-      .populate('customPermissions', 'code name module');
-
-    const userRole = (populatedUser.role || '').toLowerCase();
-    const roleCode = (populatedUser.roleId?.code || '').toLowerCase();
-    const roleName = (populatedUser.roleId?.name || '').toLowerCase();
-    const userEmail = (populatedUser.email || '').toLowerCase();
-
-    const isSuperAdmin =
-      userRole === 'administrator' ||
-      userRole === 'admin' ||
-      userRole.includes('admin') ||
-      roleCode === 'administrator' ||
-      roleCode === 'admin' ||
-      roleName.includes('administrator') ||
-      roleName.includes('quản trị') ||
-      userEmail.startsWith('admin');
-
-    const permissions = isSuperAdmin 
-      ? ['*']
-      : [...new Set([
-          ...(populatedUser.roleId?.permissions || []).map(p => p.code),
-          ...(populatedUser.customPermissions || []).map(p => p.code)
-        ])];
+    const authUser = await getPopulatedAuthUser(user._id, { clientIp, clientUserAgent, provider: 'tiktok' });
 
     res.json({
       status: 'success',
@@ -284,18 +169,7 @@ const tiktokLogin = async (req, res, next) => {
       data: {
         accessToken,
         refreshToken,
-        user: {
-          _id: populatedUser._id,
-          fullName: populatedUser.fullName,
-          email: populatedUser.email,
-          phone: populatedUser.phone,
-          avatar: populatedUser.avatar,
-          gender: populatedUser.gender,
-          role: populatedUser.role,
-          roleId: populatedUser.roleId,
-          authProvider: populatedUser.authProvider || 'tiktok',
-          permissions,
-        },
+        user: authUser,
       },
     });
   } catch (error) {
@@ -329,39 +203,7 @@ const zaloLogin = async (req, res, next) => {
     const clientIp = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip || req.socket?.remoteAddress;
     const clientUserAgent = req.headers['user-agent'] || 'Unknown';
 
-    const populatedUser = await User.findByIdAndUpdate(
-      user._id,
-      {
-        lastLoginAt: new Date(),
-        lastLoginIp: clientIp,
-        lastLoginUserAgent: clientUserAgent,
-      },
-      { returnDocument: 'after' }
-    )
-      .populate({ path: 'roleId', populate: { path: 'permissions', select: 'code name module' } })
-      .populate('customPermissions', 'code name module');
-
-    const userRole = (populatedUser.role || '').toLowerCase();
-    const roleCode = (populatedUser.roleId?.code || '').toLowerCase();
-    const roleName = (populatedUser.roleId?.name || '').toLowerCase();
-    const userEmail = (populatedUser.email || '').toLowerCase();
-
-    const isSuperAdmin =
-      userRole === 'administrator' ||
-      userRole === 'admin' ||
-      userRole.includes('admin') ||
-      roleCode === 'administrator' ||
-      roleCode === 'admin' ||
-      roleName.includes('administrator') ||
-      roleName.includes('quản trị') ||
-      userEmail.startsWith('admin');
-
-    const permissions = isSuperAdmin 
-      ? ['*']
-      : [...new Set([
-          ...(populatedUser.roleId?.permissions || []).map(p => p.code),
-          ...(populatedUser.customPermissions || []).map(p => p.code)
-        ])];
+    const authUser = await getPopulatedAuthUser(user._id, { clientIp, clientUserAgent, provider: 'zalo' });
 
     res.json({
       status: 'success',
@@ -370,18 +212,7 @@ const zaloLogin = async (req, res, next) => {
       data: {
         accessToken,
         refreshToken,
-        user: {
-          _id: populatedUser._id,
-          fullName: populatedUser.fullName,
-          email: populatedUser.email,
-          phone: populatedUser.phone,
-          avatar: populatedUser.avatar,
-          gender: populatedUser.gender,
-          role: populatedUser.role,
-          roleId: populatedUser.roleId,
-          authProvider: populatedUser.authProvider || 'zalo',
-          permissions,
-        },
+        user: authUser,
       },
     });
   } catch (error) {
@@ -413,45 +244,7 @@ const refreshToken = async (req, res, next) => {
 
 const getProfile = async (req, res, next) => {
   try {
-    const populatedUser = await User.findById(req.user._id)
-      .select('+password')
-      .populate({ path: 'roleId', populate: { path: 'permissions', select: 'code name module' } })
-      .populate('customPermissions', 'code name module');
-
-    if (!populatedUser) throw new AppError('Không tìm thấy người dùng', 404);
-
-    const hasPassword = !!populatedUser.password;
-
-    const userRole = (populatedUser.role || '').toLowerCase();
-    const roleCode = (populatedUser.roleId?.code || '').toLowerCase();
-    const roleName = (populatedUser.roleId?.name || '').toLowerCase();
-    const userEmail = (populatedUser.email || '').toLowerCase();
-
-    const isSuperAdmin =
-      userRole === 'administrator' ||
-      userRole === 'admin' ||
-      userRole.includes('admin') ||
-      roleCode === 'administrator' ||
-      roleCode === 'admin' ||
-      roleName.includes('administrator') ||
-      roleName.includes('quản trị') ||
-      userEmail.startsWith('admin');
-
-    const permissions = isSuperAdmin 
-      ? ['*']
-      : [...new Set([
-          ...(populatedUser.roleId?.permissions || []).map(p => p.code),
-          ...(populatedUser.customPermissions || []).map(p => p.code)
-        ])];
-
-    const userObj = populatedUser.toObject();
-    delete userObj.password;
-    userObj.hasPassword = hasPassword;
-    userObj.permissions = permissions;
-
-    // Ghi nhận session nền không chặn
-    recordUserSession(req.user._id, req).catch(() => {});
-
+    const userObj = await getUserProfileWithPermissions(req.user._id, req);
     res.json({
       status: 'success',
       statusCode: 200,
@@ -465,89 +258,11 @@ const getProfile = async (req, res, next) => {
 
 const getMyPermissions = async (req, res, next) => {
   try {
-    const populatedUser = await User.findById(req.user._id)
-      .populate({
-        path: 'roleId',
-        populate: {
-          path: 'permissions',
-          match: { isActive: true },
-          select: 'code name module description',
-        },
-      })
-      .populate({
-        path: 'customPermissions',
-        match: { isActive: true },
-        select: 'code name module description',
-      });
-
-    if (!populatedUser) throw new AppError('Không tìm thấy người dùng', 404);
-
-    const userRole = (populatedUser.role || '').toLowerCase();
-    const roleDoc = populatedUser.roleId;
-    const roleCode = (roleDoc?.code || '').toLowerCase();
-    const roleName = (roleDoc?.name || '').toLowerCase();
-    const userEmail = (populatedUser.email || '').toLowerCase();
-
-    const isSuperAdmin =
-      userRole === 'administrator' ||
-      userRole === 'admin' ||
-      userRole.includes('admin') ||
-      roleCode === 'administrator' ||
-      roleCode === 'admin' ||
-      roleName.includes('administrator') ||
-      roleName.includes('quản trị') ||
-      userEmail.startsWith('admin');
-
-    let permissionDocs = [];
-
-    if (isSuperAdmin) {
-      permissionDocs = await Permission.find({ isActive: true }).sort({ module: 1, name: 1 });
-    } else {
-      const rolePerms = Array.isArray(roleDoc?.permissions) ? roleDoc.permissions : [];
-      const customPerms = Array.isArray(populatedUser.customPermissions) ? populatedUser.customPermissions : [];
-
-      const permMap = new Map();
-      [...rolePerms, ...customPerms].forEach((p) => {
-        if (p && p.code) {
-          permMap.set(p.code, {
-            _id: p._id,
-            name: p.name,
-            code: p.code,
-            module: p.module || 'Khác',
-            description: p.description || '',
-          });
-        }
-      });
-
-      permissionDocs = Array.from(permMap.values()).sort((a, b) => {
-        const modCompare = (a.module || '').localeCompare(b.module || '');
-        if (modCompare !== 0) return modCompare;
-        return (a.name || '').localeCompare(b.name || '');
-      });
-    }
-
-    // Gom nhóm permissions theo module
-    const grouped = permissionDocs.reduce((acc, p) => {
-      const mod = p.module || 'Khác';
-      if (!acc[mod]) acc[mod] = [];
-      acc[mod].push(p);
-      return acc;
-    }, {});
-
+    const data = await getUserPermissions(req.user._id);
     res.json({
       status: 'success',
       statusCode: 200,
-      data: {
-        isSuperAdmin,
-        role: {
-          name: roleDoc?.name || (isSuperAdmin ? 'Quản trị viên tối cao' : 'Nhân viên'),
-          code: roleDoc?.code || populatedUser.role || 'staff',
-        },
-        permissions: permissionDocs.map((p) => p.code),
-        permissionDetails: permissionDocs,
-        grouped,
-        count: permissionDocs.length,
-      },
+      data,
     });
   } catch (error) {
     next(error);
@@ -826,7 +541,7 @@ const sessionStream = async (req, res, next) => {
       return res.end();
     }
 
-    const user = await User.findById(userId);
+    const user = await getUserById(userId);
 
     // Chuẩn bị headers SSE
     res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
@@ -940,55 +655,12 @@ const populateAdminAndBuildResponse = async (user, req, res, rememberMe, session
   const clientIp = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip || req.socket?.remoteAddress;
   const clientUserAgent = req.headers['user-agent'] || 'Unknown';
 
-  const populatedUser = await User.findByIdAndUpdate(
-    user._id,
-    {
-      lastLoginAt: new Date(),
-      lastLoginIp: clientIp,
-      lastLoginUserAgent: clientUserAgent,
-    },
-    { returnDocument: 'after' }
-  )
-    .populate({ path: 'roleId', populate: { path: 'permissions', select: 'code name module' } })
-    .populate('customPermissions', 'code name module');
-
-  const userRole = (populatedUser.role || '').toLowerCase();
-  const roleCode = (populatedUser.roleId?.code || '').toLowerCase();
-  const roleName = (populatedUser.roleId?.name || '').toLowerCase();
-  const userEmail = (populatedUser.email || '').toLowerCase();
-
-  const isSuperAdmin =
-    userRole === 'administrator' ||
-    userRole === 'admin' ||
-    userRole.includes('admin') ||
-    roleCode === 'administrator' ||
-    roleCode === 'admin' ||
-    roleName.includes('administrator') ||
-    roleName.includes('quản trị') ||
-    userEmail.startsWith('admin');
-
-  const permissions = isSuperAdmin
-    ? ['*']
-    : [...new Set([
-        ...(populatedUser.roleId?.permissions || []).map((p) => p.code),
-        ...(populatedUser.customPermissions || []).map((p) => p.code),
-      ])];
+  const authUser = await getPopulatedAuthUser(user._id, { clientIp, clientUserAgent });
 
   return {
     accessToken,
     refreshToken,
-    user: {
-      _id: populatedUser._id,
-      fullName: populatedUser.fullName,
-      email: populatedUser.email,
-      phone: populatedUser.phone,
-      avatar: populatedUser.avatar,
-      gender: populatedUser.gender,
-      role: populatedUser.role,
-      roleId: populatedUser.roleId,
-      authProvider: populatedUser.authProvider || 'local',
-      permissions,
-    },
+    user: authUser,
   };
 };
 

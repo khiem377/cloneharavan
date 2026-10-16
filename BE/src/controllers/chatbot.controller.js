@@ -4,13 +4,15 @@ const crypto = require('crypto');
 // POST /api/v1/chat
 const handleChat = async (req, res, next) => {
   try {
-    const { message, sessionId } = req.body;
+    const { message, sessionId, currentProductSlug, currentUrl } = req.body;
     const sid = sessionId || crypto.randomUUID();
 
     const result = await chat({
       sessionId: sid,
       message,
       userId: req.user?._id || null,
+      currentProductSlug,
+      currentUrl,
     });
 
     res.json({
@@ -65,9 +67,15 @@ const clearSession = async (req, res) => {
 
 // POST /api/v1/chat/stream  — SSE streaming
 const handleStream = (req, res) => {
-  const { message, sessionId } = req.body;
+  const { message, sessionId, currentProductSlug, currentUrl } = req.body;
   const sid = sessionId || crypto.randomUUID();
-  chatStream({ sessionId: sid, message, userId: req.user?._id || null }, res);
+  chatStream({
+    sessionId: sid,
+    message,
+    userId: req.user?._id || null,
+    currentProductSlug,
+    currentUrl,
+  }, res);
 };
 
 module.exports = { handleChat, handleStream, handleGetHistory, clearSession };

@@ -393,7 +393,7 @@ export default function FlashSaleView({ initialActiveSale = null, availableSales
 
       {/* ── TOP HEADER SECTION (Clean, Solid, Refined) ── */}
       <div className="bg-white border-b border-slate-200 py-4 shadow-2xs">
-        <div className="max-w-7xl mx-auto px-4">
+        <div className="max-w-[1536px] 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 2xl:px-8">
           
           {/* Breadcrumb */}
           <div className="flex items-center gap-2 text-xs text-slate-400 mb-3 font-medium">
@@ -464,7 +464,7 @@ export default function FlashSaleView({ initialActiveSale = null, availableSales
 
       {/* Commitments Bar (Custom Handcrafted Dual-Tone SVG Icons) */}
       <div className="bg-white border-b border-slate-200 py-3">
-        <div className="max-w-7xl mx-auto px-4 grid grid-cols-2 md:grid-cols-4 gap-3 text-xs font-medium text-slate-700">
+        <div className="max-w-[1536px] 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 2xl:px-8 grid grid-cols-2 md:grid-cols-4 gap-3 text-xs font-medium text-slate-700">
           <div className="flex items-center gap-2.5">
             <span className="p-2 rounded-[6px] bg-rose-50 text-rose-600"><ShieldCheckIcon size={18} /></span>
             <div>
@@ -500,7 +500,7 @@ export default function FlashSaleView({ initialActiveSale = null, availableSales
       </div>
 
       {/* Main Content Area */}
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 mt-6">
+      <div className="max-w-[1536px] 2xl:max-w-[1600px] mx-auto px-3 sm:px-4 lg:px-6 2xl:px-8 mt-6">
         
         {/* Filter and Sort Toolbar */}
         <div className="bg-white rounded-[6px] p-3 border border-slate-200 shadow-2xs flex flex-wrap items-center justify-between gap-3">
@@ -573,7 +573,7 @@ export default function FlashSaleView({ initialActiveSale = null, availableSales
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5 sm:gap-3.5 mt-5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 2xl:grid-cols-6 gap-2.5 sm:gap-3.5 2xl:gap-4.5 mt-5">
             {groupedProcessedItems.map((item, idx) => (
               <FlashSaleProductCard
                 key={item._id || idx}

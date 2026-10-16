@@ -1,32 +1,76 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Loader2, AlertCircle, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { toast } from '@/providers/ToastProvider';
 import { authService } from '@/services/auth.service';
 import useAuthStore from '@/store/authStore';
 import { getDefaultRedirectPath } from '@/utils/permissionUtils';
-import { Button } from '@/components/ui/button';
+
+const formatDisplayError = (rawError, provider = 'Zalo') => {
+  if (!rawError) return `Đăng nhập ${provider} thất bại. Vui lòng thử lại!`;
+  const errStr = typeof rawError === 'string' ? rawError : JSON.stringify(rawError);
+  const lower = errStr.toLowerCase();
+
+  if (lower.includes('code verifier') || lower.includes('invalid code verifier') || lower.includes('pkce')) {
+    return 'Phiên xác thực bảo mật đã hết hạn hoặc không hợp lệ. Vui lòng quay lại và bấm Đăng nhập lại!';
+  }
+  if (lower.includes('invalid_grant') || lower.includes('code has expired') || lower.includes('expired') || lower.includes('used') || lower.includes('invalid authorization code')) {
+    return 'Mã xác thực đã hết hạn hoặc đã được sử dụng. Vui lòng thực hiện đăng nhập lại!';
+  }
+  if (lower.includes('access_denied') || lower.includes('cancel') || lower.includes('user_denied')) {
+    return `Bạn đã từ chối hoặc hủy cấp quyền đăng nhập với ${provider}.`;
+  }
+  if (lower.includes('redirect_uri') || lower.includes('redirect uri')) {
+    return 'Địa chỉ chuyển hướng xác thực không khớp với hệ thống. Vui lòng thử lại!';
+  }
+  if (lower.includes('invalid_client') || lower.includes('app_id') || lower.includes('app secret')) {
+    return 'Thông tin ứng dụng xác thực chưa chính xác. Vui lòng liên hệ quản trị viên!';
+  }
+  if (/[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(errStr)) {
+    return errStr;
+  }
+  return `Đăng nhập ${provider} không thành công do phiên xác thực bị gián đoạn. Vui lòng thử lại!`;
+};
 
 export default function AdminAuthCallbackPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const setAuth = useAuthStore((s) => s.setAuth);
-
-  const [status, setStatus] = useState('processing');
-  const [errorMessage, setErrorMessage] = useState('');
   const hasHandledRef = useRef(false);
 
   useEffect(() => {
     const handleAuthCallback = async () => {
       if (hasHandledRef.current) return;
       hasHandledRef.current = true;
-      // 1. Kiểm tra nếu có token truyền trực tiếp từ client callback
+
       const directToken = searchParams.get('token');
       const directRefreshToken = searchParams.get('refreshToken');
 
+      const isZalo = window.location.pathname.includes('zalo') || searchParams.get('state')?.includes('zalo');
+      const providerName = isZalo ? 'Zalo' : 'TikTok';
+      const actionParam = searchParams.get('action');
+      const savedAction =
+        typeof window !== 'undefined'
+          ? sessionStorage.getItem(isZalo ? 'zalo_action' : 'tiktok_action')
+          : null;
+      const action =
+        actionParam === 'link' ||
+        searchParams.get('state')?.startsWith('link_') ||
+        (savedAction === 'link' && !searchParams.get('state')?.startsWith(isZalo ? 'zalo_' : 'tiktok_'))
+          ? 'link'
+          : 'login';
+
+      const redirectToError = (msg) => {
+        toast.error(msg);
+        if (action === 'link') {
+          navigate('/profile', { replace: true, state: { authError: msg } });
+        } else {
+          navigate('/login', { replace: true, state: { authError: msg } });
+        }
+      };
+
       if (directToken) {
         try {
-          // Lưu token tạm thời và gọi getMe để lấy profile user
           setAuth({
             user: null,
             accessToken: directToken,
@@ -37,8 +81,7 @@ export default function AdminAuthCallbackPage() {
           const user = data.data.user;
 
           if (user.role === 'user') {
-            setStatus('error');
-            setErrorMessage('Tài khoản của bạn không có quyền truy cập trang quản trị!');
+            redirectToError('Tài khoản của bạn là tài khoản Khách hàng, không có quyền truy cập trang quản trị!');
             return;
           }
 
@@ -48,52 +91,28 @@ export default function AdminAuthCallbackPage() {
             refreshToken: directRefreshToken || null,
           });
 
-          setStatus('success');
           toast.success('Đăng nhập thành công!');
           const targetPath = getDefaultRedirectPath(user);
-          setTimeout(() => navigate(targetPath, { replace: true }), 500);
+          navigate(targetPath, { replace: true });
           return;
         } catch (err) {
-          setStatus('error');
-          setErrorMessage('Phiên xác thực không hợp lệ. Vui lòng đăng nhập lại!');
+          redirectToError('Phiên xác thực không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại!');
           return;
         }
       }
 
-      // 2. Nếu có authorization code trực tiếp từ Zalo hoặc TikTok
       const code = searchParams.get('code');
       const state = searchParams.get('state') || '';
       const error = searchParams.get('error');
       const errorDescription = searchParams.get('error_description');
 
-      const isZalo = window.location.pathname.includes('zalo') || state.includes('zalo');
-      const providerName = isZalo ? 'Zalo' : 'TikTok';
-      const actionParam = searchParams.get('action');
-      const savedAction =
-        typeof window !== 'undefined'
-          ? sessionStorage.getItem(isZalo ? 'zalo_action' : 'tiktok_action')
-          : null;
-      const action =
-        actionParam === 'link' ||
-        state.startsWith('link_') ||
-        (savedAction === 'link' && !state.startsWith(isZalo ? 'zalo_' : 'tiktok_'))
-          ? 'link'
-          : 'login';
-
       if (error) {
-        setStatus('error');
-        setErrorMessage(
-          errorDescription ||
-          (error === 'access_denied'
-            ? `Bạn đã từ chối cấp quyền ${providerName}.`
-            : `Lỗi xác thực ${providerName}: ${error}`)
-        );
+        redirectToError(formatDisplayError(errorDescription || error, providerName));
         return;
       }
 
       if (!code) {
-        setStatus('error');
-        setErrorMessage('Không tìm thấy thông tin xác thực từ nhà cung cấp.');
+        redirectToError('Không tìm thấy thông tin xác thực từ nhà cung cấp.');
         return;
       }
 
@@ -101,7 +120,6 @@ export default function AdminAuthCallbackPage() {
         let resData;
 
         if (action === 'link') {
-          // Xử lý Liên kết tài khoản vào hồ sơ hiện tại
           if (isZalo) {
             const redirectUri = `${window.location.origin}/auth/zalo/callback?action=link`;
             let codeVerifier = null;
@@ -124,15 +142,15 @@ export default function AdminAuthCallbackPage() {
             resData = res.data;
           }
 
-          setStatus('success');
           toast.success(resData.message || `Liên kết ${providerName} thành công!`);
-          setTimeout(() => navigate('/profile', { replace: true }), 500);
+          navigate('/profile', { replace: true });
           return;
         }
 
-        // Xử lý Đăng nhập thông thường
+        // Đăng nhập thông thường
         if (isZalo) {
           const redirectUri =
+            searchParams.get('redirect_uri') ||
             import.meta.env.VITE_ZALO_REDIRECT_URI ||
             `${window.location.origin}/auth/zalo/callback`;
 
@@ -146,6 +164,7 @@ export default function AdminAuthCallbackPage() {
           resData = res.data;
         } else {
           const redirectUri =
+            searchParams.get('redirect_uri') ||
             import.meta.env.VITE_TIKTOK_REDIRECT_URI ||
             `${window.location.origin}/auth/tiktok/callback`;
 
@@ -162,8 +181,7 @@ export default function AdminAuthCallbackPage() {
         const user = resData.data.user;
 
         if (user.role === 'user') {
-          setStatus('error');
-          setErrorMessage(`Tài khoản ${providerName} này không có quyền truy cập trang quản trị!`);
+          redirectToError(`Tài khoản ${providerName} của bạn là tài khoản Khách hàng, không có quyền truy cập trang quản trị shop!`);
           return;
         }
 
@@ -173,18 +191,15 @@ export default function AdminAuthCallbackPage() {
           refreshToken: resData.data.refreshToken,
         });
 
-        setStatus('success');
         toast.success(resData.message || `Đăng nhập ${providerName} thành công!`);
-
         const targetPath = getDefaultRedirectPath(user);
-        setTimeout(() => navigate(targetPath, { replace: true }), 500);
+        navigate(targetPath, { replace: true });
       } catch (err) {
-        setStatus('error');
-        const msg =
+        const rawMsg =
           err.response?.data?.message ||
           err.message ||
           `Xác thực ${providerName} thất bại. Vui lòng thử lại!`;
-        setErrorMessage(msg);
+        redirectToError(formatDisplayError(rawMsg, providerName));
       } finally {
         if (typeof window !== 'undefined') {
           sessionStorage.removeItem('zalo_action');
@@ -198,43 +213,11 @@ export default function AdminAuthCallbackPage() {
 
   return (
     <div className="flex min-h-[100dvh] w-full items-center justify-center bg-background px-4 py-8">
-      <div className="w-full max-w-[400px] rounded-[6px] border border-border bg-card p-6 shadow-xs text-card-foreground text-center space-y-4">
-        <div className="mx-auto flex items-center justify-center w-12 h-12 rounded-full bg-muted border border-border">
-          {status === 'processing' && <Loader2 className="w-6 h-6 text-foreground animate-spin" />}
-          {status === 'success' && <CheckCircle2 className="w-6 h-6 text-emerald-600" />}
-          {status === 'error' && <AlertCircle className="w-6 h-6 text-destructive" />}
-        </div>
-
-        <div className="space-y-1">
-          <h2 className="text-base font-bold text-foreground">
-            {status === 'processing' && 'Đang xác thực tài khoản quản trị...'}
-            {status === 'success' && 'Xác thực thành công!'}
-            {status === 'error' && 'Đăng nhập không thành công'}
-          </h2>
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            {status === 'processing' && 'Hệ thống đang kiểm tra quyền quản trị của bạn, vui lòng đợi trong giây lát.'}
-            {status === 'success' && 'Đang chuyển hướng vào bảng điều khiển quản trị...'}
-            {status === 'error' && errorMessage}
-          </p>
-        </div>
-
-        {status === 'error' && (
-          <div className="pt-2 flex flex-col gap-2">
-            <Button
-              onClick={() => navigate('/login', { replace: true })}
-              className="w-full h-9 rounded-[6px] text-xs font-semibold"
-            >
-              <ArrowLeft className="mr-1.5 size-3.5" />
-              Quay lại Đăng nhập
-            </Button>
-          </div>
-        )}
-
-        {status === 'processing' && (
-          <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
-            <div className="bg-primary h-1.5 w-full rounded-full animate-pulse" />
-          </div>
-        )}
+      <div className="w-full max-w-[340px] rounded-[6px] border border-border bg-card p-6 shadow-xs text-card-foreground text-center space-y-3">
+        <Loader2 className="size-6 text-foreground animate-spin mx-auto" />
+        <p className="text-xs text-muted-foreground font-medium">
+          Đang xác thực thông tin đăng nhập...
+        </p>
       </div>
     </div>
   );

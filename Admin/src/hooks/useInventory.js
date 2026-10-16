@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { inventoryService } from '@/services/inventory.service';
+import { warehouseService } from '@/services/warehouse.service';
 
 const PO_KEY = ['purchase-orders'];
 const EXPORT_KEY = ['stock-exports'];
@@ -32,6 +33,19 @@ export const useUpdatePurchaseOrderStatus = () => {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: PO_KEY });
       qc.invalidateQueries({ queryKey: ['products'] });
+    },
+  });
+};
+
+export const useRecordPOPayment = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }) => inventoryService.recordPOPayment(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: PO_KEY });
+      qc.invalidateQueries({ queryKey: ['suppliers'] });
+      qc.invalidateQueries({ queryKey: ['supplier-debts'] });
+      qc.invalidateQueries({ queryKey: ['supplier-debt-transactions'] });
     },
   });
 };
@@ -123,3 +137,41 @@ export const useStockDocuments = (params) =>
     queryFn: () => inventoryService.getStockDocuments(params).then((r) => r.data),
     staleTime: 5_000,
   });
+
+// ==========================================
+// Warehouses & Multi-Warehouse Stock Management
+// ==========================================
+const WAREHOUSES_KEY = ['warehouses'];
+
+export const useWarehouses = (params) =>
+  useQuery({
+    queryKey: [...WAREHOUSES_KEY, params],
+    queryFn: () => warehouseService.getWarehouses(params).then((r) => r.data?.data?.data || []),
+    staleTime: 15_000,
+  });
+
+export const useWarehouseInventory = (warehouseId, params, options = {}) =>
+  useQuery({
+    queryKey: ['warehouse-inventory', warehouseId, params],
+    queryFn: () => warehouseService.getWarehouseInventory(warehouseId, params).then((r) => r.data?.data),
+    enabled: Boolean(warehouseId) && (options.enabled !== undefined ? options.enabled : true),
+    staleTime: 10_000,
+  });
+
+export const useStaffCandidates = () =>
+  useQuery({
+    queryKey: ['staff-candidates'],
+    queryFn: () => warehouseService.getStaffCandidates().then((r) => r.data?.data || []),
+    staleTime: 60_000,
+  });
+
+export const useUpdateWarehouse = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }) => warehouseService.updateWarehouse(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: WAREHOUSES_KEY });
+      qc.invalidateQueries({ queryKey: ['warehouse-inventory'] });
+    },
+  });
+};

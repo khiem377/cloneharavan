@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Laptop, Smartphone, Tablet, Clock, RefreshCw, LogOut, Loader2 } from 'lucide-react';
+import { Laptop, Smartphone, Tablet, Clock, RefreshCw, LogOut, Loader2, MapPin } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -165,11 +165,16 @@ export default function ActiveSessionsTab() {
                         )}
                       </div>
 
-                      <div className="flex items-center gap-3 text-[11px] text-muted-foreground font-mono flex-wrap">
-                        <span className="tabular-nums">IP: {session.ip || '127.0.0.1'}</span>
+                      <div className="flex items-center gap-3 text-[11px] text-muted-foreground flex-wrap">
+                        <span className="flex items-center gap-1 font-sans text-foreground/80">
+                          <MapPin size={11} className="text-primary shrink-0" />
+                          <span>{session.location || 'Hồ Chí Minh, Việt Nam'}</span>
+                        </span>
+                        <span>•</span>
+                        <span className="font-mono tabular-nums">IP: {session.ip || '127.0.0.1'}</span>
                         <span>•</span>
                         <span className="flex items-center gap-1 font-sans">
-                          <Clock size={11} className="text-muted-foreground" />
+                          <Clock size={11} className="text-muted-foreground shrink-0" />
                           {isCurrent
                             ? 'Đang hoạt động'
                             : session.lastActiveAt

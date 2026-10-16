@@ -7,6 +7,7 @@ import { MapPin, Phone, Mail } from 'lucide-react';
 import ShopLogo from '@/components/common/ShopLogo';
 import { PALETTE } from '@/constants/palette';
 import { menuService } from '@/services/menu.service';
+import { settingService } from '@/services/setting.service';
 
 // Fallback data in case API is not yet seeded or fails to load
 const DEFAULT_FOOTER_ITEMS = [
@@ -44,6 +45,7 @@ const DEFAULT_FOOTER_ITEMS = [
 export default function Footer({ initialMenu = null }) {
   const pathname = usePathname();
   const [footerMenu, setFooterMenu] = useState(initialMenu);
+  const [storeSetting, setStoreSetting] = useState(null);
 
   // Hide footer on authentication screens
   const isAuthRoute =
@@ -59,6 +61,9 @@ export default function Footer({ initialMenu = null }) {
         }
       });
     }
+    settingService.getPublicSettings().then((s) => {
+      if (s?.storeInfo) setStoreSetting(s.storeInfo);
+    });
   }, [initialMenu]);
 
   if (isAuthRoute) return null;
@@ -81,8 +86,8 @@ export default function Footer({ initialMenu = null }) {
   return (
     <footer className="w-full bg-white border-t border-slate-200 mt-auto text-slate-800">
       {/* Main Footer Container */}
-      <div className="max-w-[1320px] mx-auto px-4 py-8 lg:py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+      <div className="max-w-[1536px] 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 2xl:px-8 py-8 lg:py-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 2xl:gap-12">
           
           {/* ========================================================= */}
           {/* CỘT 1: THÔNG TIN CÔNG TY & LIÊN HỆ                       */}
@@ -93,15 +98,16 @@ export default function Footer({ initialMenu = null }) {
             </Link>
 
             <div className="text-base font-bold text-slate-900">
-              SHOP Điện Máy
+              {storeSetting?.name || 'SHOP Điện Máy'}
             </div>
 
             <p className="text-xs text-slate-600 leading-relaxed">
-              Chuyên cung cấp các thiết bị điện máy, điện tử, điện gia dụng chính hãng chất lượng cao.
+              {storeSetting?.businessName ? `${storeSetting.businessName} - ` : ''}
+              Chuyên cung cấp các thiết bị điện tử, thời trang và sản phẩm chính hãng chất lượng cao.
             </p>
 
             <div className="text-xs text-slate-600 font-medium">
-              Mã số thuế: <span className="font-semibold text-slate-800">12345678910</span>
+              Lĩnh vực: <span className="font-semibold text-slate-800">{storeSetting?.industry || 'Bán lẻ đa kênh'}</span>
             </div>
 
             {/* Thông tin liên hệ */}
@@ -111,7 +117,10 @@ export default function Footer({ initialMenu = null }) {
                 <div>
                   <span className="text-slate-500 block">Địa chỉ</span>
                   <span className="font-semibold text-slate-800">
-                    150/8 Nguyễn Duy Cung, Phường 12, Tp.HCM
+                    {storeSetting?.address?.fullAddress ||
+                      (storeSetting?.address?.street
+                        ? `${storeSetting.address.street}, ${storeSetting.address.ward}, ${storeSetting.address.district}, ${storeSetting.address.province}`
+                        : '150/8 Nguyễn Duy Cung, Phường 12, Tp.HCM')}
                   </span>
                 </div>
               </div>
@@ -121,10 +130,10 @@ export default function Footer({ initialMenu = null }) {
                 <div>
                   <span className="text-slate-500 block">Hotline</span>
                   <a
-                    href="tel:0999999999"
+                    href={`tel:${storeSetting?.hotline || storeSetting?.phone || '0999999999'}`}
                     className="font-bold text-[#284ea1] hover:underline"
                   >
-                    0999999999
+                    {storeSetting?.hotline || storeSetting?.phone || '0999999999'}
                   </a>
                 </div>
               </div>
@@ -134,10 +143,10 @@ export default function Footer({ initialMenu = null }) {
                 <div>
                   <span className="text-slate-500 block">Email</span>
                   <a
-                    href="mailto:support@egany.com"
+                    href={`mailto:${storeSetting?.supportEmail || storeSetting?.adminEmail || 'support@egany.com'}`}
                     className="font-semibold text-slate-800 hover:text-[#284ea1] transition-colors"
                   >
-                    support@egany.com
+                    {storeSetting?.supportEmail || storeSetting?.adminEmail || 'support@egany.com'}
                   </a>
                 </div>
               </div>
@@ -372,7 +381,7 @@ export default function Footer({ initialMenu = null }) {
       {/* THANH BẢN QUYỀN BOTTOM                                    */}
       {/* ========================================================= */}
       <div className="border-t border-slate-200 bg-white py-3.5">
-        <div className="max-w-[1320px] mx-auto px-4 text-center text-xs text-slate-500">
+        <div className="max-w-[1536px] 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 2xl:px-8 text-center text-xs text-slate-500">
           © Bản quyền thuộc về{' '}
           <span className="font-semibold text-slate-800">SHOP</span>
           {' '}| Cung cấp bởi{' '}

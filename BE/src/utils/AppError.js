@@ -1,14 +1,33 @@
-/**
- * Custom Application Error class
- * Allows attaching an HTTP status code to errors
- */
+
 class AppError extends Error {
-  constructor(message, statusCode) {
+  constructor(arg1, arg2 = 500, extra = {}) {
+    let message = arg1;
+    let statusCode = arg2;
+
+    if (typeof arg1 === 'number' && typeof arg2 === 'string') {
+      statusCode = arg1;
+      message = arg2;
+    }
+
     super(message);
     this.statusCode = statusCode;
     this.isOperational = true;
 
+    if (extra && typeof extra === 'object') {
+      Object.assign(this, extra);
+    }
+
+    Error.captureStackTrace(this, this.constructor);
   }
 }
 
-module.exports = { AppError };
+class ApiError extends AppError {
+  constructor(statusCode, message, extra = {}) {
+    super(statusCode, message, extra);
+  }
+}
+
+module.exports = AppError;
+module.exports.AppError = AppError;
+module.exports.ApiError = ApiError;
+module.exports.default = AppError;

@@ -49,6 +49,8 @@ const auditLogSchema = new mongoose.Schema(
         'MEDIA',
         'TAG',
         'BLOG',
+        'SETTING',
+        'SHIPPING_PROVIDER',
       ],
       required: true,
       index: true,

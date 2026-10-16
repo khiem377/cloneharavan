@@ -1,4 +1,5 @@
 import { ShieldCheck } from '@/components/ui/Icons';
+import { Warehouse } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -29,7 +30,16 @@ export default function StaffCreateModal({
   onSubmit,
   isPending,
   roles = [],
+  warehouses = [],
 }) {
+  const selectedRole = roles.find((r) => r._id === createForm.roleId);
+  const isWarehouseRole = Boolean(
+    selectedRole && (
+      ['inventory_manager', 'warehouse_clerk', 'shipping_clerk', 'stock_auditor', 'warehouse_staff', 'staff'].includes(selectedRole.code) ||
+      /kho|warehouse|inventory|stock/i.test(selectedRole.code) ||
+      /kho|thủ kho|kiểm kho/i.test(selectedRole.name)
+    )
+  );
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg rounded-[6px] border border-border p-6">
@@ -112,6 +122,35 @@ export default function StaffCreateModal({
               </select>
             </div>
           </div>
+
+          {/* Chỉ định Kho hàng phụ trách (Hiển thị tự động khi vai trò liên quan đến kho) */}
+          {isWarehouseRole && (
+            <div className="flex flex-col gap-1.5 p-3 rounded-[6px] border border-primary/30 bg-primary/5 transition-all">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                  <Warehouse size={14} className="text-primary" />
+                  Kho hàng phụ trách <span className="text-destructive">*</span>
+                </label>
+                <span className="text-[10px] text-muted-foreground font-medium">Bắt buộc cho nhân sự kho</span>
+              </div>
+              <select
+                required={isWarehouseRole}
+                value={createForm.warehouseId || ''}
+                onChange={(e) => setCreateForm({ ...createForm, warehouseId: e.target.value })}
+                className="h-9 w-full rounded-[6px] border border-input bg-background px-3 text-xs outline-none focus:border-ring transition-colors cursor-pointer"
+              >
+                <option value="">-- Chọn kho hàng phân công --</option>
+                {warehouses.map((w) => (
+                  <option key={w._id} value={w._id}>
+                    {w.name} ({w.code}) {w.isDefault ? '— [Kho Mặc Định]' : ''}
+                  </option>
+                ))}
+              </select>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                Nhân viên được gán vào kho này sẽ có quyền theo dõi tồn kho, lập và duyệt các chứng từ xuất/nhập/chuyển kho tại chi nhánh đó.
+              </p>
+            </div>
+          )}
 
           <DialogFooter className="pt-3 border-t border-border flex items-center justify-end gap-2 bg-transparent">
             <Button

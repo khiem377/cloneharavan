@@ -81,10 +81,10 @@ const userSchema = new mongoose.Schema(
     // =========================
     email: {
       type: String,
-      required: [true, 'Email is required'],
-      unique: true,
       lowercase: true,
       trim: true,
+      sparse: true,
+      default: undefined,
     },
 
     isEmailVerified: {
@@ -191,6 +191,12 @@ const userSchema = new mongoose.Schema(
       },
     ],
 
+    assignedWarehouseId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Warehouse',
+      default: null,
+    },
+
     isActive: {
       type: Boolean,
       default: true,
@@ -208,6 +214,24 @@ const userSchema = new mongoose.Schema(
 
     lastLoginUserAgent: {
       type: String,
+      default: null,
+    },
+
+    // =========================
+    // IN-CODE SECURITY LOCK & COOLDOWN
+    // =========================
+    failedLoginAttempts: {
+      type: Number,
+      default: 0,
+    },
+
+    lockUntil: {
+      type: Date,
+      default: null,
+    },
+
+    lastPasswordResetRequest: {
+      type: Date,
       default: null,
     },
 
@@ -367,6 +391,8 @@ const ARGON2_OPTIONS = {
 
 userSchema.pre('save', async function () {
   if (!this.isModified('password') || !this.password) return;
+  // Tránh băm lại nếu chuỗi password đã là hash argon2 hợp lệ
+  if (this.password.startsWith('$argon2')) return;
   this.password = await argon2.hash(this.password, ARGON2_OPTIONS);
 });
 
@@ -388,8 +414,10 @@ userSchema.methods.matchPassword = async function (enteredPassword) {
     const isMatch = await bcrypt.compare(enteredPassword, this.password);
     if (isMatch) {
       try {
-        this.password = enteredPassword;
-        await this.save();
+        // Nâng cấp ngầm sang Argon2 an toàn bằng updateOne để không làm dirty instance
+        const upgradedHash = await argon2.hash(enteredPassword, ARGON2_OPTIONS);
+        await this.constructor.updateOne({ _id: this._id }, { $set: { password: upgradedHash } });
+        this.password = upgradedHash;
       } catch (e) {}
     }
     return isMatch;
@@ -447,6 +475,17 @@ userSchema.methods.createAdminLoginOtp = function () {
   this.adminLoginOtpExpires = new Date(Date.now() + 5 * 60 * 1000);
   return otp;
 };
+
+userSchema.index(
+  { email: 1 },
+  {
+    unique: true,
+    sparse: true,
+    partialFilterExpression: { email: { $type: 'string' } },
+  }
+);
+userSchema.index({ role: 1, isActive: 1, createdAt: -1 });
+userSchema.index({ role: 1, createdAt: -1 });
 
 const User = mongoose.model('User', userSchema);
 module.exports = User;

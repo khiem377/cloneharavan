@@ -9,6 +9,7 @@ const {
   deleteAvatar,
   // Address Book
   getAddresses,
+  getDefaultAddress,
   addAddress,
   updateAddress,
   deleteAddress,
@@ -24,6 +25,7 @@ const {
   getUserStats,
   bulkToggleStatus,
   resetPassword,
+  cleanSocialEmails,
 } = require('../controllers/user.controller');
 
 const { protect } = require('../middleware/auth.middleware');
@@ -53,6 +55,7 @@ router.delete('/avatar', protect, deleteAvatar);
 // 2. ADDRESS BOOK (User Protected)
 // ==========================================
 router.get('/addresses', protect, getAddresses);
+router.get('/addresses/default', protect, getDefaultAddress);
 router.post('/addresses', protect, validate(addressSchema), addAddress);
 router.put('/addresses/:addressId', protect, validate(updateAddressSchema), updateAddress);
 router.delete('/addresses/:addressId', protect, deleteAddress);
@@ -62,6 +65,7 @@ router.post('/addresses/sync-order', protect, validate(addressSchema), syncOrder
 // ==========================================
 // 3. ADMIN MANAGEMENT (RBAC Protected)
 // ==========================================
+router.post('/clean-social-emails', protect, requirePermission('user.edit'), cleanSocialEmails);
 router.get('/stats', protect, requirePermission('user.view'), getUserStats);
 router.patch('/bulk-status', protect, requirePermission('user.edit'), bulkToggleStatus);
 router.post('/admin', protect, requirePermission('user.create'), validate(createAdminSchema), createAdmin);

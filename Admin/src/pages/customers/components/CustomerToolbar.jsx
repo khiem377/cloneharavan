@@ -50,7 +50,7 @@ export default function CustomerToolbar({
             <span>Xuất CSV</span>
           </Button>
 
-          <ColumnToggleDropdown {...columnVisibility} />
+          <ColumnToggleDropdown columnVisibility={columnVisibility} />
         </div>
       </div>
 

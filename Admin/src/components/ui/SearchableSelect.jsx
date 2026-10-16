@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { ChevronDown, Check, Search, Plus } from './Icons';
+import { cn } from '@/lib/utils';
 
 export default function SearchableSelect({
   options = [],
@@ -11,6 +12,7 @@ export default function SearchableSelect({
   className = '',
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [openUpwards, setOpenUpwards] = useState(false);
   const [search, setSearch] = useState('');
   const containerRef = useRef(null);
   const searchInputRef = useRef(null);
@@ -50,6 +52,19 @@ export default function SearchableSelect({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Tự động tính hướng mở (trên hay dưới) dựa trên vị trí màn hình
+  useEffect(() => {
+    if (isOpen && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      if (spaceBelow < 250 && rect.top > 250) {
+        setOpenUpwards(true);
+      } else {
+        setOpenUpwards(false);
+      }
+    }
+  }, [isOpen]);
+
   // Tự động focus ô tìm kiếm khi mở dropdown
   useEffect(() => {
     if (isOpen && searchInputRef.current) {
@@ -73,7 +88,10 @@ export default function SearchableSelect({
   );
 
   return (
-    <div ref={containerRef} className={`relative ${className || 'w-full'}`}>
+    <div
+      ref={containerRef}
+      className={cn('relative', isOpen ? 'z-50' : 'z-10', className || 'w-full')}
+    >
       {/* Trigger Button */}
       <button
         type="button"
@@ -91,7 +109,12 @@ export default function SearchableSelect({
 
       {/* Popover Dropdown */}
       {isOpen && (
-        <div className="absolute top-full left-0 right-0 z-50 mt-1 min-w-[180px] rounded-lg border border-border bg-popover text-popover-foreground shadow-lg overflow-hidden animate-in fade-in-50 zoom-in-95 duration-100">
+        <div
+          className={cn(
+            'absolute left-0 right-0 z-50 min-w-[180px] rounded-[6px] border border-border bg-popover text-popover-foreground shadow-lg overflow-hidden animate-in fade-in-50 duration-100',
+            openUpwards ? 'bottom-full mb-1 zoom-in-95 origin-bottom' : 'top-full mt-1 zoom-in-95 origin-top'
+          )}
+        >
           {/* Search Box Header */}
           <div className="p-2 border-b border-border bg-muted/30 flex items-center gap-2">
             <Search className="size-3.5 text-muted-foreground shrink-0" />

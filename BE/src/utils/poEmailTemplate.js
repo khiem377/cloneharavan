@@ -111,7 +111,7 @@ function generatePOEmailHTML({ po, supplier, customNote = '' }) {
 
                 <div style="font-size: 13px; color: #64748b; line-height: 1.6; border-t: 1px solid #e2e8f0; padding-top: 16px;">
                   Trân trọng cảm ơn Quý Nhà Cung Cấp đối tác!<br/>
-                  <strong>Phòng Cung Ứng & Quản Lý Kho Thành Phẩm — SHOP</strong>
+                  <strong>Phòng Cung Ứng & Quản Lý Kho Hàng — SHOP</strong>
                 </div>
               </td>
             </tr>

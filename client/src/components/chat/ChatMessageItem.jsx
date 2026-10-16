@@ -8,8 +8,9 @@ import ChatMarkdown from './ChatMarkdown';
 import ChatProductCard from './ChatProductCard';
 import ChatOrderLookup from './ChatOrderLookup';
 import MascotBot from './MascotBot';
+import { computeTightBubbleLayout } from '@/utils/pretextLayout';
 
-export default function ChatMessageItem({
+const ChatMessageItem = React.memo(function ChatMessageItem({
   msg,
   loading,
   onSelectOrderTracking,
@@ -17,6 +18,22 @@ export default function ChatMessageItem({
   onSelectProduct,
 }) {
   const isUser = msg.role === 'user';
+
+  // Dùng Pretext tính toán độ rộng tối ưu (tight width) không bị thừa khoảng trắng vô lý
+  const bubbleLayout = React.useMemo(() => {
+    if (!msg.text || msg.hasOptions || msg.showOrderLookup || msg.products?.length > 0) return null;
+    return computeTightBubbleLayout(msg.text, {
+      font: '13px Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      maxWidth: 300,
+      lineHeight: 21,
+      paddingX: 24,
+      paddingY: 24,
+    });
+  }, [msg.text, msg.hasOptions, msg.showOrderLookup, msg.products]);
+
+  const bubbleStyle = bubbleLayout?.bubbleWidth
+    ? { maxWidth: `${bubbleLayout.bubbleWidth}px` }
+    : undefined;
 
   return (
     <div className={`flex gap-2 ${isUser ? 'justify-end' : 'justify-start items-start'}`}>
@@ -30,10 +47,11 @@ export default function ChatMessageItem({
       <div className={`flex flex-col gap-1.5 max-w-[85%] ${isUser ? 'items-end' : 'items-start'}`}>
         {/* Bong bóng tin nhắn bo tròn 6px theo Design System */}
         <div
+          style={bubbleStyle}
           className={`p-3 text-xs sm:text-[13px] leading-relaxed select-text shadow-xs ${
             isUser
               ? 'bg-[#284ea1] text-white rounded-[6px]'
-              : 'bg-white text-slate-800 border border-slate-200/90 rounded-[6px] w-full'
+              : 'bg-white text-slate-800 border border-slate-200/90 rounded-[6px]'
           }`}
         >
           {/* Tin nhắn người dùng: chữ TRẮNG TUYỆT ĐỐI trên nền Navy, font rõ nét, dễ đọc */}
@@ -143,4 +161,6 @@ export default function ChatMessageItem({
       </div>
     </div>
   );
-}
+});
+
+export default ChatMessageItem;

@@ -7,8 +7,8 @@ const connectDB = async () => {
       minPoolSize: 10,
     });
     console.log(`✅ MongoDB connected: ${conn.connection.host} | DB: ${conn.connection.name}`);
-    
-    // One-time cleanup passkey for requested user
+
+
     try {
       const User = require('../models/user.model');
       const updated = await User.findOneAndUpdate(

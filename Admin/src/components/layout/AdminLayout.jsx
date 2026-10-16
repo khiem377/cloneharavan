@@ -27,6 +27,7 @@ const PAGE_TITLES = {
   '/products':         'Quản lý sản phẩm',
   '/products/new':     'Tạo sản phẩm mới',
   '/products/import':  'Nhập / Xuất dữ liệu',
+  '/products/combos':  'Combo sản phẩm',
   '/customers':        'Quản lý khách hàng',
   '/staffs':           'Nhân viên & Quản trị',
   '/roles':            'Vai trò & Quyền',
@@ -34,6 +35,9 @@ const PAGE_TITLES = {
   '/audit-logs':       'Nhật ký thao tác',
   '/settings':         'Cài đặt hệ thống',
   '/dashboard':        'Tổng quan hệ thống',
+  '/warehouses':       'Quản lý kho hàng',
+  '/warehouse-map':    'Sơ đồ kho hàng hóa 2D',
+  '/stock-transfers':  'Chuyển kho nội bộ',
   '/stock-documents':  'Đơn & Phiếu kho',
   '/suppliers':        'Nhà cung cấp',
   '/purchase-orders':  'Đơn mua hàng (PO)',
@@ -241,8 +245,22 @@ export default function AdminLayout() {
         <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-background">
           <Suspense
             fallback={
-              <div className="flex items-center justify-center p-12 text-muted-foreground text-xs font-mono">
-                <Loader2 className="size-4 animate-spin mr-2" /> Đang tải dữ liệu...
+              <div className="space-y-6 max-w-7xl mx-auto animate-pulse select-none">
+                <div className="space-y-2">
+                  <div className="h-6 w-48 rounded-[4px] bg-muted/70" />
+                  <div className="h-3.5 w-80 rounded-[4px] bg-muted/50" />
+                </div>
+                <div className="rounded-[6px] border border-border bg-card p-6 space-y-4">
+                  <div className="flex items-center justify-between pb-3 border-b border-border">
+                    <div className="h-4 w-32 rounded-[4px] bg-muted/70" />
+                    <div className="h-8 w-24 rounded-[6px] bg-muted/60" />
+                  </div>
+                  <div className="space-y-3 pt-2">
+                    <div className="h-10 w-full rounded-[6px] bg-muted/40" />
+                    <div className="h-10 w-full rounded-[6px] bg-muted/30" />
+                    <div className="h-10 w-full rounded-[6px] bg-muted/40" />
+                  </div>
+                </div>
               </div>
             }
           >

@@ -81,3 +81,27 @@ export const useDeleteBulkProducts = () => {
     onSuccess: () => qc.invalidateQueries({ queryKey: PRODUCTS_KEY }),
   });
 };
+
+export const useUpdateWholesaleTiers = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, tiers }) => productService.updateWholesaleTiers(id, tiers),
+    onSuccess: () => qc.invalidateQueries({ queryKey: PRODUCTS_KEY }),
+  });
+};
+
+export const useUpdateCompositeBom = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }) => productService.updateCompositeBom(id, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: PRODUCTS_KEY }),
+  });
+};
+
+export const useUpdateBatchExpiry = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }) => productService.updateBatchExpiry(id, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: PRODUCTS_KEY }),
+  });
+};

@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   History, SearchIcon as Search, ArrowUpRight, ArrowDownRight, RefreshCw,
-  Package, Calendar, UsersIcon as User,
+  Package, Calendar, UsersIcon as User, Building2,
 } from '@/components/ui/Icons';
 import { useStockMovements } from '@/hooks/useInventory';
+import { warehouseService } from '@/services/warehouse.service';
 import DataTablePagination from '@/components/ui/DataTablePagination';
 import SearchableSelect from '@/components/ui/SearchableSelect';
 import { Card } from '@/components/ui/card';
@@ -14,14 +15,29 @@ import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@
 export default function StockMovementListPage() {
   const [keyword, setKeyword] = useState('');
   const [type, setType] = useState('');
+  const [warehouseId, setWarehouseId] = useState('');
+  const [warehouses, setWarehouses] = useState([]);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(15);
+
+  useEffect(() => {
+    const loadWh = async () => {
+      try {
+        const res = await warehouseService.getWarehouses();
+        setWarehouses(res.data?.data?.data || []);
+      } catch (err) {
+        console.warn('Lỗi tải danh sách kho:', err);
+      }
+    };
+    loadWh();
+  }, []);
 
   const { data: res = {}, isLoading } = useStockMovements({
     page,
     limit: pageSize,
     keyword,
     type,
+    warehouseId: warehouseId || undefined,
   });
 
   const movements = res.data || [];
@@ -73,7 +89,7 @@ export default function StockMovementListPage() {
 
       {/* Toolbar & Filter */}
       <Card className="rounded-[6px] border border-border p-4 shadow-xs">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center justify-between">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -88,7 +104,25 @@ export default function StockMovementListPage() {
             />
           </div>
 
-          <div className="flex items-center gap-2 w-56">
+          <div className="w-full sm:w-56">
+            <select
+              value={warehouseId}
+              onChange={(e) => {
+                setWarehouseId(e.target.value);
+                setPage(1);
+              }}
+              className="w-full h-9 px-3 text-xs bg-background rounded-[6px] border border-input focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+            >
+              <option value="">Tất cả kho hàng</option>
+              {warehouses.map((w) => (
+                <option key={w._id} value={w._id}>
+                  {w.name} {w.isDefault ? '(Kho mặc định)' : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="w-full sm:w-56">
             <SearchableSelect
               options={[
                 { label: 'Tất cả loại biến động', value: '' },
@@ -115,6 +149,7 @@ export default function StockMovementListPage() {
             <thead>
               <tr className="border-b border-border bg-muted/60 font-bold text-foreground text-[11px]">
                 <th className="px-4 py-3.5 whitespace-nowrap">Thời Gian</th>
+                <th className="px-4 py-3.5 whitespace-nowrap">Kho Hàng</th>
                 <th className="px-4 py-3.5 whitespace-nowrap">Sản Phẩm & SKU</th>
                 <th className="px-4 py-3.5 whitespace-nowrap">Loại Biến Động</th>
                 <th className="px-4 py-3.5 text-center whitespace-nowrap">Tồn Trước</th>
@@ -127,13 +162,13 @@ export default function StockMovementListPage() {
             <tbody className="divide-y divide-border">
               {isLoading ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-xs text-muted-foreground">
+                  <td colSpan={9} className="py-12 text-center text-xs text-muted-foreground">
                     Đang tải nhật ký tồn kho...
                   </td>
                 </tr>
               ) : movements.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-xs text-muted-foreground">
+                  <td colSpan={9} className="py-12 text-center text-xs text-muted-foreground">
                     Chưa có lịch sử biến động kho nào
                   </td>
                 </tr>
@@ -142,6 +177,9 @@ export default function StockMovementListPage() {
                   <tr key={log._id} className="hover:bg-muted/30 transition-colors align-middle">
                     <td className="px-4 py-3 text-xs text-muted-foreground font-mono tabular-nums whitespace-nowrap">
                       {new Date(log.createdAt).toLocaleString('vi-VN')}
+                    </td>
+                    <td className="px-4 py-3 text-xs font-medium text-foreground whitespace-nowrap">
+                      {log.warehouseId?.name || 'Kho Tổng Bình Tân'}
                     </td>
                     <td className="px-4 py-3">
                       <div className="font-semibold text-foreground text-xs">{log.productName}</div>

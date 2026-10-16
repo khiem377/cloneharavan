@@ -19,6 +19,8 @@ const CUSTOMER_COLUMNS = [
   { id: 'select', label: 'Chọn', defaultVisible: true, alwaysVisible: true },
   { id: 'customer', label: 'Khách Hàng', defaultVisible: true, alwaysVisible: true },
   { id: 'contact', label: 'Liên Hệ', defaultVisible: true },
+  { id: 'orders', label: 'Đơn Hàng', defaultVisible: true },
+  { id: 'totalSpent', label: 'Tổng Chi Tiêu', defaultVisible: true },
   { id: 'address', label: 'Địa Chỉ Mặc Định', defaultVisible: true },
   { id: 'createdAt', label: 'Ngày Tham Gia', defaultVisible: true },
   { id: 'status', label: 'Trạng Thái', defaultVisible: true },
@@ -38,7 +40,7 @@ export default function CustomerListPage() {
   const [selectedIds, setSelectedIds] = useState([]);
   const [bulkConfirm, setBulkConfirm] = useState(null);
 
-  const columnVisibility = useColumnVisibility('admin_customers_columns', CUSTOMER_COLUMNS);
+  const columnVisibility = useColumnVisibility('admin_customers_columns_v2', CUSTOMER_COLUMNS);
   const { isColumnVisible } = columnVisibility;
 
   const { data: statsRes, refetch: refetchStats } = useUserStats('customer');

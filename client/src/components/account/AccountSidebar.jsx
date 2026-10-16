@@ -17,6 +17,7 @@ import { Card } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Separator } from '../ui/separator';
+import { isSyntheticEmail, getDisplayAccountIdentifier } from '../../utils/userUtils';
 
 export default function AccountSidebar({
   user,
@@ -127,9 +128,7 @@ export default function AccountSidebar({
             {displayName}
           </h3>
           <p className="text-[11px] text-slate-500 font-mono truncate">
-            {user?.phone
-              ? `${user.phone.slice(0, 3)}****${user.phone.slice(-3)}`
-              : user?.email || 'Tài khoản mua hàng'}
+            {getDisplayAccountIdentifier(user)}
           </p>
           <div className="pt-0.5">
             <Badge

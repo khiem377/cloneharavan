@@ -12,6 +12,7 @@ router.get('/:id/preview-email', protect, requirePermission('purchase_order.view
 router.post('/', protect, requirePermission('purchase_order.create'), purchaseOrderController.createPurchaseOrder);
 router.post('/preview-excel', protect, requirePermission('purchase_order.view'), purchaseOrderController.previewExcelSlip);
 router.post('/:id/send-po', protect, requirePermission('purchase_order.manage'), purchaseOrderController.sendPOToSupplier);
+router.post('/:id/payment', protect, requirePermission('purchase_order.manage'), purchaseOrderController.recordPOPayment);
 router.patch('/:id/status', protect, requirePermission('purchase_order.manage'), purchaseOrderController.updatePurchaseOrderStatus);
 
 module.exports = router;

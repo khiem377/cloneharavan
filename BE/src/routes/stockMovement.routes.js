@@ -6,11 +6,12 @@ const { requirePermission } = require('../middleware/permission.middleware');
 
 router.get('/', protect, requirePermission('stock_movement.view'), async (req, res, next) => {
   try {
-    const { page = 1, limit = 20, productId, type, keyword = '' } = req.query;
+    const { page = 1, limit = 20, productId, type, warehouseId, keyword = '' } = req.query;
     const query = {};
 
     if (productId) query.productId = productId;
     if (type) query.type = type;
+    if (warehouseId) query.warehouseId = warehouseId;
     if (keyword) {
       query.$or = [
         { productName: { $regex: keyword, $options: 'i' } },
@@ -23,6 +24,7 @@ router.get('/', protect, requirePermission('stock_movement.view'), async (req, r
     const skip = (page - 1) * limit;
     const [data, total] = await Promise.all([
       StockMovement.find(query)
+        .populate('warehouseId', 'name code')
         .populate('productId', 'name code thumbnail')
         .populate('variantId', 'displayName color size options')
         .populate('createdById', 'name email')

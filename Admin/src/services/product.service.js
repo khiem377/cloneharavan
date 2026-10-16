@@ -22,4 +22,7 @@ export const productService = {
   },
   syncImages: () => api.post('/products/sync-images'),
   searchInventory: (keyword) => api.get('/products/search-inventory', { params: { keyword } }),
+  updateWholesaleTiers: (id, tiers) => api.patch(`/products/${id}/wholesale-tiers`, { tiers }),
+  updateCompositeBom: (id, data) => api.patch(`/products/${id}/composite-bom`, data),
+  updateBatchExpiry: (id, data) => api.patch(`/products/${id}/batch-expiry`, data),
 };

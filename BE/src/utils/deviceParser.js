@@ -3,22 +3,58 @@ const axios = require('axios');
 // Cache tra cứu GeoIP theo IP để tránh gọi liên tục
 const geoCache = new Map();
 
-/**
- * Tra cứu địa lý tỉnh thành, quốc gia từ IP
- */
+const formatCityName = (city = '', region = '') => {
+  const raw = `${city} ${region}`.toLowerCase();
+  if (raw.includes('ho chi minh') || raw.includes('hồ chí minh')) return 'Hồ Chí Minh';
+  if (raw.includes('hanoi') || raw.includes('ha noi') || raw.includes('hà nội')) return 'Hà Nội';
+  if (raw.includes('da nang') || raw.includes('đà nẵng')) return 'Đà Nẵng';
+  if (raw.includes('can tho') || raw.includes('cần thơ')) return 'Cần Thơ';
+  if (raw.includes('hai phong') || raw.includes('hải phòng')) return 'Hải Phòng';
+  if (raw.includes('bien hoa') || raw.includes('biên hòa') || raw.includes('dong nai') || raw.includes('đồng nai')) return 'Đồng Nai';
+  if (raw.includes('binh duong') || raw.includes('bình dương') || raw.includes('thu dau mot')) return 'Bình Dương';
+  if (raw.includes('hue') || raw.includes('thừa thiên')) return 'Huế';
+  if (raw.includes('nha trang') || raw.includes('khánh hòa')) return 'Nha Trang';
+  if (raw.includes('vung tau') || raw.includes('vũng tàu')) return 'Vũng Tàu';
+  return city || region || 'Việt Nam';
+};
+
+const formatCountry = (c = '') => {
+  if (!c || c.toLowerCase() === 'vietnam' || c.toLowerCase() === 'viet nam') return 'Việt Nam';
+  return c;
+};
+
 const lookupGeoLocation = async (ip) => {
-  if (!ip) return 'Việt Nam';
-  
+  if (!ip) return 'Hồ Chí Minh, Việt Nam';
+
   const cleanIp = ip.replace('::ffff:', '').trim();
-  
-  if (
+
+  const isPrivateOrLocal =
     cleanIp === '127.0.0.1' ||
     cleanIp === '::1' ||
     cleanIp === 'localhost' ||
     cleanIp.startsWith('192.168.') ||
     cleanIp.startsWith('10.') ||
-    cleanIp.startsWith('172.16.')
-  ) {
+    cleanIp.startsWith('172.16.');
+
+  if (isPrivateOrLocal) {
+    if (geoCache.has('__local_public_ip__')) {
+      return geoCache.get('__local_public_ip__');
+    }
+    try {
+      // Khi phát triển ở localhost / mạng nội bộ, tra cứu IP ngoại mạng (WAN) thực tế của máy
+      const res = await axios.get(
+        'http://ip-api.com/json/?fields=status,country,city,regionName',
+        { timeout: 2500 }
+      );
+      if (res.data && res.data.status === 'success') {
+        const city = formatCityName(res.data.city, res.data.regionName);
+        const country = formatCountry(res.data.country);
+        const loc = `${city}, ${country}`;
+        geoCache.set('__local_public_ip__', loc);
+        geoCache.set(cleanIp, loc);
+        return loc;
+      }
+    } catch (err) {}
     return 'Hồ Chí Minh, Việt Nam';
   }
 
@@ -32,8 +68,8 @@ const lookupGeoLocation = async (ip) => {
       { timeout: 2500 }
     );
     if (res.data && res.data.status === 'success') {
-      const city = res.data.city || res.data.regionName || 'Hồ Chí Minh';
-      const country = res.data.country || 'Việt Nam';
+      const city = formatCityName(res.data.city, res.data.regionName);
+      const country = formatCountry(res.data.country);
       const loc = `${city}, ${country}`;
       geoCache.set(cleanIp, loc);
       return loc;
@@ -52,7 +88,7 @@ const lookupGeoLocation = async (ip) => {
  */
 const parseDeviceInfo = (userAgent = '', ip = '127.0.0.1') => {
   const ua = userAgent || '';
-  
+
   let browser = 'Chrome';
   let os = 'Windows';
   let deviceType = 'desktop';
@@ -107,8 +143,10 @@ const parseDeviceInfo = (userAgent = '', ip = '127.0.0.1') => {
 
   // Mặc định địa điểm
   let location = 'Hồ Chí Minh, Việt Nam';
-  if (cleanIp && !cleanIp.includes('127.0.0.1') && cleanIp !== '::1') {
-    location = geoCache.get(cleanIp) || 'Việt Nam';
+  if (geoCache.has(cleanIp)) {
+    location = geoCache.get(cleanIp);
+  } else if (geoCache.has('__local_public_ip__')) {
+    location = geoCache.get('__local_public_ip__');
   }
 
   return {

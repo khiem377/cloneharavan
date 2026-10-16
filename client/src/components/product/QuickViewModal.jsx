@@ -293,7 +293,7 @@ export const QuickViewModal = () => {
       sku: selectedVariant?.sku,
       quantity,
     };
-    await addToCart(payload);
+    await addToCart(payload, { isBuyNow: true });
     closeQuickView();
     router.push('/cart');
   };
@@ -423,10 +423,6 @@ export const QuickViewModal = () => {
                         )}
                       </span>
                     )}
-                    <span>|</span>
-                    <span>
-                      Mã: <strong className="text-gray-800">{sku}</strong>
-                    </span>
                   </div>
 
                   {/* Compare Link */}

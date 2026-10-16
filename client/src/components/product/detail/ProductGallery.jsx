@@ -6,8 +6,8 @@ import { ChevronLeft, ChevronRight, Maximize2, X } from 'lucide-react';
 const FALLBACK_IMAGE =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120' fill='none'%3E%3Crect width='120' height='120' rx='6' fill='%23f8fafc'/%3E%3Crect x='30' y='35' width='60' height='45' rx='4' stroke='%23cbd5e1' stroke-width='2' fill='none'/%3E%3Cpolyline points='48 80 40 90 80 90 72 80' stroke='%23cbd5e1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E";
 
-const ZOOM_LEVEL = 2.4;
-const ZOOM_BOX_SIZE = 460;
+const ZOOM_LEVEL = 2.2;
+const ZOOM_BOX_SIZE = 380;
 
 export default function ProductGallery({
   product,
@@ -124,10 +124,7 @@ export default function ProductGallery({
   }, [currentImage]);
 
   /**
-   * Tính toán vị trí Zoom CHUẨN XÁC cho ảnh Full tràn viền (object-cover):
-   * Ảnh lấp đầy 100% khung hình giúp các badge thông tin (Giảm giá, Flash Sale, HOT)
-   * nằm ngay ngắn, ăn khớp trên góc ảnh sản phẩm.
-   * Vùng Lens và Zoom Box phóng to đồng bộ 1:1 chuẩn xác không bị méo tỉ lệ.
+   * Tính toán vị trí Zoom CHUẨN XÁC cho ảnh dạng object-contain
    */
   const handleMouseMove = useCallback((e) => {
     if (!imageContainerRef.current || !mainImageRef.current) return;
@@ -141,27 +138,30 @@ export default function ProductGallery({
     const nw = naturalSize.width || mainImageRef.current.naturalWidth || cw;
     const nh = naturalSize.height || mainImageRef.current.naturalHeight || ch;
 
-    // Tính kích thước và toạ độ hiển thị thực tế của ảnh dưới cơ chế object-cover
-    const coverScale = Math.max(cw / nw, ch / nh);
-    const rw = nw * coverScale;
-    const rh = nh * coverScale;
+    // Tính kích thước và toạ độ hiển thị thực tế của ảnh dưới cơ chế object-contain
+    const padding = 16;
+    const availW = cw - padding * 2;
+    const availH = ch - padding * 2;
+    const containScale = Math.min(availW / nw, availH / nh);
+    const rw = nw * containScale;
+    const rh = nh * containScale;
     const offsetX = (cw - rw) / 2;
     const offsetY = (ch - rh) / 2;
 
     // Kích thước ô Lens trên khung ảnh chính
-    const lensW = Math.min(cw, ZOOM_BOX_SIZE / ZOOM_LEVEL);
-    const lensH = Math.min(ch, ZOOM_BOX_SIZE / ZOOM_LEVEL);
+    const lensW = Math.min(rw, ZOOM_BOX_SIZE / ZOOM_LEVEL);
+    const lensH = Math.min(rh, ZOOM_BOX_SIZE / ZOOM_LEVEL);
 
     // Tọa độ con trỏ chuột trong container
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
 
-    // Giới hạn lens nằm trọn vẹn trong khung ảnh
+    // Giới hạn lens nằm trọn vẹn trong vùng hiển thị ảnh thực tế
     const targetLensX = mouseX - lensW / 2;
     const targetLensY = mouseY - lensH / 2;
 
-    const clampedLensX = Math.max(0, Math.min(targetLensX, cw - lensW));
-    const clampedLensY = Math.max(0, Math.min(targetLensY, ch - lensH));
+    const clampedLensX = Math.max(offsetX, Math.min(targetLensX, offsetX + rw - lensW));
+    const clampedLensY = Math.max(offsetY, Math.min(targetLensY, offsetY + rh - lensH));
 
     setLensStyle({
       width: `${lensW}px`,
@@ -171,7 +171,7 @@ export default function ProductGallery({
       display: 'block',
     });
 
-    // Cập nhật vị trí và kích thước ảnh phóng to trong Zoom Box (chuẩn 1:1 theo lens)
+    // Cập nhật vị trí và kích thước ảnh phóng to trong Zoom Box
     setZoomedImageStyle({
       width: `${rw * ZOOM_LEVEL}px`,
       height: `${rh * ZOOM_LEVEL}px`,
@@ -229,7 +229,7 @@ export default function ProductGallery({
   };
 
   return (
-    <div className="flex flex-col gap-3 relative">
+    <div className="flex flex-col gap-3 relative max-w-[440px] 2xl:max-w-[460px] mx-auto w-full">
       {/* KHUNG ẢNH CHÍNH & VÙNG HOVER KÍNH LÚP */}
       <div
         ref={imageContainerRef}
@@ -237,22 +237,22 @@ export default function ProductGallery({
         onMouseLeave={handleMouseLeave}
         onMouseMove={handleMouseMove}
         onClick={() => setIsLightboxOpen(true)}
-        className="relative w-full aspect-square bg-white border border-slate-200 rounded-[6px] overflow-hidden select-none flex items-center justify-center cursor-zoom-in group"
+        className="relative w-full aspect-square bg-white border border-slate-200 rounded-[6px] overflow-hidden select-none flex items-center justify-center cursor-zoom-in group p-3 sm:p-4 shadow-2xs"
       >
         {/* Badges dạng text thuần túy - Chuẩn quy tắc không emoji */}
-        <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5 items-start pointer-events-none">
+        <div className="absolute top-2.5 left-2.5 z-10 flex flex-col gap-1 items-start pointer-events-none">
           {isFlashSale && (
-            <span className="inline-flex items-center px-2 py-0.5 rounded-[4px] bg-red-600 text-white text-[11px] font-bold tracking-wider uppercase">
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded-[4px] bg-red-600 text-white text-[10px] font-bold tracking-wider uppercase">
               FLASH SALE
             </span>
           )}
           {discountPercent > 0 && (
-            <span className="inline-flex items-center px-2 py-0.5 rounded-[4px] bg-red-600 text-white text-[11px] font-bold">
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded-[4px] bg-red-600 text-white text-[10px] font-bold">
               -{discountPercent}%
             </span>
           )}
           {product?.isHot && !isFlashSale && (
-            <span className="inline-flex items-center px-2 py-0.5 rounded-[4px] bg-amber-500 text-white text-[11px] font-bold tracking-wider uppercase">
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded-[4px] bg-amber-500 text-white text-[10px] font-bold tracking-wider uppercase">
               HOT
             </span>
           )}
@@ -265,38 +265,38 @@ export default function ProductGallery({
             e.stopPropagation();
             setIsLightboxOpen(true);
           }}
-          className="absolute top-3 right-3 z-10 w-8 h-8 rounded-[6px] bg-white/90 border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+          className="absolute top-2.5 right-2.5 z-10 w-7 h-7 rounded-[4px] bg-white/90 border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
           title="Xem ảnh toàn màn hình"
           aria-label="Phóng to ảnh"
         >
-          <Maximize2 className="size-4" />
+          <Maximize2 className="size-3.5" />
         </button>
 
-        {/* Ảnh chính hiển thị Full khung (object-cover) */}
-        <div className="relative w-full h-full flex items-center justify-center pointer-events-none">
+        {/* Ảnh chính hiển thị vừa vặn, cân đối (object-contain) */}
+        <div className="relative w-full h-full flex items-center justify-center pointer-events-none p-1 sm:p-2">
           <img
             ref={mainImageRef}
             src={currentImage}
             alt={product?.name || 'Ảnh sản phẩm'}
-            className="w-full h-full object-cover"
+            className="max-w-full max-h-full w-auto h-auto object-contain"
             onLoad={handleImageLoad}
             loading="eager"
           />
         </div>
 
-        {/* Khung ô kính mờ (Lens) bám sát vùng ảnh thực tế - KHÔNG lệch ra ngoài */}
+        {/* Khung ô kính mờ (Lens) bám sát vùng ảnh thực tế */}
         {isHovering && (
           <div
-            className="hidden lg:block absolute border-2 border-[#284ea1] bg-[#284ea1]/10 pointer-events-none rounded-[4px]"
+            className="hidden lg:block absolute border border-[#284ea1] bg-[#284ea1]/10 pointer-events-none rounded-[4px]"
             style={lensStyle}
           />
         )}
       </div>
 
-      {/* CỬA SỔ ZOOM CHI TIẾT (LOUPE ZOOM BOX - CHUẨN HARAVAN / TIKI / AMAZON) */}
+      {/* CỬA SỔ ZOOM CHI TIẾT (LOUPE ZOOM BOX) */}
       {isHovering && (
         <div
-          className="hidden lg:block absolute left-[103%] top-0 w-[460px] h-[460px] bg-white border border-slate-200 rounded-[6px] overflow-hidden z-40 shadow-md pointer-events-none"
+          className="hidden lg:block absolute left-[103%] top-0 w-[380px] h-[380px] bg-white border border-slate-200 rounded-[6px] overflow-hidden z-40 shadow-md pointer-events-none"
         >
           <img
             src={currentImage}
@@ -310,14 +310,14 @@ export default function ProductGallery({
       {/* DẢI THUMBNAILS (Rê chuột qua là đổi ảnh ngay) */}
       {allImages.length > 1 && (
         <div className="relative flex items-center">
-          {allImages.length > 4 && (
+          {allImages.length > 5 && (
             <button
               type="button"
               onClick={() => scrollThumbs('left')}
-              className="p-1.5 rounded-[6px] border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-100 mr-1.5 shrink-0 transition-colors cursor-pointer active:scale-[0.98]"
+              className="p-1 rounded-[4px] border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-100 mr-1 shrink-0 transition-colors cursor-pointer active:scale-[0.98]"
               aria-label="Ảnh trước"
             >
-              <ChevronLeft className="size-4" />
+              <ChevronLeft className="size-3.5" />
             </button>
           )}
 
@@ -334,17 +334,17 @@ export default function ProductGallery({
                   type="button"
                   onClick={() => handleThumbnailSelect(index)}
                   onMouseEnter={() => handleThumbnailSelect(index)}
-                  className={`relative w-16 h-16 sm:w-18 sm:h-18 shrink-0 rounded-[6px] bg-slate-50 transition-all cursor-pointer overflow-hidden active:scale-[0.98] ${
+                  className={`relative w-13 h-13 sm:w-14 sm:h-14 shrink-0 rounded-[4px] bg-white transition-all cursor-pointer overflow-hidden p-1 active:scale-[0.98] ${
                     isActive
-                      ? 'border-2 border-[#284ea1]'
-                      : 'border border-slate-200 hover:border-slate-400 opacity-70 hover:opacity-100'
+                      ? 'border-2 border-[#284ea1] ring-1 ring-[#284ea1]'
+                      : 'border border-slate-200 hover:border-slate-400 opacity-75 hover:opacity-100'
                   }`}
                   aria-label={`Xem ảnh ${index + 1}`}
                 >
                   <img
                     src={imgUrl}
                     alt={`Thumbnail ${index + 1}`}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-contain"
                     onError={(e) => {
                       e.currentTarget.parentElement.style.display = 'none';
                     }}
@@ -354,14 +354,14 @@ export default function ProductGallery({
             })}
           </div>
 
-          {allImages.length > 4 && (
+          {allImages.length > 5 && (
             <button
               type="button"
               onClick={() => scrollThumbs('right')}
-              className="p-1.5 rounded-[6px] border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-100 ml-1.5 shrink-0 transition-colors cursor-pointer active:scale-[0.98]"
-              aria-label="Ảnh kế tiếp"
+              className="p-1 rounded-[4px] border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-100 ml-1 shrink-0 transition-colors cursor-pointer active:scale-[0.98]"
+              aria-label="Ảnh tiếp theo"
             >
-              <ChevronRight className="size-4" />
+              <ChevronRight className="size-3.5" />
             </button>
           )}
         </div>

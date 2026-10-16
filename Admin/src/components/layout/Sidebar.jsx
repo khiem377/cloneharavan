@@ -84,6 +84,7 @@ const NAV_GROUPS = [
           { to: '/products', icon: ProductListNavIcon, label: 'Danh sách sản phẩm', permission: 'product.view' },
           { to: '/products/new', icon: ProductAddNavIcon, label: 'Thêm sản phẩm mới', permission: 'product.create' },
           { to: '/products/import', icon: ProductImportNavIcon, label: 'Nhập / Xuất Excel', permission: 'product.create' },
+          { to: '/products/combos', icon: VariantsNavIcon, label: 'Combo sản phẩm', permission: 'product.view' },
           { to: '/categories', icon: CategoriesIcon, label: 'Danh mục sản phẩm', permission: 'category.manage' },
           { to: '/brands', icon: BrandsIcon, label: 'Thương hiệu', permission: 'brand.manage' },
           { to: '/products?view=variants', icon: VariantsNavIcon, label: 'Quản lý biến thể', permission: 'product.view' },
@@ -99,6 +100,9 @@ const NAV_GROUPS = [
         label: 'Quản lý Kho hàng',
         permission: 'purchase_order.view',
         children: [
+          { to: '/warehouses', icon: WarehouseNavIcon, label: 'Danh sách kho hàng', permission: 'purchase_order.view' },
+          // { to: '/warehouse-map', icon: StockDocNavIcon, label: 'Sơ đồ mặt bằng kho (2D)', permission: 'purchase_order.view' }, // Tạm ẩn, phát triển trong tương lai
+          { to: '/stock-transfers', icon: StockHistoryNavIcon, label: 'Chuyển kho nội bộ', permission: 'purchase_order.view' },
           { to: '/stock-documents', icon: StockDocNavIcon, label: 'Đơn & Phiếu kho', permission: 'purchase_order.view' },
           { to: '/suppliers', icon: SupplierNavIcon, label: 'Nhà cung cấp', permission: 'supplier.view' },
           { to: '/purchase-orders', icon: PurchaseOrderNavIcon, label: 'Đơn mua hàng (PO)', permission: 'purchase_order.view' },
@@ -152,98 +156,95 @@ const NAV_GROUPS = [
       { to: '/staffs', icon: ShieldCheck, label: 'Nhân viên & Quản trị', permission: 'role.assign' },
       { to: '/roles', icon: RolePermissionNavIcon, label: 'Vai trò & Phân quyền', permission: 'role.manage' },
       { to: '/menus', icon: MenuNavIcon, label: 'Cấu hình Menu', permission: 'menu.manage' },
+      { to: '/settings', icon: SettingsIcon, label: 'Cài đặt hệ thống' },
       { to: '/audit-logs', icon: StockHistoryNavIcon, label: 'Nhật ký thao tác', permission: 'audit_log.view' },
-      { to: '/settings', icon: SettingsIcon, label: 'Cài đặt hệ thống', permission: 'role.manage' },
     ],
   },
 ];
 
-function NavGroupItem({ item }) {
+function NavSubMenuItem({ item, validChildren }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { state } = useSidebar();
   const isCollapsed = state === 'collapsed';
-  const hasPermission = useAuthStore((s) => s.hasPermission);
 
-  if (item.permission && !hasPermission(item.permission)) {
-    return null;
-  }
+  const childRoutes = validChildren.map((c) => c.to);
+  const isAnyActive = childRoutes.some((r) => location.pathname.startsWith(r));
+  const [open, setOpen] = useState(isAnyActive);
+  const Icon = item.icon;
+  const firstChild = validChildren[0]?.to ?? '/';
 
-  if (item.children) {
-    const validChildren = item.children.filter((c) => !c.permission || hasPermission(c.permission));
-    if (validChildren.length === 0) return null;
-
-    const childRoutes = validChildren.map((c) => c.to);
-    const isAnyActive = childRoutes.some((r) => location.pathname.startsWith(r));
-    const [open, setOpen] = useState(isAnyActive);
-    const Icon = item.icon;
-    const firstChild = validChildren[0]?.to ?? '/';
-
-    if (isCollapsed) {
-      return (
-        <SidebarMenuItem>
-          <SidebarMenuButton
-            isActive={isAnyActive}
-            onClick={() => navigate(firstChild)}
-            title={item.label}
-            className={cn(
-              "rounded-[6px] transition-colors active:scale-[0.98]",
-              isAnyActive && "bg-primary/10 text-primary font-medium"
-            )}
-          >
-            <Icon className="size-4 shrink-0" />
-            <span>{item.label}</span>
-          </SidebarMenuButton>
-        </SidebarMenuItem>
-      );
-    }
-
+  if (isCollapsed) {
     return (
       <SidebarMenuItem>
         <SidebarMenuButton
           isActive={isAnyActive}
-          onClick={() => setOpen((o) => !o)}
+          onClick={() => navigate(firstChild)}
+          title={item.label}
           className={cn(
-            "rounded-[6px] transition-colors active:scale-[0.98] font-normal text-sidebar-foreground",
+            "rounded-[6px] transition-colors active:scale-[0.98]",
             isAnyActive && "bg-primary/10 text-primary font-medium"
           )}
         >
-          <Icon className={cn("size-4 shrink-0 transition-colors", isAnyActive ? "text-primary" : "text-muted-foreground")} />
-          <span className="flex-1 text-left truncate">{item.label}</span>
-          <ChevronRightIcon
-            size={14}
-            className={cn('text-muted-foreground transition-transform duration-200 shrink-0', open && 'rotate-90 text-primary')}
-          />
+          <Icon className="size-4 shrink-0" />
+          <span>{item.label}</span>
         </SidebarMenuButton>
-
-        {open && (
-          <SidebarMenuSub className="border-l border-border/60 ml-4 pl-2 my-1 space-y-0.5">
-            {validChildren.map((child) => {
-              const CIcon = child.icon;
-              const isActive = location.pathname.startsWith(child.to);
-              return (
-                <SidebarMenuSubItem key={child.to}>
-                  <SidebarMenuSubButton
-                    isActive={isActive}
-                    onClick={() => navigate(child.to)}
-                    className={cn(
-                      "rounded-[6px] text-xs transition-colors py-1.5 active:scale-[0.98]",
-                      isActive
-                        ? "bg-primary text-primary-foreground font-medium shadow-xs"
-                        : "text-muted-foreground hover:text-foreground hover:bg-accent/60"
-                    )}
-                  >
-                    <CIcon className={cn("size-3.5 shrink-0", isActive ? "text-primary-foreground" : "text-muted-foreground")} />
-                    <span className="truncate">{child.label}</span>
-                  </SidebarMenuSubButton>
-                </SidebarMenuSubItem>
-              );
-            })}
-          </SidebarMenuSub>
-        )}
       </SidebarMenuItem>
     );
   }
+
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton
+        isActive={isAnyActive}
+        onClick={() => setOpen((o) => !o)}
+        className={cn(
+          "rounded-[6px] transition-colors active:scale-[0.98] font-normal text-sidebar-foreground",
+          isAnyActive && "bg-primary/10 text-primary font-medium"
+        )}
+      >
+        <Icon className={cn("size-4 shrink-0 transition-colors", isAnyActive ? "text-primary" : "text-muted-foreground")} />
+        <span className="flex-1 text-left truncate">{item.label}</span>
+        <ChevronRightIcon
+          size={14}
+          className={cn('text-muted-foreground transition-transform duration-200 shrink-0', open && 'rotate-90 text-primary')}
+        />
+      </SidebarMenuButton>
+
+      {open && (
+        <SidebarMenuSub className="border-l border-border/60 ml-4 pl-2 my-1 space-y-0.5">
+          {validChildren.map((child) => {
+            const CIcon = child.icon;
+            const isActive = location.pathname.startsWith(child.to);
+            return (
+              <SidebarMenuSubItem key={child.to}>
+                <SidebarMenuSubButton
+                  isActive={isActive}
+                  onClick={() => navigate(child.to)}
+                  className={cn(
+                    "rounded-[6px] text-xs transition-colors py-1.5 active:scale-[0.98]",
+                    isActive
+                      ? "bg-primary text-primary-foreground font-medium shadow-xs"
+                      : "text-muted-foreground hover:text-foreground hover:bg-accent/60"
+                  )}
+                >
+                  <CIcon className={cn("size-3.5 shrink-0", isActive ? "text-primary-foreground" : "text-muted-foreground")} />
+                  <span className="truncate">{child.label}</span>
+                </SidebarMenuSubButton>
+              </SidebarMenuSubItem>
+            );
+          })}
+        </SidebarMenuSub>
+      )}
+    </SidebarMenuItem>
+  );
+}
+
+function NavSingleItem({ item }) {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { state } = useSidebar();
+  const isCollapsed = state === 'collapsed';
 
   const Icon = item.icon;
   const isActive = item.to === '/dashboard'
@@ -268,6 +269,22 @@ function NavGroupItem({ item }) {
       </SidebarMenuButton>
     </SidebarMenuItem>
   );
+}
+
+function NavGroupItem({ item }) {
+  const hasPermission = useAuthStore((s) => s.hasPermission);
+
+  if (item.permission && !hasPermission(item.permission)) {
+    return null;
+  }
+
+  if (item.children) {
+    const validChildren = item.children.filter((c) => !c.permission || hasPermission(c.permission));
+    if (validChildren.length === 0) return null;
+    return <NavSubMenuItem item={item} validChildren={validChildren} />;
+  }
+
+  return <NavSingleItem item={item} />;
 }
 
 function UserFooterMenu({ onProfile, onChangePass }) {
@@ -427,7 +444,7 @@ export default function AppSidebar({ onProfile, onChangePass }) {
               <SidebarGroupContent className="pt-1">
                 <SidebarMenu className="space-y-0.5">
                   {visibleItems.map((item, i) => (
-                    <NavGroupItem key={item.to ?? i} item={item} />
+                    <NavGroupItem key={item.to || item.label || i} item={item} />
                   ))}
                 </SidebarMenu>
               </SidebarGroupContent>

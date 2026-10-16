@@ -11,6 +11,7 @@ export const inventoryService = {
   downloadPOExcel: (id) => api.get(`/purchase-orders/${id}/download-excel`, { responseType: 'blob' }),
   previewPOEmail: (id) => api.get(`/purchase-orders/${id}/preview-email`),
   sendPOToSupplier: (id, payload) => api.post(`/purchase-orders/${id}/send-po`, payload),
+  recordPOPayment: (id, data) => api.post(`/purchase-orders/${id}/payment`, data),
 
   // Phiếu nhập kho (Stock Receivings - PNK)
   getStockReceivings: (params) => api.get('/stock-receivings', { params }),

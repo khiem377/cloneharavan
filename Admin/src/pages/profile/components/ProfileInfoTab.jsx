@@ -75,7 +75,16 @@ export default function ProfileInfoTab({ user, setUser }) {
               <div className="relative">
                 <Input
                   type="email"
-                  value={profileForm.email}
+                  value={
+                    profileForm.email && (profileForm.email.endsWith('@zalo.user') || profileForm.email.endsWith('@tiktok.user') || profileForm.email.startsWith('zalo_') || profileForm.email.startsWith('tiktok_'))
+                      ? ''
+                      : profileForm.email
+                  }
+                  placeholder={
+                    user?.email && (user.email.endsWith('@zalo.user') || user.email.endsWith('@tiktok.user') || user.email.startsWith('zalo_') || user.email.startsWith('tiktok_'))
+                      ? 'Chưa liên kết email'
+                      : 'Chưa cập nhật email'
+                  }
                   disabled
                   className="h-9 rounded-[6px] text-xs font-mono bg-muted/40 cursor-not-allowed pr-8"
                 />

@@ -257,7 +257,7 @@ export default function DateTimePicker({
       {/* Popover Dropdown */}
       {isOpen && (
         <div
-          className={`absolute z-50 mt-1.5 p-3 rounded-xl border border-border bg-popover text-popover-foreground shadow-2xl backdrop-blur-md transition-all ${
+          className={`absolute z-50 mt-1.5 p-3 rounded-xl border border-border bg-popover text-popover-foreground shadow-2xl transition-all ${
             align === 'right' ? 'right-0' : 'left-0'
           } w-[320px] sm:w-[340px]`}
         >

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight, Loader2, LayoutList, LayoutGrid, Eye, Layers, RefreshCw, CheckSquare, Globe, FileText } from '@/components/ui/Icons';
+import { Barcode, Printer, Coins, Cpu } from 'lucide-react';
 import { toast } from '@/providers/ToastProvider';
 import { useProducts, useToggleProductStatus, useDeleteProduct, useDeleteBulkProducts, useBulkUpdateProductStatus } from '@/hooks/useProducts';
 import { useMediaByIds } from '@/hooks/useMedia';
@@ -17,6 +18,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import BarcodePrintModal from './components/BarcodePrintModal';
+import WholesalePricingModal from './components/WholesalePricingModal';
+import CompositeBomModal from './components/CompositeBomModal';
 import {
   Table,
   TableHeader,
@@ -68,6 +72,14 @@ export default function ProductListPage() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
   const [bulkStatusConfirm, setBulkStatusConfirm] = useState(null); // 'published' | 'draft'
+
+  // Pancake POS Feature Modals
+  const [barcodeModalOpen, setBarcodeModalOpen] = useState(false);
+  const [barcodeProducts, setBarcodeProducts] = useState([]);
+  const [wholesaleModalOpen, setWholesaleModalOpen] = useState(false);
+  const [wholesaleProduct, setWholesaleProduct] = useState(null);
+  const [bomModalOpen, setBomModalOpen] = useState(false);
+  const [bomProduct, setBomProduct] = useState(null);
 
   const columnVisibility = useColumnVisibility('admin_products_columns', PRODUCT_COLUMNS);
   const { isColumnVisible } = columnVisibility;
@@ -190,6 +202,20 @@ export default function ProductListPage() {
             Làm mới
           </Button>
 
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setBarcodeProducts(products);
+              setBarcodeModalOpen(true);
+            }}
+            className="rounded-[6px] text-xs font-semibold"
+            title="In tem mã vạch cho các sản phẩm"
+          >
+            <Barcode size={15} className="mr-1.5 text-primary" />
+            In tem mã vạch
+          </Button>
+
           <Can do="product.create">
             <Button
               size="sm"
@@ -282,6 +308,36 @@ export default function ProductListPage() {
         </div>
       </div>
 
+      {/* Quick Status Chips */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
+        <span className="text-muted-foreground font-medium shrink-0">Lọc nhanh:</span>
+        {[
+          { label: 'Tất cả', value: '' },
+          { label: 'Công khai', value: 'published' },
+          { label: 'Bản nháp', value: 'draft' },
+          { label: 'Hết hàng', value: 'out_of_stock' },
+        ].map((chip) => {
+          const isActive = filterStatus === chip.value;
+          return (
+            <button
+              key={chip.value}
+              type="button"
+              onClick={() => {
+                setFilterStatus(chip.value);
+                setPage(1);
+              }}
+              className={`px-3 py-1 rounded-[6px] text-xs font-medium border transition-colors cursor-pointer active:scale-[0.98] ${
+                isActive
+                  ? 'bg-primary text-primary-foreground border-primary font-semibold shadow-xs'
+                  : 'bg-card text-muted-foreground border-border hover:bg-muted/60 hover:text-foreground'
+              }`}
+            >
+              {chip.label}
+            </button>
+          );
+        })}
+      </div>
+
       {selected.length > 0 && (
         <div className="flex items-center flex-wrap gap-2 px-3.5 py-2.5 rounded-[6px] border border-primary/30 bg-primary/5">
           <CheckSquare size={14} className="text-primary shrink-0" />
@@ -317,6 +373,18 @@ export default function ProductListPage() {
                 <Trash2 size={13} className="mr-1" /> Xóa
               </Button>
             </Can>
+            <Button
+              variant="outline"
+              size="xs"
+              className="rounded-[6px] text-xs font-medium bg-primary/10 text-primary border-primary/30 hover:bg-primary/20 h-7"
+              onClick={() => {
+                const selectedProds = products.filter((p) => selected.includes(p._id));
+                setBarcodeProducts(selectedProds);
+                setBarcodeModalOpen(true);
+              }}
+            >
+              <Printer size={13} className="mr-1" /> In {selected.length} tem
+            </Button>
             <Button
               variant="ghost"
               size="xs"
@@ -380,7 +448,29 @@ export default function ProductListPage() {
                             </MediaThumbnailHover>
                           );
                         })()}
-                        <span className="font-semibold text-foreground text-xs line-clamp-1 max-w-xs">{p.name}</span>
+                        <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                          <span className="font-semibold text-foreground text-xs line-clamp-1 max-w-xs">{p.name}</span>
+                          {p.itemType === 'combo' && (
+                            <Badge variant="outline" className="text-[10px] bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20 px-1 py-0 rounded-[4px]">
+                              Combo
+                            </Badge>
+                          )}
+                          {p.allowNegativeStock && (
+                            <Badge variant="outline" className="text-[10px] bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20 px-1 py-0 rounded-[4px]" title="Cho phép bán tồn kho âm">
+                              Bán âm
+                            </Badge>
+                          )}
+                          {p.isComposite && (
+                            <Badge variant="outline" className="text-[10px] bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20 px-1 py-0 rounded-[4px]">
+                              BOM
+                            </Badge>
+                          )}
+                          {p.wholesaleTiers?.length > 0 && (
+                            <Badge variant="outline" className="text-[10px] bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 px-1 py-0 rounded-[4px]">
+                              Sỉ ({p.wholesaleTiers.length})
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                     </TableCell>
                   )}
@@ -438,8 +528,27 @@ export default function ProductListPage() {
                     </TableCell>
                   )}
                   {isColumnVisible('stock') && (
-                    <TableCell className="px-3.5 py-3 align-middle font-mono text-xs font-semibold tabular-nums">
-                      {p.stock} <span className="text-[11px] text-muted-foreground font-normal">{p.unit || 'Cái'}</span>
+                    <TableCell className="px-3.5 py-3 align-middle font-mono text-xs tabular-nums">
+                      <div className="flex flex-col gap-0.5">
+                        <div className="flex items-center gap-1.5">
+                          <span className={`font-bold text-xs ${
+                            (p.availableStock !== undefined ? p.availableStock : (p.stock || 0) - (p.allocated || 0)) > 0
+                              ? 'text-foreground'
+                              : 'text-destructive font-semibold'
+                          }`}>
+                            {p.availableStock !== undefined ? p.availableStock : Math.max(0, (p.stock || 0) - (p.allocated || 0))}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground font-sans font-normal">có thể bán</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-sans">
+                          <span>Tổng tồn: <strong className="font-mono font-medium text-foreground">{p.stock || 0}</strong></span>
+                          {(p.allocated || 0) > 0 && (
+                            <span className="text-amber-600 dark:text-amber-400 font-semibold" title="Đang nằm trong đơn hàng chờ xuất">
+                              • Giữ: {p.allocated}
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </TableCell>
                   )}
                   {isColumnVisible('actions') && (
@@ -452,6 +561,27 @@ export default function ProductListPage() {
                         <Can do="product_variant.create">
                           <button className="inline-flex size-7 items-center justify-center rounded-[4px] text-muted-foreground hover:bg-violet-500/10 hover:text-violet-500 transition-transform active:scale-[0.98] cursor-pointer" title="Quản lý biến thể" onClick={() => navigate(`/products/${p._id}/variants`)}><Layers size={14} /></button>
                         </Can>
+                        <button
+                          className="inline-flex size-7 items-center justify-center rounded-[4px] text-muted-foreground hover:bg-amber-500/10 hover:text-amber-600 transition-transform active:scale-[0.98] cursor-pointer"
+                          title="Bảng giá bán sỉ theo số lượng"
+                          onClick={() => { setWholesaleProduct(p); setWholesaleModalOpen(true); }}
+                        >
+                          <Coins size={14} />
+                        </button>
+                        <button
+                          className="inline-flex size-7 items-center justify-center rounded-[4px] text-muted-foreground hover:bg-blue-500/10 hover:text-blue-600 transition-transform active:scale-[0.98] cursor-pointer"
+                          title="Sản phẩm cấu thành (BOM linh kiện)"
+                          onClick={() => { setBomProduct(p); setBomModalOpen(true); }}
+                        >
+                          <Cpu size={14} />
+                        </button>
+                        <button
+                          className="inline-flex size-7 items-center justify-center rounded-[4px] text-muted-foreground hover:bg-slate-500/10 hover:text-foreground transition-transform active:scale-[0.98] cursor-pointer"
+                          title="In tem mã vạch sản phẩm này"
+                          onClick={() => { setBarcodeProducts([p]); setBarcodeModalOpen(true); }}
+                        >
+                          <Barcode size={14} />
+                        </button>
                         <Can do="product.edit">
                           <button className="inline-flex size-7 items-center justify-center rounded-[4px] text-muted-foreground hover:bg-accent hover:text-foreground transition-transform active:scale-[0.98] cursor-pointer" title={p.isActive ? 'Ẩn' : 'Hiện'} onClick={() => handleToggle(p)}>
                             {p.isActive ? <ToggleRight size={14} className="text-emerald-600 dark:text-emerald-400" /> : <ToggleLeft size={14} />}
@@ -539,6 +669,90 @@ export default function ProductListPage() {
         onCancel={() => setBulkStatusConfirm(null)}
         loading={bulkStatusMut.isPending}
       />
+
+      {/* Pancake POS Feature Modals */}
+      {barcodeModalOpen && (
+        <BarcodePrintModal
+          isOpen={barcodeModalOpen}
+          onClose={() => setBarcodeModalOpen(false)}
+          initialProducts={barcodeProducts}
+        />
+      )}
+
+      {wholesaleModalOpen && wholesaleProduct && (
+        <WholesalePricingModal
+          isOpen={wholesaleModalOpen}
+          onClose={() => {
+            setWholesaleModalOpen(false);
+            setWholesaleProduct(null);
+          }}
+          product={wholesaleProduct}
+          onSuccess={() => refetch()}
+        />
+      )}
+
+      {bomModalOpen && bomProduct && (
+        <CompositeBomModal
+          isOpen={bomModalOpen}
+          onClose={() => {
+            setBomModalOpen(false);
+            setBomProduct(null);
+          }}
+          product={bomProduct}
+          onSuccess={() => refetch()}
+        />
+      )}
+
+      {/* Floating Bottom Bulk Bar for scrolled users */}
+      {selected.length > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-card border border-border shadow-2xl rounded-[8px] px-4 py-2.5 flex items-center gap-3 animate-in slide-in-from-bottom-4 duration-200">
+          <div className="flex items-center gap-2 text-xs font-semibold text-foreground pr-2 border-r border-border">
+            <CheckSquare size={15} className="text-primary shrink-0" />
+            <span>Đã chọn <span className="text-primary font-mono font-bold">{selected.length}</span></span>
+          </div>
+
+          <Can do="product.edit">
+            <Button
+              variant="outline"
+              size="xs"
+              className="rounded-[6px] text-xs font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-300 hover:bg-emerald-500/20 h-8"
+              onClick={() => setBulkStatusConfirm('published')}
+              disabled={bulkStatusMut.isPending}
+            >
+              <Globe size={13} className="mr-1" /> Xuất bản
+            </Button>
+            <Button
+              variant="outline"
+              size="xs"
+              className="rounded-[6px] text-xs font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-300 hover:bg-amber-500/20 h-8"
+              onClick={() => setBulkStatusConfirm('draft')}
+              disabled={bulkStatusMut.isPending}
+            >
+              <FileText size={13} className="mr-1" /> Chuyển Nháp
+            </Button>
+          </Can>
+
+          <Can do="product.delete">
+            <Button
+              variant="destructive"
+              size="xs"
+              className="rounded-[6px] text-xs font-semibold h-8"
+              onClick={() => setBulkDeleteConfirm(true)}
+            >
+              <Trash2 size={13} className="mr-1" /> Xóa
+            </Button>
+          </Can>
+
+          <Button
+            variant="ghost"
+            size="xs"
+            className="text-xs text-muted-foreground hover:text-foreground h-8 rounded-[6px]"
+            onClick={() => setSelected([])}
+          >
+            Bỏ chọn
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

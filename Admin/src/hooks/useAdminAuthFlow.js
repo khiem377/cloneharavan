@@ -46,6 +46,10 @@ export function useAdminAuthFlow() {
   const [isPasskeyLoading, setIsPasskeyLoading] = useState(false);
   const [countdown, setCountdown] = useState(60);
   const [devOtpHint, setDevOtpHint] = useState('');
+  const [loginError, setLoginError] = useState(null);
+  const [isLocked, setIsLocked] = useState(false);
+  const [lockCountdown, setLockCountdown] = useState(0);
+  const [unlockTime, setUnlockTime] = useState('');
 
   // Countdown timer for OTP resend
   useEffect(() => {
@@ -57,6 +61,24 @@ export function useAdminAuthFlow() {
     }
     return () => clearInterval(timer);
   }, [mode, countdown]);
+
+  // Đồng hồ đếm ngược mở khóa tài khoản
+  useEffect(() => {
+    let timer;
+    if (isLocked && lockCountdown > 0) {
+      timer = setInterval(() => {
+        setLockCountdown((prev) => {
+          if (prev <= 1) {
+            setIsLocked(false);
+            setLoginError('Tài khoản đã được mở khóa. Bạn có thể đăng nhập lại.');
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [isLocked, lockCountdown]);
 
   // Auto-reset loading states when returning via Back button (BFCache) or window focus
   useEffect(() => {
@@ -135,6 +157,8 @@ export function useAdminAuthFlow() {
     }
 
     setIsLoading(true);
+    setLoginError(null);
+    setIsLocked(false);
     try {
       const { data } = await authService.login({
         email: cleanEmail,
@@ -143,10 +167,33 @@ export function useAdminAuthFlow() {
       });
       handleAuthSuccess(data.data.user, data.data, data.message);
     } catch (err) {
+      const status = err.response?.status;
       const msg =
         err.response?.data?.message ??
         err.message ??
         'Đăng nhập thất bại. Vui lòng kiểm tra lại email hoặc mật khẩu!';
+
+      if (status === 429) {
+        const remainingSec = err.response?.data?.remainingSeconds || 300;
+        const lockUntilDate = err.response?.data?.lockUntil
+          ? new Date(err.response.data.lockUntil)
+          : new Date(Date.now() + remainingSec * 1000);
+
+        const timeStr = lockUntilDate.toLocaleTimeString('vi-VN', {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false,
+        });
+
+        setIsLocked(true);
+        setLockCountdown(remainingSec);
+        setUnlockTime(timeStr);
+        setLoginError(msg);
+      } else if (msg.includes('lần thử')) {
+        setLoginError(msg);
+      }
+
       toast.error(msg);
     } finally {
       setIsLoading(false);
@@ -347,6 +394,11 @@ export function useAdminAuthFlow() {
     isPasskeyLoading,
     countdown,
     devOtpHint,
+    loginError,
+    setLoginError,
+    isLocked,
+    lockCountdown,
+    unlockTime,
     handlePasswordSubmit,
     handleRequestOtp,
     handleVerifyOtpDirect,

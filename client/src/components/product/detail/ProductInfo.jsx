@@ -70,128 +70,110 @@ function StarRating({ rating = 0, count = 0 }) {
   );
 }
 
-// Flash Sale Countdown digit block — slide animation
-function FlipCard({ value }) {
+// High-end Ticker Digit Block with smooth vertical slide micro-animation
+function CountdownDigitBlock({ value, isRed = false, label = '' }) {
   const display = String(Math.max(0, value)).padStart(2, '0');
-  const prevRef = useRef(display);
-  const [cur, setCur] = useState(display);
-  const [animKey, setAnimKey] = useState(0);
-
-  useEffect(() => {
-    if (display !== prevRef.current) {
-      prevRef.current = display;
-      setCur(display);
-      setAnimKey(k => k + 1);
-    }
-  }, [display]);
 
   return (
-    <span
-      style={{
-        display: 'inline-flex',
-        flexDirection: 'column',
-        width: 36,
-        overflow: 'hidden',
-        borderRadius: 5,
-        boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
-        userSelect: 'none',
-      }}
-    >
-      <style>{`
-        @keyframes fsSlideA {
-          from { transform: translateY(30%) translateY(-8px); opacity: 0.2; }
-          to   { transform: translateY(30%); opacity: 1; }
-        }
-        @keyframes fsSlideB {
-          from { transform: translateY(30%) translateY(-8px); opacity: 0.2; }
-          to   { transform: translateY(30%); opacity: 1; }
-        }
-        @keyframes fsSlideAb {
-          from { transform: translateY(-30%) translateY(-8px); opacity: 0.2; }
-          to   { transform: translateY(-30%); opacity: 1; }
-        }
-        @keyframes fsSlideBb {
-          from { transform: translateY(-30%) translateY(-8px); opacity: 0.2; }
-          to   { transform: translateY(-30%); opacity: 1; }
-        }
-      `}</style>
-      {/* Top half — slightly darker tint */}
-      <span style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        height: 22, background: '#f0f0f0', overflow: 'hidden',
-        borderBottom: '1px solid rgba(0,0,0,0.08)',
-      }}>
+    <div className="flex flex-col items-center">
+      <div
+        className={`relative overflow-hidden flex items-center justify-center min-w-[26px] sm:min-w-[28px] h-6 sm:h-7 px-1 rounded-[4px] font-mono font-black text-xs sm:text-[13px] tabular-nums tracking-wider ${
+          isRed
+            ? 'bg-red-600 text-white border border-red-700 shadow-2xs'
+            : 'bg-slate-900 text-white border border-slate-800 shadow-2xs'
+        }`}
+      >
         <span
+          key={display}
           style={{
-            fontSize: 22, fontWeight: 800, lineHeight: 1, color: '#c00',
-            fontFamily: '"Roboto Mono","Courier New",monospace',
-            display: 'block', transform: 'translateY(30%)',
-            animationName: animKey % 2 === 0 ? 'fsSlideA' : 'fsSlideB',
-            animationDuration: '0.32s',
-            animationTimingFunction: 'cubic-bezier(0.22,1,0.36,1)',
-            animationFillMode: 'both',
+            display: 'inline-block',
+            animation: 'fsTickerSlide 0.28s cubic-bezier(0.16, 1, 0.3, 1)',
           }}
         >
-          {cur}
+          {display}
         </span>
-      </span>
-      {/* Bottom half */}
-      <span style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        height: 22, background: '#fff', overflow: 'hidden',
-      }}>
-        <span
-          style={{
-            fontSize: 22, fontWeight: 800, lineHeight: 1, color: '#c00',
-            fontFamily: '"Roboto Mono","Courier New",monospace',
-            display: 'block', transform: 'translateY(-30%)',
-            animationName: animKey % 2 === 0 ? 'fsSlideAb' : 'fsSlideBb',
-            animationDuration: '0.32s',
-            animationTimingFunction: 'cubic-bezier(0.22,1,0.36,1)',
-            animationFillMode: 'both',
-          }}
-        >
-          {cur}
+      </div>
+      {label && (
+        <span className="text-[8px] sm:text-[9px] text-slate-500 font-bold uppercase tracking-tight mt-0.5">
+          {label}
         </span>
-      </span>
-    </span>
-
+      )}
+    </div>
   );
 }
 
+// Flash Sale Countdown component - Dynamic Ticker with Micro-Animations & Labels
 function FlashSaleCountdown({ endDate }) {
-  const calcRemaining = () => {
-    const diff = new Date(endDate) - Date.now();
+  const calculate = () => {
+    if (!endDate) return null;
+    const target = new Date(endDate).getTime();
+    if (isNaN(target)) return null;
+    const diff = target - Date.now();
     if (diff <= 0) return null;
+
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+    const minutes = Math.floor((diff / (1000 * 60)) % 60);
+    const seconds = Math.floor((diff / 1000) % 60);
+
     return {
-      h: Math.min(Math.floor(diff / 3600000), 99),
-      m: Math.floor((diff % 3600000) / 60000),
-      s: Math.floor((diff % 60000) / 1000),
+      days: isNaN(days) ? 0 : days,
+      hours: isNaN(hours) ? 0 : hours,
+      minutes: isNaN(minutes) ? 0 : minutes,
+      seconds: isNaN(seconds) ? 0 : seconds,
     };
   };
 
-  const [time, setTime] = useState(calcRemaining);
+  const [time, setTime] = useState(null);
+
   useEffect(() => {
-    if (!endDate) return;
-    const t = setInterval(() => setTime(calcRemaining()), 1000);
-    return () => clearInterval(t);
+    setTime(calculate());
+    const interval = setInterval(() => {
+      const next = calculate();
+      setTime(next);
+    }, 1000);
+    return () => clearInterval(interval);
   }, [endDate]);
 
-  if (!time) return (
-    <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', fontWeight: 500 }}>Đã kết thúc</span>
-  );
+  if (!time) {
+    return (
+      <span className="text-xs text-slate-500 font-medium">Đang diễn ra</span>
+    );
+  }
 
-  const sep = (
-    <span style={{ color: '#fff', fontWeight: 900, fontSize: 18, lineHeight: 1, opacity: 0.95 }}>:</span>
-  );
+  const d = time.days ?? 0;
+  const h = time.hours ?? time.h ?? 0;
+  const m = time.minutes ?? time.m ?? 0;
+  const s = time.seconds ?? time.s ?? 0;
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-      <FlipCard value={time.h} />
-      {sep}
-      <FlipCard value={time.m} />
-      {sep}
-      <FlipCard value={time.s} />
+    <div className="flex items-center gap-2">
+      <style>{`
+        @keyframes fsTickerSlide {
+          0% {
+            transform: translateY(-5px);
+            opacity: 0.25;
+          }
+          100% {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
+      `}</style>
+      <span className="text-[11px] text-slate-500 font-semibold hidden sm:inline">Kết thúc trong:</span>
+      <div className="flex items-start gap-1">
+        {d > 0 && (
+          <>
+            <CountdownDigitBlock value={d} label="Ngày" />
+            <span className="text-slate-400 font-bold text-xs mt-1 animate-pulse">:</span>
+          </>
+        )}
+        <CountdownDigitBlock value={h} label="Giờ" />
+        <span className="text-slate-400 font-bold text-xs mt-1 animate-pulse">:</span>
+        <CountdownDigitBlock value={m} label="Phút" />
+        <span className="text-slate-400 font-bold text-xs mt-1 animate-pulse">:</span>
+        <CountdownDigitBlock value={s} isRed label="Giây" />
+      </div>
     </div>
   );
 }
@@ -199,6 +181,7 @@ function FlashSaleCountdown({ endDate }) {
 
 export default function ProductInfo({
   product,
+  dynamicProductName = '',
   variants = [],
   selectedVariant,
   onSelectVariant,
@@ -340,7 +323,7 @@ export default function ProductInfo({
       quantity,
     };
 
-    const res = await addToCart(payload);
+    const res = await addToCart(payload, { isBuyNow });
     setIsAddingToCart(false);
 
     if (res?.success) {
@@ -359,9 +342,9 @@ export default function ProductInfo({
   return (
     <div className="flex flex-col gap-4">
 
-      {/* 1. BRAND + SKU META BAR */}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-        {brand?.name && (
+      {/* 1. BRAND META BAR */}
+      {brand?.name && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
           <Link
             href={`/search?brand=${encodeURIComponent(brand.slug || brand._id || brand.name)}`}
             className="inline-flex items-center hover:opacity-85 transition-opacity"
@@ -377,16 +360,12 @@ export default function ProductInfo({
               <span className="font-bold text-red-600 hover:text-red-700 hover:underline">{brand.name}</span>
             )}
           </Link>
-        )}
-        <span className="text-slate-300">|</span>
-        <span className="text-slate-500">
-          SKU: <span className="text-slate-700 font-mono font-medium">{currentSku}</span>
-        </span>
-      </div>
+        </div>
+      )}
 
       {/* 2. PRODUCT TITLE (H1) */}
       <h1 className="text-lg sm:text-2xl font-bold text-slate-900 leading-snug tracking-tight">
-        {product.name}
+        {dynamicProductName || product.name}
       </h1>
 
       {/* 3. STAR RATING + STOCK STATUS */}
@@ -412,15 +391,18 @@ export default function ProductInfo({
       </div>
 
 
-      {/* 4. KHỐI GIÁ CẢ & FLASH SALE */}
-      <div className="rounded-[6px] border border-slate-200 bg-slate-50/70 p-3.5 flex flex-col gap-2">
+      {/* 4. KHỐI GIÁ CẢ & FLASH SALE (SEAMLESS INTEGRATED STYLE) */}
+      <div className="rounded-[6px] border border-slate-200 bg-slate-50/70 p-3.5 sm:p-4 flex flex-col gap-2.5">
+        {/* Flash Sale Header Bar: Ribbon trên cùng */}
         {isFlashSale && (
-          <div className="flex items-center justify-between pb-2 border-b border-red-200">
-            <div className="flex items-center gap-1.5">
-              <span className="inline-flex items-center px-2 py-0.5 rounded-[4px] bg-red-600 text-white text-[11px] font-bold uppercase tracking-wide">
-                Flash Sale
+          <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-slate-200">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="bg-red-600 text-white text-[10px] font-black uppercase px-2 py-0.5 rounded-[3px] tracking-wider shrink-0">
+                FLASH SALE
               </span>
-              <span className="text-[11px] text-slate-500">Số lượng có hạn</span>
+              <span className="font-bold text-xs sm:text-sm text-slate-800 tracking-tight truncate max-w-[180px] sm:max-w-[260px] uppercase">
+                {flashSaleDeal?.name || 'SỰ KIỆN GIẢM SỐC'}
+              </span>
             </div>
             {deals?.flashSale?.endDate && (
               <FlashSaleCountdown endDate={deals.flashSale.endDate} />
@@ -428,32 +410,65 @@ export default function ProductInfo({
           </div>
         )}
 
-
+        {/* Hàng Giá chính */}
         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <span className="text-2xl sm:text-3xl font-extrabold text-red-600 tracking-tight">
+          <span className="text-2xl sm:text-3xl font-extrabold text-red-600 tracking-tight font-mono tabular-nums">
             {currentBasePrice > 0 ? `${currentBasePrice.toLocaleString('vi-VN')}₫` : 'Liên hệ'}
           </span>
 
           {hasDiscount && (
             <>
-              <span className="text-sm sm:text-base text-slate-400 line-through">
+              <span className="text-sm sm:text-base text-slate-400 line-through font-mono tabular-nums">
                 {originalPrice.toLocaleString('vi-VN')}₫
               </span>
-              <Badge variant="destructive" className="bg-red-600 text-white text-xs font-bold px-2 py-0.5">
+              <Badge variant="destructive" className="bg-red-600 text-white text-xs font-bold px-2 py-0.5 font-mono tabular-nums">
                 -{discountPercent}%
               </Badge>
             </>
           )}
         </div>
 
-        {/* Tiết kiệm tuyệt đối */}
+        {/* Mức tiết kiệm tuyệt đối */}
         {hasDiscount && savingsAmount > 0 && (
-          <div className="flex items-center gap-1.5 text-xs text-emerald-700 font-semibold">
+          <div className="text-xs text-emerald-700 font-semibold flex items-center gap-1.5">
             <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
               <path d="M8 1v14M1 8h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeOpacity="0" />
               <path d="M13 5l-5 5-5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            <span>Tiết kiệm: <strong>{savingsAmount.toLocaleString('vi-VN')}₫</strong> so với giá niêm yết</span>
+            <span>Tiết kiệm: <strong className="font-mono tabular-nums">{savingsAmount.toLocaleString('vi-VN')}₫</strong> so với giá niêm yết</span>
+          </div>
+        )}
+
+        {/* Thanh tiến độ số lượng mở bán & đã bán từ DB khi Flash Sale */}
+        {isFlashSale && matchedFsItem?.stockLimit > 0 && (
+          <div className="pt-2 border-t border-slate-200/80 flex flex-col gap-1.5">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-slate-600">
+                Đã bán: <strong className="font-mono tabular-nums text-slate-900">{matchedFsItem.soldCount || 0} / {matchedFsItem.stockLimit}</strong> suất
+              </span>
+              <span className="text-[11px] font-medium text-slate-500">
+                {matchedFsItem.remaining > 0 ? (
+                  <>Còn <strong className="font-mono tabular-nums text-red-600">{matchedFsItem.remaining}</strong> suất ưu đãi</>
+                ) : (
+                  <strong className="text-red-600">Đã bán hết suất</strong>
+                )}
+              </span>
+            </div>
+            <div className="h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-red-600 rounded-full transition-all duration-300"
+                style={{
+                  width: `${Math.min(100, matchedFsItem.stockLimit > 0 ? Math.round(((matchedFsItem.soldCount || 0) / matchedFsItem.stockLimit) * 100) : 0)}%`,
+                }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Mô tả / Thể lệ chương trình từ DB */}
+        {isFlashSale && flashSaleDeal?.description && (
+          <div className="text-xs text-slate-600 pt-2 border-t border-slate-200/80 leading-relaxed">
+            {flashSaleDeal.description}
           </div>
         )}
       </div>

@@ -12,6 +12,7 @@ export default function ProductClassificationSidebar({
   categories = [],
   brands = [],
   suppliers = [],
+  warehouses = [],
 }) {
   return (
     <Card className="rounded-[6px] border border-border shadow-none">
@@ -20,6 +21,32 @@ export default function ProductClassificationSidebar({
       </CardHeader>
 
       <CardContent className="pt-4 space-y-4">
+        {/* Kho thao tác (Pancake POS style) */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-medium text-muted-foreground flex items-center justify-between">
+            <span>Kho thao tác</span>
+            <span className="text-[10px] text-muted-foreground font-mono">Pancake POS</span>
+          </label>
+          <SearchableSelect
+            options={[
+              { label: 'Tất cả các kho', value: 'all' },
+              ...(Array.isArray(warehouses) ? warehouses : []).map((w) => ({
+                label: `${w.name} ${w.isDefault ? '(Kho mặc định)' : ''}`,
+                value: w._id,
+              })),
+            ]}
+            value={form.warehouseId || 'all'}
+            onChange={(v) => setField('warehouseId', v)}
+            creatable={false}
+            placeholder="-- Chọn kho thao tác --"
+          />
+          <p className="text-[11px] text-muted-foreground">
+            {form.warehouseId === 'all'
+              ? 'Tồn kho ban đầu sẽ ghi nhận vào kho mặc định và đồng bộ trạng thái.'
+              : 'Tồn kho ban đầu sẽ ghi nhận trực tiếp vào kho đã chọn.'}
+          </p>
+        </div>
+
         {/* Categories */}
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-medium text-muted-foreground">

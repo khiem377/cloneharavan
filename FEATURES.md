@@ -1,627 +1,498 @@
-# Clone Haravan — Tài liệu Tính năng, Kiến trúc & Kế hoạch Phát triển Hệ thống TMĐT
+# Clone Haravan — Danh Sách Chi Tiết Các Tính Năng Đã Hoàn Thành Toàn Hệ Thống (FEATURE.MD)
 
-> Tham khảo giao diện & trải nghiệm chuẩn: [EGA Điện Máy](https://ega-dien-may.myharavan.com) — Haravan Enterprise Theme.  
-> Tài liệu cập nhật toàn diện phục vụ thiết kế, tích hợp và triển khai phân hệ **Cart, Checkout, Orders, Logistics & Payments**.
-
----
-
-## 📑 Mục lục
-
-1. [Tổng quan Kiến trúc Toàn hệ thống (Architecture Overview)](#1-tổng-quan-kiến-trúc-toàn-hệ-thống)
-2. [Chi tiết Giao diện Khách hàng (Client Storefront)](#2-chi-tiết-giao-diện-khách-hàng-client-storefront)
-3. [Phân hệ Trọng tâm: Giỏ hàng (Cart System)](#3-phân-hệ-trọng-tâm-giỏ-hàng-cart-system)
-4. [Phân hệ Trọng tâm: Quy trình Thanh toán (Checkout Engine & Flow)](#4-phân-hệ-trọng-tâm-quy-trình-thanh-toán-checkout-engine--flow)
-5. [Phân hệ Trọng tâm: Quản lý Đơn hàng (Order Management System - OMS)](#5-phân-hệ-trọng-tâm-quản-lý-đơn-hàng-order-management-system---oms)
-6. [Tích hợp Vận chuyển & Hậu cần GHN (Logistics Integration)](#6-tích-hợp-vận-chuyển--hậu-cần-ghn-logistics-integration)
-7. [Tích hợp Cổng Thanh toán (Payment Gateways: VietQR, COD, VNPay, MoMo)](#7-tích-hợp-cổng-thanh-toán-payment-gateways-vietqr-cod-vnpay-momo)
-8. [Kiến trúc & Logic Nghiệp vụ Backend (BE Core Services)](#8-kiến-trúc--logic-nghiệp-vụ-backend-be-core-services)
-9. [Chi tiết Giao diện & Luồng xử lý Admin Panel](#9-chi-tiết-giao-diện--luồng-xử-lý-admin-panel)
-10. [Động cơ Tìm kiếm & Gợi ý AI (AI Search & Recommendations)](#10-động-cơ-tìm-kiếm--gợi-ý-ai-ai-search--recommendations)
-11. [Phân tích Khoảng trống (Gap Analysis) cho 1 Website TMĐT Hoàn chỉnh](#11-phân-tích-khoảng-trống-gap-analysis-cho-1-website-tmđt-hoàn-chỉnh)
-12. [Kế hoạch & Nhiệm vụ Tích hợp Trọng tâm (Integration Blueprint Tối Nay)](#12-kế-hoạch--nhiệm-vụ-tích-hợp-trọng-tâm-integration-blueprint-tối-nay)
+> **Cập nhật ngày:** 12/10/2026  
+> **Kiến trúc:** 3 Phân hệ độc lập: Backend API (Express.js/Node.js) + Admin Portal (React/Vite) + Client Storefront (Next.js 14 App Router).  
+> **Tham chiếu chuẩn UI/UX:** EGA Điện Máy — Haravan Enterprise Theme, Phong cách Flat Design, Bo góc 6px, Chống nhảy layout, Modal làm việc siêu rộng (max-w-5xl/6xl), Tương tác xúc giác.
 
 ---
 
-## 1. Tổng quan Kiến trúc Toàn hệ thống
+## 📑 Mục lục Phân hệ Nghiệp vụ
 
-Hệ thống được chia thành 3 phân hệ chính hoạt động độc lập và đồng bộ dữ liệu thời gian thực:
-
-```mermaid
-graph TD
-    Client["Client Storefront (Next.js 14 App Router)<br/>Port: 3000"] -->|REST API + Cookies/JWT| BE["Backend REST Core (Express.js + Node.js)<br/>Port: 5000"]
-    Admin["Admin Panel (React + Vite + Tailwind)<br/>Port: 5173"] -->|REST API + Bearer JWT| BE
-    BE -->|Mongoose ORM| MongoDB[("MongoDB Atlas / Local Database")]
-    BE -->|Asset Storage| Cloudinary["Cloudinary CDN Storage"]
-    BE -->|API V2/V3 Logistics| GHN["Giao Hàng Nhanh (GHN Gateway)"]
-    BE -->|Transactional Mail| SMTP["Nodemailer (SMTP Server)"]
-    BE -->|ML Matrix Factorization| Python["Python Micro-services (SVD/ALS)"]
-    BE -->|AI Chatbot SSE Stream| Groq["Groq SDK / Llama 3 LLM"]
-    BE -->|Dynamic QR Code| VietQR["VietQR API (NAPAS 247)"]
-```
-
----
-
-## 2. Chi tiết Giao diện Khách hàng (Client Storefront)
-
-### 2.1 Header & Navigation Bar
-- **Logo** — Tên thương hiệu + Slogan, click về trang chủ.
-- **Thanh tìm kiếm (Live SearchBar)**:
-  - Input nhập từ khóa có debounce 300ms.
-  - Dropdown Live Autocomplete gợi ý tức thì sản phẩm (kèm ảnh nhỏ, giá bán) và bài viết liên quan.
-  - Tích hợp **Visual Search (Tìm kiếm bằng hình ảnh)**: Upload ảnh sản phẩm để tìm kiếm sản phẩm tương đồng về thị giác.
-- **Badge LIVE** — Nhấp nháy dẫn tới trang livestream khuyến mãi.
-- **Menu Tài khoản (AccountMenu)**:
-  - Chưa đăng nhập: Nút Đăng nhập / Đăng ký.
-  - Đã đăng nhập: Dropdown hiển thị Avatar, Tên, Số điện thoại, Menu dẫn nhanh tới Đơn hàng của tôi, Sổ địa chỉ, Đổi mật khẩu, Nút Đăng xuất.
-- **Icon Giỏ hàng (Cart Button & Mini Cart)**:
-  - Hiển thị badge số lượng sản phẩm trong giỏ thời gian thực.
-  - Hover / Click mở **Mini Cart Drawer** hiển thị nhanh danh sách món, nút thanh toán nhanh.
-- **Thanh Mega Menu (HeaderNav)**:
-  - Danh mục sản phẩm (Category Drawer đa cấp).
-  - ⚡ Flash Sales (đồng hồ đếm ngược).
-  - Trả góp 0%, Đặt lịch sửa chữa, Tin khuyến mãi, Hệ thống cửa hàng, Hotline 1900 1000.
-
-### 2.2 Trang chủ (Homepage)
-- **Hero Slider Banner**: Carousel ảnh sự kiện/chiến dịch tự động cuộn.
-- **Promo Ticker Bar**: Thanh mã ưu đãi nổi bật có nút `Sao chép` nhanh mã coupon.
-- **Trust Badges**: Cam kết Giao hàng 24h, Đổi trả 30 ngày, 100% Chính hãng, Deal hot bùng nổ.
-- **Khuyến mãi Online (Coupon Cards Grid)**: Danh sách voucher phân cấp (Giảm tiền, Giảm %, Freeship) kèm điều kiện đơn tối thiểu và hạn dùng.
-- **Flash Sale Widget**: Đồng hồ đếm ngược (Countdown Timer flip card), thanh tiến trình số lượng đã bán / còn lại, giá sốc Flash Sale.
-- **Grid Danh mục Sản phẩm**: Icon tròn đại diện cho các ngành hàng điện máy, điện lạnh, gia dụng, âm thanh.
-- **Tabbed Products (Gợi ý cho bạn)**: Chuyển tab danh mục linh hoạt hiển thị lưới sản phẩm nổi bật.
-- **Month Brand Carousel**: Banner thương hiệu đối tác nổi bật (Samsung, Xiaomi, Panasonic, Daikin, Aqua...).
-- **Featured Product Showcase**: Khối sản phẩm tâm điểm (chọn variant, chọn số lượng, nút Mua ngay/Thêm giỏ).
-- **Bảng tin Khuyến mãi**: Grid bài viết tin tức mới nhất, mẹo vặt công nghệ.
-
-### 2.3 Trang Danh sách Sản phẩm (Collections Page `/collections/[slug]`)
-- **Breadcrumb**: Điều hướng phân cấp (Trang chủ / Danh mục / Nhóm sản phẩm).
-- **Bộ lọc Sidebar Đa tiêu chí (Multi-Facet Filter Bar)**:
-  - Lọc theo Mức giá (Dưới 1tr, 1-2tr, 2-5tr, 5-10tr, Trên 10tr).
-  - Lọc theo Thương hiệu (Checkbox đa chọn có ô tìm kiếm thương hiệu).
-  - Lọc theo Loại sản phẩm / Danh mục con.
-  - Lọc theo Màu sắc (Color Swatches hình tròn màu).
-  - Lọc theo Tags / Trạng thái (Flash Sale, Có quà tặng, Còn hàng).
-- **Thanh sắp xếp (Sorting Bar)**: Tên A-Z, Tên Z-A, Giá tăng dần, Giá giảm dần, Mới nhất, Bán chạy nhất.
-- **Product Card**:
-  - Ảnh đại diện chính + hover đổi ảnh phụ.
-  - Nhãn giảm giá `%`, badge Flash Sale, nhãn Quà tặng 0đ kèm theo.
-  - Tên sản phẩm, Thương hiệu, SKU.
-  - Giá bán hiện tại, giá gốc gạch chân.
-  - Nút thêm nhanh vào giỏ (Quick Add to Cart) & Nút Xem nhanh (Quick View Modal).
-- **Phân trang chuẩn Pagination**: Hiển thị số trang, Prev/Next.
-
-### 2.4 Trang Chi tiết Sản phẩm (Product Detail Page `/products/[slug]`)
-- **Gallery hình ảnh chuyên sâu**:
-  - Ảnh lớn trung tâm kèm chế độ Zoom chi tiết / Lightbox xem ảnh kích thước thật.
-  - Thumbnail Carousel nằm ngang bên dưới, bấm đổi ảnh chính mượt mà.
-  - Tự động nhảy ảnh theo Màu sắc biến thể được chọn.
-- **Khu vực Giá & Ưu đãi**:
-  - Giá bán Flash Sale (nếu đang diễn ra chiến dịch) + Countdown Timer riêng.
-  - Giá khuyến mãi Promotion + Tiết kiệm được bao nhiêu tiền.
-  - Danh sách quyền lợi quà tặng (Gift items 0đ) đi kèm.
-  - Khối mã giảm giá có thể áp dụng cho sản phẩm này kèm nút Sao chép.
-- **Bộ chọn Biến thể Sản phẩm (Variant Selector)**:
-  - Nút chọn Thuộc tính (Màu sắc, Dung lượng, Kích thước...) dạng Pill button.
-  - Tự động cập nhật Tồn kho khả dụng, SKU và Giá bán tương ứng theo từng biến thể.
-- **Bộ chọn Số lượng & Kiểm soát Tồn kho**:
-  - Nút `−`, Ô nhập số lượng, Nút `+`.
-  - Giới hạn không cho chọn quá tồn kho khả dụng (`stock - allocated`).
-  - Cảnh báo tồn kho gấp (`Chỉ còn X sản phẩm trong kho!`).
-- **Cụm Nút Hành động Mua hàng (CTAs)**:
-  - Nút **"THÊM VÀO GIỎ HÀNG"**: Thêm vào giỏ mà không rời trang, hiển thị toast thông báo thành công và cập nhật mini cart.
-  - Nút **"MUA NGAY VỚI GIÁ NÀY"**: Thêm sản phẩm vào giỏ và chuyển hướng ngay sang màn hình `/checkout`.
-  - Nút **"So sánh"**: Thêm vào thanh so sánh thông số kỹ thuật (`/so-sanh`).
-- **Thanh Mua hàng Cố định (Sticky Purchase Bar)**: Thanh bar dính ở đáy màn hình khi cuộn chuột qua khối CTA, giúp người dùng đặt mua bất cứ lúc nào.
-- **Khối Nội dung Đa Tab**:
-  - Tab 1: **Thông số kỹ thuật (Specs)** dạng bảng Key-Value chi tiết.
-  - Tab 2: **Mô tả sản phẩm** định dạng Rich HTML.
-  - Tab 3: **Đánh giá & Hỏi đáp sản phẩm (Reviews & Q&A)** kèm form gửi bình luận và đánh giá sao.
-- **Cross-sell & Gợi ý Thông minh**:
-  - Sản phẩm tương tự cùng danh mục.
-  - Phụ kiện thường mua cùng (Upsell).
-  - Sản phẩm bạn đã xem gần đây (Recently Viewed carousel).
-
-### 2.5 Trang So sánh Thông số Kỹ thuật (`/so-sanh`)
-- So sánh song song từ 2 đến 4 sản phẩm.
-- Bảng so sánh trực quan: Giá, Thương hiệu, Tồn kho, và toàn bộ thuộc tính Specs kỹ thuật.
-
-### 2.6 Trang Khách hàng Cá nhân (`/tai-khoan`)
-- **Tab Tổng quan**: Thông tin tài khoản, cấp bậc thành viên, số đơn đã mua.
-- **Tab Đơn hàng của tôi (`/tai-khoan?tab=orders`)**:
-  - Bộ lọc trạng thái: Tất cả, Chờ xác nhận, Đang xử lý, Đang giao hàng, Đã hoàn tất, Đã hủy.
-  - Ô tìm kiếm theo mã đơn hoặc tên sản phẩm.
-  - Danh sách đơn hàng chi tiết: Ngày đặt, Mã đơn, Tổng tiền, Trạng thái đơn, Nút xem chi tiết, Nút Hủy đơn (nếu hợp lệ).
-- **Tab Sổ địa chỉ nhận hàng (`/tai-khoan?tab=addresses`)**:
-  - Thêm / Sửa / Xóa địa chỉ giao hàng.
-  - Chọn Tỉnh/Thành -> Quận/Huyện -> Phường/Xã tích hợp GHN API.
-  - Đánh dấu địa chỉ mặc định khi đặt hàng.
-- **Tab Đổi mật khẩu & Bảo mật phiên (`/tai-khoan?tab=security`)**:
-  - Đổi mật khẩu tài khoản.
-  - Quản lý các thiết bị và phiên đăng nhập đang hoạt động.
+1. [Phân hệ Xác thực, Tài khoản & Bảo mật (Auth & Security System)](#1-phân-hệ-xác-thực-tài-khoản--bảo-mật-auth--security-system)
+2. [Phân hệ Quản lý Sản phẩm, Biến thể, Danh mục & Combo AI (PIM, Catalog & Gemini Bundles)](#2-phân-hệ-quản-lý-sản-phẩm-biến-thể-danh-mục--combo-ai-pim-catalog--gemini-bundles)
+3. [Phân hệ Khuyến mãi, Marketing & Flash Sale (Promotions Engine)](#3-phân-hệ-khuyến-mãi-marketing--flash-sale-promotions-engine)
+4. [Phân hệ Giỏ hàng & Quy trình Thanh toán (Cart & Checkout Engine)](#4-phân-hệ-giỏ-hàng--quy-trình-thanh-toán-cart--checkout-engine)
+5. [Phân hệ Đơn hàng, Hậu cần & Vận chuyển GHN v2/v3 (OMS & Logistics)](#5-phân-hệ-đơn-hàng-hậu-cần--vận-chuyển-ghn-v2v3-oms--logistics)
+6. [Phân hệ Quản lý Kho & Chuỗi Cung ứng (Inventory & Supply Chain - 16 Submodules Toàn diện)](#6-phân-hệ-quản-lý-kho--chuỗi-cung-ứng-inventory--supply-chain---16-submodules-toàn-diện)
+7. [Phân hệ Thư viện Media & Quản lý Tài nguyên (Media Library & Cloudinary)](#7-phân-hệ-thư-viện-media--quản-lý-tài-nguyên-media-library--cloudinary)
+8. [Phân hệ Bài viết, Tin tức & SEO (Blog & Content Management)](#8-phân-hệ-bài-viết-tin-tức--seo-blog--content-management)
+9. [Phân hệ Đánh giá & Bình luận (Customer Reviews & Q&A)](#9-phân-hệ-đánh-giá--bình-luận-customer-reviews--qa)
+10. [Phân hệ Trợ lý AI & Động cơ Tìm kiếm Thông minh (Dual AI Chatbot, Visual Search & Recommendations)](#10-phân-hệ-trợ-lý-ai--động-cơ-tìm-kiếm-thông-minh-dual-ai-chatbot-visual-search--recommendations)
+11. [Phân hệ Quản trị Nhân viên, Phân quyền Động & Nhật ký Hệ thống (RBAC & Audit Logs)](#11-phân-hệ-quản-trị-nhân-viên-phân-quyền-động--nhật-ký-hệ-thống-rbac--audit-logs)
+12. [Giao diện Trải nghiệm Khách hàng Storefront (Client Experience)](#12-giao-diện-trải-nghiệm-khách-hàng-storefront-client-experience)
+13. [Quy chuẩn Thiết kế Giao diện UI/UX Quản trị & Trải nghiệm Người dùng (Admin Design System & UX Standards)](#13-quy-chuẩn-thiết-kế-giao-diện-uiux-quản-trị--trải-nghiệm-người-dùng-admin-design-system--ux-standards)
 
 ---
 
-## 3. Phân hệ Trọng tâm: Giỏ hàng (Cart System)
+## 1. Phân hệ Xác thực, Tài khoản & Bảo mật (Auth & Security System)
 
-### 3.1 Luồng Dữ liệu & Quản lý Session Giỏ hàng
+### 1.1 Backend (`BE/src/controllers/auth.controller.js`, `auth.service.js`)
+- **Xác thực JWT đa tầng**:
+  - `accessToken` ngắn hạn gửi kèm Authorization Header.
+  - `refreshToken` lưu trữ trong **httpOnly Cookie** an toàn, chống tấn công XSS.
+  - Tự động cơ chế xoay vòng Refresh Token (Token Rotation).
+- **Đăng ký / Đăng nhập truyền thống**:
+  - Đăng ký tài khoản mật khẩu mã hóa an toàn qua `bcryptjs`.
+  - Đăng nhập xác thực email/số điện thoại và mật khẩu.
+- **Xác thực Mạng Xã Hội (Social OAuth 2.0)**:
+  - Tích hợp đăng nhập nhanh qua **Google OAuth 2.0**.
+  - Tích hợp đăng nhập nhanh qua **Zalo OAuth**.
+  - Tích hợp đăng nhập nhanh qua **TikTok Login Kit**.
+  - Tự động liên kết tài khoản mạng xã hội với tài khoản email sẵn có hoặc tạo mới an toàn.
+- **Bảo mật & Phục hồi Mật khẩu**:
+  - Quên mật khẩu qua gửi mã OTP / Token kích hoạt vào Email (sử dụng template HTML Nodemailer).
+  - Xác thực mã OTP và đặt lại mật khẩu mới.
+  - Hỗ trợ Xác thực 2 bước (2FA / Two-Factor Authentication).
+  - Hỗ trợ đăng nhập sinh trắc học / Passkey (FIDO2 / WebAuthn ready).
+- **Quản lý Thiết bị & Giám sát Phiên hoạt động (Device & Session Management)**:
+  - Tự động thu thập IP, User-Agent, Tên thiết bị, Trình duyệt, Vị trí khi đăng nhập.
+  - API lấy danh sách các phiên đăng nhập đang hoạt động của tài khoản.
+  - API Đăng xuất từ xa / Thu hồi quyền truy cập (Revoke Session) của từng thiết bị hoặc tất cả thiết bị khác.
+  - **Server-Sent Events (SSE) Session Stream (`/api/v1/auth/session-stream`)**: Thông báo thời gian thực khi phiên bị đăng xuất từ xa để hủy token và redirect ngay lập tức.
 
-```mermaid
-sequenceDiagram
-    autonumber
-    actor User as Khách hàng (User/Guest)
-    participant Client as Client Next.js (cartStore)
-    participant MW as BE cartSession Middleware
-    participant Svc as BE cart.service.js
-    participant Calc as BE checkout.service.js
-    participant DB as MongoDB (Cart & Products)
+### 1.2 Admin Portal (`Admin/src/pages/auth/`, `Admin/src/pages/profile/`)
+- Màn hình Đăng nhập quản trị viên tối ưu bảo mật.
+- Xử lý Callback OAuth đồng bộ (`AdminAuthCallbackPage`).
+- Trang Quản lý Hồ sơ Cá nhân Admin (`AdminProfilePage`): Đổi họ tên, avatar, số điện thoại, đổi mật khẩu, quản lý các thiết bị đang đăng nhập, bật/tắt 2FA.
+- Bảo vệ truy cập qua HOC `ProtectedRoute` và `PermissionGuard`.
 
-    User->>Client: Bấm "Thêm vào giỏ" (productId, variantId, qty)
-    Client->>MW: POST /api/v1/cart/items (Header: x-session-id / Bearer Token)
-    MW->>MW: Định danh userId hoặc tạo/lấy guest_uuid
-    MW->>Svc: addToCart(cartOwner, itemData)
-    Svc->>DB: Kiểm tra variant, stock, allocated
-    Svc->>DB: Lưu CartItem vào Cart document
-    Svc->>Calc: calculateCheckout(items, couponCode)
-    Calc-->>Svc: Trả về giá 4 cấp (FlashSale, Promo, Coupon, Gift)
-    Svc-->>Client: Trả về Giỏ hàng đã Validate + Warnings (nếu có)
-    Client->>Client: Cập nhật cartStore & Mini Cart Badge
-```
-
-### 3.2 Bảng API Giỏ hàng Backend (`/api/v1/cart`)
-
-| Phương thức | Endpoint | Middleware | Mô tả chức năng |
-|---|---|---|---|
-| `GET` | `/api/v1/cart` | `cartSession` | Lấy chi tiết giỏ hàng hiện tại, tự động re-validate tồn kho và tính lại giá 4 cấp |
-| `POST` | `/api/v1/cart/items` | `cartSession` | Thêm sản phẩm vào giỏ (hỗ trợ đơn lẻ hoặc mảng nhiều sản phẩm `[{ variantId, quantity }]` / `{ items: [...] }`) |
-| `PATCH` | `/api/v1/cart/items/:itemId` | `cartSession` | Cập nhật số lượng của 1 dòng sản phẩm trong giỏ |
-| `DELETE` | `/api/v1/cart/items/:itemId` | `cartSession` | Xóa 1 sản phẩm khỏi giỏ |
-| `DELETE` | `/api/v1/cart` | `cartSession` | Xóa toàn bộ sản phẩm trong giỏ (Clear Cart) |
-| `POST` | `/api/v1/cart/apply-coupon` | `cartSession` | Áp dụng mã giảm giá Coupon vào giỏ hàng |
-| `DELETE` | `/api/v1/cart/remove-coupon` | `cartSession` | Gỡ bỏ mã giảm giá Coupon khỏi giỏ |
-| `POST` | `/api/v1/cart/merge` | `protect`, `cartSession` | Hợp nhất giỏ hàng của Guest (`x-session-id`) vào giỏ User khi đăng nhập |
-| `POST` | `/api/v1/cart/validate-checkout`| `cartSession` | Kiểm tra toàn diện tồn kho & điều kiện trước khi chuyển sang màn hình Checkout |
-
-### 3.3 Chi tiết Giao diện Trang Giỏ hàng (`/cart`)
-- **Thanh Tiến trình Nhận quà (Progress Reward Bar)**:
-  - Thanh đo phần trăm theo tổng giá trị đơn hàng.
-  - Các mốc thưởng trực quan:
-    - Mốc 1 (VD: 500.000₫): Miễn phí vận chuyển toàn quốc.
-    - Mốc 2 (VD: 2.000.000₫): Tặng voucher giảm trực tiếp 100.000₫.
-    - Mốc 3 (VD: 5.000.000₫): Tặng bộ quà tặng công nghệ 0đ.
-- **Danh sách Sản phẩm trong Giỏ**:
-  - Ảnh đại diện, Tên sản phẩm (link đến trang chi tiết), Nhãn biến thể (Màu, Dung lượng).
-  - Đơn giá gốc (gạch chân) & Đơn giá thực tế (sau Flash Sale / Promo).
-  - Bộ điều chỉnh số lượng `−` `Số` `+` (tự động disable `+` nếu chạm ngưỡng tồn kho thực tế).
-  - Nút Xóa (Icon thùng rác).
-  - Thành tiền của dòng.
-- **Khối Quà tặng Kèm 0đ (Gift Items)**:
-  - Tự động hiển thị các sản phẩm quà tặng 0đ được kích hoạt từ Gift Program.
-  - Không cho phép tăng số lượng tùy tiện (số lượng quà gắn chặt với điều kiện chương trình).
-- **Khối Tiện ích Bổ sung chuẩn Haravan / EGA**:
-  - **Xuất hóa đơn VAT cho doanh nghiệp**: Checkbox toggle mở form nhập: Tên công ty, Mã số thuế (MST), Địa chỉ công ty, Email nhận HĐĐT.
-  - **Hẹn giờ giao hàng**: Bộ chọn ngày nhận hàng & khung giờ mong muốn (Sáng 8h-12h, Chiều 14h-18h, Tối 18h-21h).
-  - **Ghi chú đơn hàng**: Textarea nhập lời nhắn cho shipper hoặc cửa hàng.
-- **Khối Tóm tắt & Mã Giảm giá (Order Summary Box)**:
-  - Ô nhập mã Coupon + Nút Áp dụng.
-  - Nút "Chọn mã ưu đãi": Mở Drawer/Modal danh sách Coupon khả dụng để chọn ngay.
-  - Tạm tính tiền hàng: `XXX.XXX₫`.
-  - Giảm giá Flash Sale: `- XXX.XXX₫`.
-  - Giảm giá Khuyến mãi Promotion: `- XXX.XXX₫`.
-  - Giảm giá Coupon: `- XXX.XXX₫`.
-  - **TỔNG CỘNG THANH TOÁN**: `XXX.XXX₫` (nổi bật, số to rõ ràng).
-  - Nút CTA chính: **"TIẾN HÀNH THANH TOÁN"** (Chuyển tiếp sang `/checkout`).
+### 1.3 Client Storefront (`client/src/components/auth/`, `client/src/app/tai-khoan`)
+- Modal Đăng nhập / Đăng ký nhanh không cần chuyển trang.
+- Trang Đăng nhập (`/login`), Đăng ký (`/register`), Quên mật khẩu (`/forgot-password`), Đặt lại mật khẩu (`/reset-password`).
+- Cụm nút Social Login (Google, Zalo, TikTok).
+- Tab **Bảo mật tài khoản (`/tai-khoan?tab=security`)**:
+  - Đổi mật khẩu tài khoản trực tiếp.
+  - Bảng danh sách thiết bị và phiên đăng nhập đang hoạt động (kèm thông tin OS, Browser, Thời gian truy cập cuối).
+  - Nút "Đăng xuất thiết bị này" hoặc "Đăng xuất khỏi tất cả thiết bị khác".
 
 ---
 
-## 4. Phân hệ Trọng tâm: Quy trình Thanh toán (Checkout Engine & Flow)
+## 2. Phân hệ Quản lý Sản phẩm, Biến thể, Danh mục & Combo AI (PIM, Catalog & Gemini Bundles)
 
-### 4.1 Quy trình Đặt hàng Toàn cảnh (End-to-End Checkout Flow)
+### 2.1 Backend (`BE/src/models/product.model.js`, `productVariant.model.js`, `category.model.js`, `brand.model.js`)
+- **Quản lý Sản phẩm Đa thuộc tính (Product Model)**:
+  - Thông tin chung: Tên, Slug chuẩn SEO, Mã SKU gốc, Thương hiệu (`ref: Brand`), Danh mục (`ref: Category`), Tag (`ref: Tag`).
+  - Giá cả: Giá bán lẻ, Giá so sánh (Giá gốc gạch chân), Giá vốn (Cost price để tính lợi nhuận).
+  - Nội dung: Tóm tắt ngắn, Mô tả chi tiết Rich HTML, Bộ thông số kỹ thuật (Specs dạng Key-Value / JSON có cấu trúc).
+  - Hình ảnh: Ảnh đại diện (Thumbnail), Thư viện ảnh chi tiết (Gallery Cloudinary).
+  - Trạng thái: Nháp (Draft), Đang bán (Active), Ngừng bán (Archived).
+  - Chuẩn SEO: `metaTitle`, `metaDescription`, `metaKeywords`, Canonical URL.
+- **Quản lý Biến thể Chi tiết (ProductVariant Model)**:
+  - Cấu hình đa thuộc tính (Options: Màu sắc, Dung lượng, Bộ nhớ RAM, Kích thước...).
+  - Mỗi biến thể có: Mã SKU riêng biệt, Barcode, Giá bán riêng, Giá so sánh riêng, Giá vốn riêng, Ảnh riêng theo màu.
+  - Quản lý kho 3 trạng thái: Tồn kho thực tế (`stock`), Tồn kho đang giữ chỗ cho đơn hàng (`allocated`), Tồn kho khả dụng (`available = stock - allocated`).
+- **Nhập / Xuất Dữ liệu Hàng loạt (Excel Import / Export)**:
+  - Service đọc và phân tích file Excel sản phẩm qua thư viện `exceljs`.
+  - Preview dữ liệu trước khi import (kiểm tra lỗi SKU trùng lặp, thiếu thông tin bắt buộc).
+  - Tự động tạo sản phẩm kèm ma trận biến thể tự sinh.
+  - Xuất danh sách sản phẩm ra file Excel đầy đủ thuộc tính và tồn kho.
+- **Quản lý Danh mục & Thương hiệu (Category & Brand)**:
+  - Cây danh mục sản phẩm đa cấp (Hỗ trợ cha - con `parentId`, cấp 1, cấp 2, cấp 3).
+  - Icon danh mục, Banner danh mục, Slug danh mục, Cấu hình SEO danh mục.
+  - Quản lý thương hiệu: Tên hãng, Slug, Logo, Banner thương hiệu, Mô tả hãng.
+- **Quản lý Menu Điều hướng (Menu Model)**:
+  - Tạo và quản lý nhiều vị trí menu (Main Menu, Mega Menu, Footer Menu...).
+  - Cấu trúc cây menu đa cấp có liên kết đến Sản phẩm, Danh mục, Bài viết hoặc URL tùy chỉnh.
 
-```mermaid
-flowchart TD
-    CartPage["Trang Giỏ hàng (/cart)"] -->|Bấm Thanh toán| CheckGuard["BE validate-checkout Guard<br/>(Check Tồn kho & Giá)"]
-    CheckGuard -->|Hợp lệ| CheckoutPage["Trang Thanh toán (/checkout)"]
-    CheckGuard -->|Có lỗi tồn kho| CartWarning["Báo lỗi & Giảm số lượng tự động"]
+### 2.2 Admin Portal (`Admin/src/pages/products/`, `categories/`, `brands/`, `menus/`)
+- **Danh sách sản phẩm (`ProductListPage.jsx`)**:
+  - Bảng dữ liệu chuyên nghiệp: Phân trang, Tìm kiếm từ khóa, Lọc theo Danh mục, Thương hiệu, Trạng thái, Kho hàng.
+  - Ẩn/Hiện cột linh hoạt (`ColumnToggleDropdown`), Bulk Action (Đổi trạng thái, Xóa hàng loạt).
+  - Chỉnh sửa nhanh Giá và Tồn kho trực tiếp trên bảng dữ liệu.
+- **Form Tạo / Sửa Sản phẩm (`ProductFormPage.jsx`)**:
+  - Tab Thông tin cơ bản, Tab Media chọn ảnh từ Cloudinary Media Picker.
+  - Trình soạn thảo Rich Text Editor định dạng bài viết mô tả sản phẩm.
+  - Trình dựng Thông số kỹ thuật động (Dynamic Key-Value Specs Builder).
+  - Trình tạo Biến thể ma trận trực quan (Matrix Variant Generator theo Options).
+- **Quản lý Biến thể Chuyên sâu (`ProductVariantsPage.jsx`, `VariantEditPage.jsx`)**:
+  - Xem danh sách biến thể của sản phẩm, điều chỉnh giá bán, giá vốn, tồn kho, ảnh riêng của từng biến thể.
+- **Trang Import / Export Excel (`ImportExportPage.jsx`)**:
+  - Kéo thả file Excel, Tải template mẫu chuẩn, Modal xem trước dữ liệu và báo cáo lỗi dòng (`ExcelPreviewModal.jsx`).
+- **Quản lý Danh mục (`CategoryPage.jsx`) & Thương hiệu (`BrandPage.jsx`)**:
+  - Giao diện quản lý danh mục dạng Cây phân cấp, gán Icon, SEO.
+  - Giao diện quản lý Thương hiệu đối tác.
+- **Biên tập Menu Điều hướng (`MenuListPage.jsx`, `MenuEditorPage.jsx`)**:
+  - Kéo thả sắp xếp thứ tự và cấp độ lồng nhau (DnD-Kit sortable & nesting) trực quan.
 
-    CheckoutPage --> FillAddress["1. Nhập thông tin & Địa chỉ GHN"]
-    FillAddress --> CalcShipping["2. Tự động tính cước GHN"]
-    CalcShipping --> SelectPayment["3. Chọn hình thức Thanh toán (COD / VietQR / VNPay / MoMo)"]
-    SelectPayment --> SubmitOrder["4. Bấm 'ĐẶT HÀNG'"]
+### 2.3 Client Storefront (`client/src/app/collections/`, `products/`, `so-sanh/`)
+- **Trang Bộ sưu tập / Danh mục (`/collections/[handle]`)**:
+  - Bộ lọc Sidebar đa chiều (Multi-Facet Filter): Lọc theo Khoảng giá, Thương hiệu (checkbox có search), Danh mục con, Màu sắc (Color Swatches), Tags khuyến mãi.
+  - Sắp xếp sản phẩm: Mới nhất, Bán chạy, Giá tăng dần, Giá giảm dần, Tên A-Z.
+  - Thẻ sản phẩm chuẩn EGA: Hover lật ảnh phụ, Nhãn % giảm giá, Badge Flash Sale, Nhãn quà tặng kèm 0đ, Giá niêm yết và giá gạch.
+  - Nút Xem nhanh (Quick View Modal) và Thêm nhanh vào giỏ (Quick Add).
+- **Trang Chi tiết Sản phẩm (`/products/[handle]`)**:
+  - Gallery hình ảnh: Ảnh lớn có Zoom chi tiết / Lightbox xem toàn màn hình, Thumbnail Carousel cuộn mượt mà, Tự động nhảy ảnh theo màu biến thể được chọn.
+  - Bộ chọn biến thể (Pill buttons): Tự động tính toán tồn kho khả dụng và cập nhật giá bán tức thì.
+  - Bộ chọn số lượng có kiểm soát chống đặt quá số lượng tồn kho khả dụng.
+  - Hiển thị danh sách Quà tặng 0đ đi kèm (nếu có).
+  - Hiển thị danh sách Mã giảm giá áp dụng được cho sản phẩm kèm nút "Sao chép mã".
+  - **Thanh Mua hàng Cố định Dính đáy (Sticky Purchase Bar)** khi cuộn chuột qua khối CTA.
+  - Khối nội dung Đa Tab: Tab Thông số kỹ thuật (Bảng Specs Key-Value), Tab Mô tả Rich HTML, Tab Đánh giá & Bình luận.
+  - Khối Gợi ý: Sản phẩm tương tự cùng phân khúc, Phụ kiện mua kèm (Upsell), Sản phẩm đã xem gần đây.
+- **Trang So sánh Thông số (`/so-sanh`)**:
+  - So sánh song song 2-4 sản phẩm trên một bảng ma trận thuộc tính, giá bán, tồn kho và chi tiết kỹ thuật.
 
-    SubmitOrder --> CreateOrderAPI["BE POST /api/v1/orders<br/>- Tạo Order ID<br/>- Khóa tồn kho (variant.allocated += qty)<br/>- Cập nhật lượt dùng Coupon<br/>- Xóa sạch giỏ hàng"]
-
-    CreateOrderAPI --> PaymentBranch{Hình thức<br/>Thanh toán?}
-    
-    PaymentBranch -->|COD| OrderSuccess["Trang Đặt hàng Thành công<br/>(/checkout/success?orderCode=...)"]
-    PaymentBranch -->|VietQR| QRPage["Hiển thị Dynamic VietQR<br/>Khách quét app ngân hàng thanh toán"]
-    PaymentBranch -->|VNPay / MoMo| GatewayRedirect["Chuyển hướng cổng thanh toán<br/>VNPay / MoMo Sandbox"]
-
-    GatewayRedirect -->|IPN Webhook Callback| UpdatePaid["BE cập nhật order.paymentStatus = 'paid'"]
-    QRPage --> OrderSuccess
-    UpdatePaid --> OrderSuccess
-
-    OrderSuccess --> SendMail["BE Gửi Email Hóa đơn Xác nhận Đơn hàng cho Khách"]
-```
-
-### 4.2 Cấu trúc Giao diện Trang Thanh toán (`/checkout`)
-
-Thiết kế giao diện 3 cột hoặc 2 cột responsive chuẩn tỷ lệ chuyển đổi cao:
-
-#### Cột 1: Thông tin Giao hàng (Shipping Details)
-- Nếu đã đăng nhập: Tự động tải danh sách từ Sổ địa chỉ của User, cho phép chọn nhanh hoặc thêm địa chỉ mới.
-- Nếu là khách vãng lai (Guest):
-  - Họ và tên người nhận (*).
-  - Số điện thoại liên hệ (*).
-  - Email nhận hóa đơn & thông tin đơn hàng (*).
-- **Bộ chọn Địa chỉ Chuẩn hóa GHN (3 cấp)**:
-  - Dropdown Tỉnh / Thành phố (lấy từ API GHN).
-  - Dropdown Quận / Huyện (lấy từ API GHN theo Tỉnh đã chọn).
-  - Dropdown Phường / Xã (lấy từ API GHN theo Quận đã chọn).
-  - Địa chỉ chi tiết (Số nhà, tên đường, tòa nhà).
-  - Nhãn tự động chuẩn hóa địa chỉ sau sáp nhập GHN v3 (nếu có).
-
-#### Cột 2: Vận chuyển & Phương thức Thanh toán
-- **Phương thức Vận chuyển**:
-  - Giao hàng Nhanh GHN (Standard Delivery): Tự động tính phí dựa trên trọng lượng gói hàng và khoảng cách từ kho Shop tới người nhận. Hiển thị ngày dự kiến nhận hàng.
-  - Giao hỏa tốc 2h - 4h (Áp dụng cho nội thành TP.HCM / Hà Nội).
-- **Phương thức Thanh toán**:
-  - 💵 **Thanh toán khi nhận hàng (COD)**: Trả tiền mặt cho shipper khi nhận hàng.
-  - 🏦 **Chuyển khoản Ngân hàng qua mã VietQR**: Sinh mã QR chuẩn NAPAS 24/7 tự động điền đúng số tiền và cú pháp mã đơn.
-  - 💳 **Cổng thanh toán VNPay**: Hỗ trợ thẻ ATM nội địa, thẻ quốc tế Visa/Mastercard/JCB, VNPay-QR.
-  - 📱 **Ví điện tử MoMo**: Thanh toán qua ứng dụng MoMo.
-
-#### Cột 3: Tóm tắt Đơn hàng (Order Summary)
-- Danh sách sản phẩm thu nhỏ: Ảnh, Tên, Biến thể, Số lượng, Đơn giá.
-- Danh sách quà tặng 0đ đi kèm.
-- Khung nhập / Thay đổi mã giảm giá Coupon.
-- Chi tiết bảng giá:
-  - Tạm tính tiền hàng: `XXX.XXX₫`
-  - Giảm giá khuyến mãi: `- XXX.XXX₫`
-  - Giảm giá Coupon: `- XXX.XXX₫`
-  - Phí vận chuyển GHN: `+ XX.XXX₫`
-  - **TỔNG TIỀN PHẢI THANH TOÁN**: `XXX.XXX₫`
-- Nút bấm hành động: **"ĐẶT HÀNG NGAY"** (Có loading spinner chống click đúp, thông báo điều khoản mua hàng).
-
----
-
-## 5. Phân hệ Trọng tâm: Quản lý Đơn hàng (Order Management System - OMS)
-
-### 5.1 Cấu trúc Schema Đơn hàng Chi tiết (`order.model.js`)
-
-```javascript
-const orderSchema = new mongoose.Schema(
-  {
-    orderCode: {
-      type: String,
-      required: true,
-      unique: true,
-      trim: true,
-      uppercase: true, // VD: HD-20261007-001 hoặc EGA-984210
-    },
-    userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      default: null, // null nếu là khách vãng lai
-    },
-    customerInfo: {
-      fullName: { type: String, required: true },
-      phone: { type: String, required: true },
-      email: { type: String, required: true },
-      note: { type: String, default: '' },
-    },
-    shippingAddress: {
-      fullName: { type: String, required: true },
-      phone: { type: String, required: true },
-      province: { type: String, required: true },
-      provinceId: { type: Number, default: null },
-      district: { type: String, required: true },
-      districtId: { type: Number, default: null },
-      ward: { type: String, required: true },
-      wardCode: { type: String, default: '' },
-      detailAddress: { type: String, required: true },
-      fullAddress: { type: String, required: true },
-    },
-    invoiceInfo: {
-      required: { type: Boolean, default: false },
-      companyName: { type: String, default: '' },
-      taxCode: { type: String, default: '' },
-      companyAddress: { type: String, default: '' },
-      companyEmail: { type: String, default: '' },
-    },
-    items: [
-      {
-        productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
-        variantId: { type: mongoose.Schema.Types.ObjectId, ref: 'ProductVariant', required: true },
-        productName: { type: String, required: true },
-        variantName: { type: String, default: '' },
-        sku: { type: String, required: true },
-        thumbnail: { type: String, default: '' },
-        quantity: { type: Number, required: true, min: 1 },
-        originalPrice: { type: Number, required: true },
-        unitPrice: { type: Number, required: true }, // Giá sau FlashSale / Promo
-        subtotal: { type: Number, required: true },
-        isFlashSale: { type: Boolean, default: false },
-        isGift: { type: Boolean, default: false },
-        giftProgramId: { type: mongoose.Schema.Types.ObjectId, ref: 'GiftProgram', default: null },
-      },
-    ],
-    pricing: {
-      subtotalOriginal: { type: Number, required: true },
-      subtotalAfterDiscount: { type: Number, required: true },
-      flashSaleDiscount: { type: Number, default: 0 },
-      promotionDiscount: { type: Number, default: 0 },
-      couponDiscount: { type: Number, default: 0 },
-      couponCode: { type: String, default: null },
-      shippingFee: { type: Number, default: 0 },
-      finalTotal: { type: Number, required: true },
-    },
-    paymentMethod: {
-      type: String,
-      enum: ['COD', 'VIETQR', 'VNPAY', 'MOMO', 'BANK_TRANSFER'],
-      default: 'COD',
-    },
-    paymentStatus: {
-      type: String,
-      enum: ['UNPAID', 'PENDING', 'PAID', 'REFUNDED', 'FAILED'],
-      default: 'UNPAID',
-    },
-    paymentDetails: {
-      transactionId: { type: String, default: '' },
-      paidAt: { type: Date, default: null },
-      bankCode: { type: String, default: '' },
-      gatewayResponse: { type: Object, default: null },
-    },
-    orderStatus: {
-      type: String,
-      enum: [
-        'PENDING',    // Chờ xác nhận
-        'CONFIRMED',  // Đã xác nhận đơn
-        'PROCESSING', // Đang đóng gói
-        'SHIPPING',   // Đã giao cho đơn vị vận chuyển GHN
-        'DELIVERED',  // Giao hàng thành công
-        'COMPLETED',  // Đơn hàng hoàn tất
-        'CANCELLED',  // Đã hủy đơn
-        'RETURNED',   // Đã trả hàng hoàn tiền
-      ],
-      default: 'PENDING',
-    },
-    shippingLogistics: {
-      carrier: { type: String, default: 'GHN' },
-      ghnOrderCode: { type: String, default: '' }, // Mã vận đơn GHN
-      ghnExpectedDeliveryDate: { type: Date, default: null },
-      ghnFee: { type: Number, default: 0 },
-      trackingLogs: [
-        {
-          status: { type: String },
-          description: { type: String },
-          timestamp: { type: Date, default: Date.now },
-          location: { type: String, default: '' },
-        },
-      ],
-    },
-    scheduledDelivery: {
-      deliveryDate: { type: String, default: '' },
-      deliveryTimeSlot: { type: String, default: '' },
-    },
-    statusHistory: [
-      {
-        status: { type: String, required: true },
-        note: { type: String, default: '' },
-        changedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
-        changedAt: { type: Date, default: Date.now },
-      },
-    ],
-    cancelledReason: { type: String, default: '' },
-    cancelledAt: { type: Date, default: null },
-  },
-  { timestamps: true }
-);
-```
-
-### 5.2 Vòng đời Trạng thái Đơn hàng & Xử lý Kho (Order Lifecycle State Machine)
-
-```mermaid
-stateDiagram-v2
-    [*] --> PENDING: Khách đặt hàng thành công<br/>(variant.allocated += qty)
-    PENDING --> CONFIRMED: Admin / Hệ thống xác nhận đơn
-    PENDING --> CANCELLED: Khách / Admin hủy đơn<br/>(variant.allocated -= qty, hoàn Coupon)
-    
-    CONFIRMED --> PROCESSING: Đang lấy hàng & đóng gói tại kho
-    CONFIRMED --> CANCELLED: Hủy đơn trước khi đóng gói
-    
-    PROCESSING --> SHIPPING: Xuất kho giao cho ĐVVC GHN<br/>(variant.stock -= qty, variant.allocated -= qty, tạo StockMovement)
-    
-    SHIPPING --> DELIVERED: Khách nhận hàng thành công (GHN Webhook)
-    SHIPPING --> RETURNED: Giao thất bại / Hoàn hàng về kho<br/>(Tạo phiếu StockReceiving hoàn kho)
-    
-    DELIVERED --> COMPLETED: Hết hạn 30 ngày đổi trả / Khách xác nhận hoàn tất
-    DELIVERED --> RETURNED: Khách yêu cầu đổi trả bảo hành hợp lệ
-    
-    COMPLETED --> [*]
-    CANCELLED --> [*]
-    RETURNED --> [*]
-```
-
-### 5.3 Danh mục API Quản lý Đơn hàng (`/api/v1/orders`)
-
-| Phương thức | Endpoint | Phân quyền | Mô tả chức năng |
-|---|---|---|---|
-| `POST` | `/api/v1/orders` | Public / Guest / User | Đặt đơn hàng mới từ giỏ hàng (Validate tồn kho, khóa allocated, sinh mã đơn, xóa giỏ) |
-| `GET` | `/api/v1/orders/my-orders` | User (`protect`) | Lấy danh sách lịch sử đơn hàng của tài khoản đang đăng nhập |
-| `GET` | `/api/v1/orders/tracking/:orderCode` | Public | Tra cứu hành trình đơn hàng bằng mã đơn + số điện thoại |
-| `GET` | `/api/v1/orders/:id` | User / Admin | Xem chi tiết 1 đơn hàng cụ thể |
-| `PATCH` | `/api/v1/orders/:id/cancel` | User / Admin | Khách hàng hoặc Admin hủy đơn (chỉ khi đơn ở trạng thái `PENDING` / `CONFIRMED`) |
-| `GET` | `/api/v1/orders` | Admin (`order.view`) | Danh sách đơn hàng toàn hệ thống kèm bộ lọc đa tiêu chí, phân trang |
-| `PATCH` | `/api/v1/orders/:id/status` | Admin (`order.manage`) | Cập nhật trạng thái đơn hàng (Xác nhận, Đang đóng gói, Hoàn tất...) |
-| `POST` | `/api/v1/orders/:id/push-ghn` | Admin (`order.manage`) | Đẩy thông tin đơn sang GHN lấy mã vận đơn `ghnOrderCode` và tem in |
-| `GET` | `/api/v1/orders/:id/print` | Admin (`order.view`) | Lấy dữ liệu in Phiếu xuất kho / Phiếu giao hàng / Hóa đơn bán lẻ |
-| `PATCH` | `/api/v1/orders/:id/payment-status` | Admin (`order.manage`)| Cập nhật trạng thái thanh toán thủ công (Xác nhận đã nhận tiền mặt/CK) |
+### 2.4 Phân hệ Combo Sản Phẩm & Trí Tuệ Nhân Tạo Gemini Định Giá (Gemini Combo & AI Pricing Engine)
+- **Backend Architecture (`BE/src/models/combo.model.js`, `combo.service.js`, `combo.controller.js`)**:
+  - **Mô hình Dữ liệu Combo Chuyên sâu**:
+    - Định danh: Mã Combo (`code` tự sinh tiền tố `CB-` hoặc tùy biến), Tên Combo, Slug chuẩn SEO, Ảnh đại diện, Mô tả chi tiết.
+    - Danh sách Sản phẩm Thành phần (`items`): Liên kết trực tiếp tới `product` và `variant`, lưu trữ số lượng mỗi món trong combo.
+    - Cơ chế Tính Tồn Kho Ảo (`virtualStock`): Tự động tính toán tồn kho khả dụng của combo theo sản phẩm thành phần có số lượng nhỏ nhất (`Math.floor(stock / item.quantity)`). Đảm bảo không bao giờ bán vượt quá tồn kho thực tế của các sản phẩm đơn lẻ.
+    - Động cơ Giá & Tiết kiệm: Tự động cộng dồn giá gốc của các sản phẩm con (`originalPrice`), áp dụng chiết khấu linh hoạt theo % (`percentage`) hoặc số tiền cố định (`fixed_amount`), tự sinh giá bán combo (`comboPrice`), số tiền tiết kiệm được (`savingsAmount`) và tỷ lệ % tiết kiệm (`savingsPercent`).
+    - Cấu hình Nâng cao: Cờ Miễn phí vận chuyển (`freeShipping: true`), Thời gian hiệu lực (`startDate`, `endDate`), Trạng thái (`active`, `inactive`).
+  - **Động cơ Trí Tuệ Nhân Tạo Google Gemini Gợi Ý Định Giá (`POST /api/v1/combos/ai-suggest-pricing`)**:
+    - Kết nối Google Gemini Pro AI phân tích chi tiết giá vốn, giá bán lẻ và biên lợi nhuận của từng món trong combo.
+    - Trả về 3 phương án định giá kinh doanh tối ưu:
+      1. *Kích cầu tối đa (Max Volume)*: Mức giá khuyến mãi sâu, kích thích chốt đơn nhanh để đẩy hàng tồn kho.
+      2. *Cân bằng tối ưu (Balanced Margin)*: Cân đối hoàn hảo giữa tỷ lệ chuyển đổi và biên lợi nhuận ròng của doanh nghiệp.
+      3. *Định vị Cao cấp (Premium Value)*: Giữ vững giá trị thương hiệu, định giá hợp lý kết hợp quà tặng.
+    - Kèm phân tích chiến lược: Đánh giá biên lợi nhuận ước tính, tâm lý người tiêu dùng và lý do khuyến nghị cho từng phương án.
+  - **Động cơ Gemini AI Gợi Ý Gói Combo Tiềm Năng (`GET /api/v1/combos/ai-suggest-bundles`)**:
+    - AI tự động rà soát danh mục sản phẩm, phát hiện các nhóm phụ kiện - thiết bị thường đi cùng nhau để đề xuất lập tức các gói combo bán chéo hiệu quả.
+  - **Bộ API CRUD Hoàn Chỉnh**: `GET /api/v1/combos` (hỗ trợ tìm kiếm, lọc theo loại combo, trạng thái), `GET /api/v1/combos/:id`, `POST /api/v1/combos`, `PUT /api/v1/combos/:id`, `PATCH /api/v1/combos/:id/toggle-status`, `DELETE /api/v1/combos/:id`.
+- **Admin Portal (`Admin/src/pages/products/ComboListPage.jsx`, `ComboFormModal.jsx`)**:
+  - **Bảng Quản lý Combo Chuẩn Pancake POS (`ComboListPage.jsx`)**:
+    - Bảng dữ liệu chuyên nghiệp hiển thị đầy đủ 14 cột nghiệp vụ: Mã combo, Tên combo, Thành phần món (hình ảnh đại diện + tên sản phẩm/biến thể + số lượng), Tồn kho ảo (`virtualStock`), Phân loại combo, Miễn phí vận chuyển (Badge Freeship), Giá bán combo, % Tiết kiệm, Tiền tiết kiệm, Thời hạn áp dụng, Ngày tạo, Ngày cập nhật, Trạng thái (Đang bán / Tạm ngừng), Cột thao tác nhanh.
+    - Bộ tùy biến bật/tắt cột linh hoạt (`ColumnToggleDropdown`) giúp nhân viên tùy chỉnh giao diện xem gọn gàng theo nhu cầu.
+    - Thao tác nhanh: Bật/tắt trạng thái tức thì, sửa nhanh, xóa combo có xác nhận an toàn.
+  - **Modal Soạn Thảo Siêu Rộng (`ComboFormModal.jsx`)**:
+    - Thiết kế giao diện phẳng 2 cột không gian làm việc rộng rãi (`max-w-5xl xl:max-w-6xl`), loại bỏ hoàn toàn cảm giác chật chội.
+    - Tích hợp nút "Hỏi Gemini AI Định Giá" trực tiếp trên giao diện: Gọi API phân tích và tự động điền giá combo chỉ với 1 cú click.
+    - Tìm kiếm và thêm sản phẩm thành phần ma trận trực quan, kiểm tra tồn kho tức thì.
 
 ---
 
-## 6. Tích hợp Vận chuyển & Hậu cần GHN (Logistics Integration)
+## 3. Phân hệ Khuyến mãi, Marketing & Flash Sale (Promotions Engine)
 
-### 6.1 Các Hàm Nghiệp vụ Bổ sung trong `ghn.service.js`
+### 3.1 Backend (`BE/src/models/coupon.model.js`, `promotion.model.js`, `gift-program.model.js`, `flashSale.model.js`)
+- **Mã Giảm giá Voucher (Coupon Model)**:
+  - Loại giảm: Giảm số tiền cố định (VNĐ) hoặc Giảm theo phần trăm (%).
+  - Điều kiện: Giá trị đơn hàng tối thiểu (`minOrderValue`), Mức giảm tối đa (`maxDiscountValue`).
+  - Giới hạn: Tổng số lượt sử dụng tối đa, Giới hạn số lượt dùng cho mỗi khách hàng.
+  - Phạm vi áp dụng: Toàn bộ đơn hàng, Theo danh mục chỉ định, hoặc Theo danh sách sản phẩm chỉ định.
+  - Thời gian hiệu lực: Bắt đầu & Kết thúc, Tự động kiểm tra trạng thái kích hoạt.
+- **Chương trình Giảm giá Tự động (Promotion Model)**:
+  - Tự động chiết khấu giá trực tiếp trên từng sản phẩm hoặc toàn bộ danh mục mà không cần nhập mã voucher.
+- **Chương trình Quà tặng Kèm 0đ (Gift Program Model)**:
+  - Mua sản phẩm X được tặng sản phẩm quà Y giá 0đ.
+  - Mua đơn hàng có tổng giá trị đạt mốc Z được tự động tặng quà công nghệ 0đ.
+- **Chiến dịch Flash Sale Giá Sốc (Flash Sale Model)**:
+  - Cấu hình theo khung giờ (Time Slots: Sáng, Trưa, Chiều, Tối).
+  - Thiết lập giá bán sốc Flash Sale riêng biệt cho từng biến thể sản phẩm.
+  - Giới hạn số lượng mở bán Flash Sale (`flashSaleLimit`), Theo dõi số lượng đã bán (`flashSaleSold`).
+  - Tự động mở bán khi đến giờ và tự động kết thúc/khóa giá khi hết thời gian hoặc hết số lượng phân bổ.
+- **Động cơ Định giá 4 Cấp Tự động (4-Tier Pricing Engine)**:
+  `Giá gốc -> [1] Giá Flash Sale -> [2] Chiết khấu Promotion -> [3] Mã giảm giá Coupon -> [4] Quà tặng 0đ Gift Program`.
 
-1. **`calculateShippingFee({ toDistrictId, toWardCode, weight, length, width, height, insuranceValue })`**:
-   - Gọi API GHN endpoint `/v2/shipping-order/fee`.
-   - Tính toán cước phí vận chuyển chính xác từ địa chỉ kho mặc định của Shop đến địa chỉ người mua.
-   - Hỗ trợ tính bảo hiểm hàng hóa theo giá trị đơn hàng.
-2. **`createShippingOrder(orderDoc)`**:
-   - Gọi API GHN endpoint `/v2/shipping-order/create`.
-   - Truyền danh sách mặt hàng, kích thước đóng gói, số tiền thu hộ COD (nếu paymentMethod === 'COD').
-   - Nhận về: `order_code` (Mã vận đơn GHN, ví dụ `GHN12345678`), `expected_delivery_time`, `total_fee`.
-3. **`generateGhnPrintToken(orderCodes)`**:
-   - Gọi API GHN endpoint `/v2/a5/gen-token` để lấy link in mã vạch A5/A4 dán lên thùng hàng.
-4. **`cancelShippingOrder(orderCode)`**:
-   - Gọi API GHN endpoint `/v2/switch-status/cancel` để hủy vận đơn nếu đơn hàng bị hủy trước khi shipper đến lấy.
-5. **`ghnWebhookHandler(payload)`**:
-   - Nhận Webhook từ GHN khi đơn chuyển trạng thái (`picking`, `storing`, `delivering`, `delivered`, `return`).
-   - Tự động cập nhật `order.shippingLogistics.trackingLogs` và `order.orderStatus` tương ứng trong MongoDB.
+### 3.2 Admin Portal (`Admin/src/pages/promotions/`)
+- **Quản lý Mã Giảm giá (`CouponPage.jsx`)**: Tạo mã, cấu hình chiết khấu, theo dõi lượt sử dụng, tìm kiếm và lọc voucher.
+- **Quản lý Giảm giá Tự động (`PromotionPage.jsx`)**: Thiết lập chương trình chiết khấu theo nhóm sản phẩm.
+- **Quản lý Quà tặng 0đ (`GiftProgramPage.jsx`)**: Cấu hình quà tặng kèm theo sản phẩm hoặc mốc đơn hàng.
+- **Quản lý Flash Sale (`FlashSalePage.jsx`, `FlashSaleFormModal.jsx`)**: Thiết lập chiến dịch Flash Sale theo khung giờ, chọn sản phẩm tham gia, đặt giá sốc và giới hạn số lượng bán.
 
----
-
-## 7. Tích hợp Cổng Thanh toán (Payment Gateways)
-
-### 7.1 Thanh toán Chuyển khoản Tự động qua VietQR (NAPAS 24/7)
-- **Cơ chế**: Sinh ảnh mã QR động theo chuẩn VietQR với cấu trúc URL:
-  `https://img.vietqr.io/image/{BANK_ID}-{ACCOUNT_NO}-compact2.png?amount={TOTAL_AMOUNT}&addInfo={ORDER_CODE}&accountName={ACCOUNT_NAME}`
-- **Ưu điểm**: Khách hàng mở bất kỳ ứng dụng ngân hàng nào (Vietcombank, MBBank, Techcombank, VPBank...) quét mã là tự động điền đúng Số tài khoản, Tên thụ hưởng, Số tiền chuẩn từng đồng và Cú pháp nội dung chuyển khoản là Mã đơn hàng.
-- **Xác nhận**: Tích hợp hiển thị trực tiếp trên trang `/checkout/success` và gửi kèm trong email xác nhận.
-
-### 7.2 Thanh toán Trực tuyến qua Cổng VNPay / MoMo
-- **VNPay Sandbox**:
-  - Tạo URL thanh toán `vnp_CreatePaymentUrl` có chữ ký bảo mật HMAC-SHA512.
-  - Return URL: Điều hướng khách về trang kết quả đơn hàng trên Client.
-  - IPN URL (Server-to-Server Webhook): Kiểm tra checksum chữ ký số bí mật (`vnp_HashSecret`), cập nhật `paymentStatus = 'PAID'` tự động và chống gian lận dữ liệu.
-- **MoMo Sandbox**:
-  - Tạo Payment Request API v2 với chữ ký HMAC-SHA256 (`partnerCode`, `accessKey`, `secretKey`).
-  - Xử lý IPN Webhook callback tự động.
+### 3.3 Client Storefront (`client/src/components/home/`, `client/src/app/flash-sale/`, `client/src/components/cart/`)
+- Trang chủ: Promo Ticker Bar (Sao chép mã nhanh), Lưới Coupon Cards phân cấp, Khối Flash Sale đếm ngược với thanh tiến trình số lượng đã bán / còn lại.
+- **Trang Flash Sale Chuyên biệt (`/flash-sale`)**:
+  - Hiển thị danh sách các khung giờ Flash Sale (Khung giờ Đang diễn ra & Khung giờ Sắp diễn ra).
+  - Đồng hồ đếm ngược Countdown Timer lật số.
+  - Lưới sản phẩm Flash Sale với thanh % số lượng đã bán.
+- Khối Coupon gợi ý tại Trang chi tiết sản phẩm và Modal chọn voucher trong Giỏ hàng.
 
 ---
 
-## 8. Kiến trúc & Logic Nghiệp vụ Backend (BE Core Services)
+## 4. Phân hệ Giỏ hàng & Quy trình Thanh toán (Cart & Checkout Engine)
 
-### 8.1 Động cơ Giảm giá 4 Cấp Chống Xung đột Giá (`checkout.service.js`)
-Đường ống tính giá 4 bước chuẩn doanh nghiệp:
-1. **Cấp 1 — Flash Sale**: Thay thế giá bán trực tiếp bằng giá Flash Sale, đánh dấu cờ `isFlashSale`.
-2. **Cấp 2 — Promotion Sản phẩm**: Chỉ áp dụng cho các sản phẩm không thuộc Flash Sale, tự động chọn khuyến mãi giảm sâu nhất theo danh mục hoặc theo từng sản phẩm.
-3. **Cấp 3 — Mã Giảm giá Coupon**: Áp dụng trên tổng giá trị đơn hàng sau khi đã trừ Flash Sale & Promotion (tránh giảm giá 2 lần trên hàng Flash Sale).
-4. **Cấp 4 — Chương trình Quà tặng 0đ (Gift Program)**: Tự động kiểm tra điều kiện đơn hàng để tặng kèm các sản phẩm giá 0đ.
+### 4.1 Backend (`BE/src/controllers/cart.controller.js`, `cart.service.js`, `checkout.service.js`)
+- **Quản lý Session Giỏ hàng Độc lập**:
+  - Hỗ trợ giỏ hàng Khách vãng lai (Guest) thông qua Header `x-session-id` (UUID).
+  - Hỗ trợ giỏ hàng Khách hàng đã đăng nhập (User) gắn với `userId`.
+- **Cơ chế Hợp nhất Giỏ hàng (Cart Merging)**:
+  - Khi khách vãng lai đăng nhập, hệ thống tự động gộp toàn bộ sản phẩm từ giỏ Guest vào giỏ User mà không làm mất dữ liệu.
+- **Xác thực & Tự động Tính toán Tồn kho & Giá cả**:
+  - API `GET /api/v1/cart`: Tự động quét lại tồn kho thực tế, loại bỏ sản phẩm đã hết hàng, tính lại giá bán 4 cấp theo các chương trình khuyến mãi đang chạy.
+  - API `POST /api/v1/cart/items`: Thêm 1 hoặc nhiều sản phẩm (`variantId`, `quantity`) vào giỏ.
+  - API `PATCH /api/v1/cart/items/:itemId`: Cập nhật số lượng có kiểm tra chặn vượt quá tồn kho khả dụng.
+  - API `POST /api/v1/cart/apply-coupon`: Áp dụng mã giảm giá và kiểm tra điều kiện đơn tối thiểu.
+  - Tự động gắn sản phẩm Quà tặng 0đ vào giỏ khi đạt điều kiện chương trình Gift Program.
+- **Engine Xác thực Thanh toán (Validate Checkout Engine)**:
+  - Kiểm tra toàn diện trước khi chuyển sang thanh toán: kiểm tra biến thể còn bán không, còn đủ tồn không, mã giảm giá còn hiệu lực không.
 
-### 8.2 Chuỗi Cung ứng & Quản lý Kho Chuyên sâu (WMS)
-- **Đơn Nhập kho PO (`purchaseOrder.service.js`)**: Sinh mã `PO-YYYYMMDD-XXX`, xuất mẫu Excel chuẩn `mau-don-dat-hang.xlsx` (có công thức thuế VAT 10%, phí ship, chữ ký), gửi email trực tiếp cho Nhà cung cấp và lưu trữ đám mây Cloudinary.
-- **Phiếu Nhập kho (`stockReceiving.service.js`)**: Tăng tồn kho thực tế, ghi nhật ký biến động kho `StockMovement`.
-- **Phiếu Xuất kho (`stockExport.service.js`)**: Xuất bán lẻ, xuất trả NCC, xuất hủy hỏng.
-- **Kiểm kê Kho (`stockAudit.service.js`)**: Đối soát số lượng hệ thống và thực tế kiểm đếm, tự động cân bằng kho.
-- **Cảnh báo Tồn kho (`stockAlert.service.js`)**: Cảnh báo tức thì sản phẩm dưới ngưỡng an toàn (`stock <= threshold`) hoặc đã hết hàng (`stock = 0`).
-
----
-
-## 9. Chi tiết Giao diện & Luồng xử lý Admin Panel
-
-### 9.1 Phân hệ Quản trị Hiện có
-
-| Module | Route | Tính năng chính |
-|---|---|---|
-| **Dashboard** | `/dashboard` | Tổng quan chỉ số, báo cáo tồn kho thấp, phân bổ ngành hàng, Quick Search toàn cục |
-| **Media Library** | `/media` | Quản lý cây thư mục ảnh Cloudinary, kiểm tra an toàn liên kết trước khi xóa (`check-usages`) |
-| **Banners** | `/banners` | Quản lý Carousel banner trang chủ, vị trí hiển thị, lịch ẩn/hiện |
-| **Danh mục & Thương hiệu** | `/categories`, `/brands` | Quản lý cây danh mục đa cấp, thương hiệu chính hãng, SEO Meta |
-| **Sản phẩm & Biến thể** | `/products`, `/products/new`, `/:id/variants` | Quản lý sản phẩm, thông số specs, biến thể SKU/Màu/Dung lượng |
-| **Import / Export Excel** | `/products/import` | Tải mẫu template `.xlsx` có dropdown validation, import sản phẩm tự động tải ảnh về Cloudinary |
-| **Marketing 4 Cấp** | `/promotions/*` | Quản lý Coupons, Khuyến mãi giảm giá, Chương trình quà tặng 0đ, Chiến dịch Flash Sale |
-| **Quản lý Kho WMS** | `/purchase-orders`, `/stock-*`, `/suppliers` | Đơn nhập PO, Phiếu nhập, Phiếu xuất, Kiểm kê, Trả hàng, Cảnh báo kho, Báo cáo tồn kho |
-| **CMS Blog & Menus** | `/blog/*`, `/menus` | Đăng bài viết tin tức, Bộ đo điểm SEO tự động (`blogSeo`), Bộ dựng Tree Menu đa cấp |
-| **Tài khoản & Phân quyền** | `/customers`, `/staffs`, `/roles`, `/audit-logs` | Phân quyền RBAC ma trận chi tiết, Quản lý khách hàng, Nhật ký thao tác hệ thống |
-
-### 9.2 Phân hệ Cần bổ sung trên Admin Panel: Quản lý Đơn hàng (OMS)
-
-- **Trang Danh sách Đơn hàng (`/orders`)**:
-  - Thanh tab trạng thái: Tất cả, Chờ duyệt, Đang đóng gói, Đang giao, Đã giao, Đã hoàn tất, Đã hủy, Hoàn trả.
-  - Bảng dữ liệu hiển thị: Mã đơn, Thời gian đặt, Tên khách hàng & SĐT, Địa chỉ nhận, Tổng tiền, Hình thức thanh toán, Trạng thái thanh toán (Badge màu), Trạng thái đơn hàng.
-  - Bộ lọc theo khoảng ngày, theo phương thức thanh toán, theo ĐVVC.
-- **Trang Chi tiết Đơn hàng (`/orders/:id`)**:
-  - Xem thông tin người nhận, địa chỉ GHN chuẩn hóa, ghi chú giao hàng, thông tin xuất hóa đơn VAT công ty.
-  - Danh sách sản phẩm mua, biến thể, số lượng, đơn giá, chiết khấu, quà tặng 0đ kèm theo.
-  - Khối Cập nhật Trạng thái đơn & Timeline lịch sử xử lý đơn.
-  - Nút **"Đẩy đơn sang GHN"** (Tạo vận đơn và lấy mã vận đơn `ghnOrderCode`).
-  - Nút **"In Phiếu Giao Hàng / Đóng Gói"** (Mở popup in khổ A4/A5 chuyên nghiệp).
-  - Nút **"Xác nhận Thanh toán"** (Đối soát thu tiền mặt COD hoặc tiền chuyển khoản ngân hàng).
-  - Nút **"Hủy Đơn Hàng"** (Nhập lý do hủy, tự động hoàn trả tồn kho `allocated`).
+### 4.2 Client Storefront (`client/src/app/cart/`, `client/src/components/cart/`, `client/src/store/cartStore.js`)
+- **Mini Cart Drawer**: Mở nhanh từ Header, hiển thị danh sách món, tổng tiền, thao tác nhanh.
+- **Trang Giỏ hàng Hoàn chỉnh (`/cart`)**:
+  - **Thanh Tiến trình Nhận quà (Cart Reward Bar)**: Đo giá trị đơn hàng theo 3 mốc (VD: Mốc 1 Miễn phí vận chuyển, Mốc 2 Tặng voucher 100k, Mốc 3 Tặng bộ quà tặng 0đ).
+  - **Danh sách Sản phẩm trong giỏ**: Ảnh, Tên sản phẩm, Tên biến thể, Giá gốc, Giá sau khuyến mãi, Bộ nút tăng giảm số lượng `−`/`+`, Nút xóa sản phẩm, Cảnh báo tồn kho.
+  - **Khối Quà tặng Kèm 0đ**: Hiển thị riêng biệt các món quà được tặng kèm với giá 0₫, khóa không cho tăng số lượng tùy tiện.
+  - **Khối Mã Giảm giá (`CartVoucherModal.jsx`)**: Nhập mã hoặc chọn trực tiếp từ danh sách voucher khả dụng.
+  - **Khối Tổng kết Đơn hàng (`CartOrderSummary.jsx`)**: Tạm tính tiền hàng, Tiền giảm giá khuyến mãi, Tiền giảm voucher, Phí vận chuyển ước tính, Tổng thanh toán cuối cùng, Nút "TIẾN HÀNH ĐẶT HÀNG".
 
 ---
 
-## 10. Động cơ Tìm kiếm & Gợi ý AI (AI Search & Recommendations)
+## 5. Phân hệ Đơn hàng, Hậu cần & Vận chuyển GHN v2/v3 (OMS & Logistics)
 
-- **Full-text Token Search & Autocomplete**: Phân tích từ khóa tìm kiếm tiếng Việt, trả về kết quả sản phẩm và bài viết ngay khi gõ.
-- **Search Log Tracking (`searchLog.model.js`)**: Lưu vết từ khóa tìm kiếm để thống kê Xu hướng tìm kiếm (Trending Search Keywords).
-- **Mô hình Gợi ý Cá nhân hóa AI Machine Learning (`python-services/matrix_factorization.py`)**:
-  - Phân tích tương tác người dùng 4 cấp (`view`=1, `search_click`=2, `add_to_cart`=5, `purchase`=10).
-  - Sử dụng thuật toán SVD/ALS phân rã ma trận nhân tố ẩn để dự đoán sở thích của từng User/Session và trả về Top N sản phẩm gợi ý cá nhân hóa vào MongoDB collection `personalizedrecommendations`.
-- **AI Chatbot Trợ lý Mua sắm (`chat.service.js`)**: Sử dụng Groq SDK / Llama 3 trả về phản hồi streaming SSE, tự động tra cứu tồn kho, gợi ý sản phẩm phù hợp ngân sách của khách.
-- **Visual Search (`visualSearch.service.js`)**: Tìm kiếm sản phẩm bằng hình ảnh thông qua trích xuất vector đặc trưng thị giác.
+### 5.1 Backend (`BE/src/controllers/order.controller.js`, `order.service.js`, `ghn.service.js`, `shipping.controller.js`)
+- **Quản lý Vòng đời Đơn hàng (Order Management System - OMS)**:
+  - Mã đơn hàng sinh tự động chuẩn hóa.
+  - Lưu trữ Snapshot toàn bộ thông tin tại thời điểm đặt hàng: Giá, SKU, Tên sản phẩm, Tên biến thể, Hình ảnh, Địa chỉ giao hàng.
+  - Quản lý trạng thái đơn hàng: `pending` (Chờ xác nhận) -> `confirmed` (Đã xác nhận) -> `processing` (Đang xử lý/Đóng gói) -> `shipping` (Đang giao hàng) -> `completed` (Hoàn tất) -> `cancelled` (Đã hủy) -> `returned` (Đã hoàn trả).
+  - Quản lý trạng thái thanh toán: `unpaid` (Chưa thanh toán), `paid` (Đã thanh toán), `refunded` (Đã hoàn tiền).
+  - Lịch sử thay đổi trạng thái đơn hàng (Order Timeline Logs).
+- **Tích hợp Hậu cần Vận chuyển Giao Hàng Nhanh (GHN Integration)**:
+  - API Lấy danh mục Tỉnh / Thành phố, Quận / Huyện, Phường / Xã chuẩn GHN v2.
+  - API Tính phí vận chuyển tự động dựa trên trọng lượng, kích thước gói hàng và địa chỉ nhận hàng.
+  - API Tạo đơn giao hàng sang hệ thống bưu tá GHN, nhận mã vận đơn GHN Tracking Code.
+  - API Theo dõi hành trình đơn hàng thời gian thực.
+- **Tích hợp Cổng Thanh toán & Chuyển khoản**:
+  - Thanh toán khi nhận hàng (COD).
+  - Thanh toán Chuyển khoản Ngân hàng tự động qua **VietQR (NAPAS 247)**: Tự động sinh mã QR động kèm mã đơn và số tiền chính xác.
+  - Sẵn sàng tích hợp cổng VNPay, MoMo.
+- **Xử lý Tồn kho Tự động theo Đơn hàng**:
+  - Đặt hàng: Giữ chỗ tồn kho (`allocated += qty`).
+  - Xác nhận/Xuất kho: Trừ tồn kho thực tế (`stock -= qty`, `allocated -= qty`).
+  - Hủy đơn: Giải phóng tồn kho giữ chỗ (`allocated -= qty`).
+- **Gửi Email Xác nhận Đơn hàng Tự động**:
+  - Gửi email thông báo đơn hàng mới kèm hóa đơn chi tiết qua Nodemailer.
 
----
+### 5.2 Chuẩn Hóa Bưu Chính Mới 2 Cấp & Đối Soát Sáp Nhập Địa Giới GHN v3 (Nghị quyết 202/2025/QH15)
+- **Tích hợp Kiến trúc Địa danh 2 Cấp GHN v3 (`BE/src/controllers/shipping.controller.js`)**:
+  - `GET /api/v1/shipping/new-provinces`: Truy xuất danh mục 63 Tỉnh/Thành phố mới chuẩn hóa GHN v3 (`_id`, `name`, `code`).
+  - `GET /api/v1/shipping/new-wards?province_id=...`: Truy xuất danh mục Phường/Xã mới trực thuộc cấp Tỉnh (tối ưu hóa loại bỏ cấp trung gian Quận/Huyện theo quy hoạch hành chính mới).
+  - `GET /api/v1/shipping/post-merger-lookup`: Động cơ đối soát và tự động ánh xạ địa chỉ cũ (3 cấp) sang địa chỉ mới (2 cấp), đảm bảo đơn vận chuyển bưu tá luôn chuyển phát chính xác tuyệt đối.
+  - Hỗ trợ song song: Vừa tương thích ngược với hệ thống địa chỉ 3 cấp GHN v2 (`/provinces`, `/districts`, `/wards`), vừa sẵn sàng toàn diện với chuẩn GHN v3 2 cấp.
 
-## 11. Phân tích Khoảng trống (Gap Analysis) cho 1 Website TMĐT Hoàn chỉnh
-
-Dưới đây là ma trận đánh giá chi tiết giữa một sàn TMĐT hoàn chỉnh chuẩn Enterprise và trạng thái hiện tại của dự án:
-
-| Hạng mục / Phân hệ | Yêu cầu Tiêu chuẩn TMĐT | Trạng thái Dự án Hiện tại | Đánh giá & Hướng Xử lý |
-|---|---|---|---|
-| **Catalog & Products (PIM)** | Multi-variant SKU, Specs, SEO, Images, Batch Excel, Flash sale, Promo | ✅ Hoàn thành 100% trên BE & Admin, 95% trên Client | Đã hoàn thiện xuất sắc. |
-| **Kho & Chuỗi Cung ứng (WMS)** | Nhà cung cấp, PO Excel, Phiếu nhập/xuất/kiểm kê, Cảnh báo kho | ✅ Hoàn thành 100% trên BE & Admin | Đầy đủ tính năng doanh nghiệp. |
-| **Giỏ hàng (Cart Module)** | Cart API, Real-time Stock validation, Guest/User session, Quà tặng 0đ | 🟡 BE xong 100%, Client chưa dựng UI & Store | **Cần làm Client:** Tạo `cartStore.js`, dựng trang `/cart`, Mini Cart Drawer, đấu nối nút "Thêm vào giỏ" trên Product Detail & Cards. |
-| **Thanh toán (Checkout Flow)** | Form địa chỉ GHN, Tính cước ship, Chọn COD/VietQR/VNPay/MoMo, Đặt hàng | 🔴 BE mới có tính giá giảm 4 cấp; Client chưa có trang `/checkout` | **Trọng tâm tối nay:** Xây dựng endpoint `POST /api/v1/orders` trên BE và dựng trang `/checkout` trên Client. |
-| **Quản lý Đơn hàng (OMS)** | Schema Order, Vòng đời trạng thái, Khóa tồn kho `allocated`, Hủy đơn, Tra cứu | 🔴 Chưa có Schema Order và Router Order trên BE; Admin chưa có trang `/orders` | **Trọng tâm tối nay:** Tạo `order.model.js`, `order.service.js`, `order.controller.js` trên BE và trang `/orders` trên Admin. |
-| **Vận chuyển GHN (Logistics)** | Master data 63 tỉnh/thành, Tính phí ship tự động, Tạo vận đơn GHN, Webhook tracking | 🟡 Đã có Master data & tra cứu sáp nhập; Chưa có API tính cước & tạo vận đơn | **Cần bổ sung:** Thêm hàm `calculateShippingFee` và `createShippingOrder` vào `ghn.service.js`. |
-| **Cổng Thanh toán (Payments)** | COD, Chuyển khoản VietQR động, Cổng thanh toán trực tuyến VNPay / MoMo | 🔴 Chưa tích hợp cổng thanh toán | **Cần bổ sung:** Tích hợp VietQR động trên trang cảm ơn + Service thanh toán VNPay/MoMo Sandbox. |
-| **Email Giao dịch (Transactional Email)** | Email xác nhận đặt hàng, Email cập nhật vận chuyển, Email hủy đơn | 🟡 Đã có Nodemailer SMTP cho PO; Chưa có template email đơn hàng | **Cần bổ sung:** Thêm template HTML email xác nhận đơn hàng vào `email.service.js`. |
-| **Đánh giá & Nhận xét (Reviews)** | Đánh giá 1-5 sao, xác thực đã mua hàng (Verified Buyer), duyệt đánh giá | 🟡 Đã có comment/Q&A; Chưa có luồng đánh giá sau mua hàng | Có thể triển khai tiếp theo sau phân hệ Order. |
-| **Báo cáo Doanh thu (Analytics)** | Biểu đồ doanh thu ngày/tháng, AOV, Top sản phẩm bán chạy | 🟡 Dashboard đã có thống kê cơ bản; Chưa có biểu đồ doanh thu từ Order | Cập nhật truy vấn Aggregation từ `Order` vào `dashboard.service.js`. |
-
----
-
-## 12. Kế hoạch & Nhiệm vụ Tích hợp Trọng tâm (Integration Blueprint Tối Nay)
-
-Để tối nay 2 người phối hợp làm việc mượt mà và hiệu quả nhất, phân chia công việc theo 3 nhánh rõ ràng:
-
-### 🔹 Nhánh 1: Backend Core (Phát triển API Đơn hàng & Vận chuyển)
-1. **Tạo `order.model.js`**: Định nghĩa đầy đủ schema đơn hàng theo mục 5.1 (mã đơn, thông tin khách, địa chỉ GHN, snapshot items, pricing, payment, shippingLogistics, orderStatus).
-2. **Tạo `order.service.js` & `order.controller.js`**:
-   - `createOrder`: Validate tồn kho, gọi `checkout.service.js`, tăng `variant.allocated`, trừ lượt coupon, lưu đơn hàng, xóa giỏ hàng, gửi email xác nhận.
-   - `getMyOrders`: Lấy lịch sử đơn hàng của User.
-   - `getOrderDetail` & `trackOrderByCode`: Tra cứu đơn hàng.
-   - `cancelOrder`: Hủy đơn, hoàn trả `variant.allocated` và hoàn coupon.
-   - `updateOrderStatus` & `pushToGhn`: Dành cho Admin.
-3. **Mở rộng `ghn.service.js`**:
-   - Thêm `calculateShippingFee`: Tính cước giao hàng GHN.
-   - Thêm `createShippingOrder`: Đẩy đơn sang GHN lấy mã tracking.
-4. **Tạo `order.routes.js`** và mount vào `BE/src/routes/index.js`.
-
-### 🔹 Nhánh 2: Client Storefront (Giao diện Giỏ hàng & Thanh toán)
-1. **Tạo `client/src/store/cartStore.js` (Zustand)**:
-   - Quản lý state giỏ hàng, đồng bộ với BE qua `/api/v1/cart`, lưu `cart_session` cho Guest, cập nhật badge giỏ hàng trên HeaderTop.
-2. **Xây dựng Trang Giỏ hàng `client/src/app/cart/page.jsx`**:
-   - Tiến trình nhận quà (Progress bar), Bảng danh sách sản phẩm (+/- số lượng, xóa), Quà tặng 0đ, Toggle VAT invoice, Ghi chú đơn, Chọn mã giảm giá Coupon, Nút Thanh toán.
-3. **Xây dựng Trang Thanh toán `client/src/app/checkout/page.jsx`**:
-   - Form thông tin nhận hàng, Bộ chọn địa chỉ GHN 3 cấp, Tự động gọi API tính cước ship, Chọn hình thức thanh toán (COD / VietQR / VNPay), Tóm tắt tiền và Nút "ĐẶT HÀNG".
-4. **Xây dựng Trang Đặt hàng Thành công `client/src/app/checkout/success/page.jsx`**:
-   - Hiển thị thông báo thành công, Mã đơn hàng, Khung mã QR VietQR động chuyển khoản (nếu chọn VietQR), Chi tiết địa chỉ và thời gian nhận dự kiến.
-5. **Đấu nối Nút "Thêm vào giỏ" & "Mua ngay"**:
-   - Đấu nối `ProductInfo.jsx`, `StickyPurchaseBar.jsx`, `ProductCard.jsx`, `QuickViewModal.jsx` gọi `cartStore.addToCart`.
-6. **Đấu nối Tab Đơn hàng của tôi `client/src/components/account/AccountOrdersTab.jsx`**:
-   - Gọi API lấy danh sách đơn hàng thật từ BE để hiển thị thay vì placeholder.
-
-### 🔹 Nhánh 3: Admin Panel (Giao diện Quản lý Đơn hàng OMS)
-1. **Tạo Trang Danh sách Đơn hàng `Admin/src/pages/orders/OrderListPage.jsx`**:
-   - Tabs trạng thái đơn, Bảng danh sách đơn, Bộ lọc ngày/thanh toán, Nút xem chi tiết.
-2. **Tạo Trang Chi tiết Đơn hàng `Admin/src/pages/orders/OrderDetailPage.jsx`**:
-   - Xem chi tiết đơn hàng, Khối cập nhật trạng thái, Nút Đẩy sang GHN, Nút In phiếu đóng gói / Phiếu xuất kho.
-3. **Khai báo Route `/orders` và `/orders/:id`** trong `Admin/src/router/index.jsx` kèm phân quyền `PermissionGuard`.
+### 5.3 Client Storefront & Admin Portal Trải nghiệm Nhập Liệu Địa Chỉ
+- **Client Storefront (`client/src/app/tai-khoan`)**:
+  - **Tab Đơn hàng của tôi (`/tai-khoan?tab=orders`)**: Bộ lọc đơn hàng theo trạng thái (Tất cả, Chờ xử lý, Đang giao, Hoàn tất, Đã hủy), Tra cứu theo mã đơn, Xem chi tiết snapshot và hủy đơn tự động khi còn ở trạng thái Chờ xác nhận.
+  - **Tab Sổ địa chỉ nhận hàng (`/tai-khoan?tab=addresses`)**: Quản lý nhiều địa chỉ, hỗ trợ nhập liệu linh hoạt, đặt địa chỉ mặc định khi checkout.
+- **Admin Portal (`SupplierFormModal.jsx`, `WarehouseListPage.jsx`)**:
+  - Bộ chọn địa chỉ 2 Chế độ (Dual Address Mode): Tab 1 cho phép chọn theo "Địa chỉ mới 2 cấp GHN v3", Tab 2 cho phép chọn theo "Địa chỉ cũ 3 cấp GHN v2".
+  - Tự động ghép nối chuỗi địa chỉ hoàn chỉnh (`formattedAddress`), đảm bảo tính thống nhất dữ liệu trên toàn hệ thống.
 
 ---
 
-*Tài liệu được cập nhật toàn diện phục vụ phát triển & tích hợp hệ thống TMĐT: 2026-10-07*
+## 6. Phân hệ Quản lý Kho & Chuỗi Cung ứng (Inventory & Supply Chain - 16 Submodules Toàn diện)
 
+Hệ thống cung cấp phân hệ quản trị Kho vận & Chuỗi cung ứng toàn diện chuẩn doanh nghiệp:
+
+### 6.1 Danh sách 16 Module Kho Chi tiết
+1. **Nhà Cung Cấp Chuẩn Pancake POS & VietQR API (`supplier.model.js`, `SupplierListPage.jsx`, `SupplierFormModal.jsx`)**:
+   - **Phân loại & Công nợ**: Phân loại nhà cung cấp rõ ràng (`Sản phẩm / Nguyên vật liệu`, `Sản phẩm`, `Nguyên phụ liệu`). Tự động ghi nhận và quản lý công nợ NCC (`totalDebt`).
+   - **Hệ thống Tab Trạng thái Pancake**: Cụm tab lọc trạng thái `Tất cả` [số lượng], `Đang hoạt động` [số lượng], `Không hoạt động` [số lượng] kèm aggregation đếm chính xác theo thời gian thực.
+   - **Tích hợp Tài khoản Ngân hàng Chuẩn VietQR**: Kết nối trực tiếp API VietQR (`https://api.vietqr.io/v2/banks`) với dropdown tìm kiếm ngân hàng thông minh, hiển thị logo ngân hàng thực tế, tên viết tắt, mã bin, tự động chuẩn hóa tên chủ tài khoản viết hoa không dấu (`toUpperCase`), chi nhánh ngân hàng.
+   - **Giao diện Bảng Đa Cột & Thống Kê Ghim Chân**: Hiển thị đầy đủ thông tin mã NCC, tên, loại, thông tin liên hệ, địa chỉ, thông tin ngân hàng VietQR kèm logo, công nợ, trạng thái. Thanh thống kê ghim chân bảng tính tổng công nợ cần thanh toán của toàn bộ danh sách nhà cung cấp. Bộ toggle ẩn/hiện cột linh hoạt.
+   - **Modal Soạn Thảo Rộng Rãi 2 Cột (`max-w-5xl`)**: Thiết kế phẳng chống bí bách, công tắc trạng thái nhanh trên Header, khu vực upload logo thương hiệu rộng thoáng, tab chọn địa chỉ 2 chế độ (Địa chỉ mới 2 cấp GHN v3 & Địa chỉ cũ 3 cấp GHN v2) tự sinh chuỗi địa chỉ định dạng chuẩn.
+
+2. **Quản Trị Đa Kho Hàng Vật Lý (Multi-Warehouse - `warehouse.model.js`, `WarehouseListPage.jsx`)**:
+   - Quản lý mạng lưới chi nhánh kho hàng: Kho tổng, Kho miền Bắc, Kho miền Nam, Kho bán lẻ...
+   - Thiết lập Kho mặc định (`isDefault`), phân công Thủ kho quản lý (`manager` liên kết với danh sách Staff có quyền), diện tích mặt bằng, sức chứa tối đa và địa chỉ vị trí kho.
+   - Quản lý tồn kho phân tán theo từng kho (`productWarehouseStock.model.js`).
+   - Thống kê chỉ số hiệu suất: Tỷ lệ lấp đầy, số lượng SKU lưu kho, giá trị tồn kho theo từng kho.
+
+3. **Sơ Đồ Mặt Bằng Kho 2D Trực Quan (Interactive 2D Floor Plan - `WarehouseMapPage.jsx`)**:
+   - Trình giả lập mặt bằng kho tương tác 2D trực quan theo chuẩn phần mềm ERP/WMS MISA AMIS.
+   - Trực quan hóa mặt bằng lưới tọa độ: Khu vực dỡ hàng (Receiving Dock), Dãy kệ hàng (Racks), Tầng kệ (Shelves), Vị trí ô lưu trữ (Bins), Lối đi nội bộ (Aisles), Khu vực đóng gói (Packing Area), Cửa xuất hàng (Shipping Dock).
+   - Tương tác click từng ô kệ để mở drawer/popover xem danh sách các mặt hàng SKU đang đặt tại ô đó, số lượng tồn thực tế, cảnh báo ô đầy/trống và trạng thái nhiệt độ bảo quản.
+   - Hỗ trợ phóng to thu nhỏ (Zoom), kéo rê bản đồ (Pan), chuyển đổi nhanh giữa các chi nhánh kho.
+
+4. **Điều Chuyển Kho Nội Bộ (Stock Transfers - `stockTransfer.model.js`, `StockTransferListPage.jsx`)**:
+   - Lập phiếu điều chuyển hàng hóa giữa các kho chi nhánh (Kho xuất -> Kho nhập).
+   - Quản lý danh sách sản phẩm/biến thể cần chuyển và số lượng.
+   - Quy trình duyệt nghiêm ngặt: `Draft` (Dự thảo) -> `In Transit` (Đang vận chuyển) -> `Received` (Đã nhập kho đích) -> `Cancelled` (Hủy bỏ).
+   - Tự động sinh giao dịch thẻ kho kép (`StockMovement`: 1 giao dịch OUT tại kho nguồn và 1 giao dịch IN tại kho đích) đảm bảo cân bằng số liệu kế toán kho.
+
+5. **Đơn Nhập Hàng (Purchase Orders - PO - `purchaseOrder.model.js`, `PurchaseOrderListPage.jsx`, `PurchaseOrderCreatePage.jsx`)**:
+   - Tạo đơn đặt hàng gửi nhà cung cấp: Chọn NCC, Chọn sản phẩm/biến thể, Giá nhập, Số lượng, Thuế VAT, Chiết khấu.
+   - Luồng duyệt đơn PO nhiều cấp (`draft` -> `submitted` -> `approved` -> `completed` -> `cancelled`).
+   - Hỗ trợ xuất template in phiếu PO chuyên nghiệp và tự sinh email gửi NCC.
+
+6. **Phiếu Nhập Kho (Stock Receivings - `stockReceiving.model.js`, `StockReceivingListPage.jsx`, `StockReceivingCreatePage.jsx`)**:
+   - Lập phiếu thực nhập hàng vào kho từ PO hoặc nhập trực tiếp.
+   - Kiểm đếm số lượng thực nhận, ghi nhận chênh lệch so với PO, tự động cộng tồn kho thực tế (`stock`) và cập nhật giá vốn.
+
+7. **Trả Hàng Nhà Cung Cấp (Purchase Returns - `purchaseReturn.model.js`, `PurchaseReturnListPage.jsx`, `PurchaseReturnCreatePage.jsx`)**:
+   - Tạo phiếu xuất trả hàng lỗi/hỏng về nhà cung cấp, tự động trừ lại tồn kho và cập nhật trừ công nợ.
+
+8. **Phiếu Xuất Kho (Stock Exports - `stockExport.model.js`, `StockExportListPage.jsx`)**:
+   - Quản lý xuất kho theo nhiều mục đích: Xuất bán lẻ, Xuất điều chuyển kho, Xuất hủy hàng hư hỏng, Xuất hàng mẫu thử.
+   - Cập nhật tồn kho tức thì sau khi xuất và ghi nhận chi phí hao hụt.
+
+9. **Kiểm Kê Kho Định Kỳ (Stock Audits - `stockAudit.model.js`, `StockAuditListPage.jsx`)**:
+   - Tạo phiếu kiểm kê kho theo từng danh mục hoặc toàn bộ kho.
+   - Nhập số lượng thực tế kiểm đếm, hệ thống tự động so khớp với tồn kho phần mềm để tính chênh lệch thừa/thiếu.
+   - Tự động tạo bút toán điều chỉnh cân bằng kho sau khi hoàn tất kiểm kê.
+
+10. **Cảnh Báo Tồn Kho (Stock Alerts - `stockAlert.model.js`, `StockAlertPage.jsx`)**:
+    - Tự động phát hiện và cảnh báo sản phẩm sắp hết hàng (dưới ngưỡng tồn tối thiểu).
+    - Cảnh báo hàng tồn kho lâu ngày không phát sinh đơn hàng (Dead stock) và cảnh báo vượt định mức tồn (Overstock).
+
+11. **Sổ Nhật Ký Thẻ Kho (Stock Movements - `stockMovement.model.js`, `StockMovementListPage.jsx`)**:
+    - Ghi lại từng giao dịch biến động tồn kho chi tiết (Nhập, Xuất, Bán hàng, Trả hàng, Kiểm kê, Chuyển kho).
+    - Lưu trữ số lượng tồn trước giao dịch, số lượng biến động và số lượng tồn sau giao dịch của từng biến thể.
+
+12. **Báo Cáo Tồn Kho & Xuất Nhập Tồn (Inventory Reports - `inventoryReport.controller.js`, `InventoryReportPage.jsx`)**:
+    - Thống kê tổng giá trị tài sản hàng tồn kho theo giá vốn và giá bán lẻ.
+    - Báo cáo xuất - nhập - tồn chi tiết theo khoảng thời gian và phân tích tốc độ vòng quay hàng tồn kho.
+
+13. **Quản Lý Chứng Từ Kho (Stock Documents - `stockDocument.model.js`, `StockDocumentListPage.jsx`)**:
+    - Quản lý, lưu trữ và tra cứu toàn bộ hóa đơn, biên bản bàn giao, chứng từ đính kèm của các nghiệp vụ kho.
+
+---
+
+## 7. Phân hệ Thư viện Media & Quản lý Tài nguyên (Media Library & Cloudinary)
+
+### 7.1 Backend (`BE/src/controllers/media.controller.js`, `folder.controller.js`, `media.service.js`)
+- **Tích hợp Cloudinary CDN Storage**: Upload ảnh/video trực tiếp qua Multer memory storage.
+- **Cấu trúc Thư mục Đa cấp (Folder Model)**: Hỗ trợ tạo thư mục lồng nhau dạng Cây để tổ chức ảnh ngăn nắp theo danh mục/thương hiệu.
+- **Lưu trữ Metadata Chi tiết (Media Model)**: URL, public_id, kích thước file, định dạng (jpg, png, webp), dung lượng bytes, alt text, tag phân loại.
+- **Service Quét và Dọn dẹp Ảnh Rác (Unused Media Service)**: Tự động đối soát toàn bộ cơ sở dữ liệu để tìm các file ảnh trên Cloudinary không còn được dùng trong Sản phẩm, Biến thể, Banner hay Bài viết nào, cho phép xóa dọn dẹp dung lượng.
+
+### 7.2 Admin Portal (`Admin/src/pages/media/`)
+- **Cây thư mục Media (`FolderTree.jsx`)**: Tạo thư mục mới, đổi tên, xóa thư mục, di chuyển ảnh giữa các thư mục.
+- **Lưới hiển thị Media (`MediaGrid.jsx`, `MediaToolbar.jsx`)**: Xem trước ảnh phóng to, copy nhanh URL, xem chi tiết metadata, xóa nhiều ảnh cùng lúc.
+- **Khu vực Upload kéo thả (`UploadZone.jsx`)**: Kéo thả nhiều ảnh cùng lúc với thanh tiến trình tải lên.
+- **Modal Chọn ảnh Tái sử dụng (`MediaPickerModal.jsx`)**: Tích hợp trực tiếp vào Form Sản phẩm, Form Biến thể, Form Banner, Form Blog, Form Danh mục để chọn ảnh nhanh từ thư viện.
+- **Trang Dọn dẹp Tài nguyên Rác (`UnusedMediaPage.jsx`)**: Quét và dọn sạch các ảnh thừa giải phóng dung lượng lưu trữ.
+
+---
+
+## 8. Phân hệ Bài viết, Tin tức & SEO (Blog & Content Management)
+
+### 8.1 Backend (`BE/src/models/blogPost.model.js`, `blogCategory.model.js`, `blogSeo.service.js`)
+- Quản lý Bài viết: Tiêu đề, Slug chuẩn SEO, Ảnh bìa đại diện, Tóm tắt ngắn, Nội dung Rich HTML, Danh mục bài viết, Thẻ Tags, Tác giả, Trạng thái (Draft, Published), Lượt xem (View count).
+- Quản lý Danh mục Blog & Thẻ Tag Blog.
+- Tự động chấm điểm SEO và sinh thẻ OpenGraph metadata cho bài viết.
+
+### 8.2 Admin & Client
+- **Admin (`Admin/src/pages/blog/`)**: Danh sách bài viết, Form soạn thảo tin tức với Rich Text Editor, Quản lý danh mục bài viết và thẻ bài viết.
+- **Client (`client/src/app/blogs/`, `client/src/components/home/HomeTechNews.jsx`)**: Trang danh sách tin tức công nghệ, Khối tin tức khuyến mãi ở Trang chủ, Trang chi tiết bài viết chuẩn SEO với mục lục tự động và bài viết liên quan.
+
+---
+
+## 9. Phân hệ Đánh giá & Bình luận (Customer Reviews & Q&A)
+
+### 9.1 Backend (`BE/src/models/comment.model.js`, `comment.service.js`)
+- Đánh giá sao (1 đến 5 sao) và nhận xét nội dung chi tiết.
+- Đính kèm hình ảnh thực tế của khách hàng.
+- Huy hiệu "Đã mua hàng tại hệ thống" (Verified Purchase Badge) dựa trên lịch sử đơn hàng.
+- Phản hồi bình luận đa cấp (Admin/CSKH trả lời khách hàng).
+- Kiểm duyệt bình luận (Trạng thái: Chờ duyệt, Đã duyệt, Đã ẩn).
+
+### 9.2 Client (`client/src/components/product/detail/ProductReviewsAndComments.jsx`)
+- Thống kê tỷ lệ đánh giá sao trực quan (Thanh tiến trình 5 sao, 4 sao, 3 sao, 2 sao, 1 sao).
+- Bộ lọc xem đánh giá: Lọc theo số sao, lọc đánh giá có kèm hình ảnh, lọc đánh giá của người đã mua.
+- Form gửi đánh giá và nhận xét kèm tải ảnh thực tế.
+
+---
+
+## 10. Phân hệ Trợ lý AI & Động cơ Tìm kiếm Thông minh (Dual AI Chatbot, Visual Search & Recommendations)
+
+### 10.1 Trợ lý Ảo AI Chatbot Đa Động Cơ & Nhận Diện Ngữ Cảnh Thời Gian Thực (`BE/src/services/chatbot.service.js`, `client/src/components/chat/`)
+- **Kiến trúc Động cơ Kép (Dual AI Engine - Groq Llama 3 & Google Gemini)**:
+  - Tích hợp động cơ kép: Mô hình Groq Llama 3 (xử lý phản hồi tốc độ cực cao) kết hợp cùng Google Gemini Pro AI (xử lý logic ngữ cảnh phức tạp và dự phòng tin cậy).
+  - Tự động cơ chế chuyển đổi dự phòng (Fallback Mechanism) thông minh khi một trong hai dịch vụ gặp lỗi hoặc quá tải quota.
+- **Truyền Dữ Liệu Dạng Luồng Server-Sent Events (SSE Streaming)**:
+  - Tối ưu hóa phản hồi theo mili-giây, streaming từng từ trực tiếp xuống giao diện mà không phải chờ đợi toàn bộ văn bản sinh xong.
+- **Nhận Diện Ngữ Cảnh Sản Phẩm Đang Xem Thời Gian Thực (`Viewed Product Context`)**:
+  - Khi khách hàng nhắn tin trong lúc đang xem trang chi tiết sản phẩm (ví dụ: các dòng Samsung Galaxy, iPhone...), hệ thống tự động bóc tách ngữ cảnh sản phẩm hiện tại (ID, SKU, Tên, Giá, và Tồn kho khả dụng thực tế `availableStock`).
+  - Chatbot lập tức phân tích và trả lời chính xác tình trạng còn hàng hoặc hết hàng dựa trên dữ liệu tồn kho thực tế, loại bỏ hoàn toàn hiện tượng ảo giác (hallucination) hoặc báo nhầm hết hàng.
+- **Tương Tác Trực Quan Đa Năng**:
+  - Trả về tin nhắn kèm **Thẻ sản phẩm tương tác trực tiếp (`ChatProductCard.jsx`)** cho phép xem nhanh thông tin, giá bán và thêm ngay vào giỏ hàng từ khung chat.
+  - Tích hợp **Tra cứu Vận đơn Tự động (`ChatOrderLookup.jsx`)**: Khách hàng nhập mã đơn, Bot tự động truy vấn trạng thái đơn hàng và tiến trình vận chuyển thời gian thực.
+  - Mascot hoạt hình thông minh kèm hiệu ứng âm thanh tương tác xúc giác (`MascotBot.jsx`, `AiChatWidget.jsx`).
+
+### 10.2 Động cơ Tìm kiếm Nâng cao & Tìm kiếm bằng Hình ảnh (Visual Search)
+- **Live Search Autocomplete (`client/src/components/header/SearchBar.jsx`)**: Debounce 300ms, gợi ý tức thì danh sách sản phẩm và bài viết liên quan kèm hình ảnh nhỏ và giá bán.
+- **AI Search Enricher (`aiSearchEnricher.service.js`)**: Phân tích ngữ nghĩa từ khóa và tìm kiếm theo thuộc tính kỹ thuật.
+- **Visual Search (Tìm kiếm bằng hình ảnh - `visualSearch.service.js`, `VisualSearchModal.jsx`)**:
+  - Cho phép người dùng tải lên hình ảnh sản phẩm từ điện thoại hoặc máy tính.
+  - Trích xuất đặc trưng hình ảnh để tìm kiếm các sản phẩm tương đồng về kiểu dáng và màu sắc trong kho.
+
+### 10.3 Động cơ Gợi ý Thông minh (Recommendation Engine)
+- **Item Similarity Model**: Gợi ý sản phẩm tương tự cùng tầm giá và danh mục.
+- **Upsell Suggestion Model**: Gợi ý phụ kiện thường được mua kèm với sản phẩm đang xem.
+- **Personalized Recommendation Feed**: Gợi ý sản phẩm cá nhân hóa tại Trang chủ dựa trên lịch sử xem hàng của người dùng (`userInteraction.model.js`).
+
+---
+
+## 11. Phân hệ Quản trị Nhân viên, Phân quyền Động & Nhật ký Hệ thống (RBAC & Audit Logs)
+
+### 11.1 Phân quyền Động Đa cấp (RBAC - `role.model.js`, `permission.model.js`)
+- Danh mục quyền hạn chi tiết theo dạng `resource:action` (VD: `product.create`, `product.edit`, `stock_audit.manage`, `purchase_order.approve`, `user.view`...).
+- Quản lý Nhóm quyền (Roles: Super Admin, Quản lý kho, Kế toán, Nhân viên CSKH, Biên tập viên...).
+- Gán phân quyền linh hoạt theo từng vai trò.
+- Phân quyền giao diện phía Admin bằng HOC `PermissionGuard` và `Can.jsx` (tự động ẩn các nút thao tác và chặn truy cập trang nếu không có quyền).
+
+### 11.2 Quản lý Nhân viên & Khách hàng
+- **Quản lý Nhân viên (`StaffListPage.jsx`)**: Danh sách nhân viên, gán vai trò quyền hạn, khóa/mở tài khoản, mời nhân viên tham gia qua Email.
+- **Quản lý Khách hàng (`CustomerListPage.jsx`)**: Danh sách khách hàng, thông tin liên hệ, tổng chi tiêu, tổng số đơn đã mua, lịch sử hoạt động.
+
+### 11.3 Nhật ký Hoạt động Toàn hệ thống (Audit Logs - `auditLog.model.js`, `AuditLogListPage.jsx`)
+- Tự động ghi lại mọi thao tác quan trọng trong hệ thống:
+  - Ai thực hiện (User/Staff).
+  - Hành động gì (Create, Update, Delete, Export, Login...).
+  - Trên tài nguyên nào (Sản phẩm, Đơn hàng, Kho hàng, Quyền hạn...).
+  - Thời gian, Địa chỉ IP, Trình duyệt.
+  - Dữ liệu trước và sau khi thay đổi (Old Data vs New Data diff).
+- Bảng tra cứu nhật ký có bộ lọc theo ngày, theo người thao tác và theo hành động.
+
+---
+
+## 12. Giao diện Trải nghiệm Khách hàng Storefront (Client Experience)
+
+### 12.1 Header & Navigation
+- Thanh Top Header: Cam kết chính hãng, Hotline, Đặt lịch hẹn, Tra cứu đơn.
+- Live Search Bar kèm tìm kiếm hình ảnh Visual Search.
+- Mega Menu & Category Drawer đa cấp.
+- Account Dropdown Menu (Đơn hàng, Sổ địa chỉ, Đổi mật khẩu, Đăng xuất).
+- Mini Cart Drawer thời gian thực.
+
+### 12.2 Các Khối Giao diện Trang chủ (Homepage)
+- Hero Banner Slider tự động cuộn.
+- Promo Ticker Bar sao chép mã ưu đãi nhanh.
+- Khối 4 Cam kết dịch vụ (Trust Badges).
+- Khối Coupon Cards danh sách mã giảm giá.
+- Khối Flash Sale đồng hồ đếm ngược và thanh tiến trình.
+- Khối Danh mục ngành hàng bo tròn.
+- Khối Tabbed Products (Sản phẩm mới / Bán chạy / Nổi bật).
+- Khối Brand Marquee thương hiệu đối tác.
+- Khối Bài viết tin tức khuyến mãi & công nghệ.
+- Khối Đăng ký nhận bản tin khuyến mãi (Newsletter).
+
+### 12.3 Toàn bộ các Trang Chức năng Client
+- Trang chủ (`/`)
+- Trang Danh mục / Bộ sưu tập (`/collections/[handle]`)
+- Trang Chi tiết Sản phẩm (`/products/[handle]`)
+- Trang So sánh Thông số (`/so-sanh`)
+- Trang Giỏ hàng (`/cart`)
+- Trang Chiến dịch Flash Sale (`/flash-sale`)
+- Trang Danh sách Tin tức (`/blogs`) & Chi tiết Bài viết (`/blogs/[slug]`)
+- Trang Tìm kiếm Kết quả Nâng cao (`/search`)
+- Trang Tài khoản Khách hàng Cá nhân (`/tai-khoan`)
+- Các trang Xác thực: Đăng nhập (`/login`), Đăng ký (`/register`), Quên mật khẩu (`/forgot-password`), Đặt lại mật khẩu (`/reset-password`).
+
+---
+
+## 13. Quy chuẩn Thiết kế Giao diện UI/UX Quản trị & Trải nghiệm Người dùng (Admin Design System & UX Standards)
+
+Dự án áp dụng chặt chẽ triết lý thiết kế phẳng doanh nghiệp (Enterprise Flat Design) nhằm mang lại trải nghiệm chuyên nghiệp, tốc độ cao và loại bỏ hoàn toàn các phong cách AI-slop:
+
+### 13.1 Triết lý Thiết kế Cốt lõi
+- **Mặc định Flat & Solid Colors**: Sử dụng hệ màu đặc chuẩn mực (`bg-background`, `bg-surface`, `bg-card`). Tuyệt đối không dùng dải màu gradient loè loẹt hay màu nền bán trong suốt thiếu kiểm soát.
+- **Không Glassmorphism**: Loại bỏ các hiệu ứng kính mờ (`backdrop-blur`, viền trắng mờ ảo) để giữ giao diện luôn sắc nét, hiệu năng cao trên mọi thiết bị.
+- **Không Card Lồng Card**: Bố cục phẳng phân tầng bằng đường kẻ viền mảnh 1px (`border-slate-200 / border-border`), bảng biểu rõ ràng thay cho các khối hộp xếp lồng nhau gây rối mắt.
+- **Bo Góc Cố Định 6px (`rounded-[6px]`)**: Đồng bộ 100% các thành phần UI (Nút bấm, Input, Modal, Badge, Dropdown, Khung Bảng) theo kích thước bo góc 6px tinh gọn, hiện đại.
+- **Hệ Thống Khoảng Cách (Spacing System)**: Chuẩn hóa theo bội số của 4px (`gap-1` 4px, `gap-2` 8px, `gap-3` 12px, `gap-4` 16px, `gap-6` 24px).
+- **Định Dạng Số Liệu Chuẩn Mực**: Luôn sử dụng `tabular-nums font-mono` cho các trường tiền tệ, mã đơn hàng, mã SKU, mã vận đơn GHN, số lượng tồn kho và công nợ để căn thẳng cột tuyệt đối.
+
+### 13.2 Chuẩn Không Gian Làm Việc Siêu Rộng Cho Modal (Wide Workspace Standard)
+- Nhằm xóa bỏ hoàn toàn cảm giác chật chội, bí bách trong các tác vụ quản trị kho vận và cấu hình sản phẩm phức tạp, toàn bộ các Modal nghiệp vụ chính đều được nâng cấp kích thước rộng rãi:
+  - **Modal Nhà Cung Cấp (`SupplierFormModal.jsx`)**: Chiều rộng cực đại `max-w-5xl`, chia 2 cột rõ ràng, tách bạch giữa thông tin cơ bản, thông tin tài chính VietQR và sổ địa chỉ.
+  - **Modal Combo Sản Phẩm (`ComboFormModal.jsx`)**: Chiều rộng cực đại `max-w-5xl xl:max-w-6xl`, hiển thị song song danh sách sản phẩm thành phần ma trận và bảng tính giá gợi ý từ Gemini AI.
+  - **Modal Đơn PO & Phiếu Nhập Kho**: Không gian thoáng đãng, dễ dàng kiểm đếm bảng hàng chục sản phẩm mà không phải cuộn ngang.
+
+### 13.3 Tương Tác Xúc Giác & Chống Nhảy Layout (Rule N1 & Micro-interactions)
+- Mọi nút bấm và tương tác người dùng đều có phản hồi vật lý tinh tế (`active:scale-[0.98] transition-transform`).
+- Cơ chế bảo vệ chống giật layout (Layout Shift Prevention): Khi chuyển đổi tab, kích hoạt dropdown hay trạng thái loading, kích thước phần tử được cố định để không làm dịch chuyển các thành phần lân cận.
+
+---
+*Tài liệu được trích xuất và đối soát trực tiếp 100% từ cấu trúc mã nguồn thực tế của dự án Clone Haravan.*

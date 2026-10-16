@@ -1,4 +1,6 @@
 import React from 'react';
+import { useLocation } from 'react-router-dom';
+import { ShieldAlert, AlertTriangle } from 'lucide-react';
 import { useAdminAuthFlow } from '@/hooks/useAdminAuthFlow';
 import MascotAdminWelcome from '@/components/ui/MascotAdminWelcome';
 import AuthReasonAlert from '@/components/auth/AuthReasonAlert';
@@ -7,6 +9,8 @@ import OtpRequestForm from '@/components/auth/OtpRequestForm';
 import OtpVerifyForm from '@/components/auth/OtpVerifyForm';
 
 export default function LoginPage() {
+  const location = useLocation();
+  const authError = location.state?.authError || location.state?.error;
   const {
     reason,
     mode,
@@ -24,6 +28,10 @@ export default function LoginPage() {
     otpInputRefs,
     countdown,
     devOtpHint,
+    loginError,
+    isLocked,
+    lockCountdown,
+    unlockTime,
     handlePasswordSubmit,
     handleRequestOtp,
     handleVerifyOtpDirect,
@@ -33,6 +41,12 @@ export default function LoginPage() {
     handleResendOtp,
     handlePasskeyLogin,
   } = useAdminAuthFlow();
+
+  const formatCountdown = (sec) => {
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  };
 
   return (
     <div className="flex min-h-[100dvh] w-full items-center justify-center bg-background px-4 py-8 antialiased selection:bg-primary selection:text-primary-foreground font-sans">
@@ -49,7 +63,49 @@ export default function LoginPage() {
         </div>
 
         <div className="rounded-[6px] border border-border bg-card p-6 shadow-xs text-card-foreground">
-          <AuthReasonAlert reason={reason} />
+          <AuthReasonAlert reason={reason} customMessage={authError} />
+
+          {/* Account Lock or Failed Attempts Alert */}
+          {loginError && (
+            <div
+              className={`mb-4 rounded-[6px] p-3 text-xs border ${
+                isLocked
+                  ? 'border-destructive/30 bg-destructive/10 text-destructive'
+                  : 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300'
+              }`}
+            >
+              <div className="flex items-start gap-2.5">
+                {isLocked ? (
+                  <ShieldAlert className="size-4 shrink-0 text-destructive mt-0.5" />
+                ) : (
+                  <AlertTriangle className="size-4 shrink-0 text-amber-600 mt-0.5" />
+                )}
+                <div className="flex flex-col gap-1.5 w-full">
+                  <span className="font-semibold leading-relaxed">{loginError}</span>
+                  {isLocked && (
+                    <div className="flex flex-col gap-1 pt-1.5 border-t border-destructive/20 text-[11px]">
+                      {lockCountdown > 0 && (
+                        <div className="flex items-center justify-between">
+                          <span>Thời gian chờ mở khóa:</span>
+                          <span className="font-mono font-bold text-xs tabular-nums bg-destructive/15 px-1.5 py-0.5 rounded-[4px]">
+                            {formatCountdown(lockCountdown)}
+                          </span>
+                        </div>
+                      )}
+                      {unlockTime && (
+                        <div className="flex items-center justify-between opacity-80">
+                          <span>Thời điểm đăng nhập lại:</span>
+                          <span className="font-mono font-semibold tabular-nums">
+                            {unlockTime}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           {mode === 'password' && (
             <PasswordLoginForm
@@ -61,6 +117,8 @@ export default function LoginPage() {
               setShowPass={setShowPass}
               isLoading={isLoading}
               isPasskeyLoading={isPasskeyLoading}
+              isLocked={isLocked}
+              lockCountdown={lockCountdown}
               onSubmit={handlePasswordSubmit}
               onPasskeyLogin={handlePasskeyLogin}
               onSwitchToOtp={() => setMode('otp_request')}

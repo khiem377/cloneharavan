@@ -47,6 +47,20 @@ const orderItemSchema = new mongoose.Schema(
       required: [true, 'Giá gốc là bắt buộc'],
       min: [0, 'Giá gốc không được nhỏ hơn 0'],
     },
+    isGift: {
+      type: Boolean,
+      default: false,
+    },
+    giftProgramId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'GiftProgram',
+      default: null,
+    },
+    giftProgramName: {
+      type: String,
+      default: '',
+      trim: true,
+    },
     salePrice: {
       type: Number,
       default: null,
@@ -195,6 +209,8 @@ const orderSchema = new mongoose.Schema(
 orderSchema.index({ createdAt: -1 });
 orderSchema.index({ userId: 1, createdAt: -1 });
 orderSchema.index({ orderStatus: 1, paymentStatus: 1 });
+orderSchema.index({ orderStatus: 1, createdAt: -1 });
+orderSchema.index({ 'shippingAddress.phone': 1 });
 
 const Order = mongoose.model('Order', orderSchema);
 module.exports = Order;

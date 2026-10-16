@@ -13,6 +13,11 @@ const updateProfileSchema = z.object({
     .regex(/^0\d{9}$/, 'Số điện thoại phải có 10 chữ số và bắt đầu bằng 0')
     .optional(),
 
+  email: z
+    .string()
+    .email('Email không đúng định dạng')
+    .optional(),
+
   gender: z
     .enum(['male', 'female', 'other'], {
       errorMap: () => ({ message: 'Giới tính phải là male, female hoặc other' }),

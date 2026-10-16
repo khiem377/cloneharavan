@@ -8,7 +8,11 @@ const Category = require('../models/category.model');
 const SearchLog = require('../models/searchLog.model');
 const FlashSale = require('../models/flashSale.model');
 
+const FLASH_SALE_MAP_TTL_MS = 15 * 1000;
+let flashSaleMapCache = { map: null, expiresAt: 0 };
+
 async function getActiveFlashSaleMap() {
+  if (flashSaleMapCache.map && flashSaleMapCache.expiresAt > Date.now()) return flashSaleMapCache.map;
   try {
     const now = new Date();
     const activeSales = await FlashSale.find({
@@ -37,6 +41,7 @@ async function getActiveFlashSaleMap() {
         }
       });
     });
+    flashSaleMapCache = { map: fsMap, expiresAt: Date.now() + FLASH_SALE_MAP_TTL_MS };
     return fsMap;
   } catch (err) {
     console.error('[SearchService] getActiveFlashSaleMap error:', err.message);
@@ -678,12 +683,16 @@ const globalSearch = async (query = {}, req = null) => {
 
   // 1. SEARCH PRODUCTS
   if (domain === 'all' || domain === 'products') {
-    const textQuery = parsed.normalized
+    const anchorCondition = (parsed.anchorCategories && parsed.anchorCategories.length > 0)
       ? {
-          $and: [
-            ...baseExclusions,
-            { $text: { $search: parsed.normalized } },
-          ],
+          $or: parsed.anchorCategories.flatMap((a) => {
+            const flexP = a.split(/\s+/).map(escapeRegExp).join('[-_\\s]+');
+            return [
+              { slug: new RegExp(`(?:^|[-_\\s])${flexP}(?:$|[-_\\s])`, 'i') },
+              { name: new RegExp(flexP, 'i') },
+              { searchTokens: new RegExp(flexP, 'i') },
+            ];
+          }),
         }
       : null;
 
@@ -691,20 +700,28 @@ const globalSearch = async (query = {}, req = null) => {
     const nonTrivialTokens = parsed.tokens.filter((t) => t.length >= 2);
     const activeTokens = coreTokens.length > 0 ? coreTokens : nonTrivialTokens;
 
-    // Build per-token conditions for multi-term AND matching
+    // Build per-token conditions for multi-term AND matching with synonym & flexible separator support
     const tokenConditions = activeTokens.map((t) => {
       const isShort = t.length <= 2;
       const reg = isShort
         ? new RegExp(`(?:^|[^a-zA-Z0-9])${escapeRegExp(t)}(?:$|[^a-zA-Z0-9])`, 'i')
         : new RegExp(escapeRegExp(t), 'i');
-      const tokenSyns = (parsed.synonyms || []).filter(
-        (s) => s.includes(t) || t.includes(s)
-      );
-      const synRegs = tokenSyns.map((s) =>
-        s.length <= 2
-          ? new RegExp(`(?:^|[^a-zA-Z0-9])${escapeRegExp(s)}(?:$|[^a-zA-Z0-9])`, 'i')
-          : new RegExp(escapeRegExp(s), 'i')
-      );
+
+      const tokenAliases = [t];
+      if (parsed.synonymMap && parsed.synonymMap[t]) {
+        tokenAliases.push(parsed.synonymMap[t]);
+      }
+      const tokenSyns = [
+        ...tokenAliases,
+        ...(parsed.synonyms || []).filter((s) => s.includes(t) || t.includes(s)),
+      ];
+
+      const synRegs = tokenSyns.map((s) => {
+        const flexP = s.split(/\s+/).map(escapeRegExp).join('[-_\\s]+');
+        return s.length <= 2
+          ? new RegExp(`(?:^|[^a-zA-Z0-9])${flexP}(?:$|[^a-zA-Z0-9])`, 'i')
+          : new RegExp(flexP, 'i');
+      });
       const allTokenRegs = [reg, ...synRegs];
 
       return {
@@ -729,16 +746,20 @@ const globalSearch = async (query = {}, req = null) => {
         .limit(200)
         .lean();
     } else {
-      if (tokenConditions.length > 0) {
-        regexResults = await Product.find({
-          $and: [...baseExclusions, ...tokenConditions],
-        })
-          .populate('categories', 'name slug')
-          .populate('brand', 'name slug logo')
-          .limit(100)
-          .lean();
-      }
+      // Tier 1: Strict Multi-token AND search (with Anchor Category Guard if present)
+      const tier1Conditions = [...baseExclusions];
+      if (anchorCondition) tier1Conditions.push(anchorCondition);
+      if (tokenConditions.length > 0) tier1Conditions.push(...tokenConditions);
 
+      regexResults = await Product.find({
+        $and: tier1Conditions,
+      })
+        .populate('categories', 'name slug')
+        .populate('brand', 'name slug logo')
+        .limit(100)
+        .lean();
+
+      // Tier 2: If Tier 1 returned 0, fallback to Category-Guarded OR query
       if (regexResults.length === 0) {
         const orConditions = nonTrivialTokens.map((t) => ({
           $or: [
@@ -747,9 +768,12 @@ const globalSearch = async (query = {}, req = null) => {
           ],
         }));
 
+        const tier2Conditions = [...baseExclusions];
+        if (anchorCondition) tier2Conditions.push(anchorCondition);
+
         const orQuery = {
           $and: [
-            ...baseExclusions,
+            ...tier2Conditions,
             {
               $or: [
                 { name: new RegExp(escapeRegExp(parsed.normalized), 'i') },
@@ -762,20 +786,29 @@ const globalSearch = async (query = {}, req = null) => {
         regexResults = await Product.find(orQuery)
           .populate('categories', 'name slug')
           .populate('brand', 'name slug logo')
-          .limit(200)
+          .limit(100)
           .lean();
       }
     }
 
-    const textResults = textQuery
-      ? await Product.find(textQuery, { score: { $meta: 'textScore' } })
-          .sort({ score: { $meta: 'textScore' } })
-          .populate('categories', 'name slug')
-          .populate('brand', 'name slug logo')
-          .limit(100)
-          .lean()
-          .catch(() => [])
-      : [];
+    // Tier 3: Text Search only if no regex results or when explicitly needed with Anchor Guard
+    let textResults = [];
+    if (parsed.normalized && regexResults.length === 0) {
+      const textQueryConditions = [...baseExclusions];
+      if (anchorCondition) textQueryConditions.push(anchorCondition);
+      textQueryConditions.push({ $text: { $search: parsed.normalized } });
+
+      textResults = await Product.find(
+        { $and: textQueryConditions },
+        { score: { $meta: 'textScore' } }
+      )
+        .sort({ score: { $meta: 'textScore' } })
+        .populate('categories', 'name slug')
+        .populate('brand', 'name slug logo')
+        .limit(50)
+        .lean()
+        .catch(() => []);
+    }
 
     const seenIds = new Set();
     const rawProducts = [];
@@ -1179,9 +1212,56 @@ const globalSearch = async (query = {}, req = null) => {
 };
 
 /**
- * Instant Autocomplete Search Suggestions Endpoint (Sub-20ms preview)
+ * Instant Autocomplete Search Suggestions Endpoint
+ * - Cache RAM theo query (30s) + gop request dong thoi (in-flight dedupe).
+ * - Truy van phu (blog, brand, category, flash sale) chay song song voi truy van san pham.
+ * - Brand/category cua san pham lay tu corpus trong RAM, khong populate.
  */
+const SUGGEST_CACHE_TTL_MS = 30 * 1000;
+const SUGGEST_CACHE_MAX = 500;
+const suggestCache = new Map();
+
+const getCorpusLookups = (corpus) => {
+  if (!corpus._lookups) {
+    corpus._lookups = {
+      brands: new Map((corpus.brands || []).map((b) => [String(b._id), b])),
+      categories: new Map((corpus.categories || []).map((c) => [String(c._id), c])),
+    };
+  }
+  return corpus._lookups;
+};
+
+const attachBrandAndCategories = (products, corpus) => {
+  const { brands, categories } = getCorpusLookups(corpus);
+  return products.map((p) => ({
+    ...p,
+    brand: p.brand ? brands.get(String(p.brand)) || null : null,
+    categories: (p.categories || []).map((id) => categories.get(String(id))).filter(Boolean),
+  }));
+};
+
 const getInstantSuggestions = async (q = '') => {
+  const key = String(q || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  const hit = suggestCache.get(key);
+  if (hit) {
+    if (hit.pending) return hit.pending;
+    if (hit.expiresAt > Date.now()) return hit.data;
+  }
+  const pending = computeInstantSuggestions(q)
+    .then((data) => {
+      if (suggestCache.size >= SUGGEST_CACHE_MAX) suggestCache.delete(suggestCache.keys().next().value);
+      suggestCache.set(key, { data, expiresAt: Date.now() + SUGGEST_CACHE_TTL_MS });
+      return data;
+    })
+    .catch((err) => {
+      suggestCache.delete(key);
+      throw err;
+    });
+  suggestCache.set(key, { pending });
+  return pending;
+};
+
+const computeInstantSuggestions = async (q = '') => {
   const corpus = await getStoreCorpus();
   const parsed = parseSearchQuery(q, corpus);
   if (!parsed.normalized) {
@@ -1218,6 +1298,51 @@ const getInstantSuggestions = async (q = '') => {
     };
   });
 
+  const brandOrConditions = [{ name: regex }, { slug: regex }];
+  const categoryOrConditions = [{ name: regex }, { slug: regex }];
+
+  // Add synonym & didYouMean matching to brands & categories
+  (parsed.synonyms || []).forEach((syn) => {
+    if (syn && syn.length >= 2) {
+      const synReg = new RegExp(escapeRegExp(syn), 'i');
+      brandOrConditions.push({ name: synReg });
+      categoryOrConditions.push({ name: synReg });
+    }
+  });
+
+  if (parsed.didYouMean) {
+    const dymReg = new RegExp(escapeRegExp(parsed.didYouMean), 'i');
+    brandOrConditions.push({ name: dymReg });
+    categoryOrConditions.push({ name: dymReg });
+  }
+
+  // Truy van phu chay SONG SONG voi truy van san pham (khong cho nhau)
+  const sidePromise = Promise.all([
+    BlogPost.find({
+      status: 'published',
+      $or: [{ title: regex }, { slug: regex }],
+    })
+      .select('title slug thumbnail excerpt createdAt')
+      .limit(3)
+      .lean(),
+
+    Brand.find({ isActive: true, $or: brandOrConditions })
+      .select('name slug logo')
+      .limit(4)
+      .lean(),
+
+    Category.find({ isActive: true, $or: categoryOrConditions })
+      .select('name slug icon image')
+      .limit(4)
+      .lean(),
+
+    getTrendingKeywords(),
+    getActiveFlashSaleMap(),
+  ]);
+  sidePromise.catch(() => {}); // tranh unhandled rejection neu truy van san pham loi truoc
+
+  const productSelect = 'name slug price salePrice thumbnail productCode sku cachedPrice cachedSalePrice brand categories';
+
   let matchedProducts = [];
   if (andTokenConditions.length > 0) {
     matchedProducts = await Product.find({
@@ -1225,9 +1350,7 @@ const getInstantSuggestions = async (q = '') => {
       status: 'published',
       $and: andTokenConditions,
     })
-      .select('name slug price salePrice thumbnail productCode sku cachedPrice cachedSalePrice brand categories')
-      .populate('categories', 'name slug')
-      .populate('brand', 'name slug logo')
+      .select(productSelect)
       .limit(50)
       .lean();
   }
@@ -1249,54 +1372,14 @@ const getInstantSuggestions = async (q = '') => {
         ...orConditions.flatMap((c) => c.$or),
       ],
     })
-      .select('name slug price salePrice thumbnail productCode sku cachedPrice cachedSalePrice brand categories')
-      .populate('categories', 'name slug')
-      .populate('brand', 'name slug logo')
+      .select(productSelect)
       .limit(100)
       .lean();
   }
 
-  const brandOrConditions = [{ name: regex }, { slug: regex }];
-  const categoryOrConditions = [{ name: regex }, { slug: regex }];
+  matchedProducts = attachBrandAndCategories(matchedProducts, corpus);
 
-  // Add synonym & didYouMean matching to brands & categories
-  (parsed.synonyms || []).forEach((syn) => {
-    if (syn && syn.length >= 2) {
-      const synReg = new RegExp(escapeRegExp(syn), 'i');
-      brandOrConditions.push({ name: synReg });
-      categoryOrConditions.push({ name: synReg });
-    }
-  });
-
-  if (parsed.didYouMean) {
-    const dymReg = new RegExp(escapeRegExp(parsed.didYouMean), 'i');
-    brandOrConditions.push({ name: dymReg });
-    categoryOrConditions.push({ name: dymReg });
-  }
-
-  const [blogs, brands, categories, trendingKeywords] = await Promise.all([
-    BlogPost.find({
-      status: 'published',
-      $or: [{ title: regex }, { slug: regex }],
-    })
-      .select('title slug thumbnail excerpt createdAt')
-      .limit(3)
-      .lean(),
-
-    Brand.find({ isActive: true, $or: brandOrConditions })
-      .select('name slug logo')
-      .limit(4)
-      .lean(),
-
-    Category.find({ isActive: true, $or: categoryOrConditions })
-      .select('name slug icon image')
-      .limit(4)
-      .lean(),
-
-    getTrendingKeywords(),
-  ]);
-
-  const activeFsMap = await getActiveFlashSaleMap();
+  const [blogs, brands, categories, trendingKeywords, activeFsMap] = await sidePromise;
 
   const scoredProducts = matchedProducts
     .map((p) => {
@@ -1367,7 +1450,10 @@ const SEED_TRENDING_KEYWORDS = [
   { keyword: 'máy rửa chén bosch', count: 70, count24h: 14, countPrev24h: 7, count7d: 70, count6h: 3, resultsCount: 3, isTrending: true, trendingScore: 62, zScore: 1.2, uniqueSessionCount: 10, cartCount: 4, purchaseCount: 1, discussionCount: 2 },
 ];
 
+let seedKeywordsEnsured = false;
 const ensureSeedKeywordsInDb = async () => {
+  if (seedKeywordsEnsured) return;
+  seedKeywordsEnsured = true;
   try {
     for (const item of SEED_TRENDING_KEYWORDS) {
       await SearchLog.updateOne(
@@ -1395,17 +1481,49 @@ const ensureSeedKeywordsInDb = async () => {
       );
     }
   } catch (err) {
+    seedKeywordsEnsured = false;
     console.error('[SearchService] ensureSeedKeywordsInDb error:', err.message);
   }
 };
 
 const JUNK_KEYWORDS_REGEX = /^(meo|mẹo|top\s*\d+|test|abc|xyz|demo|asdf|qwerty|123|\d+|[a-z]{1,2})$/i;
 
+const TRENDING_CACHE_TTL_MS = 30 * 1000;
+const JUNK_CLEAN_INTERVAL_MS = 10 * 60 * 1000;
+const trendingCache = new Map();
+let junkCleanedAt = 0;
+
+/**
+ * Cache RAM 30s + gộp các request đồng thời (in-flight dedupe).
+ * Autocomplete gọi hàm này ở mỗi lần gõ phím nên không được đụng DB mỗi lần.
+ */
 const getTrendingKeywords = async (limit = 10, type = 'all') => {
+  const key = `${parseInt(limit, 10) || 10}:${type}`;
+  const hit = trendingCache.get(key);
+  if (hit) {
+    if (hit.pending) return hit.pending;
+    if (hit.expiresAt > Date.now()) return hit.data;
+  }
+  const pending = computeTrendingKeywords(limit, type)
+    .then((data) => {
+      trendingCache.set(key, { data, expiresAt: Date.now() + TRENDING_CACHE_TTL_MS });
+      return data;
+    })
+    .catch((err) => {
+      trendingCache.delete(key);
+      throw err;
+    });
+  trendingCache.set(key, { pending });
+  return pending;
+};
+
+const computeTrendingKeywords = async (limit = 10, type = 'all') => {
   await ensureSeedKeywordsInDb();
 
-  // Background clean junk logs
-  SearchLog.deleteMany({
+  // Background clean junk logs (throttled: tối đa 1 lần / 10 phút)
+  const shouldCleanJunk = Date.now() - junkCleanedAt > JUNK_CLEAN_INTERVAL_MS;
+  if (shouldCleanJunk) junkCleanedAt = Date.now();
+  if (shouldCleanJunk) SearchLog.deleteMany({
     $or: [
       { keyword: { $regex: JUNK_KEYWORDS_REGEX } },
       { keyword: { $in: ['meo', 'top 5', 'top 10', 'test', 'aqt', 'p635'] } },
@@ -1490,6 +1608,7 @@ const setKeywordTrending = async (keyword, isTrending = true) => {
     { isTrending, trendingScore: isTrending ? 999999 : 0 },
     { upsert: true, new: true }
   );
+  trendingCache.clear();
   return log;
 };
 

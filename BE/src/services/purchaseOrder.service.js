@@ -2,18 +2,23 @@ const PurchaseOrder = require('../models/purchaseOrder.model');
 const Product = require('../models/product.model');
 const ProductVariant = require('../models/productVariant.model');
 const StockMovement = require('../models/stockMovement.model');
+const Warehouse = require('../models/warehouse.model');
+const ProductWarehouseStock = require('../models/productWarehouseStock.model');
 const { uploadRawToCloudinary } = require('../config/cloudinary');
 const ExcelJS = require('exceljs');
 const path = require('path');
 const fs = require('fs');
 const AppError = require('../utils/AppError');
+const { numberToWordsVN } = require('../utils/vnNumberToWords');
+const SupplierDebtService = require('./supplierDebt.service');
 
 class PurchaseOrderService {
     // 1. Lấy danh sách Đơn Nhập Kho
-    static async getPurchaseOrders({ page = 1, limit = 20, keyword = '', status, supplierId }) {
+    static async getPurchaseOrders({ page = 1, limit = 20, keyword = '', status, supplierId, warehouseId }) {
         const query = {};
         if (status) query.status = status;
         if (supplierId) query.supplierId = supplierId;
+        if (warehouseId) query.warehouseId = warehouseId;
         if (keyword) {
             query.$or = [
                 { poNumber: { $regex: keyword, $options: 'i' } },
@@ -25,6 +30,7 @@ class PurchaseOrderService {
         const [data, total] = await Promise.all([
             PurchaseOrder.find(query)
                 .populate('supplierId', 'name code phone address email taxCode')
+                .populate('warehouseId', 'name code phone address')
                 .populate('createdById', 'name email')
                 .sort({ createdAt: -1 })
                 .skip(skip)
@@ -47,6 +53,7 @@ class PurchaseOrderService {
     static async getPurchaseOrderById(id) {
         const po = await PurchaseOrder.findById(id)
             .populate('supplierId')
+            .populate('warehouseId', 'name code phone address')
             .populate('createdById', 'name email');
         if (!po) throw new AppError('Đơn nhập kho không tồn tại', 404);
         return po;
@@ -54,9 +61,15 @@ class PurchaseOrderService {
 
     // 3. Tạo Đơn Nhập Kho Mới (Draft hoặc Completed)
     static async createPurchaseOrder(payload, userId) {
-        const { supplierId, items, note, deliveryDate, status = 'draft' } = payload;
+        const { supplierId, items, note, deliveryDate, status = 'draft', warehouseId } = payload;
         if (!items || items.length === 0) {
             throw new AppError('Danh sách sản phẩm nhập kho không được để trống', 400);
+        }
+
+        let targetWarehouseId = warehouseId;
+        if (!targetWarehouseId) {
+            const defaultWh = await Warehouse.findOne({ isDefault: true });
+            targetWarehouseId = defaultWh?._id;
         }
 
         const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
@@ -91,10 +104,13 @@ class PurchaseOrderService {
         const po = await PurchaseOrder.create({
             poNumber,
             supplierId,
+            warehouseId: targetWarehouseId,
             status,
             items: formattedItems,
             totalQuantity,
             totalAmount,
+            paidAmount: 0,
+            paymentStatus: 'unpaid',
             note: note || '',
             deliveryDate: deliveryDate ? new Date(deliveryDate) : null,
             createdById: userId,
@@ -104,6 +120,7 @@ class PurchaseOrderService {
             po.receivedAt = new Date();
             await this.processInventoryIncrement(po, userId);
             await po.save();
+            await SupplierDebtService.syncFromPurchaseOrder(po);
         }
 
         return po;
@@ -134,6 +151,7 @@ class PurchaseOrderService {
             if (status === 'completed') {
                 po.receivedAt = new Date();
                 await this.processInventoryIncrement(po, userId);
+                await SupplierDebtService.syncFromPurchaseOrder(po);
             }
         }
 
@@ -160,6 +178,8 @@ class PurchaseOrderService {
         const productBulkOps = [];
         const movementDocs   = [];
 
+        const pwStockOps = [];
+
         for (const item of po.items) {
             if (item.variantId) {
                 const variant = variantMap.get(item.variantId.toString());
@@ -174,6 +194,7 @@ class PurchaseOrderService {
                     });
                     movementDocs.push({
                         type: 'IMPORT',
+                        warehouseId: po.warehouseId,
                         productId: item.productId,
                         variantId: item.variantId,
                         sku: item.sku,
@@ -185,6 +206,19 @@ class PurchaseOrderService {
                         reason: `Nhập kho từ đơn ${po.poNumber}`,
                         createdById: userId,
                     });
+
+                    if (po.warehouseId) {
+                        pwStockOps.push({
+                            updateOne: {
+                                filter: { warehouseId: po.warehouseId, variantId: item.variantId },
+                                update: {
+                                    $inc: { stock: item.actualQty },
+                                    $setOnInsert: { productId: item.productId, allocated: 0 },
+                                },
+                                upsert: true,
+                            },
+                        });
+                    }
                 }
             } else {
                 const product = productMap.get(item.productId.toString());
@@ -199,6 +233,7 @@ class PurchaseOrderService {
                     });
                     movementDocs.push({
                         type: 'IMPORT',
+                        warehouseId: po.warehouseId,
                         productId: item.productId,
                         sku: item.sku,
                         productName: item.productName,
@@ -213,10 +248,11 @@ class PurchaseOrderService {
             }
         }
 
-        // Thực hiện trong 3 DB calls thay vì N*3 calls
+        // Thực hiện trong DB calls
         await Promise.all([
             variantBulkOps.length > 0 ? ProductVariant.bulkWrite(variantBulkOps) : Promise.resolve(),
             productBulkOps.length > 0 ? Product.bulkWrite(productBulkOps)         : Promise.resolve(),
+            pwStockOps.length > 0     ? ProductWarehouseStock.bulkWrite(pwStockOps) : Promise.resolve(),
             movementDocs.length > 0   ? StockMovement.insertMany(movementDocs, { ordered: false }) : Promise.resolve(),
         ]);
 
@@ -237,7 +273,7 @@ class PurchaseOrderService {
 
     // 5. 🔥 ĐIỀN DỮ LIỆU CHUẨN VÀO TEMPLATE EXCEL 'mau-don-dat-hang.xlsx' (ĐƠN ĐẶT HÀNG PO)
     static async generateExcelSlip(id) {
-        const po = await PurchaseOrder.findById(id).populate('supplierId');
+        const po = await PurchaseOrder.findById(id).populate('supplierId').populate('warehouseId');
         if (!po) throw new AppError('Đơn mua hàng không tồn tại', 404);
 
         let templatePath = path.join(__dirname, '../template/mau-don-dat-hang.xlsx');
@@ -295,11 +331,14 @@ class PurchaseOrderService {
                         } else if (val.startsWith('Phí vận chuyển')) {
                             cell.value = `Phí vận chuyển: Miễn phí`;
                         } else if (val.startsWith('Tổng tiền thanh toán:')) {
-                            cell.value = `Tổng tiền thanh toán: ${grandTotal.toLocaleString('vi-VN')} VNĐ`;
+                            const grandTotalWords = numberToWordsVN(grandTotal);
+                            cell.value = `Tổng tiền thanh toán: ${grandTotal.toLocaleString('vi-VN')} VNĐ (Bằng chữ: ${grandTotalWords})`;
                         } else if (val.startsWith('Thời gian giao hàng:')) {
                             cell.value = `Thời gian giao hàng: ${po.deliveryDate ? new Date(po.deliveryDate).toLocaleDateString('vi-VN') : 'Dự kiến 3 - 5 ngày làm việc'}`;
                         } else if (val.startsWith('Địa điểm giao hàng:')) {
-                            cell.value = `Địa điểm giao hàng: Kho Thành Phẩm SHOP - Tầng 35, Keangnam Hanoi Landmark Tower, Q.Nam Từ Liêm, Hà Nội`;
+                            const whName = po.warehouseId?.name || 'Kho Tổng Bình Tân';
+                            const whAddr = po.warehouseId?.address?.fullAddress || po.warehouseId?.address?.detailAddress || '38-40 Đường 21A, Phường Bình Trị Đông B, Quận Bình Tân, TP. Hồ Chí Minh';
+                            cell.value = `Địa điểm giao hàng: ${whName} - ${whAddr}`;
                         } else if (val.includes('ngày') && val.includes('tháng') && val.includes('năm')) {
                             cell.value = dateText;
                         }
@@ -400,6 +439,77 @@ class PurchaseOrderService {
         }
 
         return po;
+    }
+
+    // 8. Tạo và xuất Excel xem trước (không lưu lại PO rác)
+    static async previewExcelSlip(payload, userId) {
+        const tempPO = await this.createPurchaseOrder(
+            { ...payload, status: 'draft' },
+            userId
+        );
+        const { workbook } = await this.generateExcelSlip(tempPO._id);
+        await PurchaseOrder.findByIdAndDelete(tempPO._id);
+        return { workbook };
+    }
+
+    // 9. Xác nhận thanh toán trực tiếp cho Đơn Mua Hàng / Nhập Kho (P2P Standard)
+    static async recordPOPayment(id, payload, userId) {
+        const po = await PurchaseOrder.findById(id).populate('supplierId');
+        if (!po) throw new AppError('Đơn mua hàng không tồn tại', 404);
+
+        if (po.status === 'cancelled') {
+            throw new AppError('Không thể thanh toán cho đơn hàng đã bị hủy', 400);
+        }
+
+        const payAmount = Number(payload.amount);
+        if (!payAmount || payAmount <= 0) {
+            throw new AppError('Số tiền thanh toán phải lớn hơn 0', 400);
+        }
+
+        const currentPaid = Number(po.paidAmount || 0);
+        const remainingAmount = Math.max(0, (po.totalAmount || 0) - currentPaid);
+
+        if (payAmount > remainingAmount) {
+            throw new AppError(
+                `Số tiền thanh toán (${payAmount.toLocaleString('vi-VN')}đ) vượt quá số tiền còn cần trả (${remainingAmount.toLocaleString('vi-VN')}đ)`,
+                400
+            );
+        }
+
+        // Đảm bảo khoản công nợ của PO đã tồn tại trong SupplierDebt
+        let debt = await SupplierDebtService.syncFromPurchaseOrder(po);
+        if (!debt) {
+            throw new AppError('Không tìm thấy hoặc không thể tạo bản ghi công nợ cho đơn hàng này', 500);
+        }
+
+        // Thực hiện thanh toán công nợ qua SupplierDebtService (tạo phiếu chi & trừ nợ NCC)
+        const supplierIdToPay = po.supplierId?._id || po.supplierId;
+        const paymentResult = await SupplierDebtService.payDebt(
+            supplierIdToPay,
+            debt._id,
+            {
+                amount: payAmount,
+                warehouseId: payload.warehouseId || po.warehouseId,
+                paymentMethod: payload.paymentMethod || 'bank_transfer',
+                voucherType: 'payment',
+                description: payload.description || `Thanh toán cho Đơn nhập hàng ${po.poNumber}`,
+                note: payload.note || '',
+                accountingRecorded: payload.accountingRecorded !== false,
+            },
+            { _id: userId }
+        );
+
+        // Cập nhật trạng thái thanh toán trên PO
+        po.paidAmount = currentPaid + payAmount;
+        po.paymentStatus = po.paidAmount >= po.totalAmount ? 'paid' : 'partially_paid';
+        await po.save();
+
+        return {
+            po,
+            transaction: paymentResult.transaction,
+            debt: paymentResult.debt,
+            currentSupplierDebt: paymentResult.currentSupplierDebt,
+        };
     }
 }
 

@@ -36,8 +36,8 @@ export default function HomeTechNews({
     'https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=1200&q=80';
 
   return (
-    <section className="max-w-7xl mx-auto px-3 sm:px-4 my-6" aria-label="Tin tức & Tư vấn chọn mua">
-      <div className="bg-white rounded-[6px] border border-slate-200 p-3.5 sm:p-5">
+    <section className="max-w-[1536px] 2xl:max-w-[1600px] mx-auto px-3 sm:px-4 lg:px-6 2xl:px-8 my-6" aria-label="Tin tức & Tư vấn chọn mua">
+      <div className="bg-white rounded-[6px] border border-slate-200 p-3.5 sm:p-5 2xl:p-6">
 
         {/* ─── HEADER KHỐI ─── */}
         <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
@@ -55,7 +55,7 @@ export default function HomeTechNews({
         </div>
 
         {/* ─── NỘI DUNG 2 CỘT ─── */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 2xl:gap-6">
 
           {/* CỘT TRÁI: 1 BÀI VIẾT NỔI BẬT NHẤT */}
           {heroPost && (
@@ -71,7 +71,7 @@ export default function HomeTechNews({
 
               <Link
                 href={`/blogs/${heroPost.slug}`}
-                className="group relative flex-1 min-h-[320px] rounded-[6px] border border-slate-200 overflow-hidden flex flex-col justify-end p-4 sm:p-5 bg-slate-950 transition-all duration-200 active:scale-[0.99]"
+                className="group relative flex-1 min-h-[320px] 2xl:min-h-[360px] rounded-[6px] border border-slate-200 overflow-hidden flex flex-col justify-end p-4 sm:p-5 2xl:p-6 bg-slate-950 transition-all duration-200 active:scale-[0.99]"
               >
                 <img
                   src={heroThumb}

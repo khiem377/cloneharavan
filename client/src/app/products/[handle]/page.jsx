@@ -1,5 +1,5 @@
 import React from 'react';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import productServerService from '@/services/product.server.service';
 import ProductDetailClient from '@/components/product/detail/ProductDetailClient';
 
@@ -33,12 +33,18 @@ export async function generateMetadata({ params }) {
     product.images?.[0]?.url ||
     '';
 
+  const canonicalUrl = `/products/${product.slug || handle}`;
+
   return {
     title,
     description: plainDesc,
+    alternates: {
+      canonical: canonicalUrl,
+    },
     openGraph: {
       title,
       description: plainDesc,
+      url: canonicalUrl,
       images: thumbUrl ? [{ url: thumbUrl }] : [],
       type: 'website',
     },
@@ -61,6 +67,11 @@ export default async function ProductDetailPage({ params }) {
   const product = await productServerService.getProductBySlug(handle);
   if (!product) {
     notFound();
+  }
+
+  // Chuẩn hóa SEO URL: Tự động 308 Permanent Redirect sang Slug nếu người dùng truy cập bằng ID
+  if (product.slug && handle !== product.slug) {
+    permanentRedirect(`/products/${product.slug}`);
   }
 
   const productId = product._id || product.id;

@@ -13,6 +13,9 @@ router.get('/', cartCtrl.getCart);
 // 2. Thêm sản phẩm vào giỏ (theo SKU hoặc productId / variantId)
 router.post('/items', cartCtrl.addToCart);
 
+// 2.1. Thêm trọn bộ Combo vào giỏ hàng với giá ưu đãi tự động
+router.post('/combo', cartCtrl.addComboToCart);
+
 // 3. Cập nhật số lượng của một dòng sản phẩm
 router.patch('/items/:itemId', cartCtrl.updateCartItemQuantity);
 

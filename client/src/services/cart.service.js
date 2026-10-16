@@ -23,6 +23,16 @@ export const cartService = {
   },
 
   /**
+   * Thêm trọn bộ Combo vào giỏ hàng với giá ưu đãi
+   * @param {string} comboId - ID của gói combo
+   * @param {number} [quantity=1] - Số lượng bộ combo
+   */
+  async addComboToCart(comboId, quantity = 1) {
+    const response = await api.post('/cart/combo', { comboId, quantity });
+    return response.data;
+  },
+
+  /**
    * Cập nhật số lượng của một dòng sản phẩm trong giỏ
    * @param {string} itemId - ID của dòng item trong cart
    * @param {number} quantity - Số lượng mới

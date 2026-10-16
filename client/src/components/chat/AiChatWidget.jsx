@@ -36,6 +36,7 @@ export default function AiChatWidget() {
   const [sessionId, setSessionId] = useState(null);
 
   const sessionIdRef = useRef(null);
+  const messagesContainerRef = useRef(null);
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
   const abortCtrlRef = useRef(null);
@@ -109,8 +110,13 @@ export default function AiChatWidget() {
 
   // Tự động cuộn xuống cuối khi có tin nhắn mới hoặc đang stream
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    if (loading && messagesContainerRef.current) {
+      // Khi AI đang stream từng token (12ms), cuộn tức thì không animation tránh giật và quá tải compositor
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+    } else {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages, loading]);
 
   // Focus textarea khi mở chat widget
   useEffect(() => {
@@ -163,8 +169,8 @@ export default function AiChatWidget() {
     const tickTypewriter = () => {
       if (streamDisplayedText.length < streamTargetText.length) {
         const remaining = streamTargetText.length - streamDisplayedText.length;
-        // Nhả từng 1-2 ký tự (hoặc 3-4 nếu buffer tồn nhiều) để tạo hiệu ứng gõ phím mượt mà tự nhiên
-        const step = remaining > 60 ? 4 : (remaining > 20 ? 2 : 1);
+        // Tốc độ phản hồi siêu nhanh, mượt mà và không bắt người dùng phải chờ đợi
+        const step = remaining > 100 ? 8 : (remaining > 40 ? 5 : (remaining > 15 ? 3 : 2));
         streamDisplayedText = streamTargetText.slice(0, streamDisplayedText.length + step);
 
         setMessages((prev) =>
@@ -200,13 +206,19 @@ export default function AiChatWidget() {
       typewriterTimerRef.current = null;
     }
 
-    typewriterTimerRef.current = setInterval(tickTypewriter, 18);
+    typewriterTimerRef.current = setInterval(tickTypewriter, 12);
 
     try {
+      const currentProductSlug = isProductPage && pathname
+        ? pathname.replace('/products/', '').split('?')[0].split('/')[0]
+        : null;
+
       await chatService.sendMessageStream(
         {
           sessionId: sessionIdRef.current,
           message: cleanMsg,
+          currentProductSlug,
+          currentUrl: typeof window !== 'undefined' ? window.location.href : pathname,
         },
         {
           signal: abortCtrlRef.current.signal,
@@ -248,7 +260,11 @@ export default function AiChatWidget() {
     }
   };
 
-  const handleSelectOrderTracking = () => {
+  const handleCloseOnSelectProduct = React.useCallback(() => {
+    setIsOpen(false);
+  }, []);
+
+  const handleSelectOrderTracking = React.useCallback(() => {
     const nowTime = new Date().toLocaleTimeString('vi-VN', {
       hour: '2-digit',
       minute: '2-digit',
@@ -271,9 +287,9 @@ export default function AiChatWidget() {
 
     setMessages((prev) => [...prev, userMsg, botMsg]);
     if (soundEnabled) playChime();
-  };
+  }, [soundEnabled]);
 
-  const handleSelectOnlineShopping = () => {
+  const handleSelectOnlineShopping = React.useCallback(() => {
     const nowTime = new Date().toLocaleTimeString('vi-VN', {
       hour: '2-digit',
       minute: '2-digit',
@@ -296,7 +312,7 @@ export default function AiChatWidget() {
 
     setMessages((prev) => [...prev, userMsg, botMsg]);
     if (soundEnabled) playChime();
-  };
+  }, [soundEnabled]);
 
   const handleResetSession = async () => {
     if (loading) return;
@@ -326,11 +342,11 @@ export default function AiChatWidget() {
         isCartPage={isCartPage}
       />
 
-      {/* Cửa sổ chat chính dạng modal nổi bên góc phải */}
+      {/* Cửa sổ chat chính dạng modal nổi bên góc phải / Fullscreen trên Mobile */}
       {isOpen && (
         <div
-          className={`fixed z-50 flex flex-col bg-white border border-slate-200 shadow-lg overflow-hidden transition-all duration-200 select-none
-            inset-x-0 bottom-0 top-0 sm:inset-auto sm:right-6 sm:bottom-6 sm:w-[420px] sm:h-[620px] sm:max-h-[85vh] sm:rounded-[6px]
+          className={`fixed z-50 flex flex-col bg-white border border-slate-200 shadow-xl overflow-hidden transition-all duration-200 select-none
+            inset-0 h-[100dvh] max-h-[100dvh] sm:inset-auto sm:right-6 sm:bottom-6 sm:w-[420px] sm:h-[620px] sm:max-h-[85vh] sm:rounded-[6px]
           `}
           role="dialog"
           aria-label="Cửa sổ trò chuyện tư vấn SHOP"
@@ -345,7 +361,10 @@ export default function AiChatWidget() {
           />
 
           {/* Vùng nội dung tin nhắn */}
-          <div className="flex-1 overflow-y-auto p-3.5 space-y-3 bg-[#f8fafc] text-xs sm:text-sm select-text">
+          <div
+            ref={messagesContainerRef}
+            className="flex-1 overflow-y-auto p-3.5 space-y-3 bg-[#f8fafc] text-xs sm:text-sm select-text"
+          >
             {messages.map((msg) => (
               <ChatMessageItem
                 key={msg.id}
@@ -353,7 +372,7 @@ export default function AiChatWidget() {
                 loading={loading}
                 onSelectOrderTracking={handleSelectOrderTracking}
                 onSelectOnlineShopping={handleSelectOnlineShopping}
-                onSelectProduct={() => setIsOpen(false)}
+                onSelectProduct={handleCloseOnSelectProduct}
               />
             ))}
             <div ref={messagesEndRef} />
@@ -370,7 +389,7 @@ export default function AiChatWidget() {
             input={input}
             setInput={setInput}
             loading={loading}
-            onSendMessage={() => handleSendMessage()}
+            onSendMessage={(msg) => handleSendMessage(msg)}
             textareaRef={textareaRef}
           />
         </div>

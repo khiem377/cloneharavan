@@ -7,6 +7,7 @@ import useCartStore from '@/store/cartStore';
 
 export default function StickyPurchaseBar({
   product,
+  dynamicProductName = '',
   selectedVariant,
 }) {
   const router = useRouter();
@@ -31,24 +32,6 @@ export default function StickyPurchaseBar({
 
   if (!product) return null;
 
-  // Ảnh đại diện sản phẩm & biến thể
-  const thumb =
-    selectedVariant?.image ||
-    selectedVariant?.thumbnail ||
-    product?.thumbnail ||
-    (typeof product?.images?.[0] === 'string'
-      ? product.images[0]
-      : product?.images?.[0]?.url) ||
-    '/logo-shop.jpg';
-
-  // Đơn giá hiển thị
-  const displayPrice =
-    selectedVariant?.price ??
-    product?.price ??
-    product?.regularPrice ??
-    product?.salePrice ??
-    0;
-
   const handleAction = async (actionType = 'Thêm vào giỏ') => {
     if (isSubmitting) return;
     setIsSubmitting(true);
@@ -62,7 +45,7 @@ export default function StickyPurchaseBar({
       quantity: 1,
     };
 
-    const res = await addToCart(payload);
+    const res = await addToCart(payload, { isBuyNow });
     setIsSubmitting(false);
 
     if (res?.success) {
@@ -72,6 +55,22 @@ export default function StickyPurchaseBar({
     }
   };
 
+  const thumb =
+    selectedVariant?.thumbnail?.url ||
+    selectedVariant?.image?.url ||
+    (typeof product.thumbnail === 'string' ? product.thumbnail : product.thumbnail?.url) ||
+    product.images?.[0]?.url ||
+    '/logo-shop.jpg';
+
+  const displayPrice =
+    selectedVariant?.salePrice > 0
+      ? selectedVariant.salePrice
+      : selectedVariant?.price > 0
+      ? selectedVariant.price
+      : product.salePrice > 0
+      ? product.salePrice
+      : product.price || 0;
+
   return (
     <>
       <div
@@ -79,7 +78,7 @@ export default function StickyPurchaseBar({
           isVisible ? 'translate-y-0' : 'translate-y-full'
         }`}
       >
-        <div className="max-w-7xl mx-auto px-4 py-2.5 flex items-center justify-between gap-4">
+        <div className="max-w-[1536px] 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 2xl:px-8 py-2.5 flex items-center justify-between gap-4">
           {/* Cột trái */}
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-11 h-11 rounded-[6px] border border-slate-200 bg-white p-0.5 shrink-0 overflow-hidden">
@@ -95,7 +94,7 @@ export default function StickyPurchaseBar({
 
             <div className="flex flex-col min-w-0">
               <span className="font-semibold text-xs sm:text-sm text-slate-900 truncate">
-                {product.name}
+                {dynamicProductName || product.name}
               </span>
               <div className="flex items-center gap-2 text-xs">
                 <span className="font-extrabold text-red-600">
@@ -133,8 +132,9 @@ export default function StickyPurchaseBar({
 
             <button
               type="button"
-              onClick={() => handleAction('Mua ngay')}
-              className="inline-flex items-center px-5 py-2 rounded-[6px] bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm font-bold transition-all cursor-pointer active:scale-[0.98]"
+              disabled={isSubmitting}
+              onClick={() => handleAction(true)}
+              className="inline-flex items-center px-5 py-2 rounded-[6px] bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm font-bold transition-all cursor-pointer active:scale-[0.98] disabled:opacity-60"
             >
               Mua ngay
             </button>

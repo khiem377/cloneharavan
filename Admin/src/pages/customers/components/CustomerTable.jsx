@@ -31,6 +31,10 @@ const formatDate = (dateStr) => {
   }
 };
 
+const formatCurrency = (amount) => {
+  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount || 0);
+};
+
 export default function CustomerTable({
   customers = [],
   selectedIds = [],
@@ -62,6 +66,8 @@ export default function CustomerTable({
             )}
             {isColumnVisible('customer') && <TableHead>Khách hàng</TableHead>}
             {isColumnVisible('contact') && <TableHead>Liên hệ</TableHead>}
+            {isColumnVisible('orders') && <TableHead className="text-center w-24">Đơn hàng</TableHead>}
+            {isColumnVisible('totalSpent') && <TableHead className="text-right w-32">Tổng chi tiêu</TableHead>}
             {isColumnVisible('address') && <TableHead>Địa chỉ mặc định</TableHead>}
             {isColumnVisible('createdAt') && <TableHead>Ngày tham gia</TableHead>}
             {isColumnVisible('status') && <TableHead>Trạng thái</TableHead>}
@@ -71,7 +77,7 @@ export default function CustomerTable({
         <TableBody>
           {customers.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={7} className="py-12 text-center text-xs text-muted-foreground font-mono">
+              <TableCell colSpan={9} className="py-12 text-center text-xs text-muted-foreground font-mono">
                 Không tìm thấy khách hàng nào
               </TableCell>
             </TableRow>
@@ -135,10 +141,24 @@ export default function CustomerTable({
                   {isColumnVisible('contact') && (
                     <TableCell className="px-3 py-2">
                       <div className="flex flex-col gap-0.5 text-xs">
-                        <div className="flex items-center gap-1 text-foreground">
-                          <Mail className="size-3 text-muted-foreground shrink-0" />
-                          <span className="truncate max-w-[180px]">{user.email}</span>
-                        </div>
+                        {user.email ? (
+                          <div className="flex items-center gap-1 text-foreground">
+                            <Mail className="size-3 text-muted-foreground shrink-0" />
+                            <span className="truncate max-w-[180px]">{user.email}</span>
+                          </div>
+                        ) : user.zaloId ? (
+                          <div className="flex items-center gap-1 text-[#0068FF] font-medium text-[11px]">
+                            <span className="size-1.5 rounded-full bg-[#0068FF] shrink-0" />
+                            <span className="truncate max-w-[180px]">Zalo: {user.zaloName || user.zaloId}</span>
+                          </div>
+                        ) : user.tiktokId ? (
+                          <div className="flex items-center gap-1 text-foreground font-medium text-[11px]">
+                            <span className="size-1.5 rounded-full bg-foreground shrink-0" />
+                            <span className="truncate max-w-[180px]">TikTok: @{user.tiktokUsername || user.tiktokId}</span>
+                          </div>
+                        ) : (
+                          <span className="text-[10px] text-muted-foreground italic">Chưa có email</span>
+                        )}
                         {user.phone ? (
                           <div className="flex items-center gap-1 text-muted-foreground font-mono tabular-nums text-[11px]">
                             <Phone className="size-3 shrink-0" />
@@ -146,6 +166,31 @@ export default function CustomerTable({
                           </div>
                         ) : (
                           <span className="text-[10px] text-muted-foreground font-mono italic">Chưa có SĐT</span>
+                        )}
+                      </div>
+                    </TableCell>
+                  )}
+
+                  {/* Orders Count */}
+                  {isColumnVisible('orders') && (
+                    <TableCell className="px-3 py-2 text-center">
+                      <span className="font-mono tabular-nums text-xs font-semibold px-2 py-0.5 rounded-[4px] bg-secondary/70 border border-border">
+                        {user.orderCount || 0}
+                      </span>
+                    </TableCell>
+                  )}
+
+                  {/* Total Spent */}
+                  {isColumnVisible('totalSpent') && (
+                    <TableCell className="px-3 py-2 text-right">
+                      <div className="flex flex-col items-end">
+                        <span className="font-mono tabular-nums text-xs font-bold text-foreground">
+                          {formatCurrency(user.totalSpent)}
+                        </span>
+                        {user.totalSpent >= 5000000 && (
+                          <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 font-mono">
+                            ★ VIP
+                          </span>
                         )}
                       </div>
                     </TableCell>

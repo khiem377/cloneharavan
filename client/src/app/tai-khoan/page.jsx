@@ -8,6 +8,7 @@ import useAuthStore from '../../store/authStore';
 import userService from '../../services/user.service';
 import authService from '../../services/auth.service';
 import shippingService from '../../services/shipping.service';
+import orderService from '../../services/order.service';
 import { toast } from '../../components/ui/toast';
 import { confirm } from '../../components/ui/confirm-dialog';
 
@@ -21,6 +22,7 @@ import AccountAddressesTab from '../../components/account/AccountAddressesTab';
 import AccountChangePasswordTab from '../../components/account/AccountChangePasswordTab';
 import AccountSecurityTab from '../../components/account/AccountSecurityTab';
 import AddressModal from '../../components/account/AddressModal';
+import { isSyntheticEmail } from '../../utils/userUtils';
 
 function AccountContent() {
   const [mounted, setMounted] = useState(false);
@@ -93,6 +95,8 @@ function AccountContent() {
   const [passwordMessage, setPasswordMessage] = useState(null);
 
   // Orders State
+  const [orders, setOrders] = useState([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
   const [orderFilter, setOrderFilter] = useState('all');
   const [orderSearch, setOrderSearch] = useState('');
 
@@ -156,10 +160,24 @@ function AccountContent() {
     }
   };
 
+  // Fetch Orders for overview metrics
+  const fetchUserOrders = async () => {
+    setOrdersLoading(true);
+    try {
+      const res = await orderService.getMyOrders({ limit: 50 });
+      setOrders(Array.isArray(res?.data) ? res.data : []);
+    } catch (err) {
+      console.error('Lỗi lấy danh sách đơn hàng overview:', err);
+    } finally {
+      setOrdersLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (mounted && isUserAuth) {
       fetchAddresses();
       ensureProvincesLoaded();
+      fetchUserOrders();
     }
   }, [mounted, isUserAuth]);
 
@@ -247,6 +265,10 @@ function AccountContent() {
         gender: profileForm.gender,
         dateOfBirth: profileForm.dateOfBirth || null,
       };
+
+      if (profileForm.email && !isSyntheticEmail(profileForm.email) && profileForm.email.toLowerCase().trim() !== user?.email?.toLowerCase()?.trim()) {
+        payload.email = profileForm.email.toLowerCase().trim();
+      }
 
       const updatedUser = await userService.updateProfile(payload);
       if (updatedUser) {
@@ -721,7 +743,7 @@ function AccountContent() {
         className="hidden"
       />
 
-      <div className="max-w-[1200px] mx-auto px-4 sm:px-6">
+      <div className="max-w-[1536px] 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 2xl:px-8">
         {/* Breadcrumb Header */}
         <div className="flex items-center gap-2 text-xs text-slate-500 mb-5">
           <Link href="/" className="hover:text-[#e30019] transition">
@@ -760,6 +782,7 @@ function AccountContent() {
                 addresses={addresses}
                 defaultAddress={defaultAddress}
                 handleOpenAddAddress={handleOpenAddAddress}
+                orders={orders}
               />
             )}
 
@@ -769,6 +792,7 @@ function AccountContent() {
                 setOrderSearch={setOrderSearch}
                 orderFilter={orderFilter}
                 setOrderFilter={setOrderFilter}
+                onOrdersUpdated={fetchUserOrders}
               />
             )}
 

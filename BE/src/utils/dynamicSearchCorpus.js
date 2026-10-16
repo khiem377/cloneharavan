@@ -6,7 +6,8 @@ const SearchLog = require('../models/searchLog.model');
 // In-memory corpus cache
 let cachedCorpus = null;
 let lastCorpusBuildTime = 0;
-const CORPUS_TTL_MS = 30 * 1000;
+const CORPUS_TTL_MS = 5 * 60 * 1000;
+let corpusBuildPromise = null;
 
 // Common Vietnamese E-Commerce Aliases & Synonyms Dictionary
 const COMMON_SEARCH_ALIASES = {
@@ -16,26 +17,41 @@ const COMMON_SEARCH_ALIASES = {
   boncau: 'bồn cầu',
   'bon cau': 'bồn cầu',
   ip: 'iphone',
+  prm: 'pro max',
   ss: 'samsung',
+  samsug: 'samsung',
+  snoy: 'sony',
+  pana: 'panasonic',
+  panaosnic: 'panasonic',
+  elec: 'electrolux',
   dt: 'điện thoại',
   dienthoai: 'điện thoại',
   mb: 'macbook',
   mac: 'macbook',
   lap: 'laptop',
+  tl: 'tủ lạnh',
   tulanh: 'tủ lạnh',
   'tu lanh': 'tủ lạnh',
+  mg: 'máy giặt',
   maygiat: 'máy giặt',
   'may giat': 'máy giặt',
+  ml: 'máy lạnh',
+  maylanh: 'máy lạnh',
+  'may lanh': 'máy lạnh',
   noichien: 'nồi chiên không dầu',
   'noi chien': 'nồi chiên không dầu',
+  ko: 'không',
+  k: 'không',
+  bp: 'bàn phím',
+  banphim: 'bàn phím',
+  'ban phim': 'bàn phím',
+  tn: 'tai nghe',
   tainghe: 'tai nghe',
   'tai nghe': 'tai nghe bluetooth',
   quat: 'quạt điện',
   'quat dien': 'quạt điện',
   dieuhoa: 'điều hòa',
   'dieu hoa': 'điều hòa',
-  maylanh: 'máy lạnh',
-  'may lanh': 'máy lạnh',
   senvoi: 'sen vòi',
   'sen voi': 'sen vòi',
   chaurua: 'chậu rửa',
@@ -343,8 +359,14 @@ const buildStoreCorpus = async () => {
  */
 const getStoreCorpus = async (forceRefresh = false) => {
   const now = Date.now();
-  if (!cachedCorpus || forceRefresh || cachedCorpus.version !== 4 || now - lastCorpusBuildTime > CORPUS_TTL_MS) {
-    return await buildStoreCorpus();
+  const isMissing = !cachedCorpus || cachedCorpus.version !== 4;
+  if (isMissing || forceRefresh) {
+    if (!corpusBuildPromise) corpusBuildPromise = buildStoreCorpus().finally(() => { corpusBuildPromise = null; });
+    return corpusBuildPromise;
+  }
+  if (now - lastCorpusBuildTime > CORPUS_TTL_MS && !corpusBuildPromise) {
+    // Stale-while-revalidate: tra ban cu ngay, rebuild ngam o nen (chi 1 lan tai 1 thoi diem)
+    corpusBuildPromise = buildStoreCorpus().finally(() => { corpusBuildPromise = null; });
   }
   return cachedCorpus;
 };

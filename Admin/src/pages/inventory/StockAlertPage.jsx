@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   AlertTriangle, Package, SearchIcon as Search, ShoppingCart, RefreshCw, Edit2,
   Check, X, History, Boxes, Clock, CalendarX, TrendingDown, FileCheck, FileText,
+  Building2,
 } from '@/components/ui/Icons';
 import { useStockAlerts } from '@/hooks/useInventory';
 import { inventoryService } from '@/services/inventory.service';
+import { warehouseService } from '@/services/warehouse.service';
 import DataTablePagination from '@/components/ui/DataTablePagination';
 import ProductStockHistoryModal from '@/components/inventory/ProductStockHistoryModal';
 import { useNavigate } from 'react-router-dom';
@@ -22,6 +24,8 @@ export default function StockAlertPage() {
   const [viewMode, setViewMode] = useState('all'); // 'all' | 'low_stock'
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [warehouses, setWarehouses] = useState([]);
+  const [selectedWarehouseId, setSelectedWarehouseId] = useState('');
 
   // History Modal
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
@@ -31,12 +35,22 @@ export default function StockAlertPage() {
   const [editingCostId, setEditingCostId] = useState(null);
   const [editingCostVal, setEditingCostVal] = useState('');
 
+  useEffect(() => {
+    warehouseService
+      .getWarehouses()
+      .then((res) => {
+        setWarehouses(res.data?.data?.data || []);
+      })
+      .catch(console.warn);
+  }, []);
+
   const { data: alertsData, isLoading, refetch } = useStockAlerts({
     threshold,
     search,
     viewMode,
     page,
     limit: pageSize,
+    warehouseId: selectedWarehouseId,
   });
 
   const items = alertsData?.data || alertsData?.items || [];
@@ -257,18 +271,39 @@ export default function StockAlertPage() {
       {/* Filter Toolbar */}
       <Card className="rounded-[6px] border border-border p-4 shadow-xs">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder="Tìm theo tên sản phẩm hoặc mã SKU..."
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
-              }}
-              className="pl-9 h-9 text-xs rounded-[6px]"
-            />
+          <div className="flex items-center gap-3 flex-1 flex-wrap">
+            <div className="relative flex-1 min-w-[240px] max-w-md">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Tìm theo tên sản phẩm hoặc mã SKU..."
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                }}
+                className="pl-9 h-9 text-xs rounded-[6px]"
+              />
+            </div>
+
+            {/* Warehouse Filter */}
+            <div className="min-w-[220px]">
+              <select
+                value={selectedWarehouseId}
+                onChange={(e) => {
+                  setSelectedWarehouseId(e.target.value);
+                  setPage(1);
+                }}
+                className="h-9 w-full rounded-[6px] border border-input bg-background px-3 text-xs font-medium text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+              >
+                <option value="">🏢 Tất cả kho hàng (Toàn hệ thống)</option>
+                {warehouses.map((wh) => (
+                  <option key={wh._id} value={wh._id}>
+                    📦 {wh.name} {wh.isDefault ? '(Mặc định)' : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <div className="flex items-center gap-3 flex-wrap">
@@ -289,6 +324,7 @@ export default function StockAlertPage() {
             <TableRow className="border-b border-border bg-muted/60 text-[11px] font-bold text-foreground">
               <TableHead className="whitespace-nowrap">Sản phẩm</TableHead>
               <TableHead className="whitespace-nowrap">Mã SKU</TableHead>
+              <TableHead className="whitespace-nowrap">Kho lưu trữ</TableHead>
               <TableHead className="whitespace-nowrap">Thương hiệu</TableHead>
               <TableHead className="whitespace-nowrap">Nhà Cung Cấp</TableHead>
               <TableHead className="text-right whitespace-nowrap">Giá bán</TableHead>
@@ -302,13 +338,13 @@ export default function StockAlertPage() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={10} className="py-12 text-center text-muted-foreground">
+                <TableCell colSpan={11} className="py-12 text-center text-muted-foreground">
                   Đang đối soát danh sách tồn kho toàn hệ thống...
                 </TableCell>
               </TableRow>
             ) : items.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={10} className="py-12 text-center text-muted-foreground">
+                <TableCell colSpan={11} className="py-12 text-center text-muted-foreground">
                   Không tìm thấy sản phẩm kho phù hợp.
                 </TableCell>
               </TableRow>
@@ -336,6 +372,36 @@ export default function StockAlertPage() {
                   <TableCell className="font-mono font-bold text-muted-foreground whitespace-nowrap text-xs">
                     {prod.productCode || '---'}
                   </TableCell>
+
+                  {/* Kho lưu trữ */}
+                  <TableCell className="whitespace-nowrap text-xs">
+                    {selectedWarehouseId ? (
+                      <span className="inline-flex items-center gap-1 rounded-[4px] bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary border border-primary/20">
+                        <Building2 className="size-3" />
+                        {warehouses.find((w) => w._id === selectedWarehouseId)?.name || 'Kho đã chọn'}
+                      </span>
+                    ) : (
+                      <div className="flex flex-col gap-1">
+                        {(prod.warehouseStocks || []).filter((ws) => ws.stock > 0).length === 0 ? (
+                          <span className="text-[11px] text-muted-foreground italic">Chưa có tồn kho</span>
+                        ) : (
+                          (prod.warehouseStocks || [])
+                            .filter((ws) => ws.stock > 0)
+                            .map((ws, idx) => (
+                              <div
+                                key={idx}
+                                className="inline-flex items-center gap-1.5 text-[11px] text-foreground font-medium"
+                              >
+                                <span className="size-1.5 rounded-full bg-emerald-500 shrink-0" />
+                                <span className="truncate max-w-[130px]">{ws.warehouseName}:</span>
+                                <span className="font-mono font-bold tabular-nums text-primary">{ws.stock}</span>
+                              </div>
+                            ))
+                        )}
+                      </div>
+                    )}
+                  </TableCell>
+
                   <TableCell className="text-muted-foreground whitespace-nowrap text-xs">
                     {prod.brandName}
                   </TableCell>

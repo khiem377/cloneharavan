@@ -62,7 +62,13 @@ QUY ĐỊNH BẮT BUỘC:
   }
 - Sinh tối thiểu 35-50 từ khóa chất lượng cao, thực tế, đúng hành vi tìm kiếm của người dùng Việt Nam.`;
 
-  const modelsToTry = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-2.5-flash', 'gemini-1.5-pro'];
+  const modelsToTry = [
+    'gemini-3.5-flash',
+    'gemini-3.8-flash',
+    'gemini-3.5-flash-lite',
+    'gemini-2.5-flash',
+    'gemini-2.0-flash-lite',
+  ];
 
   for (const modelName of modelsToTry) {
     try {
@@ -181,7 +187,7 @@ Mô tả tóm tắt: "${product.description ? product.description.slice(0, 200) 
 Yêu cầu trả về đúng 1 JSON array các chuỗi string ngắn gọn (không markdown, tối đa 8 từ khóa):
 Ví dụ: ["áo thun", "ao phong", "ao phong unisex", "at form rong", "ao phong nam"]`;
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash' });
     const result = await model.generateContent(prompt);
     const text = result.response.text();
     const cleaned = text.replace(/```json/gi, '').replace(/```/g, '').trim();

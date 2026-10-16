@@ -15,8 +15,8 @@ export default function HomeCategoryShortcuts({ categories = [] }) {
   }
 
   return (
-    <section className="max-w-7xl mx-auto px-3 sm:px-4 my-5" aria-label="Danh mục ngành hàng">
-      <div className="bg-white rounded-[6px] border border-slate-200 p-4 sm:p-5">
+    <section className="max-w-[1536px] 2xl:max-w-[1600px] mx-auto px-3 sm:px-4 lg:px-6 2xl:px-8 my-5" aria-label="Danh mục ngành hàng">
+      <div className="bg-white rounded-[6px] border border-slate-200 p-4 sm:p-5 2xl:p-6">
         {/* Header khối */}
         <div className="flex items-center justify-between pb-3 mb-3.5 border-b border-slate-100">
           <div className="flex items-center gap-2">

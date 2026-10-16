@@ -32,14 +32,14 @@ export const chatService = {
    * @param {Function} [callbacks.onError] - Callback khi có lỗi
    */
   async sendMessageStream(
-    { message, sessionId },
+    { message, sessionId, currentProductSlug, currentUrl },
     { signal, onSessionId, onChunk, onProducts, onEnd, onError } = {}
   ) {
     try {
       const response = await fetch(`${API_BASE}/chat/stream`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message, sessionId }),
+        body: JSON.stringify({ message, sessionId, currentProductSlug, currentUrl }),
         signal,
       });
 

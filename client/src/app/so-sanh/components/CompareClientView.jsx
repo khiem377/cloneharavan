@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import api from '@/lib/axios';
 import useCompareStore from '@/store/compareStore';
+import { sanitizeHtml } from '@/utils/sanitizeHtml';
 
 // Helper to intelligently resolve comprehensive technical specs for any electronics item
 function resolveProductSpecs(p) {
@@ -75,7 +76,7 @@ function resolveProductSpecs(p) {
     overview: [
       { label: 'Loại sản phẩm', value: categoryName },
       { label: 'Hãng sản xuất (Brand)', value: brandName },
-      { label: 'Mã Model / SKU', value: p.sku || p.productCode || p._id?.slice(-8)?.toUpperCase() || 'Chính hãng' },
+      { label: 'Xuất xứ & Phân phối', value: 'Chính hãng 100% (Nguyên seal)' },
       { label: 'Năm ra mắt', value: '2024' },
       { label: 'Nơi sản xuất', value: brandName === 'Sony' ? 'Malaysia' : brandName === 'Samsung' ? 'Việt Nam' : 'Thái Lan / Indonesia' },
       { label: 'Thời gian bảo hành', value: '24 tháng chính hãng (Kích hoạt bảo hành điện tử tại nhà)' },
@@ -287,7 +288,7 @@ export default function CompareClientView({ initialProducts = [], productIdsPara
 
   return (
     <div className="bg-[#f8f9fa] min-h-[90vh] py-5 sm:py-8">
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 space-y-6">
+      <div className="max-w-[1536px] 2xl:max-w-[1600px] mx-auto px-3 sm:px-4 lg:px-6 2xl:px-8 space-y-6">
         {/* Breadcrumb */}
         <div className="flex items-center gap-1.5 text-xs text-gray-500">
           <Link href="/" className="hover:text-[#e30019] transition">
@@ -541,7 +542,7 @@ export default function CompareClientView({ initialProducts = [], productIdsPara
                       </h5>
                       <div
                         className="text-xs text-gray-600 leading-relaxed prose prose-sm max-w-none line-clamp-6"
-                        dangerouslySetInnerHTML={{ __html: p.description }}
+                        dangerouslySetInnerHTML={{ __html: sanitizeHtml(p.description) }}
                       />
                     </div>
                   )}

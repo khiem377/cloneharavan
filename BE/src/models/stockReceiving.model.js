@@ -58,12 +58,28 @@ const stockReceivingSchema = new mongoose.Schema(
     purchaseOrderId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'PurchaseOrder',
-      required: true,
+      default: null,
     },
     supplierId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Supplier',
-      required: true,
+      default: null,
+    },
+    type: {
+      type: String,
+      enum: ['purchase_order', 'audit_surplus', 'transfer', 'other'],
+      default: 'purchase_order',
+    },
+    referenceDoc: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+    warehouseId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Warehouse',
+      default: null,
+      index: true,
     },
     note: {
       type: String,

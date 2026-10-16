@@ -25,8 +25,8 @@ export default function HomeNewsletterBanner() {
   };
 
   return (
-    <section className="max-w-7xl mx-auto px-3 sm:px-4 my-6" aria-label="Bản tin khuyến mãi & Cam kết dịch vụ">
-      <div className="bg-white rounded-[6px] border border-slate-200 p-5 sm:p-6">
+    <section className="max-w-[1536px] 2xl:max-w-[1600px] mx-auto px-3 sm:px-4 lg:px-6 2xl:px-8 my-6" aria-label="Bản tin khuyến mãi & Cam kết dịch vụ">
+      <div className="bg-white rounded-[6px] border border-slate-200 p-5 sm:p-6 2xl:p-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
           
           {/* CỘT TRÁI: Form đăng ký nhận tin ưu đãi */}

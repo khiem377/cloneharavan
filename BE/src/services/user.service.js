@@ -2,6 +2,8 @@ const User = require('../models/user.model');
 const { AppError } = require('../utils/AppError');
 const { uploadToCloudinary, deleteFromCloudinary } = require('../config/cloudinary');
 const sseService = require('./sse.service');
+const { escapeRegex } = require('../middleware/sanitize.middleware');
+const ghnService = require('./ghn.service');
 
 // ==========================================
 // 1. AVATAR MANAGEMENT
@@ -107,6 +109,17 @@ const updateUserProfile = async (userId, data) => {
     user.isPhoneVerified = false; // Reset trạng thái xác minh khi đổi SĐT
   }
 
+  // Cho phép người dùng cập nhật email thật (đặc biệt khi đang dùng email giả định zalo/tiktok)
+  if (data.email && data.email.toLowerCase().trim() !== user.email) {
+    const targetEmail = data.email.toLowerCase().trim();
+    const emailExists = await User.findOne({ email: targetEmail, _id: { $ne: userId } });
+    if (emailExists) {
+      throw new AppError('Địa chỉ email này đã được sử dụng bởi một tài khoản khác', 400);
+    }
+    user.email = targetEmail;
+    user.isEmailVerified = false;
+  }
+
   if (data.fullName !== undefined) user.fullName = data.fullName;
   if (data.gender !== undefined) user.gender = data.gender;
   if (data.dateOfBirth !== undefined) user.dateOfBirth = data.dateOfBirth;
@@ -131,6 +144,22 @@ const getUserAddresses = async (userId) => {
 };
 
 /**
+ * Lấy địa chỉ mặc định của user (nếu chưa có thì trả về hasDefault: false)
+ */
+const getDefaultAddress = async (userId) => {
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new AppError('Không tìm thấy người dùng', 404);
+  }
+  const defaultAddr = user.addresses.find((addr) => addr.isDefault === true) || null;
+  return {
+    hasDefault: Boolean(defaultAddr),
+    address: defaultAddr,
+    addressesCount: user.addresses.length,
+  };
+};
+
+/**
  * Thêm địa chỉ mới
  * - Nếu là địa chỉ đầu tiên hoặc isDefault = true -> set làm mặc định
  */
@@ -149,6 +178,22 @@ const addAddress = async (userId, addressData) => {
     addressData.isDefault = true;
   } else {
     addressData.isDefault = false;
+  }
+
+  // Tự động phân giải mã GHN nếu chưa có
+  if ((!addressData.districtId || !addressData.wardCode) && addressData.province && addressData.ward) {
+    try {
+      const resolved = await ghnService.resolveAddressGhnCodes({
+        province: addressData.province,
+        district: addressData.district,
+        ward: addressData.ward,
+      });
+      if (resolved?.districtId && resolved?.wardCode) {
+        addressData.provinceId = resolved.provinceId;
+        addressData.districtId = resolved.districtId;
+        addressData.wardCode = resolved.wardCode;
+      }
+    } catch (_) {}
   }
 
   user.addresses.push(addressData);
@@ -188,6 +233,22 @@ const updateAddress = async (userId, addressId, updateData) => {
   if (updateData.wardCode !== undefined) address.wardCode = updateData.wardCode;
   if (updateData.detailAddress !== undefined) address.detailAddress = updateData.detailAddress;
   if (updateData.isDefault !== undefined) address.isDefault = updateData.isDefault;
+
+  // Tự động phân giải mã GHN nếu sửa địa chỉ mà thiếu mã
+  if ((!address.districtId || !address.wardCode) && address.province && address.ward) {
+    try {
+      const resolved = await ghnService.resolveAddressGhnCodes({
+        province: address.province,
+        district: address.district,
+        ward: address.ward,
+      });
+      if (resolved?.districtId && resolved?.wardCode) {
+        address.provinceId = resolved.provinceId;
+        address.districtId = resolved.districtId;
+        address.wardCode = resolved.wardCode;
+      }
+    } catch (_) {}
+  }
 
   await user.save();
   return address;
@@ -293,7 +354,7 @@ const getAllUsers = async (query = {}) => {
   const filter = {};
 
   if (q) {
-    const searchRegex = { $regex: q.trim(), $options: 'i' };
+    const searchRegex = { $regex: escapeRegex(q.trim()), $options: 'i' };
     filter.$or = [
       { fullName: searchRegex },
       { email: searchRegex },
@@ -337,13 +398,52 @@ const getAllUsers = async (query = {}) => {
         populate: { path: 'permissions', select: 'name code module description' },
       })
       .populate('customPermissions', 'name code module description')
+      .populate('assignedWarehouseId', 'name code isDefault')
       .sort(sort)
       .skip(skip)
       .limit(limitNum),
   ]);
 
+  // Đồng bộ hai chiều: Nếu user chưa có assignedWarehouseId nhưng có trong Warehouse.assignedStaffIds
+  const Warehouse = require('../models/warehouse.model');
+  const warehouses = await Warehouse.find({ 'assignedStaffIds.0': { $exists: true } }).select('_id name code isDefault assignedStaffIds');
+  const staffWhMap = new Map();
+  warehouses.forEach((w) => {
+    (w.assignedStaffIds || []).forEach((staffId) => {
+      const sId = typeof staffId === 'object' && staffId._id ? staffId._id.toString() : staffId.toString();
+      staffWhMap.set(sId, { _id: w._id, name: w.name, code: w.code, isDefault: w.isDefault });
+    });
+  });
+
+  // Lấy thống kê đơn hàng (orderCount, totalSpent) cho danh sách người dùng
+  const Order = require('../models/order.model');
+  const userIds = users.map((u) => u._id);
+  const orderStats = await Order.aggregate([
+    { $match: { userId: { $in: userIds }, orderStatus: { $ne: 'CANCELLED' } } },
+    {
+      $group: {
+        _id: '$userId',
+        orderCount: { $sum: 1 },
+        totalSpent: { $sum: { $ifNull: ['$pricing.totalAmount', 0] } },
+      },
+    },
+  ]);
+  const orderStatsMap = new Map();
+  orderStats.forEach((st) => orderStatsMap.set(st._id.toString(), st));
+
+  const enrichedUsers = users.map((u) => {
+    const uObj = u.toObject();
+    if (!uObj.assignedWarehouseId && staffWhMap.has(uObj._id.toString())) {
+      uObj.assignedWarehouseId = staffWhMap.get(uObj._id.toString());
+    }
+    const st = orderStatsMap.get(uObj._id.toString());
+    uObj.orderCount = st ? st.orderCount : 0;
+    uObj.totalSpent = st ? st.totalSpent : 0;
+    return uObj;
+  });
+
   return {
-    users,
+    users: enrichedUsers,
     total,
     page: pageNum,
     limit: limitNum,
@@ -361,9 +461,26 @@ const getUserById = async (id) => {
       select: 'name code description permissions',
       populate: { path: 'permissions', select: 'name code module description' },
     })
-    .populate('customPermissions', 'name code module description');
+    .populate('customPermissions', 'name code module description')
+    .populate('assignedWarehouseId', 'name code isDefault');
   if (!user) throw new AppError('Không tìm thấy người dùng', 404);
-  return user;
+
+  const uObj = user.toObject();
+  const Order = require('../models/order.model');
+  const stats = await Order.aggregate([
+    { $match: { userId: user._id, orderStatus: { $ne: 'CANCELLED' } } },
+    {
+      $group: {
+        _id: '$userId',
+        orderCount: { $sum: 1 },
+        totalSpent: { $sum: { $ifNull: ['$pricing.totalAmount', 0] } },
+      },
+    },
+  ]);
+  uObj.orderCount = stats[0]?.orderCount || 0;
+  uObj.totalSpent = stats[0]?.totalSpent || 0;
+
+  return uObj;
 };
 
 /**
@@ -478,6 +595,8 @@ const createAdminUser = async (data) => {
     }
   }
 
+  const assignedWhId = data.assignedWarehouseId || data.warehouseId || null;
+
   const newAdmin = await User.create({
     fullName: data.fullName.trim(),
     email: data.email.toLowerCase().trim(),
@@ -487,10 +606,18 @@ const createAdminUser = async (data) => {
     dateOfBirth: data.dateOfBirth || null,
     role: data.role || 'staff',
     roleId: data.roleId || null,
+    assignedWarehouseId: assignedWhId,
     isActive: data.isActive !== undefined ? data.isActive : true,
     isEmailVerified: data.isEmailVerified !== undefined ? data.isEmailVerified : true,
     isPhoneVerified: data.isPhoneVerified !== undefined ? data.isPhoneVerified : true,
   });
+
+  if (assignedWhId) {
+    const Warehouse = require('../models/warehouse.model');
+    await Warehouse.findByIdAndUpdate(assignedWhId, {
+      $addToSet: { assignedStaffIds: newAdmin._id },
+    });
+  }
 
   const userObj = newAdmin.toObject();
   delete userObj.password;
@@ -594,6 +721,7 @@ module.exports = {
   updateUserProfile,
   // Addresses
   getUserAddresses,
+  getDefaultAddress,
   addAddress,
   updateAddress,
   deleteAddress,

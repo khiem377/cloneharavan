@@ -132,6 +132,7 @@ const validateCoupon = async (code, orderTotal) => {
       type: coupon.type,
       value: coupon.value,
       maxDiscount: coupon.maxDiscount,
+      minOrderValue: coupon.minOrderValue || 0,
     },
     discountAmount,
     finalTotal: orderTotal - discountAmount,

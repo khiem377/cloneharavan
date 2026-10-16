@@ -56,7 +56,25 @@ export default function DashboardRecentCustomers({ recentCustomers = [] }) {
                   <p className="text-xs font-medium text-foreground truncate group-hover:text-primary transition-colors">
                     {c.fullName || 'Khách hàng'}
                   </p>
-                  <p className="text-[10px] text-muted-foreground font-mono truncate">{c.email}</p>
+                  <div className="text-[10px] text-muted-foreground font-mono truncate mt-0.5">
+                    {c.email ? (
+                      <span>{c.email}</span>
+                    ) : c.phone ? (
+                      <span className="text-foreground font-medium">{c.phone}</span>
+                    ) : c.zaloId ? (
+                      <span className="inline-flex items-center gap-1 text-[#0068FF] font-medium">
+                        <span className="size-1.5 rounded-full bg-[#0068FF]" />
+                        Zalo: {c.zaloName || c.fullName}
+                      </span>
+                    ) : c.tiktokId ? (
+                      <span className="inline-flex items-center gap-1 text-foreground font-medium">
+                        <span className="size-1.5 rounded-full bg-foreground" />
+                        TikTok: @{c.tiktokUsername || c.fullName}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground/60 italic">Chưa liên kết email</span>
+                    )}
+                  </div>
                 </div>
                 <div className="shrink-0 text-right">
                   <span

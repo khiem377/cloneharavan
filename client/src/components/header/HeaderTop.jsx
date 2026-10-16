@@ -10,7 +10,7 @@ import AccountMenu from './AccountMenu';
 import useCartStore from '@/store/cartStore';
 
 export const HeaderTop = ({ onOpenCategoryDrawer }) => {
-  const { totalItems, fetchCart, initialized } = useCartStore();
+  const { items, totalItems, fetchCart, initialized } = useCartStore();
 
   useEffect(() => {
     if (!initialized) {
@@ -18,8 +18,11 @@ export const HeaderTop = ({ onOpenCategoryDrawer }) => {
     }
   }, [initialized, fetchCart]);
 
+  // Tổng số loại sản phẩm trong giỏ (không tính số lượng lặp lại của từng món)
+  const productCount = Array.isArray(items) ? items.length : (totalItems || 0);
+
   return (
-    <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 sm:py-2.5 flex flex-col md:flex-row md:items-center justify-between gap-2.5 md:gap-6">
+    <div className="max-w-[1536px] 2xl:max-w-[1600px] mx-auto px-3 sm:px-4 lg:px-6 2xl:px-8 py-2 sm:py-2.5 flex flex-col md:flex-row md:items-center justify-between gap-2.5 md:gap-6">
       <div className="flex items-center justify-between w-full md:w-auto">
         <div className="flex items-center gap-2">
           {onOpenCategoryDrawer && (
@@ -29,7 +32,7 @@ export const HeaderTop = ({ onOpenCategoryDrawer }) => {
               className="p-1.5 -ml-1 text-slate-700 hover:text-slate-900 md:hidden cursor-pointer"
               aria-label="Mở menu danh mục"
             >
-              <Icon name="menu" size={22} color="#1e2b69" />
+              <Icon name="menu" size={22} color="#284ea1" />
             </button>
           )}
 
@@ -38,6 +41,7 @@ export const HeaderTop = ({ onOpenCategoryDrawer }) => {
           </Link>
         </div>
 
+        {/* MOBILE CONTROLS */}
         <div className="flex md:hidden items-center gap-2 sm:gap-3">
           <Link
             href="/live"
@@ -50,27 +54,24 @@ export const HeaderTop = ({ onOpenCategoryDrawer }) => {
 
           <AccountMenu />
 
-          <Link href="/cart" aria-label="Xem giỏ hàng" className="flex items-center p-1 cursor-pointer hover:opacity-80 transition">
-            <div className="relative">
-              <Icon name="cart" size={22} color="#334155" />
-              {totalItems > 0 && (
-                <span
-                  className="absolute -top-1.5 -right-1.5 min-w-4 h-4 px-1 rounded-full text-[10px] font-bold flex items-center justify-center text-white shadow-xs animate-fadeIn"
-                  style={{ backgroundColor: PALETTE.accent }}
-                >
-                  {totalItems > 99 ? '99+' : totalItems}
-                </span>
-              )}
-            </div>
+          {/* Mobile Cart Pill Button */}
+          <Link
+            href="/cart"
+            aria-label="Xem giỏ hàng"
+            className="flex items-center gap-1.5 bg-[#284ea1] hover:bg-[#1e3b82] text-white px-2.5 py-1 rounded-full text-xs font-bold active:scale-[0.98] transition shadow-xs"
+          >
+            <Icon name="header-bag" size={17} color="#ffffff" strokeWidth={2} />
+            <span className="font-mono tabular-nums">{productCount}</span>
           </Link>
         </div>
       </div>
 
-      <div className="w-full md:flex-1 md:max-w-xl">
+      <div className="w-full md:flex-1 md:max-w-xl lg:max-w-2xl 2xl:max-w-3xl">
         <SearchBar />
       </div>
 
-      <div className="hidden md:flex items-center gap-3 sm:gap-5 shrink-0">
+      {/* DESKTOP CONTROLS */}
+      <div className="hidden md:flex items-center gap-3 sm:gap-4 shrink-0">
         <Link
           href="/live"
           aria-label="Xem livestream bán hàng"
@@ -82,21 +83,21 @@ export const HeaderTop = ({ onOpenCategoryDrawer }) => {
 
         <AccountMenu />
 
-        <Link href="/cart" aria-label="Xem giỏ hàng" className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition group">
-          <div className="relative">
-            <Icon name="cart" size={24} color="#334155" />
-            {totalItems > 0 && (
-              <span
-                className="absolute -top-1.5 -right-1.5 min-w-4 h-4 px-1 rounded-full text-[10px] font-bold flex items-center justify-center text-white shadow-xs animate-fadeIn"
-                style={{ backgroundColor: PALETTE.accent }}
-              >
-                {totalItems > 99 ? '99+' : totalItems}
-              </span>
-            )}
+        {/* NÚT GIỎ HÀNG PILL ĐỒNG BỘ THEME #284ea1 */}
+        <Link
+          href="/cart"
+          aria-label="Xem giỏ hàng"
+          className="flex items-center gap-2.5 bg-[#284ea1] hover:bg-[#1e3b82] text-white px-3.5 py-1.5 rounded-full active:scale-[0.98] transition-all shadow-xs cursor-pointer select-none group"
+        >
+          <Icon name="header-bag" size={22} color="#ffffff" strokeWidth={2.2} className="group-hover:scale-105 transition-transform" />
+          <div className="flex flex-col text-left leading-none">
+            <span className="text-[9.5px] font-extrabold uppercase tracking-wider text-blue-100">
+              GIỎ HÀNG
+            </span>
+            <span className="text-xs font-bold text-white font-mono tabular-nums mt-0.5">
+              {productCount} Sản phẩm
+            </span>
           </div>
-          <span className="text-xs font-medium text-slate-800 group-hover:text-red-600 transition-colors hidden sm:inline">
-            Giỏ hàng
-          </span>
         </Link>
       </div>
     </div>

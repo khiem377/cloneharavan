@@ -288,7 +288,7 @@ export default function VariantDetailDrawer({ variant, product, onClose }) {
   return (
     <>
       {/* Overlay */}
-      <div className="fixed inset-0 z-40 bg-black/30 backdrop-blur-xs" onClick={onClose} />
+      <div className="fixed inset-0 z-40 bg-black/30" onClick={onClose} />
 
       {/* Drawer */}
       <div className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-2xl bg-background border-l border-border shadow-2xl flex flex-col overflow-hidden">

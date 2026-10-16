@@ -153,7 +153,7 @@ const Sidebar = React.forwardRef(
         <>
           {openMobile && (
             <div
-              className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs md:hidden"
+              className="fixed inset-0 z-50 bg-black/50 md:hidden"
               onClick={() => setOpenMobile(false)}
             />
           )}

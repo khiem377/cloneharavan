@@ -10,6 +10,7 @@ const UNIT_OPTIONS = [
 
 const ITEM_TYPE_OPTIONS = [
   { label: 'Hàng hóa (Mua bán)', value: 'merchandise' },
+  { label: 'Combo (Đóng gói)', value: 'combo' },
   { label: 'Thành phẩm', value: 'finished_good' },
   { label: 'Nguyên vật liệu', value: 'raw_material' },
   { label: 'Dịch vụ', value: 'service' },

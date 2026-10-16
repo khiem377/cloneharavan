@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Cart = require('../models/cart.model');
 const Product = require('../models/product.model');
 const ProductVariant = require('../models/productVariant.model');
+const Combo = require('../models/combo.model');
 const checkoutService = require('./checkout.service');
 const flashSaleService = require('./flashSale.service');
 const { AppError } = require('../utils/AppError');
@@ -21,21 +22,6 @@ const getAvailableStock = (variant) => {
   return Math.max(0, stock - allocated);
 };
 
-/**
- * Phân giải sản phẩm & biến thể cho Giỏ hàng:
- * 1. ƯU TIÊN SỐ 1: variantId (Đơn vị lưu kho & bán hàng chuẩn nhất)
- *    - Tìm trực tiếp ProductVariant theo variantId và populate('productId').
- *    - Hoàn toàn KHÔNG cần client truyền productId vì biến thể đã liên kết chặt chẽ với sản phẩm cha.
- * 2. ƯU TIÊN SỐ 2: sku
- *    - Tìm trực tiếp ProductVariant theo mã SKU và populate('productId').
- * 3. FALLBACK LINH HOẠT: productId
- *    - Nếu ID truyền vào thực chất là ID của một variant (client gửi nhầm tên trường):
- *      Tự động nhận diện luôn là variant!
- *    - Nếu đúng là ID của Product cha:
- *      + Tự động chọn Default Variant (isDefault: true) đại diện của sản phẩm đó.
- *      + Nếu default variant hết hàng, tự động tìm biến thể đầu tiên còn hàng khả dụng.
- *      + Cho phép thêm ngay vào giỏ hàng mà không bị chặn lỗi 400.
- */
 const resolveVariantAndProduct = async ({ productId, variantId, sku }) => {
   let targetProduct = null;
   let targetVariant = null;
@@ -116,15 +102,28 @@ const resolveVariantAndProduct = async ({ productId, variantId, sku }) => {
   }
 
   // Tự động phân giải biến thể khi chỉ có productId:
+  // Ưu tiên chọn biến thể có thuộc tính thực tế (attributes có giá trị hợp lệ, không phải dummy rỗng):
+  const isDefaultText = (t) => {
+    if (!t) return true;
+    const s = String(t).trim().toLowerCase();
+    return ['mặc định', 'mac dinh', 'default', 'default title', 'tiêu chuẩn', 'tieu chuan'].includes(s);
+  };
+  const realVariants = allVariants.filter(
+    (v) =>
+      Array.isArray(v.attributes) &&
+      v.attributes.some((a) => a && !isDefaultText(a.value) && !isDefaultText(a.name))
+  );
+  const candidates = realVariants.length > 0 ? realVariants : allVariants;
+
   // - Ưu tiên A: Biến thể mặc định (isDefault: true) còn hàng khả dụng
   // - Ưu tiên B: Biến thể đầu tiên còn hàng khả dụng
   // - Ưu tiên C: Biến thể mặc định hoặc biến thể đầu tiên
-  let selectedVariant = allVariants.find((v) => v.isDefault && getAvailableStock(v) > 0);
+  let selectedVariant = candidates.find((v) => v.isDefault && getAvailableStock(v) > 0);
   if (!selectedVariant) {
-    selectedVariant = allVariants.find((v) => getAvailableStock(v) > 0);
+    selectedVariant = candidates.find((v) => getAvailableStock(v) > 0);
   }
   if (!selectedVariant) {
-    selectedVariant = allVariants.find((v) => v.isDefault) || allVariants[0];
+    selectedVariant = candidates.find((v) => v.isDefault) || candidates[0];
   }
 
   return { product: targetProduct, variant: selectedVariant };
@@ -275,7 +274,7 @@ const formatAndValidateCart = async (cartDoc) => {
   const validatedItems = [];
 
   for (const item of cartDoc.items) {
-    const variant = await ProductVariant.findById(item.variantId);
+    let variant = await ProductVariant.findById(item.variantId);
     const product = await Product.findById(item.productId);
 
     // 1. Sản phẩm hoặc biến thể bị xóa khỏi hệ thống
@@ -305,6 +304,33 @@ const formatAndValidateCart = async (cartDoc) => {
         subtotal: (item.priceAtAdded || 0) * item.quantity,
       });
       continue;
+    }
+
+    // Tự động chữa lành (auto-heal) nếu item trong giỏ từng bị gán nhầm biến thể dummy rỗng
+    // trong khi sản phẩm thực tế có các biến thể thuộc tính hợp lệ:
+    const isDefaultTextVal = (t) => {
+      if (!t) return true;
+      const s = String(t).trim().toLowerCase();
+      return ['mặc định', 'mac dinh', 'default', 'default title', 'tiêu chuẩn', 'tieu chuan'].includes(s);
+    };
+    const hasValidVariantAttrs =
+      Array.isArray(variant.attributes) &&
+      variant.attributes.some((a) => a && !isDefaultTextVal(a.value) && !isDefaultTextVal(a.name));
+
+    if (!hasValidVariantAttrs && product) {
+      const allProductVars = await ProductVariant.find({ productId: product._id }).sort({ isDefault: -1, position: 1 });
+      const realVar = allProductVars.find(
+        (v) =>
+          Array.isArray(v.attributes) &&
+          v.attributes.some((a) => a && !isDefaultTextVal(a.value) && !isDefaultTextVal(a.name))
+      );
+      if (realVar) {
+        variant = realVar;
+        item.variantId = realVar._id;
+        item.sku = realVar.sku || item.sku;
+        item.selectedAttributes = realVar.attributes || [];
+        hasCartMutation = true;
+      }
     }
 
     // 2. Sản phẩm tạm ngưng kinh doanh
@@ -371,37 +397,40 @@ const formatAndValidateCart = async (cartDoc) => {
       hasCartMutation = true;
     }
 
-    // 4. Tính toán giá hiện tại (kiểm tra Flash Sale)
+    // 4. Tính toán giá hiện tại (kiểm tra Combo & Flash Sale)
     const originalPrice = variant.price || 0;
-    let unitPrice = getSellingPrice(variant);
+    let unitPrice = item.isComboItem && item.comboPrice ? item.comboPrice : getSellingPrice(variant);
     let isFlashSale = false;
 
-    const fsKey = `${product._id.toString()}_${variant._id.toString()}`;
-    const fsKeyProduct = `${product._id.toString()}_default`;
-    const matchedFs = flashSaleMap.get(fsKey) || flashSaleMap.get(fsKeyProduct);
+    // Chỉ áp Flash Sale nếu item không phải là hàng mua theo Combo ưu đãi riêng
+    if (!item.isComboItem) {
+      const fsKey = `${product._id.toString()}_${variant._id.toString()}`;
+      const fsKeyProduct = `${product._id.toString()}_default`;
+      const matchedFs = flashSaleMap.get(fsKey) || flashSaleMap.get(fsKeyProduct);
 
-    if (matchedFs) {
-      const fsPrice = matchedFs.flashSalePrice ?? matchedFs.flashPrice;
-      const fsStock = Math.max(0, (matchedFs.stockLimit || 0) - (matchedFs.soldCount || 0));
-      if (fsPrice !== null && fsPrice < unitPrice && fsStock > 0) {
-        unitPrice = fsPrice;
-        isFlashSale = true;
+      if (matchedFs) {
+        const fsPrice = matchedFs.flashSalePrice ?? matchedFs.flashPrice;
+        const fsStock = Math.max(0, (matchedFs.stockLimit || 0) - (matchedFs.soldCount || 0));
+        if (fsPrice !== null && fsPrice < unitPrice && fsStock > 0) {
+          unitPrice = fsPrice;
+          isFlashSale = true;
+        }
       }
-    }
 
-    // Kiểm tra biến động giá so với thời điểm thêm vào giỏ
-    if (item.priceAtAdded && Math.abs(item.priceAtAdded - unitPrice) > 100) {
-      hasPriceChange = true;
-      warnings.push({
-        type: 'PRICE_CHANGED',
-        itemId: item._id,
-        productName: product.name,
-        message: `Đơn giá của "${product.name}" đã cập nhật từ ${item.priceAtAdded.toLocaleString('vi-VN')}đ sang ${unitPrice.toLocaleString('vi-VN')}đ.`,
-        oldPrice: item.priceAtAdded,
-        newPrice: unitPrice,
-      });
-      item.priceAtAdded = unitPrice;
-      hasCartMutation = true;
+      // Kiểm tra biến động giá so với thời điểm thêm vào giỏ (bỏ qua nếu là Combo)
+      if (item.priceAtAdded && Math.abs(item.priceAtAdded - unitPrice) > 100) {
+        hasPriceChange = true;
+        warnings.push({
+          type: 'PRICE_CHANGED',
+          itemId: item._id,
+          productName: product.name,
+          message: `Đơn giá của "${product.name}" đã cập nhật từ ${item.priceAtAdded.toLocaleString('vi-VN')}đ sang ${unitPrice.toLocaleString('vi-VN')}đ.`,
+          oldPrice: item.priceAtAdded,
+          newPrice: unitPrice,
+        });
+        item.priceAtAdded = unitPrice;
+        hasCartMutation = true;
+      }
     }
 
     validatedItems.push({
@@ -409,6 +438,7 @@ const formatAndValidateCart = async (cartDoc) => {
       productId: product._id,
       variantId: variant._id,
       sku: variant.sku || '',
+      slug: product.slug || '',
       name: product.name,
       displayName: variant.displayName || '',
       isDefaultVariant: Boolean(variant.isDefault),
@@ -419,6 +449,12 @@ const formatAndValidateCart = async (cartDoc) => {
       isOutOfStock,
       canCheckout,
       isFlashSale,
+      isComboItem: Boolean(item.isComboItem),
+      comboId: item.comboId || null,
+      comboName: item.comboName || '',
+      comboCode: item.comboCode || '',
+      comboPrice: item.comboPrice || null,
+      comboSavings: item.isComboItem ? Math.max(0, originalPrice - unitPrice) : 0,
       unitPrice,
       originalPrice,
       subtotal: unitPrice * itemQuantity,
@@ -431,6 +467,13 @@ const formatAndValidateCart = async (cartDoc) => {
   }
 
   // 5. Tích hợp Master Discount Calculator (Promotion, Coupon, Gift Program)
+  const rawSubtotalOriginal = validatedItems.reduce(
+    (acc, it) => acc + (it.canCheckout ? (it.originalPrice || it.unitPrice) * it.quantity : 0),
+    0
+  );
+  const subtotal = validatedItems.reduce((acc, it) => acc + (it.canCheckout ? it.subtotal : 0), 0);
+  const totalItems = validatedItems.reduce((acc, it) => acc + (it.canCheckout ? it.quantity : 0), 0);
+
   const checkoutPayload = {
     cartItems: validatedItems
       .filter((it) => it.canCheckout)
@@ -438,7 +481,8 @@ const formatAndValidateCart = async (cartDoc) => {
         productId: it.productId,
         variantId: it.variantId,
         quantity: it.quantity,
-        originalPrice: it.originalPrice,
+        originalPrice: it.originalPrice || it.unitPrice,
+        unitPrice: it.unitPrice,
         productName: it.name,
         sku: it.sku,
       })),
@@ -466,8 +510,9 @@ const formatAndValidateCart = async (cartDoc) => {
     }
   }
 
-  const subtotal = validatedItems.reduce((acc, it) => acc + (it.canCheckout ? it.subtotal : 0), 0);
-  const totalItems = validatedItems.reduce((acc, it) => acc + (it.canCheckout ? it.quantity : 0), 0);
+  const calcSummary = calculation?.summary;
+  const finalSubtotalOriginal = calcSummary?.subtotalOriginal || rawSubtotalOriginal;
+  const finalSubtotal = calcSummary?.subtotalAfterFlashSale || subtotal;
 
   return {
     cart: {
@@ -477,17 +522,20 @@ const formatAndValidateCart = async (cartDoc) => {
       items: validatedItems,
       totalItems,
       totalKinds: validatedItems.length,
-      subtotalOriginal: calculation?.subtotalOriginal || subtotal,
-      subtotal: calculation?.subtotalAfterFlashSale || subtotal,
-      totalFlashSaleDiscount: calculation?.totalFlashSaleDiscount || 0,
-      totalPromotionDiscount: calculation?.totalPromotionDiscount || 0,
-      appliedPromotion: calculation?.appliedPromotion || null,
+      subtotalOriginal: finalSubtotalOriginal,
+      subtotal: finalSubtotal,
+      totalProductDiscount: Math.max(0, finalSubtotalOriginal - finalSubtotal),
+      totalFlashSaleDiscount: calcSummary?.totalFlashSaleDiscount || 0,
+      totalPromotionDiscount: calcSummary?.totalPromoDiscount || 0,
+      appliedPromotion: calculation?.appliedPromotions || null,
       couponCode: cartDoc.couponCode || null,
       appliedCoupon: calculation?.appliedCoupon || null,
-      couponDiscount: calculation?.couponDiscount || 0,
-      totalDiscount: calculation?.totalDiscount || 0,
-      finalTotal: calculation?.finalTotal ?? subtotal,
-      giftPrograms: calculation?.gifts || [],
+      couponDiscount: calcSummary?.couponDiscount || 0,
+      totalDiscount: calcSummary?.totalDiscountAll || 0,
+      finalTotal: calcSummary?.finalTotal ?? finalSubtotal,
+      giftPrograms: calculation?.giftItems || [],
+      giftItems: calculation?.giftItems || [],
+      giftNudges: calculation?.giftNudges || [],
     },
     warnings,
     hasStockIssue,
@@ -503,6 +551,10 @@ const formatAndValidateCart = async (cartDoc) => {
  * - Object chứa items: { items: [...] }
  */
 const addToCart = async (cartOwner, payload) => {
+  if (payload && payload.comboId) {
+    return addComboToCart(cartOwner, payload);
+  }
+
   let itemsList = [];
   if (Array.isArray(payload)) {
     itemsList = payload;
@@ -606,7 +658,7 @@ const addMultipleToCart = async (cartOwner, items) => {
 };
 
 /**
- * Cập nhật số lượng của một dòng sản phẩm trong giỏ
+ * Cập nhật số lượng của một dòng sản phẩm trong giỏ (Kèm đồng bộ số lượng trọn bộ Combo)
  */
 const updateCartItemQuantity = async (cartOwner, itemId, quantity) => {
   if (!itemId || !mongoose.isValidObjectId(itemId)) {
@@ -625,17 +677,66 @@ const updateCartItemQuantity = async (cartOwner, itemId, quantity) => {
     throw new AppError('Không tìm thấy sản phẩm trong giỏ hàng để cập nhật', 404);
   }
 
-  // Nếu số lượng <= 0 -> Xóa item khỏi giỏ
+  const targetItem = cart.items[itemIndex];
+
+  // TRƯỜNG HỢP SỐ LƯỢNG <= 0: Xóa sản phẩm khỏi giỏ
   if (qty <= 0) {
-    cart.items.splice(itemIndex, 1);
+    if (targetItem.isComboItem && targetItem.comboId) {
+      // Xóa trọn bộ combo để tránh phân mảnh giá ưu đãi
+      cart.items = cart.items.filter(
+        (it) => !it.isComboItem || it.comboId?.toString() !== targetItem.comboId.toString()
+      );
+    } else {
+      cart.items.splice(itemIndex, 1);
+    }
+    cart.lastValidatedAt = new Date();
     await cart.save();
     return formatAndValidateCart(cart);
   }
 
-  // Nếu tăng số lượng -> Kiểm tra tồn kho khả dụng
-  const targetItem = cart.items[itemIndex];
-  const variant = await ProductVariant.findById(targetItem.variantId).populate('productId');
+  // TRƯỜNG HỢP SẢN PHẨM THUỘC GÓI COMBO: Đồng bộ số lượng toàn bộ các món trong cùng Combo
+  if (targetItem.isComboItem && targetItem.comboId) {
+    const combo = await Combo.findById(targetItem.comboId);
+    if (!combo) {
+      throw new AppError('Gói combo không còn tồn tại trên hệ thống', 404);
+    }
 
+    const baseCfg = combo.items?.find(
+      (ci) => ci.productId?.toString() === targetItem.productId.toString()
+    );
+    const baseQty = baseCfg?.quantity || 1;
+    const comboSets = Math.max(1, Math.round(qty / baseQty));
+
+    // Kiểm tra tồn kho khả dụng cho tất cả các sản phẩm trong combo
+    for (const cItem of cart.items) {
+      if (cItem.isComboItem && cItem.comboId?.toString() === targetItem.comboId.toString()) {
+        const cfg = combo.items?.find(
+          (ci) => ci.productId?.toString() === cItem.productId.toString()
+        );
+        const itemNeeded = (cfg?.quantity || 1) * comboSets;
+        const v = await ProductVariant.findById(cItem.variantId).populate('productId');
+        if (!v) {
+          throw new AppError('Một biến thể sản phẩm trong combo không còn tồn tại', 404);
+        }
+        const avail = getAvailableStock(v);
+        if (itemNeeded > avail) {
+          const vTitle = `${v.productId?.name || 'Sản phẩm'} (${v.displayName || v.sku})`;
+          throw new AppError(
+            `Kho chỉ còn ${avail} sản phẩm cho "${vTitle}". Không đủ để tăng gói combo lên ${comboSets} bộ`,
+            400
+          );
+        }
+        cItem.quantity = itemNeeded;
+      }
+    }
+
+    cart.lastValidatedAt = new Date();
+    await cart.save();
+    return formatAndValidateCart(cart);
+  }
+
+  // TRƯỜNG HỢP SẢN PHẨM THƯỜNG
+  const variant = await ProductVariant.findById(targetItem.variantId).populate('productId');
   if (!variant) {
     cart.items.splice(itemIndex, 1);
     await cart.save();
@@ -660,7 +761,7 @@ const updateCartItemQuantity = async (cartOwner, itemId, quantity) => {
 };
 
 /**
- * Xóa 1 dòng sản phẩm khỏi giỏ hàng
+ * Xóa 1 dòng sản phẩm khỏi giỏ hàng (Kèm xóa trọn bộ combo nếu là sản phẩm combo)
  */
 const removeCartItem = async (cartOwner, itemId) => {
   if (!itemId || !mongoose.isValidObjectId(itemId)) {
@@ -668,11 +769,24 @@ const removeCartItem = async (cartOwner, itemId) => {
   }
 
   const cart = await getOrCreateCart(cartOwner);
-  const initialLength = cart.items.length;
-  cart.items = cart.items.filter((item) => item._id.toString() !== itemId.toString());
+  const targetItem = cart.items.find((item) => item._id.toString() === itemId.toString());
 
-  if (cart.items.length === initialLength) {
+  if (!targetItem) {
     throw new AppError('Không tìm thấy sản phẩm này trong giỏ hàng', 404);
+  }
+
+  if (targetItem.isComboItem && targetItem.comboId) {
+    // Xóa toàn bộ sản phẩm cùng thuộc combo này
+    cart.items = cart.items.filter(
+      (item) => !item.isComboItem || item.comboId?.toString() !== targetItem.comboId.toString()
+    );
+  } else {
+    cart.items = cart.items.filter((item) => item._id.toString() !== itemId.toString());
+  }
+
+  // Nếu giỏ hàng trống, xóa luôn coupon đã áp dụng
+  if (cart.items.length === 0) {
+    cart.couponCode = null;
   }
 
   cart.lastValidatedAt = new Date();
@@ -695,7 +809,21 @@ const removeCartItems = async (cartOwner, itemIds = []) => {
   const cart = await getOrCreateCart(cartOwner);
   const idSet = new Set(itemIds.map((id) => id?.toString?.() || String(id)));
 
-  cart.items = cart.items.filter((item) => !idSet.has(item._id.toString()));
+  // Thu thập thêm toàn bộ các item thuộc cùng combo nếu bất kỳ item nào của combo bị xóa
+  const targetComboIds = new Set();
+  for (const item of cart.items) {
+    if (idSet.has(item._id.toString()) && item.isComboItem && item.comboId) {
+      targetComboIds.add(item.comboId.toString());
+    }
+  }
+
+  cart.items = cart.items.filter((item) => {
+    if (idSet.has(item._id.toString())) return false;
+    if (item.isComboItem && item.comboId && targetComboIds.has(item.comboId.toString())) {
+      return false;
+    }
+    return true;
+  });
 
   // Nếu giỏ hàng trống, xóa luôn coupon đã áp dụng
   if (cart.items.length === 0) {
@@ -779,12 +907,145 @@ const validateCheckout = async (cartOwner) => {
     );
     throw new AppError(
       stockWarn?.message ||
-        'Một số sản phẩm trong giỏ hàng đã hết hàng hoặc thay đổi tồn kho. Vui lòng kiểm tra lại giỏ hàng trước khi đặt hàng.',
+      'Một số sản phẩm trong giỏ hàng đã hết hàng hoặc thay đổi tồn kho. Vui lòng kiểm tra lại giỏ hàng trước khi đặt hàng.',
       400
     );
   }
 
+  // Ràng buộc kiểm tra toàn vẹn gói Combo
+  const comboGroups = new Map();
+  for (const it of cart.items) {
+    if (it.isComboItem && it.comboId) {
+      const cId = it.comboId.toString();
+      if (!comboGroups.has(cId)) comboGroups.set(cId, []);
+      comboGroups.get(cId).push(it);
+    }
+  }
+
+  for (const [cId, cItems] of comboGroups.entries()) {
+    const comboDoc = await Combo.findById(cId);
+    if (comboDoc && Array.isArray(comboDoc.items)) {
+      if (cItems.length < comboDoc.items.length) {
+        throw new AppError(
+          `Gói combo "${comboDoc.name}" bị thiếu sản phẩm thành phần trong đơn hàng. Vui lòng chọn đầy đủ trọn bộ combo để được hưởng giá ưu đãi.`,
+          400
+        );
+      }
+    }
+  }
+
   return result;
+};
+
+/**
+ * Thêm trọn bộ Combo vào giỏ hàng với giá ưu đãi tự động phân bổ theo tỷ lệ
+ */
+const addComboToCart = async (cartOwner, { comboId, quantity = 1 }) => {
+  const qty = parseInt(quantity, 10);
+  if (isNaN(qty) || qty < 1) {
+    throw new AppError('Số lượng combo phải là số nguyên dương lớn hơn 0', 400);
+  }
+
+  if (!comboId || !mongoose.isValidObjectId(comboId)) {
+    throw new AppError('ID combo không hợp lệ', 400);
+  }
+
+  const combo = await Combo.findById(comboId).populate('items.productId');
+  if (!combo) {
+    throw new AppError('Combo không tồn tại trên hệ thống', 404);
+  }
+
+  if (!combo.isActive) {
+    throw new AppError(`Combo "${combo.name}" hiện đang tạm ngừng kích hoạt`, 400);
+  }
+
+  const now = new Date();
+  if (combo.startDate && new Date(combo.startDate) > now) {
+    throw new AppError(`Combo "${combo.name}" chưa đến thời gian áp dụng`, 400);
+  }
+  if (combo.endDate && new Date(combo.endDate) < now) {
+    throw new AppError(`Combo "${combo.name}" đã hết hạn áp dụng`, 400);
+  }
+
+  // Tính toán tỷ lệ phân bổ giá combo cho từng sản phẩm thành phần
+  const totalOrig = combo.totalOriginalPrice || 1;
+  const ratio = combo.comboPrice / totalOrig;
+
+  let allocatedSum = 0;
+  const itemPrices = combo.items.map((it, idx) => {
+    if (idx === combo.items.length - 1) {
+      const finalPrice = Math.max(0, combo.comboPrice - allocatedSum);
+      return Math.round(finalPrice / (it.quantity || 1));
+    }
+    const origPrice = it.originalPrice || it.productId?.price || 0;
+    const discounted = Math.round(origPrice * ratio);
+    allocatedSum += discounted * (it.quantity || 1);
+    return discounted;
+  });
+
+  const cart = await getOrCreateCart(cartOwner);
+
+  // Thêm từng sản phẩm trong combo vào giỏ
+  for (let i = 0; i < combo.items.length; i++) {
+    const item = combo.items[i];
+    const pid = item.productId?._id || item.productId;
+    const itemQty = (item.quantity || 1) * qty;
+    const unitComboPrice = itemPrices[i];
+
+    const { product, variant } = await resolveVariantAndProduct({ productId: pid });
+    const availableStock = getAvailableStock(variant);
+
+    if (availableStock <= 0) {
+      throw new AppError(
+        `Sản phẩm "${product.name}" trong combo hiện đã hết hàng trong kho`,
+        400
+      );
+    }
+
+    const existingIndex = cart.items.findIndex(
+      (cItem) =>
+        cItem.variantId.toString() === variant._id.toString() &&
+        cItem.comboId?.toString() === combo._id.toString()
+    );
+
+    if (existingIndex > -1) {
+      const newQty = cart.items[existingIndex].quantity + itemQty;
+      if (newQty > availableStock) {
+        throw new AppError(
+          `Tồn kho của "${product.name}" chỉ còn ${availableStock} cái, không đủ để thêm số lượng combo yêu cầu`,
+          400
+        );
+      }
+      cart.items[existingIndex].quantity = newQty;
+      cart.items[existingIndex].comboPrice = unitComboPrice;
+      cart.items[existingIndex].priceAtAdded = unitComboPrice;
+    } else {
+      if (itemQty > availableStock) {
+        throw new AppError(
+          `Tồn kho của "${product.name}" chỉ còn ${availableStock} cái, không đủ để thêm combo`,
+          400
+        );
+      }
+      cart.items.push({
+        productId: product._id,
+        variantId: variant._id,
+        sku: variant.sku || '',
+        quantity: itemQty,
+        priceAtAdded: unitComboPrice,
+        selectedAttributes: variant.attributes || [],
+        comboId: combo._id,
+        comboName: combo.name,
+        comboCode: combo.code,
+        isComboItem: true,
+        comboPrice: unitComboPrice,
+      });
+    }
+  }
+
+  cart.lastValidatedAt = new Date();
+  await cart.save();
+
+  return formatAndValidateCart(cart);
 };
 
 module.exports = {
@@ -802,4 +1063,5 @@ module.exports = {
   removeCoupon,
   mergeGuestCart,
   validateCheckout,
+  addComboToCart,
 };

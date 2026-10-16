@@ -34,13 +34,31 @@ const processQueue = (error, token = null) => {
 api.interceptors.request.use(
   (config) => {
     if (typeof window !== 'undefined') {
-      const { accessToken, anonymousId, getOrCreateAnonymousId } = useAuthStore.getState();
+      let { accessToken, anonymousId, getOrCreateAnonymousId } = useAuthStore.getState();
+
+      if (!accessToken || !anonymousId) {
+        try {
+          const raw = localStorage.getItem('client-auth');
+          if (raw) {
+            const parsed = JSON.parse(raw)?.state;
+            if (!accessToken && parsed?.accessToken) {
+              accessToken = parsed.accessToken;
+            }
+            if (!anonymousId && parsed?.anonymousId) {
+              anonymousId = parsed.anonymousId;
+            }
+          }
+          if (!anonymousId) {
+            anonymousId = localStorage.getItem('cart_anonymous_id');
+          }
+        } catch {}
+      }
 
       if (accessToken) {
         config.headers.Authorization = `Bearer ${accessToken}`;
       }
 
-      const sessionId = anonymousId || getOrCreateAnonymousId();
+      const sessionId = anonymousId || (getOrCreateAnonymousId ? getOrCreateAnonymousId() : null);
       if (sessionId) {
         config.headers['x-session-id'] = sessionId;
       }

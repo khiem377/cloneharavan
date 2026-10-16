@@ -35,7 +35,17 @@ const uploadFromUrl = async (req, res, next) => {
     const { url, folderId } = req.body;
     const media = await uploadMediaFromUrl(url, folderId, req.user?._id || null);
     res.status(201).json({ status: 'success', statusCode: 201, message: 'Upload từ URL thành công', data: { media } });
-  } catch (error) { next(error); }
+  } catch (error) {
+    if (error.statusCode === 409 && error.existingMedia) {
+      return res.status(200).json({
+        status: 'success',
+        statusCode: 200,
+        message: 'File đã tồn tại trong thư viện media',
+        data: { media: error.existingMedia },
+      });
+    }
+    next(error);
+  }
 };
 
 const browse = async (req, res, next) => {

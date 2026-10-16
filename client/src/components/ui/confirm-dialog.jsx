@@ -137,7 +137,7 @@ export function ConfirmDialogView({
             </p>
           </div>
 
-          {/* Close X button */}
+
           <button
             onClick={onCancel}
             className="shrink-0 p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-[6px] transition cursor-pointer"
@@ -154,6 +154,7 @@ export function ConfirmDialogView({
             onClick={onCancel}
             className="w-full sm:w-auto px-4 py-2 text-xs sm:text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-[6px] hover:bg-slate-50 active:scale-[0.98] transition-all cursor-pointer text-center"
           >
+
             {cancelText}
           </button>
           <button

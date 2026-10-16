@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useAuthStore from '@/store/authStore';
 import { authService } from '@/services/auth.service';
@@ -24,6 +24,25 @@ export default function AdminProfilePage() {
   const [activeTab, setActiveTab] = useState('profile');
   const avatarInputRef = useRef(null);
   const [avatarLoading, setAvatarLoading] = useState(false);
+
+  // Luôn đồng bộ dữ liệu mới nhất từ server khi vào trang hoặc reload (F5)
+  useEffect(() => {
+    let isMounted = true;
+    authService.getProfile()
+      .then((res) => {
+        if (!isMounted) return;
+        const freshUser = res.data?.data?.user || res.data?.data;
+        if (freshUser && setUser) {
+          setUser(freshUser);
+        }
+      })
+      .catch((err) => {
+        console.error('Không thể đồng bộ hồ sơ cá nhân:', err);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, [setUser]);
 
   // Permissions Data
   const { data: myPermsData = {}, isLoading: loadingPerms } = useMyPermissions();
@@ -88,11 +107,23 @@ export default function AdminProfilePage() {
     setAvatarLoading(true);
     try {
       const res = await authService.uploadAvatar(formData);
-      const updatedUser = res.data?.data?.user || res.data?.data || res.data;
-      setUser({ ...user, avatar: updatedUser.avatar || { url: URL.createObjectURL(file) } });
-      toast.success('Cập nhật ảnh đại diện thành công');
+      const avatarData = res.data?.data?.avatar || res.data?.avatar;
+      const avatarObj =
+        typeof avatarData === 'object' && avatarData?.url
+          ? avatarData
+          : typeof avatarData === 'string'
+          ? { url: avatarData, publicId: null }
+          : { url: URL.createObjectURL(file), publicId: null };
+
+      if (setUser) {
+        setUser({
+          ...user,
+          avatar: avatarObj,
+        });
+      }
+      toast.success(res.data?.message || 'Cập nhật ảnh đại diện thành công');
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Tải ảnh đại diện thất bại');
+      toast.error(err.response?.data?.message || err.message || 'Tải ảnh đại diện thất bại');
     } finally {
       setAvatarLoading(false);
       if (avatarInputRef.current) avatarInputRef.current.value = '';

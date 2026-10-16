@@ -7,7 +7,7 @@ export const useFlashSales = (query = {}) => {
   const [pagination, setPagination] = useState({});
   const [loading, setLoading] = useState(false);
 
-  const fetch = useCallback(async () => {
+  const fetchFlashSales = useCallback(async () => {
     setLoading(true);
     try {
       const res = await flashSaleService.getAll(query);
@@ -21,8 +21,8 @@ export const useFlashSales = (query = {}) => {
   }, [JSON.stringify(query)]);
 
   useEffect(() => {
-    fetch();
-  }, [fetch]);
+    fetchFlashSales();
+  }, [fetchFlashSales]);
 
-  return { data, pagination, loading, refetch: fetch };
+  return { data, pagination, loading, refetch: fetchFlashSales };
 };

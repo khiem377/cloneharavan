@@ -86,13 +86,13 @@ export default function HeroBannerSliderClient({ slides = [] }) {
 
     return (
         <section
-            className="w-full overflow-hidden bg-slate-900 select-none relative mb-6 rounded-[6px] border border-slate-800"
+            className="w-full relative overflow-hidden select-none bg-slate-950 mb-4 sm:mb-6"
             aria-label="Khuyến mãi nổi bật"
             onMouseEnter={() => setIsPaused(true)}
             onMouseLeave={() => setIsPaused(false)}
         >
             <div
-                className="relative w-full overflow-hidden group aspect-[16/7] sm:aspect-[19/7] md:aspect-[21/8] lg:aspect-[24/8] max-h-[480px]"
+                className="relative w-full overflow-hidden bg-slate-900 select-none group aspect-[16/7] sm:aspect-[21/8] md:aspect-[24/8] lg:aspect-[28/8] 2xl:aspect-[32/9] max-h-[460px] 2xl:max-h-[520px]"
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
@@ -117,7 +117,7 @@ export default function HeroBannerSliderClient({ slides = [] }) {
                                     }
                                     fill
                                     priority={index === 0}
-                                    sizes="(max-width: 1280px) 100vw, 1280px"
+                                    sizes="100vw"
                                     className={`w-full h-full object-cover object-center transition-transform duration-700 ease-out ${
                                         isCurrent ? 'scale-100' : 'scale-105'
                                     }`}
@@ -157,7 +157,7 @@ export default function HeroBannerSliderClient({ slides = [] }) {
                             prevSlide();
                         }}
                         aria-label="Slide trước"
-                        className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 size-9 sm:size-10 rounded-[6px] bg-black/75 hover:bg-black text-white flex items-center justify-center transition-colors opacity-0 group-hover:opacity-100 cursor-pointer z-10 border border-white/20"
+                        className="absolute left-3 sm:left-6 lg:left-8 top-1/2 -translate-y-1/2 size-9 sm:size-11 rounded-[6px] bg-black/60 hover:bg-black/90 text-white flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 cursor-pointer z-10 border border-white/20 active:scale-95"
                     >
                         <ChevronLeft className="size-5 sm:size-6" />
                     </button>
@@ -171,7 +171,7 @@ export default function HeroBannerSliderClient({ slides = [] }) {
                             nextSlide();
                         }}
                         aria-label="Slide tiếp theo"
-                        className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 size-9 sm:size-10 rounded-[6px] bg-black/75 hover:bg-black text-white flex items-center justify-center transition-colors opacity-0 group-hover:opacity-100 cursor-pointer z-10 border border-white/20"
+                        className="absolute right-3 sm:right-6 lg:right-8 top-1/2 -translate-y-1/2 size-9 sm:size-11 rounded-[6px] bg-black/60 hover:bg-black/90 text-white flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 cursor-pointer z-10 border border-white/20 active:scale-95"
                     >
                         <ChevronRight className="size-5 sm:size-6" />
                     </button>

@@ -1,5 +1,6 @@
 import React, { Suspense } from 'react';
 import CompareClientView from './components/CompareClientView';
+import { productService } from '@/services/product.service';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -13,34 +14,15 @@ export async function generateMetadata() {
 
 export default async function ComparePage({ searchParams }) {
   const params = await searchParams;
-  console.log('ComparePage params received:', params);
   const productIdsParam = params?.products || '';
   const ids = productIdsParam ? productIdsParam.split(',').filter(Boolean) : [];
-  console.log('ComparePage ids:', ids);
 
   let initialProducts = [];
   if (ids.length > 0) {
     try {
-      const API_BASE = process.env.API_SERVER_URL || 'http://127.0.0.1:5000/api/v1';
-      const res = await fetch(`${API_BASE}/products/compare`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids }),
-        cache: 'no-store',
-      });
-      const text = await res.text();
-      if (res.ok) {
-        try {
-          const json = JSON.parse(text);
-          initialProducts = json?.data || [];
-        } catch (e) {
-          console.error('Failed to parse json:', e.message);
-        }
-      } else {
-        console.error('Compare fetch failed:', res.status, text);
-      }
+      initialProducts = await productService.compareProducts(ids);
     } catch (e) {
-      console.error('Server compare fetch error:', e.message);
+      console.error('Server compare fetch error:', e?.message);
     }
   }
 

@@ -1,15 +1,21 @@
 'use client';
 
-import React from 'react';
+import React, { useId } from 'react';
 
 /**
- * MascotBot — Mascot trợ lý AI thông minh "Shopy Bot"
- * Thiết kế phong cách 3D Cyber / Cute Robot với các chuyển động sống động:
- * - Lơ lửng bồng bềnh (Floating & Breathing)
- * - Mắt led chớp tự nhiên & đổi biểu cảm cười khi hover (Blinking & Happy Visor)
- * - Tay vẫy chào thân thiện (Waving Hand)
- * - Đèn ăng-ten phát sóng nhấp nháy (Pulsing Antenna)
- * - Bóng đổ co giãn theo nhịp bay (Dynamic Shadow)
+ * ══════════════════════════════════════════════════════════════════════════════
+ * MascotBot — Studio-grade Animated 3D Mascot "Anty Shopy"
+ * Đồng bộ 100% nhận diện thương hiệu, màu sắc và phong cách với bộ Mascot:
+ * (MascotFlashSale, MascotCartEmpty, MascotNotFound)
+ *
+ * Màu sắc chuẩn:
+ * - Visor OLED đen bóng sâu thẳm (#0f172a / #020617) kèm viền Cyan (#38bdf8)
+ * - Mắt LED Cyber Cyan phát sáng (#38bdf8) kèm điểm phản quang trắng (#ffffff)
+ * - Áo yếm đỏ thương hiệu SHOP (#e11d48 / #be123c) kèm huy hiệu ngực tia chớp
+ * - Tai nghe công nghệ xanh Navy & đỏ (#2563eb, #e11d48)
+ * - Găng tay đỏ (#e11d48) vẫy chào sống động
+ * - Vỏ đầu mũ bảo hộ trắng ngọc trai 3D (#ffffff, #f8fafc) viền sắc nét (#cbd5e1)
+ * ══════════════════════════════════════════════════════════════════════════════
  */
 export default function MascotBot({
   size = 64,
@@ -18,272 +24,327 @@ export default function MascotBot({
   isWaving = true,
   onClick,
 }) {
+  const rawId = useId();
+  const uid = rawId ? rawId.replace(/[^a-zA-Z0-9_-]/g, '_') : 'mbot';
+
+  const width = typeof size === 'number' ? size : size;
+  const height = typeof size === 'number' ? size * 1.15 : '100%';
+
   return (
     <div
       onClick={onClick}
       className={`relative inline-flex flex-col items-center justify-center select-none group cursor-pointer ${className}`}
-      style={{ width: size, height: size * 1.15 }}
+      style={{
+        width: typeof size === 'number' ? `${size}px` : size,
+        height: typeof size === 'number' ? `${size * 1.15}px` : '100%',
+      }}
     >
       <svg
         viewBox="0 0 160 184"
-        width={size}
-        height={size * 1.15}
+        width={width}
+        height={height}
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
-        className="w-full h-full overflow-visible transition-transform duration-300 group-hover:scale-105"
+        className="w-full h-full overflow-visible transition-transform duration-300 group-hover:scale-105 drop-shadow-xs"
       >
         <defs>
-          {/* Gradients */}
-          <linearGradient id="botPearl" x1="20%" y1="0%" x2="80%" y2="100%">
+          {/* Hào quang nền chống chìm trên nền trắng */}
+          <radialGradient id={`aura_${uid}`} cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#dbeafe" stopOpacity="0.8" />
+            <stop offset="50%" stopColor="#ede9fe" stopOpacity="0.35" />
+            <stop offset="85%" stopColor="#f8fafc" stopOpacity="0.1" />
+            <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
+          </radialGradient>
+
+          {/* Vỏ ngọc trai 3D trắng tuyết cao cấp */}
+          <linearGradient id={`pearl_${uid}`} x1="15%" y1="0%" x2="85%" y2="100%">
             <stop offset="0%" stopColor="#ffffff" />
-            <stop offset="50%" stopColor="#f8fafc" />
-            <stop offset="100%" stopColor="#e2e8f0" />
+            <stop offset="45%" stopColor="#f8fafc" />
+            <stop offset="85%" stopColor="#e2e8f0" />
+            <stop offset="100%" stopColor="#cbd5e1" />
           </linearGradient>
 
-          <linearGradient id="botBlueBrand" x1="0%" y1="0%" x2="100%" y2="100%">
+          {/* Màn hình Kính Visor OLED Sâu Thẳm */}
+          <linearGradient id={`visor_${uid}`} x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#1e293b" />
+            <stop offset="35%" stopColor="#0f172a" />
+            <stop offset="100%" stopColor="#020617" />
+          </linearGradient>
+
+          {/* Đỏ Thương Hiệu SHOP (Brand Red Coat) */}
+          <linearGradient id={`redCoat_${uid}`} x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#f43f5e" />
+            <stop offset="50%" stopColor="#e11d48" />
+            <stop offset="100%" stopColor="#9f1239" />
+          </linearGradient>
+
+          {/* Xanh Navy Công Nghệ (Brand Blue) */}
+          <linearGradient id={`blueTech_${uid}`} x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#3b82f6" />
-            <stop offset="100%" stopColor="#1d4ed8" />
+            <stop offset="50%" stopColor="#2563eb" />
+            <stop offset="100%" stopColor="#1e40af" />
           </linearGradient>
 
-          <linearGradient id="botVisor" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#0f172a" />
-            <stop offset="60%" stopColor="#020617" />
-            <stop offset="100%" stopColor="#0f172a" />
+          {/* Mắt LED Cyber Cyan phát sáng */}
+          <linearGradient id={`cyanEye_${uid}`} x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#67e8f9" />
+            <stop offset="60%" stopColor="#38bdf8" />
+            <stop offset="100%" stopColor="#0284c7" />
           </linearGradient>
 
-          <linearGradient id="botCyanGlow" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#38bdf8" />
-            <stop offset="100%" stopColor="#06b6d4" />
-          </linearGradient>
-
-          <radialGradient id="antennaGlow" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#67e8f9" stopOpacity="1" />
-            <stop offset="60%" stopColor="#06b6d4" stopOpacity="0.8" />
+          {/* Hào quang Ăng-ten phát sóng */}
+          <radialGradient id={`beacon_${uid}`} cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#67e8f9" stopOpacity="0.9" />
+            <stop offset="50%" stopColor="#06b6d4" stopOpacity="0.6" />
             <stop offset="100%" stopColor="#0891b2" stopOpacity="0" />
           </radialGradient>
 
-          <radialGradient id="shadowGrad" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#0f172a" stopOpacity="0.35" />
+          {/* Bóng đổ co giãn dưới đất */}
+          <radialGradient id={`floorShadow_${uid}`} cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#0f172a" stopOpacity="0.32" />
             <stop offset="100%" stopColor="#0f172a" stopOpacity="0" />
           </radialGradient>
 
-          {/* Keyframe animations */}
+          {/* Vệt phản quang gương trên kính */}
+          <linearGradient id={`gloss_${uid}`} x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.45" />
+            <stop offset="40%" stopColor="#ffffff" stopOpacity="0.1" />
+            <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
+          </linearGradient>
+
+          {/* Filters hiệu ứng mắt sáng */}
+          <filter id={`eyeGlow_${uid}`} x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur stdDeviation="2" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+
+          <filter id={`dropShadow_${uid}`} x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="4" stdDeviation="3" floodColor="#0f172a" floodOpacity="0.12" />
+          </filter>
+
+          {/* CSS Keyframe Animations */}
           <style>{`
-            @keyframes botFloat {
-              0%, 100% {
-                transform: translateY(0px) rotate(0deg);
-              }
-              50% {
-                transform: translateY(-9px) rotate(2.5deg);
-              }
+            @keyframes botFloat_${uid} {
+              0%, 100% { transform: translateY(0px) rotate(0deg); }
+              50% { transform: translateY(-7px) rotate(1.5deg); }
+            }
+            @keyframes botWave_${uid} {
+              0%, 100% { transform: rotate(0deg); }
+              20% { transform: rotate(-24deg); }
+              40% { transform: rotate(14deg); }
+              60% { transform: rotate(-20deg); }
+              80% { transform: rotate(8deg); }
+            }
+            @keyframes botBlink_${uid} {
+              0%, 45%, 55%, 100% { transform: scaleY(1); }
+              50% { transform: scaleY(0.12); }
+            }
+            @keyframes botShadow_${uid} {
+              0%, 100% { transform: scale(1); opacity: 0.32; }
+              50% { transform: scale(0.75); opacity: 0.16; }
+            }
+            @keyframes beaconPulse_${uid} {
+              0%, 100% { transform: scale(1); opacity: 0.95; }
+              50% { transform: scale(1.3); opacity: 0.4; }
             }
 
-            @keyframes botWave {
-              0%, 100% {
-                transform: rotate(0deg);
-              }
-              15% {
-                transform: rotate(-26deg);
-              }
-              30% {
-                transform: rotate(16deg);
-              }
-              45% {
-                transform: rotate(-22deg);
-              }
-              60% {
-                transform: rotate(12deg);
-              }
-              75% {
-                transform: rotate(0deg);
-              }
-            }
-
-            @keyframes botBlink {
-              0%, 90%, 100% {
-                transform: scaleY(1);
-              }
-              95% {
-                transform: scaleY(0.12);
-              }
-            }
-
-            @keyframes botShadow {
-              0%, 100% {
-                transform: scale(1);
-                opacity: 0.35;
-              }
-              50% {
-                transform: scale(0.72);
-                opacity: 0.16;
-              }
-            }
-
-            @keyframes antennaBeacon {
-              0%, 100% {
-                transform: scale(1);
-                opacity: 0.95;
-              }
-              50% {
-                transform: scale(1.4);
-                opacity: 0.35;
-              }
-            }
-
-            .anim-float {
-              animation: botFloat 2.3s ease-in-out infinite;
-            }
-
-            .anim-wave {
-              transform-origin: 125px 95px;
-              animation: botWave 2.0s ease-in-out infinite;
-            }
-
-            .anim-blink {
-              transform-origin: 80px 72px;
-              animation: botBlink 2.6s ease-in-out infinite;
-            }
-
-            .anim-shadow {
-              transform-origin: 80px 172px;
-              animation: botShadow 2.3s ease-in-out infinite;
-            }
-
-            .anim-beacon {
-              transform-origin: 80px 16px;
-              animation: antennaBeacon 1.3s ease-in-out infinite;
-            }
+            .anim-float-${uid} { animation: botFloat_${uid} 3s ease-in-out infinite; }
+            .anim-wave-${uid} { transform-origin: 122px 82px; animation: botWave_${uid} 2.2s ease-in-out infinite; }
+            .anim-blink-${uid} { transform-origin: 80px 60px; animation: botBlink_${uid} 4s ease-in-out infinite; }
+            .anim-shadow-${uid} { transform-origin: 80px 170px; animation: botShadow_${uid} 3s ease-in-out infinite; }
+            .anim-beacon-${uid} { transform-origin: 80px 14px; animation: beaconPulse_${uid} 1.8s ease-in-out infinite; }
           `}</style>
         </defs>
 
-        {/* BÓNG ĐỔ DƯỚI ĐẤT CO GIÃN THEO NHỊP BAY */}
+        {/* HÀO QUANG NỀN */}
+        <ellipse cx="80" cy="88" rx="66" ry="66" fill={`url(#aura_${uid})`} />
+
+        {/* BÓNG ĐỔ DƯỚI ĐẤT */}
         <ellipse
           cx="80"
-          cy="172"
-          rx="38"
+          cy="170"
+          rx="36"
           ry="7"
-          fill="url(#shadowGrad)"
-          className="anim-shadow"
+          fill={`url(#floorShadow_${uid})`}
+          className={`anim-shadow-${uid}`}
         />
 
-        {/* KHỐI THÂN VÀ ĐẦU MASCOT BAY LƠ LỬNG */}
-        <g className="anim-float">
-          {/* Ăng-ten phát tín hiệu trên đầu */}
+        {/* KHỐI ROBOT ANTY SHOPY BAY LƠ LỬNG */}
+        <g className={`anim-float-${uid}`}>
+          {/* 1. Ăng-ten phát sóng */}
           <line
             x1="80"
-            y1="34"
+            y1="28"
             x2="80"
-            y2="18"
+            y2="14"
             stroke="#94a3b8"
-            strokeWidth="3.5"
+            strokeWidth="3.2"
             strokeLinecap="round"
           />
-          {/* Vòng hào quang phát sáng ăng-ten */}
           <circle
             cx="80"
-            cy="16"
-            r="12"
-            fill="url(#antennaGlow)"
-            className="anim-beacon"
+            cy="14"
+            r="11"
+            fill={`url(#beacon_${uid})`}
+            className={`anim-beacon-${uid}`}
           />
-          {/* Quả cầu đỉnh ăng-ten */}
           <circle
             cx="80"
-            cy="16"
-            r="6.5"
+            cy="14"
+            r="5.5"
             fill="#38bdf8"
             stroke="#ffffff"
             strokeWidth="1.5"
           />
 
-          {/* TAI NGHE / LOA 2 BÊN (HEADPHONES) */}
-          {/* Tai trái */}
-          <rect
-            x="20"
-            y="54"
-            width="12"
-            height="34"
-            rx="6"
-            fill="#1e293b"
+          {/* 2. Tai nghe công nghệ xanh Navy + đèn đỏ thương hiệu 2 bên */}
+          {/* Tai nghe bên trái */}
+          <g transform="translate(28, 62) rotate(-8)">
+            <rect
+              x="-6"
+              y="-16"
+              width="12"
+              height="32"
+              rx="6"
+              fill="#2563eb"
+              stroke="#1e40af"
+              strokeWidth="1.2"
+            />
+            <circle cx="0" cy="0" r="4.5" fill="#e11d48" />
+            <circle cx="0" cy="0" r="1.8" fill="#ffffff" />
+          </g>
+
+          {/* Tai nghe bên phải */}
+          <g transform="translate(132, 62) rotate(8)">
+            <rect
+              x="-6"
+              y="-16"
+              width="12"
+              height="32"
+              rx="6"
+              fill="#2563eb"
+              stroke="#1e40af"
+              strokeWidth="1.2"
+            />
+            <circle cx="0" cy="0" r="4.5" fill="#e11d48" />
+            <circle cx="0" cy="0" r="1.8" fill="#ffffff" />
+          </g>
+
+          {/* 3. Thân robot + Áo yếm đỏ thương hiệu Anty Shopy */}
+          {/* Vỏ thân ngọc trai */}
+          <path
+            d="M 52 94 C 52 94 48 136 48 144 C 48 152 62 156 80 156 C 98 156 112 152 112 144 C 112 136 108 94 108 94 Z"
+            fill={`url(#pearl_${uid})`}
             stroke="#cbd5e1"
             strokeWidth="1.5"
           />
-          <circle cx="26" cy="71" r="3.5" fill="#38bdf8" />
 
-          {/* Tai phải */}
-          <rect
-            x="128"
-            y="54"
-            width="12"
-            height="34"
-            rx="6"
-            fill="#1e293b"
-            stroke="#cbd5e1"
-            strokeWidth="1.5"
+          {/* Áo yếm đỏ SHOP ở bụng */}
+          <path
+            d="M 58 98 L 102 98 L 98 138 C 98 144 90 148 80 148 C 70 148 62 144 62 138 Z"
+            fill={`url(#redCoat_${uid})`}
+            stroke="#9f1239"
+            strokeWidth="1.2"
           />
-          <circle cx="134" cy="71" r="3.5" fill="#38bdf8" />
 
-          {/* KHUNG ĐẦU MASCOT (BO TRÒN CUTE NGỌC TRAI) */}
+          {/* Huy hiệu ngực trắng + Logo SHOP */}
+          <circle cx="80" cy="118" r="10" fill="#ffffff" stroke="#cbd5e1" strokeWidth="0.8" />
+          {/* Logo tia chớp SHOP màu đỏ */}
+          <path
+            d="M 81 112 L 76 119 L 80 119 L 79 125 L 85 118 L 81 118 Z"
+            fill="#e11d48"
+          />
+
+          {/* Đôi chân / Động cơ phản lực xanh Navy bên dưới */}
+          <ellipse cx="64" cy="153" rx="10" ry="6.5" fill="#1e40af" stroke="#1e3a8a" strokeWidth="1" />
+          <ellipse cx="96" cy="153" rx="10" ry="6.5" fill="#1e40af" stroke="#1e3a8a" strokeWidth="1" />
+
+          {/* 4. Cánh tay robot */}
+          {/* Tay trái */}
+          <g transform="translate(48, 100)">
+            <path
+              d="M 0 0 L -12 16 Q -16 22 -10 26 Q -4 30 2 22 L 8 4 Z"
+              fill={`url(#pearl_${uid})`}
+              stroke="#cbd5e1"
+              strokeWidth="1.2"
+            />
+            <circle cx="-11" cy="23" r="6.5" fill="#e11d48" stroke="#9f1239" strokeWidth="0.8" />
+          </g>
+
+          {/* Tay phải vẫy chào */}
+          <g className={isWaving ? `anim-wave-${uid}` : ''}>
+            <path
+              d="M 108 102 Q 124 94 130 78 Q 136 70 130 64 Q 122 66 118 78 Q 112 92 108 102 Z"
+              fill={`url(#pearl_${uid})`}
+              stroke="#cbd5e1"
+              strokeWidth="1.2"
+            />
+            <circle cx="130" cy="70" r="7" fill="#e11d48" stroke="#9f1239" strokeWidth="0.8" />
+          </g>
+
+          {/* 5. Đầu robot tròn Chibi ngọc trai viền sắc nét */}
           <rect
             x="28"
-            y="32"
+            y="24"
             width="104"
-            height="80"
+            height="76"
             rx="36"
-            fill="url(#botPearl)"
+            fill={`url(#pearl_${uid})`}
             stroke="#cbd5e1"
             strokeWidth="2"
-            className="filter drop-shadow-sm"
+            filter={`url(#dropShadow_${uid})`}
           />
 
-          {/* MÀN HÌNH KÍNH VISOR MẶT ROBOT */}
+          {/* Màn hình Kính Visor OLED Đen Bóng Chống Chìm */}
           <rect
-            x="38"
-            y="44"
-            width="84"
+            x="37"
+            y="34"
+            width="86"
             height="56"
-            rx="24"
-            fill="url(#botVisor)"
-            stroke="#334155"
+            rx="25"
+            fill={`url(#visor_${uid})`}
+            stroke="#38bdf8"
             strokeWidth="1.5"
           />
 
-          {/* ĐÈN PHẢN CHIẾU ÁNH SÁNG KÍNH */}
+          {/* Vệt phản quang gương (Gloss Highlight) */}
           <path
-            d="M 48 50 Q 80 47 112 50"
-            stroke="#ffffff"
-            strokeWidth="1.8"
-            strokeLinecap="round"
-            opacity="0.35"
+            d="M 46 42 Q 80 36 114 42 Q 106 48 80 45 Q 54 48 46 42 Z"
+            fill={`url(#gloss_${uid})`}
           />
 
-          {/* ĐÔI MẮT LED CYAN NỔI BẬT (CHỚP MẮT & BIỂU CẢM) */}
-          <g className="anim-blink">
+          {/* Đôi Mắt Cyber Cyan Chớp Mắt & Đổi Mặt Cười Khi Hover */}
+          <g className={`anim-blink-${uid}`}>
             {/* Mắt trái */}
             <ellipse
-              cx="63"
-              cy="70"
+              cx="62"
+              cy="62"
               rx="7.5"
               ry="10.5"
-              fill="url(#botCyanGlow)"
+              fill={`url(#cyanEye_${uid})`}
+              filter={`url(#eyeGlow_${uid})`}
               className="group-hover:hidden"
             />
-            <circle cx="65.5" cy="67" r="2.5" fill="#ffffff" className="group-hover:hidden" />
+            <circle cx="64.5" cy="59" r="2.5" fill="#ffffff" className="group-hover:hidden" />
 
             {/* Mắt phải */}
             <ellipse
-              cx="97"
-              cy="70"
+              cx="98"
+              cy="62"
               rx="7.5"
               ry="10.5"
-              fill="url(#botCyanGlow)"
+              fill={`url(#cyanEye_${uid})`}
+              filter={`url(#eyeGlow_${uid})`}
               className="group-hover:hidden"
             />
-            <circle cx="99.5" cy="67" r="2.5" fill="#ffffff" className="group-hover:hidden" />
+            <circle cx="100.5" cy="59" r="2.5" fill="#ffffff" className="group-hover:hidden" />
 
-            {/* Mắt cười hình cung khi hover (Happy smile eye) */}
+            {/* Mắt cười hình cung hạnh phúc khi hover */}
             <path
-              d="M 55 72 Q 63 60 71 72"
+              d="M 54 64 Q 62 52 70 64"
               stroke="#38bdf8"
               strokeWidth="4"
               strokeLinecap="round"
@@ -291,7 +352,7 @@ export default function MascotBot({
               className="hidden group-hover:block"
             />
             <path
-              d="M 89 72 Q 97 60 105 72"
+              d="M 90 64 Q 98 52 106 64"
               stroke="#38bdf8"
               strokeWidth="4"
               strokeLinecap="round"
@@ -300,54 +361,9 @@ export default function MascotBot({
             />
           </g>
 
-          {/* Má hồng công nghệ hai bên */}
-          <ellipse cx="49" cy="80" rx="4.5" ry="2.5" fill="#f43f5e" opacity="0.35" />
-          <ellipse cx="111" cy="80" rx="4.5" ry="2.5" fill="#f43f5e" opacity="0.35" />
-
-          {/* THÂN ROBOT NHỎ XINH BÊN DƯỚI */}
-          <path
-            d="M 52 110 L 46 142 Q 80 156 114 142 L 108 110 Z"
-            fill="url(#botPearl)"
-            stroke="#cbd5e1"
-            strokeWidth="2"
-          />
-
-          {/* TRÁI TIM / HUY HIỆU SHOP TRÊN NGỰC */}
-          <rect
-            x="68"
-            y="120"
-            width="24"
-            height="18"
-            rx="6"
-            fill="url(#botBlueBrand)"
-            stroke="#ffffff"
-            strokeWidth="1.2"
-          />
-          {/* Logo SHOP tia chớp nhỏ */}
-          <path
-            d="M 81 123 L 77 129 L 80 129 L 79 135 L 84 128 L 81 128 Z"
-            fill="#ffffff"
-          />
-
-          {/* TAY TRÁI (THẢ TỰ NHIÊN) */}
-          <path
-            d="M 44 116 Q 30 128 35 140 Q 40 144 46 136 Q 48 126 48 116 Z"
-            fill="url(#botPearl)"
-            stroke="#cbd5e1"
-            strokeWidth="1.5"
-          />
-
-          {/* TAY PHẢI VẪY CHÀO THÂN THIỆN (WAVING HAND) */}
-          <g className={isWaving ? 'anim-wave' : ''}>
-            <path
-              d="M 112 116 Q 132 108 136 94 Q 142 88 138 82 Q 130 84 126 94 Q 118 106 112 116 Z"
-              fill="url(#botPearl)"
-              stroke="#cbd5e1"
-              strokeWidth="1.5"
-            />
-            {/* Lòng bàn tay vẫy chào */}
-            <circle cx="137" cy="88" r="6" fill="#38bdf8" opacity="0.85" />
-          </g>
+          {/* Đôi má hồng e thẹn công nghệ siêu cute */}
+          <ellipse cx="48" cy="73" rx="5.5" ry="3" fill="#fb7185" fillOpacity="0.85" />
+          <ellipse cx="112" cy="73" rx="5.5" ry="3" fill="#fb7185" fillOpacity="0.85" />
         </g>
       </svg>
     </div>

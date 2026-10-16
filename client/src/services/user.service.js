@@ -50,6 +50,16 @@ export const userService = {
     return res.data;
   },
 
+  getDefaultAddress: async () => {
+    try {
+      const res = await api.get('/users/addresses/default');
+      return res.data?.data || null;
+    } catch (err) {
+      console.warn('Lỗi lấy địa chỉ mặc định:', err.response?.data || err.message);
+      return null;
+    }
+  },
+
   changePassword: async ({ currentPassword, newPassword, confirmPassword }) => {
     const res = await api.post('/auth/change-password', {
       currentPassword,

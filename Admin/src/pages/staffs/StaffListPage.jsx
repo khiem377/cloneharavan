@@ -15,6 +15,7 @@ import {
   useResetPassword,
 } from '@/hooks/useUsers';
 import { useRoles, usePermissions } from '@/hooks/useRoles';
+import { useWarehouses } from '@/hooks/useInventory';
 import useColumnVisibility from '@/hooks/useColumnVisibility';
 import Can from '@/components/auth/Can';
 import useAuthStore from '@/store/authStore';
@@ -34,6 +35,7 @@ const STAFF_COLUMNS = [
   { id: 'staff', label: 'Nhân Viên', defaultVisible: true, alwaysVisible: true },
   { id: 'contact', label: 'Liên Hệ', defaultVisible: true },
   { id: 'role', label: 'Vai Trò & Quyền Hạn', defaultVisible: true },
+  { id: 'warehouse', label: 'Kho Phụ Trách', defaultVisible: true },
   { id: 'lastLogin', label: 'Đăng Nhập Gần Nhất', defaultVisible: true },
   { id: 'createdAt', label: 'Ngày Tạo', defaultVisible: true },
   { id: 'status', label: 'Trạng Thái', defaultVisible: true },
@@ -62,6 +64,7 @@ export default function StaffListPage() {
     password: '',
     roleId: '',
     role: 'staff',
+    warehouseId: '',
   });
 
   const [drawerStaff, setDrawerStaff] = useState(null);
@@ -79,9 +82,10 @@ export default function StaffListPage() {
   const columnVisibility = useColumnVisibility('admin_staffs_columns', STAFF_COLUMNS);
   const { isColumnVisible } = columnVisibility;
 
-  // Roles & Permissions Queries
+  // Roles & Permissions & Warehouses Queries (React Query)
   const { data: roles = [] } = useRoles();
   const { data: permissionsGrouped = {} } = usePermissions();
+  const { data: warehouses = [] } = useWarehouses();
 
   // Stats Query
   const { data: statsRes, refetch: refetchStats } = useUserStats('staff');
@@ -188,6 +192,7 @@ export default function StaffListPage() {
         ...createForm,
         phone: createForm.phone || undefined,
         roleId: createForm.roleId || undefined,
+        assignedWarehouseId: createForm.warehouseId || undefined,
       });
       setCreateModalOpen(false);
       setCreateForm({
@@ -197,8 +202,10 @@ export default function StaffListPage() {
         password: '',
         roleId: '',
         role: 'staff',
+        warehouseId: '',
       });
       refetchStats();
+      refetch();
     } catch (_) {}
   };
 
@@ -399,6 +406,7 @@ export default function StaffListPage() {
         onSubmit={handleCreateSubmit}
         isPending={createStaffMut.isPending}
         roles={roles}
+        warehouses={warehouses}
       />
 
       {/* 9. Confirm Toggle Status Dialog */}

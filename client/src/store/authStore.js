@@ -11,13 +11,55 @@ const generateAnonymousId = () => {
   });
 };
 
+const getInitialState = () => {
+  if (typeof window !== 'undefined') {
+    try {
+      const raw = localStorage.getItem('client-auth');
+      if (raw) {
+        const parsed = JSON.parse(raw)?.state;
+        if (parsed) {
+          const directId = localStorage.getItem('cart_anonymous_id') || parsed.anonymousId;
+          if (directId && !localStorage.getItem('cart_anonymous_id')) {
+            localStorage.setItem('cart_anonymous_id', directId);
+          }
+          return {
+            user: parsed.user || null,
+            accessToken: parsed.accessToken || null,
+            refreshToken: parsed.refreshToken || null,
+            anonymousId: directId || null,
+          };
+        }
+      }
+      const directId = localStorage.getItem('cart_anonymous_id');
+      if (directId) {
+        return {
+          user: null,
+          accessToken: null,
+          refreshToken: null,
+          anonymousId: directId,
+        };
+      }
+    } catch (e) {
+      console.error('Error reading auth state from localStorage:', e);
+    }
+  }
+  return {
+    user: null,
+    accessToken: null,
+    refreshToken: null,
+    anonymousId: null,
+  };
+};
+
+const initial = getInitialState();
+
 const useAuthStore = create(
   persist(
     (set, get) => ({
-      user: null,
-      accessToken: null,
-      refreshToken: null,
-      anonymousId: null,
+      user: initial.user,
+      accessToken: initial.accessToken,
+      refreshToken: initial.refreshToken,
+      anonymousId: initial.anonymousId,
 
       setAuth: ({ user, accessToken, refreshToken }) =>
         set({ user, accessToken, refreshToken }),
@@ -32,7 +74,32 @@ const useAuthStore = create(
       getOrCreateAnonymousId: () => {
         const current = get().anonymousId;
         if (current) return current;
+
+        if (typeof window !== 'undefined') {
+          try {
+            const stored = localStorage.getItem('cart_anonymous_id');
+            if (stored) {
+              set({ anonymousId: stored });
+              return stored;
+            }
+            const raw = localStorage.getItem('client-auth');
+            if (raw) {
+              const parsed = JSON.parse(raw)?.state;
+              if (parsed?.anonymousId) {
+                localStorage.setItem('cart_anonymous_id', parsed.anonymousId);
+                set({ anonymousId: parsed.anonymousId });
+                return parsed.anonymousId;
+              }
+            }
+          } catch {}
+        }
+
         const newId = generateAnonymousId();
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem('cart_anonymous_id', newId);
+          } catch {}
+        }
         set({ anonymousId: newId });
         return newId;
       },

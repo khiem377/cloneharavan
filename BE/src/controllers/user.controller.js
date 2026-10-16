@@ -7,6 +7,7 @@ const {
   updateUserProfile,
   // Addresses
   getUserAddresses,
+  getDefaultAddress: getDefaultAddressService,
   addAddress: addAddressService,
   updateAddress: updateAddressService,
   deleteAddress: deleteAddressService,
@@ -63,7 +64,10 @@ const updateAvatar = async (req, res, next) => {
       status: 'success',
       statusCode: 200,
       message: 'Đổi ảnh đại diện thành công',
-      data: { avatar: user.avatar },
+      data: {
+        avatar: user.avatar,
+        user,
+      },
     });
   } catch (error) {
     next(error);
@@ -96,6 +100,20 @@ const getAddresses = async (req, res, next) => {
       statusCode: 200,
       message: 'Lấy danh sách địa chỉ thành công',
       data: { addresses },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getDefaultAddress = async (req, res, next) => {
+  try {
+    const result = await getDefaultAddressService(req.user._id);
+    res.json({
+      status: 'success',
+      statusCode: 200,
+      message: result.hasDefault ? 'Lấy địa chỉ mặc định thành công' : 'Chưa thiết lập địa chỉ mặc định',
+      data: result,
     });
   } catch (error) {
     next(error);
@@ -303,6 +321,22 @@ const resetPassword = async (req, res, next) => {
   }
 };
 
+const cleanSocialDummyEmails = require('../scripts/cleanSocialDummyEmails');
+
+const cleanSocialEmails = async (req, res, next) => {
+  try {
+    const result = await cleanSocialDummyEmails();
+    res.json({
+      status: 'success',
+      statusCode: 200,
+      message: result.message,
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   // Profile & Avatar
   getProfile,
@@ -311,6 +345,7 @@ module.exports = {
   deleteAvatar,
   // Address Book
   getAddresses,
+  getDefaultAddress,
   addAddress,
   updateAddress,
   deleteAddress,
@@ -326,5 +361,6 @@ module.exports = {
   getUserStats,
   bulkToggleStatus,
   resetPassword,
+  cleanSocialEmails,
 };
 

@@ -7,6 +7,8 @@ const Promotion = require('../models/promotion.model');
 const GiftProgram = require('../models/gift-program.model');
 const Coupon = require('../models/coupon.model');
 const FlashSale = require('../models/flashSale.model');
+const Warehouse = require('../models/warehouse.model');
+const ProductWarehouseStock = require('../models/productWarehouseStock.model');
 const { AppError } = require('../utils/AppError');
 const { slugify } = require('../utils/slugify');
 
@@ -31,6 +33,9 @@ const getActiveFlashSaleMap = async () => {
       ...item,
       flashSaleId: activeSale._id,
       flashSaleName: activeSale.name,
+      flashSaleSlug: activeSale.slug,
+      flashSaleDescription: activeSale.description || '',
+      startDate: activeSale.startDate,
       endDate: activeSale.endDate,
     });
   }
@@ -73,6 +78,50 @@ const syncCachedPrice = async (productId) => {
     { _id: productId },
     { $set: { cachedPrice: dv.price ?? null, cachedSalePrice: dv.salePrice ?? null } }
   );
+};
+
+/**
+ * Khởi tạo tồn kho theo kho (ProductWarehouseStock) cho sản phẩm mới (Pancake style).
+ * Nếu warehouseId = 'all' hoặc null: gán tồn ban đầu vào kho mặc định, các kho khác khởi tạo 0.
+ * Nếu warehouseId là 1 kho cụ thể: gán tồn ban đầu vào kho đó, các kho khác khởi tạo 0.
+ */
+const syncInitialWarehouseStock = async (productId, variants = [], warehouseId = null, initialStock = 0) => {
+  try {
+    const activeWarehouses = await Warehouse.find({ status: 'active' }).select('_id isDefault').lean();
+    if (!activeWarehouses || activeWarehouses.length === 0) return;
+
+    let targetWarehouseId = warehouseId;
+    if (!targetWarehouseId || targetWarehouseId === 'all') {
+      const defaultWh = activeWarehouses.find((w) => w.isDefault) || activeWarehouses[0];
+      targetWarehouseId = defaultWh?._id?.toString();
+    } else {
+      targetWarehouseId = targetWarehouseId.toString();
+    }
+
+    const stockDocs = [];
+    for (const v of variants) {
+      if (!v?._id) continue;
+      for (const wh of activeWarehouses) {
+        const whIdStr = wh._id.toString();
+        const isTarget = whIdStr === targetWarehouseId;
+        const stockQty = isTarget ? (v.stock ?? initialStock ?? 0) : 0;
+
+        stockDocs.push({
+          warehouseId: wh._id,
+          productId,
+          variantId: v._id,
+          stock: Math.max(0, Number(stockQty) || 0),
+          allocated: 0,
+        });
+      }
+    }
+
+    if (stockDocs.length > 0) {
+      await ProductWarehouseStock.insertMany(stockDocs, { ordered: false }).catch(() => {});
+    }
+  } catch (err) {
+    console.error('Error syncing initial warehouse stock:', err.message);
+  }
 };
 
 /**
@@ -316,13 +365,26 @@ const createProduct = async (data) => {
     description: data.description, specifications: data.specifications,
     options: data.options, isFeatured: data.isFeatured, isHot: data.isHot,
     status: data.status, isActive: data.isActive,
+    supplierId: data.supplierId || null,
+    warehouseId: data.warehouseId && data.warehouseId !== 'all' ? data.warehouseId : null,
+    costPrice: data.costPrice || 0,
+    allowNegativeStock: data.allowNegativeStock === true,
+    hideNameOnPrint: data.hideNameOnPrint === true,
+    hideOnInvoice: data.hideOnInvoice === true,
+    weightBasedPricing: data.weightBasedPricing === true,
+    lowStockThreshold: data.lowStockThreshold !== undefined ? Number(data.lowStockThreshold) : 5,
+    keywords: Array.isArray(data.keywords) ? data.keywords : (data.keyword ? [data.keyword] : []),
+    weight: data.weight !== undefined ? Number(data.weight) : 0,
+    dimensions: data.dimensions || { length: 0, width: 0, height: 0 },
+    giftProduct: data.giftProduct || null,
   });
 
   // Default Variant
-  await createDefaultVariant(
+  const defaultVar = await createDefaultVariant(
     product._id, productCode, data.price, data.salePrice, data.stock, data.unit || 'Cái'
   );
 
+  let insertedVariants = [];
   // Biến thể chi tiết — batch SKU generation (1 query) + insertMany (1 round trip)
   if (Array.isArray(data.variants) && data.variants.length > 0) {
     // Batch generate tất cả SKUs trong 1 DB call thay vì N sequential calls
@@ -336,11 +398,17 @@ const createProduct = async (data) => {
         salePrice: item.salePrice ?? data.salePrice ?? null,
         costPrice: item.costPrice ?? data.costPrice ?? null,
         stock: item.stock ?? 0, unit: item.unit || data.unit || 'Cái',
+        weight: item.weight ?? data.weight ?? 0,
+        dimensions: item.dimensions || data.dimensions || { length: 0, width: 0, height: 0 },
         position: i, isActive: true,
       };
     });
-    await ProductVariant.insertMany(variantDocs);
+    insertedVariants = await ProductVariant.insertMany(variantDocs);
   }
+
+  // Khởi tạo tồn kho theo kho (ProductWarehouseStock) cho Default Variant và tất cả các biến thể
+  const allVariantsToSync = [defaultVar, ...(insertedVariants || [])].filter(Boolean);
+  await syncInitialWarehouseStock(product._id, allVariantsToSync, data.warehouseId, data.stock);
 
   // Sync cachedPrice và search tokens song song
   await Promise.all([
@@ -351,6 +419,7 @@ const createProduct = async (data) => {
   const result = await Product.findById(product._id)
     .populate('categories', 'name slug parentId')
     .populate('brand', 'name slug logo')
+    .populate('warehouseId', 'name code isDefault')
     .lean();
 
   const dv = await ProductVariant.findOne({ productId: product._id, isDefault: true })
@@ -392,6 +461,34 @@ const syncProductSmartTokens = async (productId) => {
   }
 };
 
+const PRODUCT_LIST_MAX_LIMIT = 100; // API cong khai
+const PRODUCT_LIST_ADMIN_MAX_LIMIT = 1000; // Admin: dropdown can lay toan bo
+const PRODUCT_SORT_WHITELIST = new Set([
+  'createdAt', 'updatedAt', 'name', 'sold', 'viewsCount', 'cachedPrice', 'stock', 'sku', 'productCode',
+]);
+
+const escapeRegex = (str) => String(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+// Escape regex de tranh ReDoS / loi cu phap; van giu hanh vi tim chua (contains), khong phan biet hoa thuong
+const buildKeywordOr = (keyword) => {
+  const safe = escapeRegex(String(keyword).trim().slice(0, 100));
+  return [
+    { name: { $regex: safe, $options: 'i' } },
+    { sku: { $regex: safe, $options: 'i' } },
+    { productCode: { $regex: safe, $options: 'i' } },
+  ];
+};
+
+// Gioi han limit, whitelist sortBy, chuan hoa page
+const normalizeListParams = ({ page, limit, sortBy, sortOrder, maxLimit = PRODUCT_LIST_MAX_LIMIT }) => {
+  const pageNum = Math.max(1, parseInt(page, 10) || 1);
+  const limitNum = Math.min(maxLimit, Math.max(1, parseInt(limit, 10) || 20));
+  const sortField = PRODUCT_SORT_WHITELIST.has(sortBy) ? sortBy : 'createdAt';
+  const sort = { [sortField]: sortOrder === 'asc' ? 1 : -1 };
+  if (sortField !== 'createdAt') sort._id = -1; // tie-breaker de phan trang on dinh
+  return { pageNum, limitNum, sort };
+};
+
 const getAllProducts = async (query = {}) => {
   const {
     keyword, category, brand, minPrice, maxPrice,
@@ -401,11 +498,7 @@ const getAllProducts = async (query = {}) => {
 
   const filter = { isActive: true, status };
 
-  if (keyword) filter.$or = [
-    { name: { $regex: keyword, $options: 'i' } },
-    { sku: { $regex: keyword, $options: 'i' } },
-    { productCode: { $regex: keyword, $options: 'i' } },
-  ];
+  if (keyword) filter.$or = buildKeywordOr(keyword);
   if (category) {
     const ids = await getCategoryIds(category);
     if (ids && ids.length > 0) {
@@ -435,9 +528,7 @@ const getAllProducts = async (query = {}) => {
   if (minPrice) filter.cachedPrice = { $gte: Number(minPrice) };
   if (maxPrice) filter.cachedPrice = { ...(filter.cachedPrice || {}), $lte: Number(maxPrice) };
 
-  const pageNum = Math.max(1, parseInt(page, 10));
-  const limitNum = Math.max(1, parseInt(limit, 10));
-  const sort = { [sortBy]: sortOrder === 'asc' ? 1 : -1 };
+  const { pageNum, limitNum, sort } = normalizeListParams({ page, limit, sortBy, sortOrder });
 
   const [products, total] = await Promise.all([
     Product.find(filter)
@@ -490,11 +581,7 @@ const getAllProductsAdmin = async (query = {}) => {
   } = query;
 
   const filter = {};
-  if (keyword) filter.$or = [
-    { name: { $regex: keyword, $options: 'i' } },
-    { sku: { $regex: keyword, $options: 'i' } },
-    { productCode: { $regex: keyword, $options: 'i' } },
-  ];
+  if (keyword) filter.$or = buildKeywordOr(keyword);
   if (category) {
     const ids = await getCategoryIds(category);
     if (ids && ids.length > 0) filter.categories = { $in: ids };
@@ -503,9 +590,7 @@ const getAllProductsAdmin = async (query = {}) => {
   if (status) filter.status = status;
   if (isActive !== undefined) filter.isActive = isActive === 'true';
 
-  const pageNum = Math.max(1, parseInt(page, 10));
-  const limitNum = Math.max(1, parseInt(limit, 10));
-  const sort = { [sortBy]: sortOrder === 'asc' ? 1 : -1 };
+  const { pageNum, limitNum, sort } = normalizeListParams({ page, limit, sortBy, sortOrder, maxLimit: PRODUCT_LIST_ADMIN_MAX_LIMIT });
 
   const [products, total] = await Promise.all([
     Product.find(filter)
@@ -529,7 +614,7 @@ const getAllProductsAdmin = async (query = {}) => {
       { $group: { _id: '$productId', count: { $sum: 1 } } },
     ]),
     ProductVariant.find({ productId: { $in: productIds }, isDefault: true })
-      .select('productId price salePrice stock sku').lean(),
+      .select('productId price salePrice stock allocated sku').lean(),
   ]);
 
   const variantCountMap = {};
@@ -559,6 +644,10 @@ const getAllProductsAdmin = async (query = {}) => {
         }
       }
 
+      const totalStock = dv?.stock ?? p.stock ?? 0;
+      const allocatedStock = dv?.allocated ?? p.allocated ?? 0;
+      const availableStock = Math.max(0, totalStock - allocatedStock);
+
       return {
         ...p,
         category: p.categories?.[0] || null,
@@ -566,7 +655,9 @@ const getAllProductsAdmin = async (query = {}) => {
         defaultVariantId: dv?._id || null,
         price,
         salePrice,
-        stock: dv?.stock ?? null,
+        stock: totalStock,
+        allocated: allocatedStock,
+        availableStock,
         isFlashSale,
       };
     }),
@@ -579,6 +670,7 @@ const getProductById = async (idOrSlug) => {
   const product = await Product.findOne(isObjectId ? { _id: idOrSlug } : { slug: idOrSlug })
     .populate('categories', 'name slug parentId')
     .populate('brand', 'name slug logo')
+    .populate('warehouseId', 'name code isDefault')
     .lean();
   if (!product) throw new AppError('Không tìm thấy sản phẩm', 404);
 
@@ -737,15 +829,30 @@ const updateProduct = async (id, data) => {
     await syncCachedPrice(id);
   }
 
-  const { thumbnailMediaId, imageMediaIds, price, salePrice, stock, ...rest } = data;
+    const { thumbnailMediaId, imageMediaIds, price, salePrice, stock, warehouseId, ...rest } = data;
+  if (warehouseId !== undefined) {
+    product.warehouseId = warehouseId && warehouseId !== 'all' ? warehouseId : null;
+  }
   Object.assign(product, rest);
   await product.save();
+
+  if (warehouseId && warehouseId !== 'all' && stock !== undefined) {
+    const dv = await getDefaultVariant(id);
+    if (dv) {
+      await ProductWarehouseStock.updateOne(
+        { productId: id, variantId: dv._id, warehouseId },
+        { $set: { stock: Math.max(0, Number(stock) || 0) } },
+        { upsert: true }
+      );
+    }
+  }
 
   await syncProductSmartTokens(product._id);
 
   const result = await Product.findById(product._id)
     .populate('categories', 'name slug parentId')
     .populate('brand', 'name slug logo')
+    .populate('warehouseId', 'name code isDefault')
     .lean();
 
   const dv2 = await ProductVariant.findOne({ productId: product._id, isDefault: true })
@@ -856,16 +963,22 @@ const getProductDeals = async (idOrSlug) => {
   let flashSaleDeal = null;
 
   if (isFlashSaleActive) {
+    const limit = matchedFsItem.stockLimit || 0;
+    const sold = matchedFsItem.soldCount || 0;
     effectivePrice = fsPrice;
     flashSaleDeal = {
       _id: matchedFsItem.flashSaleId,
       name: matchedFsItem.flashSaleName,
+      slug: matchedFsItem.flashSaleSlug || '',
+      description: matchedFsItem.flashSaleDescription || '',
       price: fsPrice,
       originalPrice: productPrice,
       remaining: fsRemaining,
-      stockLimit: matchedFsItem.stockLimit,
-      soldCount: matchedFsItem.soldCount,
+      stockLimit: limit,
+      soldCount: sold,
+      percentSold: limit > 0 ? Math.min(100, Math.round((sold / limit) * 100)) : 0,
       discountPercent: Math.round(((productPrice - fsPrice) / productPrice) * 100),
+      startDate: matchedFsItem.startDate,
       endDate: matchedFsItem.endDate,
     };
   } else {
@@ -896,13 +1009,16 @@ const getProductDeals = async (idOrSlug) => {
       for (const [, item] of (fsData.itemMap || new Map())) {
         const itemPId = item.productId?.toString() || '';
         if (itemPId === product._id.toString()) {
+          const limit = item.stockLimit || 0;
+          const sold = item.soldCount || 0;
           items.push({
             variantId: item.variantId ? item.variantId.toString() : null,
             price: item.flashSalePrice ?? item.flashPrice,
             originalPrice: item.originalPrice,
-            remaining: Math.max(0, (item.stockLimit || 0) - (item.soldCount || 0)),
-            stockLimit: item.stockLimit,
-            soldCount: item.soldCount,
+            remaining: Math.max(0, limit - sold),
+            stockLimit: limit,
+            soldCount: sold,
+            percentSold: limit > 0 ? Math.min(100, Math.round((sold / limit) * 100)) : 0,
           });
         }
       }
@@ -923,32 +1039,71 @@ const searchInventoryProducts = async (keyword) => {
   const matchingProducts = await Product.find({
     $or: [{ name: regex }, { sku: regex }, { code: regex }, { productCode: regex }],
     isActive: true,
-  }).select('_id').lean();
+  })
+    .select('name code productCode price costPrice thumbnail images stock sku')
+    .lean();
 
   const productIds = matchingProducts.map((p) => p._id);
 
   const matchingVariants = await ProductVariant.find({
     $or: [{ productId: { $in: productIds } }, { sku: regex }, { displayName: regex }],
   })
-    .populate('productId', 'name code productCode price costPrice thumbnail')
+    .populate('productId', 'name code productCode price costPrice thumbnail images stock sku')
     .lean();
 
   const results = [];
   const seenVariantIds = new Set();
+  const seenProductIds = new Set();
 
   for (const v of matchingVariants) {
     if (!v.productId || seenVariantIds.has(v._id.toString())) continue;
     seenVariantIds.add(v._id.toString());
     const prod = v.productId;
+    seenProductIds.add(prod._id.toString());
+
+    const thumbUrl =
+      v.thumbnail?.url ||
+      (typeof v.thumbnail === 'string' ? v.thumbnail : '') ||
+      (Array.isArray(v.images) && v.images[0]?.url) ||
+      prod.thumbnail?.url ||
+      (typeof prod.thumbnail === 'string' ? prod.thumbnail : '') ||
+      (Array.isArray(prod.images) && prod.images[0]?.url) ||
+      '';
+
     results.push({
       _id: prod._id,
       variantId: v._id,
       name: !v.isDefault ? `${prod.name} (${v.displayName || v.sku || 'Biến thể'})` : prod.name,
-      sku: v.sku || prod.productCode || prod.code || '',
+      sku: v.sku || prod.productCode || prod.code || prod.sku || '',
       unit: 'Cái',
       price: v.price || prod.price || 0,
       costPrice: v.costPrice || prod.costPrice || 0,
-      stock: v.stock || 0,
+      stock: v.stock ?? prod.stock ?? 0,
+      thumbnail: thumbUrl,
+    });
+  }
+
+  // Bổ sung sản phẩm chưa có biến thể vào kết quả
+  for (const prod of matchingProducts) {
+    if (seenProductIds.has(prod._id.toString())) continue;
+    seenProductIds.add(prod._id.toString());
+
+    const thumbUrl =
+      prod.thumbnail?.url ||
+      (typeof prod.thumbnail === 'string' ? prod.thumbnail : '') ||
+      (Array.isArray(prod.images) && prod.images[0]?.url) ||
+      '';
+
+    results.push({
+      _id: prod._id,
+      variantId: null,
+      name: prod.name,
+      sku: prod.sku || prod.productCode || prod.code || '',
+      unit: 'Cái',
+      price: prod.price || 0,
+      costPrice: prod.costPrice || 0,
+      stock: prod.stock || 0,
+      thumbnail: thumbUrl,
     });
   }
 
@@ -963,6 +1118,69 @@ const bulkUpdateProductStatus = async (ids, status) => {
     throw new AppError('Trạng thái không hợp lệ', 400);
   const result = await Product.updateMany({ _id: { $in: ids } }, { $set: { status } });
   return { updated: result.modifiedCount };
+};
+
+const updateWholesaleTiers = async (id, tiers = []) => {
+  const product = await Product.findById(id);
+  if (!product) throw new AppError('Không tìm thấy sản phẩm', 404);
+
+  const cleanTiers = (Array.isArray(tiers) ? tiers : [])
+    .map((t) => ({
+      minQuantity: Math.max(2, parseInt(t.minQuantity, 10) || 2),
+      price: Math.max(0, parseInt(t.price, 10) || 0),
+      discountPercent: Math.max(0, Math.min(100, parseInt(t.discountPercent, 10) || 0)),
+    }))
+    .sort((a, b) => a.minQuantity - b.minQuantity);
+
+  product.wholesaleTiers = cleanTiers;
+  await product.save();
+
+  await ProductVariant.updateMany(
+    { productId: id, isDefault: true },
+    { $set: { wholesaleTiers: cleanTiers } }
+  );
+
+  return product;
+};
+
+const updateCompositeBom = async (id, { isComposite = false, bomItems = [] }) => {
+  const product = await Product.findById(id);
+  if (!product) throw new AppError('Không tìm thấy sản phẩm', 404);
+
+  product.isComposite = Boolean(isComposite);
+  product.bomItems = (Array.isArray(bomItems) ? bomItems : []).map((item) => ({
+    productId: item.productId,
+    variantId: item.variantId || null,
+    quantity: Math.max(1, parseInt(item.quantity, 10) || 1),
+    costPrice: Math.max(0, Number(item.costPrice) || 0),
+  }));
+
+  await product.save();
+  return product;
+};
+
+const updateBatchExpiry = async (id, { batchNumber = '', manufacturingDate = null, expiryDate = null }) => {
+  const product = await Product.findById(id);
+  if (!product) throw new AppError('Không tìm thấy sản phẩm', 404);
+
+  product.batchNumber = (batchNumber || '').trim();
+  product.manufacturingDate = manufacturingDate ? new Date(manufacturingDate) : null;
+  product.expiryDate = expiryDate ? new Date(expiryDate) : null;
+
+  await product.save();
+
+  await ProductVariant.updateMany(
+    { productId: id },
+    {
+      $set: {
+        batchNumber: product.batchNumber,
+        manufacturingDate: product.manufacturingDate,
+        expiryDate: product.expiryDate,
+      },
+    }
+  );
+
+  return product;
 };
 
 module.exports = {
@@ -982,6 +1200,9 @@ module.exports = {
   generateProductCode,
   generateVariantSku,
   createDefaultVariant,
+  updateWholesaleTiers,
+  updateCompositeBom,
+  updateBatchExpiry,
   locateProduct: async (id, limit = 20) => {
     const product = await Product.findById(id).select('_id createdAt');
     if (!product) throw new AppError('Không tìm thấy sản phẩm', 404);

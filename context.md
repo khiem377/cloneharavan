@@ -1,610 +1,673 @@
-# context.md — Haravan Clone Project
+# context.md — Tài Liệu Kiến Trúc Codebase & Chuẩn Chia File Toàn Hệ Thống
 
-Tài liệu tham chiếu nội bộ cho toàn bộ codebase. Dùng khi onboard thành viên mới
-hoặc khi bắt đầu feature mới để không đi sai pattern.
+> **Dự án**: Sàn TMĐT Clone Haravan (E-Commerce Enterprise Platform)  
+> **Phiên bản tài liệu**: 2.0 (Toàn diện cho cả Backend, Admin Panel và Client Storefront)  
+> **Mục đích**: Làm kim chỉ nam kiến trúc, hướng dẫn chia file, phân lớp trách nhiệm (Separation of Concerns), luồng dữ liệu và quy chuẩn code cho toàn bộ lập trình viên.
+
+> **Đính chính (2026-10-16)**: Một số mục dưới đây được viết từ sớm. Stack thật theo package.json: BE Express 5 + Mongoose 9 + Zod 4 (không Joi, không Helmet, không rate-limit package, chưa có Redis); Admin React 19 + Vite 8 + React Router 7 + Tailwind 4; Client Next 16 + React 19 + Tailwind 4. DB là MongoDB Atlas (remote). Tóm tắt bối cảnh và quyết định mới nhất nằm ở `AGENTS.md` (mục 5) và `docs/progress.md`.
 
 ---
 
-## 1. Tổng quan kiến trúc
+## 📑 Mục Lục
+
+1. [Tổng Quan Kiến Trúc Monorepo & Cổng Mạng](#1-tổng-quan-kiến-trúc-monorepo--cổng-mạng)
+2. [Kiến Trúc & Chuẩn Chia File Backend (`BE`)](#2-kiến-trúc--chuẩn-chia-file-backend-be)
+   - [2.1 Tech Stack Backend](#21-tech-stack-backend)
+   - [2.2 Cấu trúc Thư mục Backend Chi tiết](#22-cấu-trúc-thư-mục-backend-chi-tiết)
+   - [2.3 Quy chuẩn Phân Lớp Trách Nhiệm (MVC + Service Layer)](#23-quy-chuẩn-phân-lớp-trách-nhiệm-mvc--service-layer)
+   - [2.4 Chuẩn Request / Response & Xử Lý Lỗi Tập Trung](#24-chuẩn-request--response--xử-lý-lỗi-tập-trung)
+   - [2.5 Quy ước Đặt Tên Backend (Naming Conventions)](#25-quy-ước-đặt-tên-backend-naming-conventions)
+   - [2.6 Luồng Xác Thực & Quản Lý Phiên (Auth & Session Flow)](#26-luồng-xác-thực--quản-lý-phiên-auth--session-flow)
+   - [2.7 Động cơ AI Chatbot RAG & Dịch vụ Python ML](#27-động-cơ-ai-chatbot-rag--dịch-vụ-python-ml)
+3. [Kiến Trúc & Chuẩn Chia File Admin Panel (`Admin`)](#3-kiến-trúc--chuẩn-chia-file-admin-panel-admin)
+   - [3.1 Tech Stack Admin](#31-tech-stack-admin)
+   - [3.2 Cấu trúc Thư mục Admin Chi tiết](#32-cấu-trúc-thư-mục-admin-chi-tiết)
+   - [3.3 Hệ Thống Routing & Phân Quyền Bảo Vệ (`ProtectedRoute`)](#33-hệ-thống-routing--phân-quyền-bảo-vệ-protectedroute)
+   - [3.4 Quản Lý Trạng Thái (State Management Pattern)](#34-quản-lý-trạng-thái-state-management-pattern)
+   - [3.5 Axios Client & Cơ Chế Auto Refresh Token](#35-axios-client--cơ-chế-auto-refresh-token)
+   - [3.6 Chuẩn Thiết Kế UI/UX Admin (Design Directives)](#36-chuẩn-thiết-kế-uiux-admin-design-directives)
+4. [Kiến Trúc & Chuẩn Chia File Client Storefront (`client`)](#4-kiến-trúc--chuẩn-chia-file-client-storefront-client)
+   - [4.1 Tech Stack Client](#41-tech-stack-client)
+   - [4.2 Cấu trúc Thư mục Client App Router Chi tiết](#42-cấu-trúc-thư-mục-client-app-router-chi-tiết)
+   - [4.3 Chiến lược Server Components (RSC) & Client Components](#43-chiến-lược-server-components-rsc--client-components)
+   - [4.4 Phân Tầng Dịch Vụ Gọi API (Server Services vs Client Services)](#44-phân-tầng-dịch-vụ-gọi-api-server-services-vs-client-services)
+   - [4.5 Quản Lý Trạng Thái Giỏ Hàng & Người Dùng với Zustand Persist](#45-quản-lý-trạng-thái-giỏ-hàng--người-dùng-với-zustand-persist)
+   - [4.6 Tổ Chức Component Theo Miền Nghiệp Vụ (Domain-driven Components)](#46-tổ-chức-component-theo-miền-nghiệp-vụ-domain-driven-components)
+5. [Sơ Đồ Các Luồng Nghiệp Vụ Trọng Tâm (Core Workflows)](#5-sơ-đồ-các-luồng-nghiệp-vụ-trọng-tâm-core-workflows)
+   - [5.1 Luồng Giỏ Hàng & Đặt Hàng (Cart & Checkout)](#51-luồng-giỏ-hàng--đặt-hàng-cart--checkout)
+   - [5.2 Luồng Quản Lý Sổ Kho & Biến Động (Stock Movement Flow)](#52-luồng-quản-lý-sổ-kho--biến-động-stock-movement-flow)
+   - [5.3 Luồng Trợ Lý AI Chatbot RAG SSE Streaming](#53-luồng-trợ-lý-ai-chatbot-rag-sse-streaming)
+   - [5.4 Luồng Gợi Ý Cá Nhân Hóa (Recommendation Pipeline)](#54-luồng-gợi-ý-cá-nhân-hóa-recommendation-pipeline)
+
+---
+
+## 1. Tổng Quan Kiến Trúc Monorepo & Cổng Mạng
+
+Hệ thống được tổ chức dạng đa phân hệ độc lập (Multi-package Monorepo Structure):
 
 ```
 cloneharavan/
-├── BE/         — Express.js API (Node.js + MongoDB)
-├── Admin/      — React + Vite (quản trị nội bộ)
-└── Client/     — (chưa build — planned: Next.js storefront)
+├── BE/               — Backend API REST + AI Engine (Node.js + Express + MongoDB) -> Port: 5000
+│   └── python-services/ — Python ML Scripts & CSV Recommendation Datasets
+├── Admin/            — Dashboard Quản trị Doanh nghiệp (React + Vite + Tailwind)   -> Port: 5173
+├── client/           — Storefront Bán hàng Khách hàng (Next.js 16 App Router)       -> Port: 3000
+└── docs/             — Tài liệu kỹ thuật & đặc tả nghiệp vụ chi tiết
 ```
 
-Cổng mặc định:
-- BE API  : http://localhost:5000
-- Admin   : http://localhost:5173
-- Client  : http://localhost:3000 (planned)
+### Bảng Cổng & Tương Tác Giữa Các Khối:
+
+| Phân hệ / Dịch vụ | Công nghệ | Cổng / URL | Vai trò chính |
+| :--- | :--- | :--- | :--- |
+| **Backend REST Core** | Express.js / Node.js | `http://localhost:5000` | Xử lý nghiệp vụ, xác thực, API, AI RAG, Database |
+| **Admin Dashboard** | React + Vite + Tailwind | `http://localhost:5173` | Giao diện quản trị PIM, Kho vận, OMS, CMS, RBAC |
+| **Client Storefront** | Next.js 16 App Router | `http://localhost:3000` | Giao diện mua sắm, giỏ hàng, tìm kiếm, chatbot, tài khoản |
+| **Database** | MongoDB (Mongoose) | `MongoDB Atlas (URI trong BE/.env)` | Lưu trữ dữ liệu sản phẩm, đơn hàng, người dùng, kho |
+| **Cloud Storage** | Cloudinary CDN | Cloud Storage | Lưu trữ và phân phối hình ảnh/video sản phẩm & blog |
+| **Logistics Gateway** | GHN API v2/v3 | `https://dev-online-gateway.ghn.vn` | Tính phí vận chuyển, tạo mã vận đơn tự động |
+| **AI LLM Gateway** | Groq SDK (Llama 3) / Gemini | Cloud Inference | Phục vụ Chatbot RAG và trích xuất ý định tìm kiếm |
+| **Payment Gateway** | VietQR (NAPAS 247) | `https://img.vietqr.io` | Sinh mã QR chuyển khoản ngân hàng tự động |
 
 ---
 
-## 2. Backend (BE)
+## 2. Kiến Trúc & Chuẩn Chia File Backend (`BE`)
 
-### 2.1 Tech stack
+### 2.1 Tech Stack Backend
+- **Core Runtime**: Node.js
+- **Web Framework**: Express.js
+- **Database & ODM**: MongoDB, Mongoose (Mọi Schema đều có `{ timestamps: true }`)
+- **Authentication**: JWT (Access Token ngắn hạn + Refresh Token HttpOnly Cookie), WebAuthn (Passkeys FIDO2), TOTP 2FA (Speakeasy / QR Code)
+- **File Upload**: Multer (Memory Storage) -> Cloudinary Stream Upload
+- **Validation**: Zod 4 Schema Validator
+- **Excel Processing**: ExcelJS
+- **Email Service**: Nodemailer (SMTP Server)
+- **AI & Streaming**: Groq SDK, Google Generative AI (`@google/generative-ai`), Server-Sent Events (SSE)
+- **Machine Learning Services**: Python 3 (Pandas, Scikit-learn, Matrix Factorization SVD/ALS)
 
-| Thành phần      | Thư viện / Ghi chú                                         |
-|-----------------|------------------------------------------------------------|
-| Runtime         | Node.js                                                    |
-| Framework       | Express.js                                                 |
-| Database        | MongoDB + Mongoose (timestamps: true mọi schema)           |
-| Auth            | JWT access token + httpOnly cookie refresh token           |
-| Upload          | Multer (memStorage) → Cloudinary                           |
-| Email           | Nodemailer                                                 |
-| Excel           | ExcelJS                                                    |
-| AI / Chatbot    | Groq SDK (openai-compatible), SSE stream                   |
-| Recommendation  | Matrix factorization — Python script + DB sync             |
-| Search (client) | Custom token-based index (không dùng cho chatbot)          |
+---
 
-### 2.2 Cấu trúc thư mục BE
-
-```
-BE/src/
-├── app.js          — Express setup (CORS, middleware, mount routes)
-├── config/         — db.js, cloudinary.js, hằng số môi trường
-├── controllers/    — Nhận req/res, gọi service, trả JSON
-├── services/       — Business logic, gọi model + external API
-├── models/         — Mongoose schema + virtuals + indexes
-├── routes/         — Gắn middleware chain + controller
-├── middleware/     — auth, permission, error, upload, validate
-├── validators/     — Schema validate (Zod/Joi)
-├── utils/          — Helper functions thuần túy
-└── template/       — Email HTML, Excel template
-```
-
-### 2.3 Flow request điển hình
+### 2.2 Cấu trúc Thư mục Backend Chi tiết
 
 ```
-Request
-  → routes/xxx.routes.js
-      → authenticate          (verify JWT, gắn req.user)
-      → requirePermission()   (check role.permissions)
-      → validate(schema)      (validate body/params)
-      → controller.action()
-          → service.doSomething()
-              → Model.find() / .create() / ...
-                  → MongoDB
-          ← data
-      ← res.json({ success, data, pagination })
-```
-
-### 2.4 Chuẩn response API
-
-```js
-// List
-{ success: true, data: [...], pagination: { page, limit, total, totalPages } }
-
-// Single
-{ success: true, data: { ...object } }
-
-// Lỗi (qua error.middleware.js)
-{ success: false, message: 'Mô tả lỗi', errors: [...] }
-```
-
-### 2.5 Naming conventions BE
-
-| Thứ          | Convention           | Ví dụ                         |
-|--------------|----------------------|-------------------------------|
-| File         | camelCase.type.js    | product.service.js            |
-| Route prefix | /api/v1/resource     | /api/v1/products              |
-| Model field  | camelCase            | thumbnailUrl, isActive        |
-| Controller   | exports.verb         | exports.list, exports.create  |
-| Service fn   | async verbNoun()     | async listProducts()          |
-
-### 2.6 Auth flow
-
-1. Login → BE trả `accessToken` + set `refreshToken` vào **httpOnly cookie**
-2. Admin gắn `Authorization: Bearer <accessToken>` vào mọi request (axios interceptor)
-3. 401 → axios interceptor tự gọi `/auth/refresh-token` → lấy token mới → retry
-4. Refresh thất bại → `clearAuth()` → redirect `/login`
-
-### 2.7 Permission system
-
-- Route dùng: `requirePermission('resource:action')`
-- Action chuẩn: `read`, `create`, `update`, `delete`, `manage`
-- Role → mảng `permissions[]` ref Permission model
-- Middleware check `user.role.permissions.includes(permCode)`
-
-### 2.8 Middleware chain
-
-```
-auth.middleware.js        — Verify JWT, gắn req.user
-permission.middleware.js  — Check req.user.role.permissions
-validate.middleware.js    — Validate body/params
-upload.middleware.js      — Multer memStorage → Cloudinary
-error.middleware.js       — Catch-all, format error response
-```
-
-### 2.9 Controller pattern
-
-```js
-exports.list = async (req, res, next) => {
-  try {
-    const result = await productService.list(req.query);
-    res.json({ success: true, data: result.data, pagination: result.pagination });
-  } catch (err) { next(err); }
-};
-```
-
-### 2.10 Service pattern
-
-```js
-// Không biết gì về req/res
-async function listProducts({ page = 1, limit = 20, keyword }) {
-  const query = keyword ? { name: new RegExp(keyword, 'i') } : {};
-  const [data, total] = await Promise.all([
-    Product.find(query).skip((page-1)*limit).limit(limit).lean(),
-    Product.countDocuments(query),
-  ]);
-  return { data, pagination: { page, limit, total, totalPages: Math.ceil(total/limit) } };
-}
+BE/
+├── package.json
+├── server.js               — Điểm khởi động server, kết nối DB, lắng nghe Port 5000
+├── python-services/        — Micro-services Python phục vụ tính toán AI Offline
+│   ├── data/               — Thư mục chứa các file CSV huấn luyện (interactions, products, users...)
+│   ├── generate_dataset.py — Sinh dữ liệu giả lập cho AI Engine
+│   ├── matrix_factorization.py — Thuật toán gợi ý Matrix Factorization (ALS/SVD)
+│   ├── sync_dataset_to_db.py   — Đồng bộ dữ liệu tương tác vào MongoDB
+│   └── upsell_engine.py    — Thuật toán khai phá luật kết hợp mua kèm (Association Rules)
+└── src/
+    ├── app.js              — Cấu hình Express app, CORS, security headers thủ công (không Helmet/rate-limit), Mount API routes
+    ├── config/             — Cấu hình bên thứ 3 và cơ sở dữ liệu
+    │   ├── db.js           — Kết nối MongoDB Mongoose
+    │   ├── cloudinary.js   — Khởi tạo Cloudinary SDK
+    │   ├── elasticsearch.js— Cấu hình search index (nếu dùng)
+    │   └── mediaRegistry.js— Đăng ký tracking vị trí sử dụng của media
+    ├── models/             — 35 Mongoose Models định nghĩa schema, indexes, virtuals
+    │   ├── user.model.js, product.model.js, productVariant.model.js, category.model.js, brand.model.js
+    │   ├── order.model.js, cart.model.js, coupon.model.js, flashSale.model.js, promotion.model.js
+    │   ├── purchaseOrder.model.js, stockReceiving.model.js, stockExport.model.js, stockAudit.model.js
+    │   ├── stockMovement.model.js, supplier.model.js, auditLog.model.js, role.model.js
+    │   ├── chatSession.model.js, userInteraction.model.js, itemSimilarity.model.js...
+    ├── controllers/        — 35 Controllers xử lý Request/Response, không chứa logic nghiệp vụ nặng
+    │   ├── auth.controller.js, product.controller.js, inventoryReport.controller.js...
+    ├── services/           — 46 Services chứa 100% Business Logic, Database queries, AI Pipelines
+    │   ├── auth.service.js, product.service.js, cart.service.js, order.service.js
+    │   ├── chatbot.service.js, recommendation.service.js, search.service.js, visualSearch.service.js
+    │   ├── purchaseOrder.service.js, stockReceiving.service.js, stockAudit.service.js...
+    ├── routes/             — 39 Express Routers gắn Middleware, Permissions và Controllers
+    │   ├── index.js        — Router tổng hợp prefix `/api/v1`
+    │   ├── auth.routes.js, product.routes.js, inventoryReport.routes.js...
+    ├── middleware/         — Middlewares xử lý trung gian
+    │   ├── auth.middleware.js         — Xác thực JWT Access Token & nạp req.user
+    │   ├── permission.middleware.js   — Kiểm tra RBAC permissions của user
+    │   ├── cartSession.middleware.js  — Quản lý Guest Cart Session ID qua cookie
+    │   ├── error.middleware.js        — Bắt lỗi tập trung (Global Error Handler)
+    │   ├── upload.middleware.js       — Multer memory storage xử lý file upload
+    │   ├── validate.middleware.js     — Chặn và validate request body/query bằng Zod
+    │   └── sanitize.middleware.js     — Làm sạch dữ liệu đầu vào chống XSS / Injection
+    ├── validators/         — Zod Validation Schemas
+    │   ├── auth.validator.js, product.validator.js, promotion.validator.js...
+    ├── utils/              — Hàm tiện ích dùng chung
+    │   ├── AppError.js            — Custom Error class chứa statusCode
+    │   ├── cache.service.js       — In-Memory TTL Cache cho hot endpoints
+    │   ├── cronJobs.js            — Lịch trình chạy ngầm (Flash sale status, Python recommendation sync)
+    │   ├── deviceParser.js        — Phân tích User-Agent thành Device, OS, Browser
+    │   ├── diff.js                — So sánh Diff JSON Before/After cho Audit Log
+    │   ├── dynamicSearchCorpus.js — Bóc tách token tiếng Việt phục vụ tìm kiếm
+    │   ├── jwt.js                 — Sign/verify token JWT
+    │   ├── profanityFilter.js     — Bộ lọc từ ngữ nhạy cảm trong bình luận
+    │   └── vnNumberToWords.js     — Đổi số tiền thành chữ tiếng Việt trong hóa đơn
+    └── template/           — Template HTML Email và Template File Excel
+        └── poEmailTemplate.js     — Template gửi email đơn nhập hàng PO cho NCC
 ```
 
 ---
 
-## 3. Admin
+### 2.3 Quy chuẩn Phân Lớp Trách Nhiệm (MVC + Service Layer)
 
-### 3.1 Tech stack
-
-| Thành phần   | Thư viện                                                    |
-|--------------|-------------------------------------------------------------|
-| Framework    | React 18 + Vite                                             |
-| Routing      | React Router v7                                             |
-| Server state | TanStack Query (React Query v5)                             |
-| Client state | Zustand (auth store duy nhất)                               |
-| Styling      | Tailwind CSS v4 + CSS variables (shadcn token system)       |
-| Font         | Geist Variable (@fontsource-variable/geist)                 |
-| Icons        | Lucide React — re-export qua @/components/ui/Icons.jsx      |
-| DnD          | @dnd-kit/core + @dnd-kit/sortable                           |
-| Rich Text    | Custom RichTextEditor                                       |
-| Toast        | Custom ToastProvider                                        |
-| HTTP         | Axios instance tại src/lib/axios.js (tự refresh token)      |
-
-### 3.2 Cấu trúc thư mục Admin
+Mỗi tính năng Backend tuân theo luồng xử lý 4 lớp nghiêm ngặt:
 
 ```
-Admin/src/
-├── main.jsx            — Entry: QueryClientProvider, RouterProvider
-├── App.jsx
-├── index.css           — Global CSS + design tokens + utility classes
-├── lib/
-│   └── axios.js        — Axios instance, token interceptor, refresh logic
-├── store/
-│   └── authStore.js    — Zustand: user, accessToken, refreshToken
-├── providers/
-│   ├── ToastProvider.jsx
-│   └── ThemeProvider.jsx
-├── router/
-│   └── index.jsx       — Route definitions (lazy import)
-├── hooks/              — React Query hooks (1 file per resource)
-├── services/           — Axios calls (không có logic)
-├── components/
-│   ├── ui/             — Generic, không gắn với domain
-│   ├── auth/           — Can.jsx (RBAC render guard)
-│   ├── layout/         — AppLayout, Sidebar, Header
-│   ├── products/       — Product-specific shared components
-│   ├── inventory/      — Inventory-specific shared components
-│   └── media/          — Media library components
-├── pages/              — Route pages, nhóm theo domain
-│   ├── DashboardPage.jsx
-│   ├── products/
-│   ├── inventory/
-│   ├── categories/
-│   ├── brands/
-│   ├── promotions/
-│   ├── menus/
-│   ├── media/
-│   ├── blog/
-│   ├── roles/
-│   ├── audit/
-│   └── auth/
-└── utils/
-    └── treeUtils.js    — flattenTree, buildTree, buildRelationMaps, getAncestors...
+[Client Request] 
+      │
+      ▼
+1. ROUTES Layer (`src/routes/*.routes.js`)
+   - Định nghĩa endpoint (`GET`, `POST`, `PUT`, `DELETE`).
+   - Gắn Middleware xác thực: `authenticate`.
+   - Gắn Middleware phân quyền: `requirePermission('products', 'create')`.
+   - Gắn Middleware validate: `validate(productSchema)`.
+      │
+      ▼
+2. CONTROLLER Layer (`src/controllers/*.controller.js`)
+   - Chỉ nhận `req.body`, `req.params`, `req.query`, `req.user`.
+   - Gọi Service tương ứng: `const result = await productService.createProduct(req.body, req.user)`.
+   - Trả response JSON về client theo format chuẩn: `res.status(201).json({ success: true, data: result })`.
+   - Tuyệt đối **KHÔNG** viết logic nghiệp vụ phức tạp hay gọi trực tiếp MongoDB queries tại Controller.
+      │
+      ▼
+3. SERVICE Layer (`src/services/*.service.js`)
+   - Chứa 100% Business Logic: Tính toán giá, kiểm tra tồn kho, gọi API bên ngoài (GHN, Cloudinary, Groq).
+   - Tương tác với Database qua Mongoose Models.
+   - Bắn lỗi bằng `throw new AppError('Thông báo lỗi', 400)`.
+   - Tự động ghi nhận Audit Log khi có thay đổi dữ liệu quan trọng (`auditLogService.logAction(...)`).
+      │
+      ▼
+4. MODEL Layer (`src/models/*.model.js`)
+   - Định nghĩa Schema, Data Types, Required fields, Default values.
+   - Thiết lập Compound Indexes tối ưu truy vấn (`{ slug: 1 }`, `{ sku: 1 }`, `{ price: 1 }`).
+   - Khai báo Virtual fields, Pre/Post Mongoose hooks (ví dụ: tự động tính slug, hash password).
 ```
 
-### 3.3 Data fetching — React Query (BẮT BUỘC)
+---
 
-Mỗi resource có 1 hook file ở `hooks/useXxx.js`:
+### 2.4 Chuẩn Request / Response & Xử Lý Lỗi Tập Trung
 
-```js
-// hooks/useProducts.js
-export function useProducts(params) {
-  return useQuery({
-    queryKey: ['products', params],
-    queryFn: () => productService.list(params).then(r => r.data),
-    staleTime: 30_000,
-  });
+#### Chuẩn Response Thành Công:
+
+```javascript
+// Dạng Danh sách có phân trang (List Response)
+{
+  "success": true,
+  "data": [ ... ],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 150,
+    "totalPages": 8
+  }
 }
 
-export function useCreateProduct() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (data) => productService.create(data),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['products'] });
-      toast.success('Tạo sản phẩm thành công');
-    },
-    onError: (e) => toast.error(e.response?.data?.message || 'Lỗi'),
-  });
+// Dạng Đối tượng đơn lẻ (Single Object Response)
+{
+  "success": true,
+  "data": {
+    "_id": "660c1e2f...",
+    "name": "Smart TV Samsung 4K 55 inch",
+    "price": 12500000
+  }
 }
 ```
 
-Query key convention:
-```
-['products']                        — list
-['products', { page, keyword }]     — list có filter
-['products', id]                    — single
-['products', 'variants', productId] — nested
-```
+#### Chuẩn Xử Lý Lỗi (Error Handling):
+Mọi lỗi trong Service đều được ném ra bằng class `AppError`:
 
-### 3.4 Service layer
-
-```js
-// services/product.service.js — chỉ wrap axios, không có logic
-const productService = {
-  list:    (params) => api.get('/products', { params }),
-  getById: (id)     => api.get(`/products/${id}`),
-  create:  (data)   => api.post('/products', data),
-  update:  (id, data) => api.put(`/products/${id}`, data),
-  delete:  (id)     => api.delete(`/products/${id}`),
-};
-export default productService;
+```javascript
+// utils/AppError.js
+class AppError extends Error {
+  constructor(message, statusCode) {
+    super(message);
+    this.statusCode = statusCode;
+    this.isOperational = true;
+    Error.captureStackTrace(this, this.constructor);
+  }
+}
 ```
 
-### 3.5 State management
+Toàn bộ lỗi được bắt tự động bởi `middleware/error.middleware.js`, trả về JSON đồng nhất:
 
-Auth state — Zustand (persist localStorage):
-```js
-const useAuthStore = create(persist(
-  (set) => ({
-    user: null, accessToken: null, refreshToken: null,
-    setAuth: ({ user, accessToken, refreshToken }) => set({ user, accessToken, refreshToken }),
-    clearAuth: () => set({ user: null, accessToken: null, refreshToken: null }),
-  }),
-  { name: 'auth-store' }
-));
+```json
+{
+  "success": false,
+  "message": "Số lượng tồn kho không đủ để đáp ứng đơn hàng.",
+  "errors": []
+}
 ```
 
-Server state — React Query (không dùng useState cho data từ API).
+---
 
-Local UI state — useState trong component (form, modal open, filter).
+### 2.5 Quy ước Đặt Tên Backend (Naming Conventions)
 
-Multi-modal state — dùng `useModalSet` hook:
-```js
-const modal = useModalSet(['detail', 'confirm', 'excelPreview']);
-modal.open('detail', rowData);   // mở + gắn data
-modal.close('detail');
-modal.isOpen('detail');          // boolean
-modal.data('detail');            // rowData
-modal.props('detail');           // { open, data, onClose }
+| Thành phần | Quy ước đặt tên | Ví dụ thực tế |
+| :--- | :--- | :--- |
+| **Tên File Service** | `camelCase.service.js` | `product.service.js`, `purchaseOrder.service.js` |
+| **Tên File Controller** | `camelCase.controller.js` | `product.controller.js`, `chatbot.controller.js` |
+| **Tên File Route** | `camelCase.routes.js` | `product.routes.js`, `stockAudit.routes.js` |
+| **Tên File Model** | `camelCase.model.js` | `productVariant.model.js`, `chatSession.model.js` |
+| **Tên File Validator** | `camelCase.validator.js` | `product.validator.js`, `coupon.validator.js` |
+| **Prefix Route API** | `/api/v1/<resource>` (danh từ số nhiều/ít nhất quán) | `/api/v1/products`, `/api/v1/purchase-orders` |
+| **Hàm trong Controller** | `exports.verbNoun` hoặc `exports.verb` | `exports.getProductById`, `exports.create`, `exports.list` |
+| **Hàm trong Service** | `async function verbNoun(params)` | `async function createPurchaseOrder(data, userId)` |
+
+---
+
+### 2.6 Luồng Xác Thực & Quản Lý Phiên (Auth & Session Flow)
+
+```
+[Client] ── (1) POST /api/v1/auth/login ──> [Backend: auth.controller.js]
+                                                    │
+                                                    ▼
+                                            [auth.service.js]
+                                            - Xác thực Email/Password hoặc Passkey/Social
+                                            - Bóc tách IP, User-Agent qua deviceParser
+                                            - Sinh Access Token (15p) & Refresh Token (7d)
+                                            - Lưu session vào user.sessions array
+                                                    │
+                                                    ▼
+[Client] <── Trả Access Token trong body + Gắn Refresh Token vào HttpOnly Cookie
+   │
+   ├── (2) Mọi Request sau: Gắn Header `Authorization: Bearer <accessToken>`
+   │
+   └── (3) Khi Access Token hết hạn (401 Unauthorized):
+           Axios Interceptor tự động gọi `POST /api/v1/auth/refresh-token` (kèm cookie)
+           → Nhận Access Token mới và tự động thực hiện lại request bị lỗi (Silent Retry).
 ```
 
-### 3.6 Component conventions
+---
 
-| Loại                            | Nơi đặt                      |
-|---------------------------------|------------------------------|
-| Dùng ở nhiều domain             | components/ui/               |
-| Gắn với 1 domain                | components/{domain}/         |
-| Chỉ dùng trong 1 page           | Inline local function        |
-| Route page                      | pages/{domain}/XxxPage.jsx   |
+### 2.7 Động cơ AI Chatbot RAG & Dịch vụ Python ML
 
-Shared components đã có:
-- `components/ui/PriceInput.jsx` — input tiền VNĐ format dấu phẩy, export formatVND
-- `components/ui/SearchableSelect.jsx` — dropdown có search, creatable
-- `components/ui/MediaPickerModal.jsx` — chọn ảnh từ thư viện
-- `components/ui/ConfirmDialog.jsx` — confirm popup (thay window.confirm)
-- `components/ui/RichTextEditor.jsx` — rich text WYSIWYG
-- `components/products/SpecsEditor.jsx` — bảng thông số kỹ thuật, prop showGroup
-- `components/products/SortableGalleryItem.jsx` — DnD gallery item, prop size='md'|'sm'
+#### RAG AI Chatbot Pipeline (`chatbot.service.js`):
+1. **Tiếp nhận câu hỏi** từ người dùng qua SSE connection (`/api/v1/chatbot/stream`).
+2. **Nạp Lịch sử Hội thoại & Hồ sơ Khách hàng** từ `ChatSession` (kết hợp In-Memory Hot Cache + MongoDB).
+3. **Retrieval**: Truy vấn trực tiếp MongoDB để lấy dữ liệu sản phẩm mới nhất, giá Flash Sale, trạng thái tồn kho thực tế, chương trình khuyến mãi đang áp dụng.
+4. **Augmentation**: Tạo Prompt chứa đầy đủ ngữ cảnh sản phẩm thực tế, hướng dẫn LLM xưng hô là "Trợ lý ảo Điện máy Haravan", định dạng Markdown và trả về các ID sản phẩm phù hợp.
+5. **Generation**: Gọi Groq SDK (Llama 3 70B/8B) hoặc Google Gemini, stream từng token phản hồi trực tiếp tới client qua SSE.
+6. **Card Extraction**: Bóc tách danh sách sản phẩm được AI đề xuất và gửi kèm theo stream để client hiển thị `ChatProductCard`.
 
-Icons — LUÔN import từ wrapper:
-```js
-import { Plus, Trash2, Loader2, Edit3 } from '@/components/ui/Icons';
-// KHÔNG import trực tiếp từ lucide-react trong page
+#### Python ML Background Engine (`python-services/`):
+- `matrix_factorization.py`: Đọc `interactions.csv`, áp dụng thuật toán phân rã ma trận để tính toán ma trận tương đồng giữa các sản phẩm (Item-to-Item Cosine Similarity) và ma trận sở thích người dùng.
+- `cronJobs.js`: Cron Job trong Node.js định kỳ kích hoạt script Python tính toán và đồng bộ kết quả vào model `ItemSimilarity` và `PersonalizedRecommendation`.
+
+---
+
+## 3. Kiến Trúc & Chuẩn Chia File Admin Panel (`Admin`)
+
+### 3.1 Tech Stack Admin
+- **Framework**: React 19, Vite 8
+- **Styling**: Tailwind CSS
+- **Routing**: React Router DOM v7
+- **State Management**: Zustand (`store/authStore.js`), React Context (`providers/`)
+- **Icons**: Lucide React + Bộ Icon SVG chuyên dụng (`components/ui/Icons.jsx`)
+- **Charts & Visualization**: Recharts (Area, Bar, Donut charts)
+- **HTTP Client**: Axios với Request/Response Interceptors
+- **Rich Text Editor**: Custom RichTextEditor Component
+- **Excel & Date**: ExcelJS, Lucide Date Range Pickers
+
+---
+
+### 3.2 Cấu trúc Thư mục Admin Chi tiết
+
+```
+Admin/
+├── package.json
+├── vite.config.js
+├── index.html
+└── src/
+    ├── main.jsx            — Entry point, mount AppProvider, React Router
+    ├── App.jsx             — Render App Router & Global Providers
+    ├── index.css           — Toàn bộ CSS Utilities, Design Tokens, Scrollbar, Tailwind
+    ├── router/
+    │   ├── index.jsx       — Cấu hình toàn bộ Routes, lồng AdminLayout, phân nhánh trang
+    │   └── ProtectedRoute.jsx — HOC kiểm tra trạng thái đăng nhập và quyền truy cập RBAC
+    ├── store/
+    │   └── authStore.js    — Zustand Store lưu thông tin Admin User, Permissions, Login, Logout
+    ├── providers/
+    │   ├── AppProvider.jsx — Bọc toàn bộ Contexts của hệ thống
+    │   ├── ToastProvider.jsx — Quản lý hệ thống thông báo Toast (Success, Error, Info, Warning)
+    │   └── CommonOptionsProvider.jsx — Cung cấp danh sách Danh mục, Thương hiệu, Nhà cung cấp dùng chung
+    ├── services/           — 22 API Services gọi sang Backend (1 file tương ứng 1 domain)
+    │   ├── auth.service.js, product.service.js, productVariant.service.js
+    │   ├── inventory.service.js, inventoryReport.service.js, supplier.service.js
+    │   ├── promotion.service.js, coupon.service.js, flashSale.service.js, gift-program.service.js
+    │   ├── media.service.js, folder.service.js, menu.service.js, blog.service.js
+    │   ├── user.service.js, role.service.js, auditLog.service.js, dashboard.service.js...
+    ├── lib/
+    │   ├── axios.js        — Cấu hình Axios instance, BaseURL, Auto Token Header, Refresh Token
+    │   └── utils.js        — Helper `cn()` gộp Tailwind classes (clsx + tailwind-merge)
+    ├── utils/
+    │   ├── passkeyUtils.js — Xử lý WebAuthn API trên trình duyệt
+    │   ├── permissionUtils.js — Hàm `hasPermission(user, resource, action)`
+    │   ├── treeUtils.js    — Xử lý thuật toán cây danh mục đa cấp, flatten/unflatten
+    │   └── vnNumberToWords.js — Đổi số tiền thành chữ tiếng Việt
+    ├── components/
+    │   ├── layout/         — Layout khung sườn giao diện Admin
+    │   │   ├── AdminLayout.jsx — Khung chính bao gồm Sidebar, Topbar và Content Area
+    │   │   ├── Sidebar.jsx     — Menu điều hướng bên trái phân nhóm chức năng
+    │   │   └── Topbar.jsx      — Thanh công cụ trên cùng: Tìm kiếm nhanh, Thông báo, Profile menu
+    │   ├── common/         — Components dùng chung giữa các trang
+    │   │   ├── ExcelPreviewModal.jsx — Modal xem trước dữ liệu Excel trước khi import
+    │   │   ├── InviteMemberModal.jsx — Modal mời nhân viên mới
+    │   │   └── SessionStreamListener.jsx — Lắng nghe SSE lệnh hủy session từ xa
+    │   ├── media/          — `MediaUsageModal.jsx` xem chi tiết vị trí ảnh đang được dùng
+    │   └── ui/             — 38 UI Component Primitives (Button, Input, Select, Table, Modal...)
+    └── pages/              — 17 Module Trang chức năng
+        ├── dashboard/      — Trang tổng quan: KPI Cards, Charts, Donut, Alerts, Top Products
+        ├── products/       — Quản lý sản phẩm: `ProductListPage`, `ProductFormPage`, `VariantEditPage`, `ImportExportPage`
+        │   └── components/ — `ProductBasicInfoCard`, `CategoryTreeMultiPicker`, `ProductVariantsGeneratorCard`...
+        ├── inventory/      — Quản trị kho: PO, Nhập kho, Xuất kho, Kiểm kê, Sổ kho, Báo cáo, Cảnh báo, NCC
+        ├── promotions/     — Quản lý khuyến mãi: `CouponPage`, `PromotionPage`, `FlashSalePage`, `GiftProgramPage`
+        ├── media/          — Thư viện media: `MediaPage`, `FolderTree`, `MediaGrid`, `UploadZone`, `UnusedMediaPage`
+        ├── menus/          — CMS Menu: `MenuListPage`, `MenuEditorPage`
+        ├── blog/           — CMS Blog: `BlogPostListPage`, `BlogPostFormPage`, `BlogCategoryPage`, `BlogTagPage`
+        ├── customers/      — `CustomerListPage` danh sách và lịch sử mua hàng của khách
+        ├── staffs/         — `StaffListPage` quản lý tài khoản nhân sự nội bộ
+        ├── roles/          — `RoleListPage` ma trận phân quyền chi tiết
+        ├── audit/          — `AuditLogListPage` tra cứu nhật ký kiểm toán hệ thống
+        ├── banners/        — `BannerPage` quản lý banner và popup
+        ├── brands/         — `BrandPage` quản lý danh mục thương hiệu
+        ├── categories/     — `CategoryPage` quản lý cây danh mục
+        ├── profile/        — `AdminProfilePage` hồ sơ cá nhân, đổi mật khẩu, Passkeys, 2FA
+        └── auth/           — `LoginPage`, `ForgotPasswordPage`, `ResetPasswordPage`
 ```
 
-### 3.7 Page structure chuẩn
+---
+
+### 3.3 Hệ Thống Routing & Phân Quyền Bảo Vệ (`ProtectedRoute`)
+
+Trong `Admin/src/router/index.jsx`, toàn bộ route được bọc bởi `AdminLayout` và `ProtectedRoute`:
 
 ```jsx
-export default function XxxListPage() {
-  // 1. Server data
-  const { data, isLoading } = useXxx(params);
-  const deleteMut = useDeleteXxx();
+<Route element={<ProtectedRoute requiredResource="products" requiredAction="read" />}>
+  <Route path="/products" element={<ProductListPage />} />
+  <Route path="/products/new" element={<ProductFormPage />} />
+  <Route path="/products/:id/edit" element={<ProductFormPage />} />
+</Route>
+```
 
-  // 2. Local UI state
-  const [keyword, setKeyword] = useState('');
-  const [page, setPage] = useState(1);
-  const modal = useModalSet(['confirm']);
+- `ProtectedRoute` đọc quyền từ `authStore`. Nếu chưa đăng nhập -> chuyển hướng về `/login`.
+- Nếu thiếu quyền truy cập tài nguyên -> hiển thị màn hình `403 Forbidden` chuyên nghiệp, không làm sập ứng dụng.
 
-  // 3. Handlers
-  const handleDelete = (item) => modal.open('confirm', item);
-  const confirmDelete = () => deleteMut.mutate(modal.data('confirm')?._id);
+---
 
-  // 4. Loading guard
-  if (isLoading) return <div className="page-loading"><Loader2 className="animate-spin" /></div>;
+### 3.4 Quản Lý Trạng Thái (State Management Pattern)
+- **User & Auth State**: Lưu trong Zustand Store (`authStore.js`), tự động lưu trữ thông tin cơ bản và nạp quyền vào RAM.
+- **Shared Master Data**: Lưu trong `CommonOptionsProvider` (danh sách danh mục phẳng/cây, danh sách thương hiệu, danh sách NCC) để tránh việc mỗi trang phải gọi lại API trùng lặp.
+- **Page / Form State**: Sử dụng `useState` và `useReducer` cục bộ trong từng Page/Card component để đảm bảo tính đóng gói (encapsulation) và hiệu năng re-render tối ưu.
 
-  // 5. JSX
-  return (
-    <div className="page-container">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Tiêu đề</h1>
-          <p className="page-subtitle">Mô tả</p>
-        </div>
-        <button className="btn-primary">Thêm mới</button>
-      </div>
+---
 
-      <div className="page-toolbar">
-        {/* filter, search */}
-      </div>
+### 3.5 Axios Client & Cơ Chế Auto Refresh Token
 
-      <div className="table-wrap">
-        <table className="data-table">...</table>
-      </div>
+`Admin/src/lib/axios.js` được cấu hình Interceptor thông minh:
+- **Request Interceptor**: Tự động lấy `accessToken` từ `authStore` và gắn vào header `Authorization: Bearer <token>`.
+- **Response Interceptor**:
+  - Trả về trực tiếp `response.data` để code ở component ngắn gọn.
+  - Bắt lỗi HTTP: Nếu nhận mã `401 Unauthorized`, hệ thống tự động đưa các request đang chờ vào hàng đợi (`failedQueue`), gọi API `/auth/refresh-token` để lấy access token mới, sau đó giải phóng hàng đợi và retry lại request ban đầu mà người dùng không hề bị gián đoạn.
+  - Tự động hiển thị `toast.error(message)` khi nhận các mã lỗi 400, 403, 404, 500.
 
-      <ConfirmDialog
-        {...modal.props('confirm')}
-        title="Xóa?"
-        onConfirm={confirmDelete}
-      />
-    </div>
-  );
-}
+---
+
+### 3.6 Chuẩn Thiết Kế UI/UX Admin (Design Directives)
+Tuân thủ nghiêm ngặt theo bộ quy chuẩn cốt lõi:
+- **Mặc định Flat & Solid**: Sử dụng màu nền đặc rõ ràng (`bg-card`, `bg-background`, `bg-slate-50`), không dùng gradient loè loẹt.
+- **Không Glassmorphism**: Không dùng `backdrop-blur` hay nền mờ bán trong suốt.
+- **Viền mảnh 1px thay cho Shadow**: Đường viền `border border-slate-200 / border-border` sắc nét. Chỉ dùng `shadow-xs` hoặc `shadow-sm` cho Popover/Dropdown/Modal.
+- **Bo góc chuẩn 6px**: Áp dụng `rounded-[6px]` cho toàn bộ components (Button, Input, Card, Modal, Badge).
+- **Hệ Spacing Bội số 4px**: `gap-1` (4px), `gap-2` (8px), `gap-3` (12px), `gap-4` (16px), `gap-6` (24px).
+- **Số liệu & Mã định danh**: Luôn dùng `tabular-nums font-mono` cho tiền tệ, mã SKU, số lượng, ngày tháng để đảm bảo căn gióng thẳng hàng tuyệt đối.
+- **Tương tác xúc giác**: Nút bấm có hiệu ứng `active:scale-[0.98] transition-transform`.
+
+---
+
+## 4. Kiến Trúc & Chuẩn Chia File Client Storefront (`client`)
+
+### 4.1 Tech Stack Client
+- **Framework**: Next.js 16 (App Router)
+- **Language**: JavaScript (React 19)
+- **Styling**: Tailwind CSS
+- **State Management**: Zustand với `persist` middleware (Lưu giỏ hàng, xác thực, danh sách so sánh)
+- **Data Fetching**: Hybrid (Next.js Server-side `fetch` / `serverAxios` kết hợp Client-side Axios)
+- **Icons**: Lucide React
+- **Streaming & SSE**: Hỗ trợ đọc Stream trực tiếp từ API Backend cho Trợ lý AI Chatbot
+- **Rich Media**: Next.js Image Optimization (`next/image`)
+
+---
+
+### 4.2 Cấu trúc Thư mục Client App Router Chi tiết
+
+```
+client/
+├── package.json
+├── next.config.mjs
+├── tailwind.config.js
+└── src/
+    ├── app/                — Next.js 16 App Router Directory
+    │   ├── layout.jsx      — Root Layout: Header, Footer, AiChatWidget, CompareBar, StoreProvider
+    │   ├── page.jsx        — Trang chủ Homepage (SSR + Client Sections)
+    │   ├── globals.css     — Global Styles, Tailwind imports, CSS Variables
+    │   ├── not-found.jsx   — Trang 404 tùy biến kèm MascotNotFound
+    │   ├── (auth)/         — Nhóm Route Xác thực
+    │   │   ├── layout.jsx  — Layout trang auth căn giữa màn hình
+    │   │   ├── login/page.jsx, register/page.jsx, forgot-password/page.jsx, reset-password/page.jsx
+    │   ├── collections/    — Trang danh mục sản phẩm
+    │   │   └── [slug]/page.jsx — Trang danh mục với bộ lọc đa tiêu chí (Faceted Filters)
+    │   ├── products/       — Trang chi tiết sản phẩm
+    │   │   └── [slug]/page.jsx — Product Detail Page (SSR nạp SEO metadata + Client components)
+    │   ├── cart/page.jsx   — Trang Giỏ hàng hoàn chỉnh
+    │   ├── flash-sale/page.jsx — Trang sự kiện Flash Sale theo khung giờ
+    │   ├── so-sanh/page.jsx— Trang bảng so sánh thông số kỹ thuật sản phẩm
+    │   ├── search/page.jsx — Trang kết quả tìm kiếm sản phẩm và bài viết
+    │   ├── blogs/          — Trang tin tức & cẩm nang
+    │   │   ├── page.jsx    — Danh sách bài viết toàn bộ
+    │   │   ├── [category]/page.jsx — Bài viết theo danh mục
+    │   │   └── [category]/[slug]/page.jsx — Chi tiết bài viết chuẩn SEO + Table of Contents
+    │   ├── brands/         — Trang danh sách thương hiệu & chi tiết thương hiệu
+    │   └── tai-khoan/page.jsx — Trung tâm quản lý tài khoản khách hàng (Tabbed Interface)
+    ├── components/         — Các Component giao diện phân theo Domain
+    │   ├── header/         — `Header.jsx`, `HeaderTop.jsx`, `HeaderNav.jsx`, `SearchBar.jsx`, `CategoryDrawer.jsx`...
+    │   ├── home/           — `HeroBannerSliderClient`, `HomeFlashSaleSection`, `HomeCategoryShowcase`...
+    │   ├── product/        — `ProductCard.jsx`, `FlashSaleProductCard.jsx`, `QuickViewModal.jsx`, `CompareBar.jsx`
+    │   │   └── detail/     — `ProductGallery`, `ProductInfo`, `ProductSpecsSummary`, `ProductReviewsAndComments`...
+    │   ├── cart/           — `CartView`, `CartItemList`, `CartOrderSummary`, `CartRewardBar`, `CartVoucherModal`...
+    │   ├── chat/           — `AiChatWidget`, `ChatMessageItem`, `ChatProductCard`, `ChatOrderLookup`, `MascotBot`...
+    │   ├── mascot/         — Mascot SVG hoạt hình: `MascotCartEmpty`, `MascotNotFound`, `MascotFlashSale`...
+    │   ├── account/        — `AccountOverviewTab`, `AccountOrdersTab`, `AccountAddressesTab`, `AccountSecurityTab`...
+    │   ├── blog/           — `BlogCard`, `BlogDetailHeader`, `BlogDetailContent`, `BlogTableOfContents`...
+    │   ├── collection/     — `CollectionCategoryShowcase`, `CollectionCommitments`, `CollectionSeoSection`...
+    │   ├── auth/           — `GoogleLoginButton`, `TikTokLoginButton`, `ZaloLoginButton`...
+    │   ├── layout/         — `Footer.jsx`, `Breadcrumb.jsx`...
+    │   └── ui/             — Button, Input, Modal, Drawer, Tabs, Badges...
+    ├── services/           — Tầng gọi API
+    │   ├── *.server.service.js — Dịch vụ gọi API chạy trên Node.js Server (SSR / SSG / SEO Metadata)
+    │   └── *.service.js        — Dịch vụ gọi API chạy trên Browser Client (Axios)
+    ├── store/              — Zustand Stores
+    │   ├── cartStore.js    — Quản lý giỏ hàng, đồng bộ local và database
+    │   ├── authStore.js    — Quản lý phiên khách hàng, token, user profile
+    │   ├── compareStore.js — Quản lý danh sách sản phẩm đang so sánh (tối đa 4 món)
+    │   └── quickViewStore.js — Điều khiển mở/đóng Modal xem nhanh sản phẩm
+    ├── lib/
+    │   ├── axios.js        — Client Axios instance
+    │   ├── serverAxios.js  — Server-side Axios instance
+    │   └── utils.js        — Helper `cn()`
+    ├── providers/
+    │   └── StoreProvider.jsx — Hydrate Zustand stores an toàn trên Client Side
+    ├── constants/
+    │   └── palette.js      — Mã màu thương hiệu chuẩn
+    └── utils/
+        ├── oauthPopup.js   — Mở cửa sổ popup đăng nhập mạng xã hội và bắt kết quả callback
+        └── vietnamAddressMerger.js — Chuẩn hóa dữ liệu địa chỉ hành chính Việt Nam
 ```
 
 ---
 
-## 4. Styling — Tailwind CSS v4 + Design Tokens
+### 4.3 Chiến lược Server Components (RSC) & Client Components
 
-### 4.1 Setup
-
-- Tailwind v4 — `@import "tailwindcss"` trong CSS, không có `tailwind.config.js`
-- Tokens theo chuẩn shadcn — CSS variables trong `:root` và `.dark`
-- Font: Geist Variable (giống Vercel dashboard)
-- Color space: OKLCH
-
-### 4.2 Color Palette (CSS Variables)
-
-| Token                | Light                          | Dark                           | Dùng cho              |
-|----------------------|--------------------------------|--------------------------------|-----------------------|
-| `--background`       | oklch(1 0 0) — trắng           | oklch(0.145 0 0) — đen         | Nền trang             |
-| `--foreground`       | oklch(0.145 0 0)               | oklch(0.985 0 0)               | Text chính            |
-| `--card`             | oklch(1 0 0)                   | oklch(0.205 0 0)               | Nền card/panel        |
-| `--primary`          | oklch(0.205 0 0) — đen         | oklch(0.922 0 0) — trắng xám   | Nút chính             |
-| `--primary-foreground`| oklch(0.985 0 0)              | oklch(0.205 0 0)               | Text trên primary     |
-| `--muted`            | oklch(0.97 0 0)                | oklch(0.269 0 0)               | Nền mờ, row zebra     |
-| `--muted-foreground` | oklch(0.556 0 0)               | oklch(0.708 0 0)               | Text phụ, placeholder |
-| `--border`           | oklch(0.922 0 0)               | oklch(1 0 0 / 10%)             | Viền                  |
-| `--input`            | oklch(0.922 0 0)               | oklch(1 0 0 / 15%)             | Viền input            |
-| `--ring`             | oklch(0.708 0 0)               | oklch(0.556 0 0)               | Focus ring            |
-| `--destructive`      | oklch(0.577 0.245 27.325) — đỏ | oklch(0.704 0.191 22.216)      | Xóa, lỗi              |
-| `--accent`           | oklch(0.97 0 0)                | oklch(0.269 0 0)               | Hover state           |
-| `--sidebar`          | oklch(0.975 0.005 240) — xanh nhạt | oklch(0.205 0 0)           | Nền sidebar           |
-| `--radius`           | 0.625rem                       | —                              | Base border radius    |
-
-Semantic colors bổ sung (dùng Tailwind trực tiếp):
-
-| Màu     | Tailwind class                    | Dùng cho                         |
-|---------|-----------------------------------|----------------------------------|
-| Xanh lá | emerald-500/10, emerald-600       | Thành công, active, published    |
-| Xanh    | blue-500/10, blue-600             | Info, link, edit action          |
-| Tím     | purple-500/10, purple-600         | Variant, level badge 2           |
-| Indigo  | indigo-500/10, indigo-600         | In transit, level badge 1        |
-| Vàng    | amber-500/10, amber-600           | Warning, pending                 |
-| Đỏ      | destructive token                 | Delete, error, cancelled         |
-
-### 4.3 Border Radius
-
-| Class        | Giá trị (base 0.625rem)   |
-|--------------|---------------------------|
-| rounded-sm   | ~0.375rem (0.6×)          |
-| rounded-md   | 0.5rem (0.8×)             |
-| rounded-lg   | 0.625rem (1×)             |
-| rounded-xl   | ~0.875rem (1.4×)          |
-| rounded-2xl  | ~1.125rem (1.8×)          |
-
-### 4.4 CSS Utility Classes (index.css)
-
-#### Layout & Container
-
-```
-.page-container    — Wrapper chính mỗi page
-.page-header       — Header row title + actions
-.page-title        — h1 tiêu đề
-.page-subtitle     — Mô tả nhỏ dưới title
-.page-toolbar      — Row filter + search + button
-.page-card         — Panel có border, rounded-xl, shadow-2xs
-.page-loading      — Spinner center (py-20)
-.page-empty        — Empty state center (py-20)
-.filter-bar        — Row chứa filter dropdowns
-.filter-select     — Dropdown filter h-9
-```
-
-#### Table
-
-```
-.table-wrap        — Wrapper overflow-x-auto + border + rounded-xl
-.data-table        — <table> style mặc định
-.empty-cell        — <td> empty state center
-.loading-center    — Loading row trong table
-.slug-text         — Monospace code pill
-.row-checkbox      — Checkbox cell
-```
-
-#### Form & Input
-
-```
-.form-group        — flex flex-col gap-1.5
-.form-label        — text-xs font-medium
-.form-input        — h-9 input chuẩn với focus ring
-.form-row          — grid 1/2/3 cols responsive
-.search-box        — Wrapper search với icon
-.search-input      — Input search padding-left icon
-.required          — Dấu * màu destructive
-```
-
-#### Buttons
-
-```
-.btn-primary       — h-9 bg-primary, nút chính
-.btn-outline       — h-9 border-input, nút phụ
-.btn-ghost         — h-9 hover:bg-accent
-.btn-danger-outline — h-9 viền đỏ
-.btn-primary-sm    — h-8 text-xs
-.btn-ghost-sm      — h-8 text-xs ghost
-.btn-danger-sm     — h-8 text-xs danger
-.btn-icon          — size-8 icon button
-.btn-icon.danger   — icon hover đỏ
-.btn-icon-sm       — size-6 icon button nhỏ
-.ia-btn            — Inline action button base
-.ia-edit           — Edit (xanh)
-.ia-toggle         — Toggle (tím)
-.ia-delete         — Delete (đỏ)
-```
-
-#### Badges & Status
-
-```
-.badge             — Base pill
-.badge-info        — Xanh dương
-.badge-success     — Xanh lá
-.badge-muted       — Xám
-.status-badge      — Có dot indicator
-.status-badge.active / .inactive
-.level-badge-0/1/2 — primary / indigo / purple
-```
-
-#### Modal
-
-```
-.modal-overlay     — Fixed backdrop blur
-.modal-box         — Container max-w-lg
-.modal-header      — Header border-b
-.modal-body        — Scrollable max-h-[80vh]
-.modal-footer      — Footer actions
-```
-
-### 4.5 Quy tắc style
-
-1. Dùng utility class trong index.css trước khi viết inline Tailwind
-2. Input chuẩn:
-   `h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/20`
-3. Card/Panel chuẩn:
-   `rounded-xl border border-border bg-card p-5 shadow-2xs`
-4. Dark mode: các token tự handle — không viết thủ công `dark:` trừ semantic color
-5. Transparency: `/` slash — `bg-primary/10`, `border-primary/20`
-6. Shadow: chỉ `shadow-xs`, `shadow-2xs`, `shadow-sm`
-7. Spacing: `gap-2`, `gap-3`, `gap-4`, `gap-6` — tránh gap-5 hay gap-7
+Dự án áp dụng mô hình phân tách Server/Client Components tối ưu:
+- **Server Components (Mặc định trong App Router)**:
+  - Dùng cho `app/**/page.jsx` và `layout.jsx`.
+  - Thực hiện gọi API trực tiếp ở phía server thông qua các file `*.server.service.js`.
+  - Tạo sẵn mã HTML tĩnh, sinh thẻ `generateMetadata` chuẩn SEO (Meta Title, OpenGraph, Schema JSON-LD) giúp Google Bot thu thập dữ liệu nhanh chóng mà không cần chạy JS.
+- **Client Components (`"use client"`)**:
+  - Dùng cho các thành phần có tương tác người dùng: Header Search Bar, Giỏ hàng, Modal Xem Nhanh, Gallery ảnh, Bộ chọn biến thể, Chatbot Widget, Account Tabs.
+  - Nhận dữ liệu khởi tạo (Initial Data) được truyền qua `props` từ Server Components, giúp hiển thị ngay lập tức không bị giật trang (Zero Layout Shift).
 
 ---
 
-## 5. Anti-patterns — Không làm
+### 4.4 Phân Tầng Dịch Vụ Gọi API (Server Services vs Client Services)
 
-### BE
-
-- Không để business logic trong controller — phải vào service
-- Không gọi model trực tiếp từ controller
-- Không bỏ `next(err)` trong catch block
-- Không trả format response khác chuẩn `{ success, data, pagination }`
-
-### Admin
-
-- Không dùng `useEffect + fetch/axios` để lấy data — phải dùng React Query
-- Không import từ `lucide-react` trực tiếp trong pages — dùng `@/components/ui/Icons`
-- Không dùng `alert()` hay `window.confirm()` — dùng `toast` và `ConfirmDialog`
-- Không copy component inline nếu đã có shared version
-- Không dùng `useState` để lưu server data
-
-### Styling
-
-- Không dùng `style={{...}}` inline trừ DnD transform
-- Không hardcode màu hex/rgb — phải dùng Tailwind class hoặc CSS var
-- Không dùng emoji trong UI
-- Không dùng markdown (bold, italic) trong chatbot response
+Để đảm bảo bảo mật và tối ưu hóa kết nối:
+1. **Server Services (`services/*.server.service.js`)**:
+   - Chạy trên môi trường Node.js của Next.js Server.
+   - Gọi thẳng tới Backend REST API bằng URL nội bộ (`http://localhost:5000/api/v1/...`).
+   - Có thể cấu hình cache/revalidate của Next.js: `fetch(url, { next: { revalidate: 60 } })`.
+   - Ví dụ: `product.server.service.js`, `banner.server.service.js`, `brand.server.service.js`.
+2. **Client Services (`services/*.service.js`)**:
+   - Chạy trên trình duyệt người dùng qua thư viện Axios (`lib/axios.js`).
+   - Tự động gắn token người dùng khi gọi các endpoint yêu cầu xác thực (Thêm giỏ hàng, Áp dụng voucher, Cập nhật thông tin cá nhân, Đánh giá sản phẩm).
+   - Ví dụ: `cart.service.js`, `chat.service.js`, `user.service.js`, `comment.client.service.js`.
 
 ---
 
-## 6. Môi trường
+### 4.5 Quản Lý Trạng Thái Giỏ Hàng & Người Dùng với Zustand Persist
 
-BE (.env):
-```
-PORT=5000
-MONGODB_URI=...
-JWT_SECRET=...
-JWT_REFRESH_SECRET=...
-CLOUDINARY_CLOUD_NAME=...
-CLOUDINARY_API_KEY=...
-CLOUDINARY_API_SECRET=...
-GROQ_API_KEY=...
-CLIENT_URL=http://localhost:3000
-ADMIN_URL=http://localhost:5173
-```
+- `cartStore.js`:
+  - Quản lý danh sách sản phẩm, số lượng, voucher đang áp dụng.
+  - Sử dụng `persist` middleware lưu vào `localStorage`. Khi khởi động, Store tự động đồng bộ số lượng với Backend API.
+  - Cung cấp các hành động tức thì (Optimistic Updates) giúp giao diện phản hồi ngay khi bấm nút mà không cần chờ mạng.
+- `authStore.js`:
+  - Lưu trạng thái đăng nhập của khách hàng.
+  - Hỗ trợ lưu thông tin profile và danh sách địa chỉ nhận hàng.
+- `compareStore.js`:
+  - Cho phép lưu tối đa 4 sản phẩm vào hàng đợi so sánh. Hiển thị thanh `CompareBar` nổi bật ở đáy màn hình.
 
-Admin (.env):
-```
-VITE_API_URL=http://localhost:5000/api/v1
+---
+
+### 4.6 Tổ Chức Component Theo Miền Nghiệp Vụ (Domain-driven Components)
+
+Toàn bộ components trong `client/src/components/` được phân tách theo từng miền chức năng rõ ràng:
+- `cart/`: Chứa toàn bộ các thành phần của trang giỏ hàng (`CartView`, `CartItemList`, `CartOrderSummary`, `CartRewardBar`, `CartVoucherModal`).
+- `product/detail/`: Chứa các mảnh ghép của trang chi tiết sản phẩm (`ProductGallery`, `ProductInfo`, `ProductPromotions`, `ProductSpecsSummary`, `ProductReviewsAndComments`, `StickyPurchaseBar`).
+- `chat/`: Chứa toàn bộ logic và UI của Chatbot AI (`AiChatWidget`, `ChatMessageItem`, `ChatProductCard`, `ChatOrderLookup`).
+- `mascot/`: Chứa các SVG Mascots có chuyển động biểu cảm linh hoạt theo từng trạng thái người dùng.
+- `account/`: Chứa các Tab quản lý hồ sơ, đơn hàng, sổ địa chỉ và trung tâm bảo mật.
+
+---
+
+## 5. Sơ Đồ Các Luồng Nghiệp Vụ Trọng Tâm (Core Workflows)
+
+### 5.1 Luồng Giỏ Hàng & Đặt Hàng (Cart & Checkout)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as Khách Hàng
+    participant Client as Client Storefront
+    participant BE as Backend Cart & Order Service
+    participant GHN as GHN Logistics API
+    participant DB as MongoDB Database
+
+    User->>Client: Bấm "Thêm vào giỏ"
+    Client->>BE: POST /api/v1/cart/items (variantId, quantity)
+    BE->>DB: Kiểm tra tồn kho variant & Cập nhật Cart
+    BE-->>Client: Trả về Giỏ hàng mới nhất
+    Client-->>User: Cập nhật Cart Badge & Mở Mini Cart Drawer
+
+    User->>Client: Chọn Voucher & Nhập Địa chỉ nhận hàng
+    Client->>BE: POST /api/v1/shipping/fee (address, weight)
+    BE->>GHN: Tính phí ship chuẩn xác theo địa chỉ & cân nặng
+    GHN-->>BE: Phí ship thực tế
+    BE-->>Client: Trả về Phí vận chuyển & Số tiền giảm trừ
+
+    User->>Client: Bấm "Xác Nhận Đặt Hàng"
+    Client->>BE: POST /api/v1/orders (cartId, paymentMethod, address)
+    BE->>DB: Tạo Order, trừ tồn kho variant, tạo StockMovement 'OUT'
+    alt Thanh toán VietQR
+        BE-->>Client: Trả về VietQR Dynamic URL kèm mã đơn hàng
+        Client-->>User: Hiển thị Mã QR chuyển khoản ngân hàng
+    else Thanh toán COD
+        BE-->>Client: Trả về Đơn hàng thành công
+        Client-->>User: Chuyển hướng tới trang Đặt Hàng Thành Công
+    end
 ```
 
 ---
 
-## 7. Flow thêm feature mới (end-to-end)
+### 5.2 Luồng Quản Lý Sổ Kho & Biến Động (Stock Movement Flow)
 
-Ví dụ thêm "Supplier Ratings":
-
-BE:
-1. `models/supplierRating.model.js`
-2. `services/supplierRating.service.js`
-3. `controllers/supplierRating.controller.js`
-4. `validators/supplierRating.validator.js`
-5. `routes/supplierRating.routes.js`
-6. Mount vào `routes/index.js`
-
-Admin:
-1. `services/supplierRating.service.js`
-2. `hooks/useSupplierRatings.js`
-3. `pages/suppliers/SupplierRatingPage.jsx`
-4. Thêm route vào `router/index.jsx`
-5. Thêm link vào sidebar
-
----
-
-## 8. Models quan trọng
-
-| Model                     | Chức năng chính                                          |
-|---------------------------|----------------------------------------------------------|
-| product.model.js          | Sản phẩm, specifications[], media refs, variants ref     |
-| productVariant.model.js   | Biến thể: SKU, giá, stock, options, images               |
-| category.model.js         | Tree: parentId, slug, level                              |
-| purchaseOrder.model.js    | Đơn đặt hàng, items[], status workflow                   |
-| stockReceiving.model.js   | Phiếu nhập kho, link PO                                  |
-| stockExport.model.js      | Phiếu xuất kho                                           |
-| stockAudit.model.js       | Kiểm kê tồn kho                                          |
-| user.model.js             | User + địa chỉ + refresh token store                     |
-| role.model.js             | Role → permissions[]                                     |
-| media.model.js            | File Cloudinary: url, publicId, folderId                 |
-| menu.model.js             | Navigation menu với items tree                           |
+```mermaid
+graph TD
+    A[Sự Kiện Thay Đổi Kho] --> B{Loại Nghiệp Vụ?}
+    
+    B -->|Nhập Hàng từ NCC| C[Stock Receiving]
+    B -->|Bán Hàng Cho Khách| D[Customer Order]
+    B -->|Kiểm Kê Lệch Tồn| E[Stock Audit Balance]
+    B -->|Trả Hàng NCC| F[Purchase Return]
+    B -->|Xuất Hủy / Hao Hụt| G[Stock Export]
+    
+    C -->|Cộng Tồn Kho| H[Cập nhật ProductVariant.stock]
+    D -->|Trừ Tồn Kho| H
+    E -->|Cân Bằng Tồn Kho| H
+    F -->|Trừ Tồn Kho| H
+    G -->|Trừ Tồn Kho| H
+    
+    H --> I[Ghi nhận vào StockMovement Ledger]
+    I --> J[Lưu trữ: Tồn Trước -> Thay Đổi -> Tồn Sau -> Mã Chứng Từ -> Nhân Viên Thực Hiện]
+    I --> K[Quét Ngưỡng: Kích hoạt StockAlert nếu tồn < định mức tối thiểu]
+```
 
 ---
 
-## 9. Shared utilities đã có
+### 5.3 Luồng Trợ Lý AI Chatbot RAG SSE Streaming
 
-| File                                  | Export                                                    |
-|---------------------------------------|-----------------------------------------------------------|
-| utils/treeUtils.js                    | flattenTree, buildTree, buildNodeMap, buildBreadcrumb,    |
-|                                       | buildRelationMaps, getAncestors, getDescendants,          |
-|                                       | getDepth, flattenFolders                                  |
-| components/ui/PriceInput.jsx          | default PriceInput, named formatVND, parseVND             |
-| components/products/SpecsEditor.jsx   | default SpecsEditor (prop: specs, onChange, showGroup)    |
-| components/products/SortableGalleryItem.jsx | default SortableGalleryItem (prop: id, url, idx,   |
-|                                       | onRemove, size='md'|'sm')                                 |
-| hooks/useModalSet.js                  | useModalSet(keys[]) → { open, close, isOpen, data, props }|
-| hooks/useRoles.js                     | useRoles, usePermissions, useCreateRole, useUpdateRole,   |
-|                                       | useDeleteRole, useSeedFullPermissions                     |
-| hooks/usePOCreateForm.js              | usePOCreateForm() → step, items, addItem, removeItem,     |
-|                                       | updateItem, autoFillAll, totalQuantity, totalAmount       |
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Customer as Khách Hàng
+    participant ChatWidget as AiChatWidget (Client)
+    participant BE as Backend Chatbot Service
+    participant Mongo as MongoDB Catalog
+    participant LLM as Groq Llama-3 / Google Gemini
+
+    Customer->>ChatWidget: Nhập: "Tìm giúp tôi tủ lạnh 4 cánh dưới 20 triệu"
+    ChatWidget->>BE: GET /api/v1/chatbot/stream?message=... (SSE Request)
+    BE->>Mongo: Query sản phẩm thỏa mãn: category='Tủ lạnh', specs.doors=4, price <= 20000000
+    Mongo-->>BE: Danh sách 3 sản phẩm phù hợp thực tế + tồn kho + giá khuyến mãi
+    BE->>LLM: Gửi System Prompt + Dữ liệu sản phẩm thực tế + Câu hỏi khách hàng
+    
+    loop Server-Sent Events (SSE Stream)
+        LLM-->>BE: Stream từng Token từ phản hồi
+        BE-->>ChatWidget: data: {"type": "token", "content": "Dạ..."}
+        ChatWidget-->>Customer: Hiển thị chữ gõ phím trực tiếp
+    end
+    
+    BE->>ChatWidget: data: {"type": "products", "items": [ProductCards]}
+    ChatWidget-->>Customer: Render Card sản phẩm có nút "Xem chi tiết" & "Mua ngay"
+```
 
 ---
 
-*Cập nhật: 2026-09-03*
+### 5.4 Luồng Gợi Ý Cá Nhân Hóa (Recommendation Pipeline)
+
+```mermaid
+graph LR
+    subgraph 1. Thu Thập Tín Hiệu (Client & BE)
+        A1[User Click/View] --> B[UserInteraction Model]
+        A2[Add to Cart] --> B
+        A3[Order Purchase] --> B
+        A4[Search Query] --> B
+    end
+    
+    subgraph 2. Xử Lý Máy Học (Python ML Engine)
+        B -->|Cron Job Export CSV| C[interactions.csv]
+        C --> D[matrix_factorization.py]
+        D -->|Tính toán ALS/SVD| E[Item Similarity Matrix]
+    end
+    
+    subgraph 3. Phục Vụ Trực Tiếp (MongoDB & API)
+        E -->|Sync| F[ItemSimilarity & PersonalizedRecommendation Models]
+        F --> G[recommendation.service.js]
+        G --> H[Client Carousel: "Gợi ý cho bạn", "Sản phẩm tương tự", "Mua kèm"]
+    end
+```

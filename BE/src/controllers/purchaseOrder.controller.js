@@ -90,13 +90,7 @@ const downloadExcelSlip = async (req, res, next) => {
 
 const previewExcelSlip = async (req, res, next) => {
   try {
-    const tempPO = await PurchaseOrderService.createPurchaseOrder(
-      { ...req.body, status: 'draft' },
-      req.user._id
-    );
-    const { workbook } = await PurchaseOrderService.generateExcelSlip(tempPO._id);
-    const PurchaseOrderModel = require('../models/purchaseOrder.model');
-    await PurchaseOrderModel.findByIdAndDelete(tempPO._id);
+    const { workbook } = await PurchaseOrderService.previewExcelSlip(req.body, req.user._id);
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     await workbook.xlsx.write(res);
@@ -135,6 +129,34 @@ const sendPOToSupplier = async (req, res, next) => {
   }
 };
 
+const recordPOPayment = async (req, res, next) => {
+  try {
+    const result = await PurchaseOrderService.recordPOPayment(
+      req.params.id,
+      req.body,
+      req.user._id
+    );
+
+    recordAuditLog({
+      req,
+      user: req.user,
+      action: 'UPDATE',
+      module: 'PURCHASE_ORDER',
+      targetId: result.po._id,
+      targetName: `${result.po.poNumber} — Thanh toán ${Number(req.body.amount || 0).toLocaleString('vi-VN')}đ`,
+      newData: result,
+    }).catch(() => {});
+
+    res.json({
+      status: 'success',
+      data: result,
+      message: 'Xác nhận thanh toán đơn nhập kho thành công',
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   getPurchaseOrders,
   getPurchaseOrderById,
@@ -144,5 +166,6 @@ module.exports = {
   previewExcelSlip,
   previewPOEmail,
   sendPOToSupplier,
+  recordPOPayment,
 };
 

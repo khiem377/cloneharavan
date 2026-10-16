@@ -3,6 +3,7 @@ import {
   FileCheck, Plus, SearchIcon as Search, Download, CheckCircle2, Clock,
   Send, XCircle, Eye, Building2, Truck, PackageCheck, ClipboardCheck,
   ShieldCheck, FileSpreadsheet, RotateCcw, ArrowUpDown, ArrowUp, ArrowDown, X,
+  CreditCard,
 } from '@/components/ui/Icons';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
@@ -10,6 +11,7 @@ import {
   useUpdatePurchaseOrderStatus,
 } from '@/hooks/useInventory';
 import { inventoryService } from '@/services/inventory.service';
+import { warehouseService } from '@/services/warehouse.service';
 import DataTablePagination from '@/components/ui/DataTablePagination';
 import Can from '@/components/auth/Can';
 import SearchableSelect from '@/components/ui/SearchableSelect';
@@ -17,6 +19,7 @@ import { toast } from '@/providers/ToastProvider';
 import ExcelPreviewModal from '@/components/common/ExcelPreviewModal';
 import SendPOModal from '@/components/inventory/SendPOModal';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import PurchaseOrderPaymentModal from './components/PurchaseOrderPaymentModal';
 import { useQueryClient } from '@tanstack/react-query';
 import { useModalSet } from '@/hooks/useModalSet';
 
@@ -29,10 +32,12 @@ import { Card } from '@/components/ui/card';
 const PO_COLUMNS = [
   { id: 'stt', label: 'STT', defaultVisible: true },
   { id: 'poNumber', label: 'Mã Đơn PO', defaultVisible: true, alwaysVisible: true },
+  { id: 'warehouse', label: 'Kho Nhập', defaultVisible: true },
   { id: 'supplier', label: 'Nhà Cung Cấp', defaultVisible: true },
   { id: 'itemCount', label: 'Số Loại SP', defaultVisible: true },
   { id: 'totalQuantity', label: 'Tổng SL', defaultVisible: true },
   { id: 'totalAmount', label: 'Tổng Giá Nhập', defaultVisible: true },
+  { id: 'paymentStatus', label: 'Thanh Toán', defaultVisible: true },
   { id: 'status', label: 'Trạng Thái', defaultVisible: true },
   { id: 'stepper', label: 'Nấc Tiến Quy Trình', defaultVisible: true },
   { id: 'actions', label: 'Xem & Tải Excel', defaultVisible: true, alwaysVisible: true },
@@ -43,6 +48,8 @@ export default function PurchaseOrderListPage() {
   const queryClient = useQueryClient();
   const [keyword, setKeyword] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [warehouseFilter, setWarehouseFilter] = useState('');
+  const [warehouses, setWarehouses] = useState([]);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [downloadingId, setDownloadingId] = useState(null);
@@ -52,7 +59,7 @@ export default function PurchaseOrderListPage() {
   const [sortOrder, setSortOrder] = useState('desc');
 
   // Modal state — managed by useModalSet
-  const modal = useModalSet(['detail', 'excelPreview', 'sendPO', 'confirm']);
+  const modal = useModalSet(['detail', 'excelPreview', 'sendPO', 'confirm', 'payment']);
 
   // Convenience shorthands
   const detailModalOpen   = modal.isOpen('detail');
@@ -63,21 +70,37 @@ export default function PurchaseOrderListPage() {
   const previewTitle      = previewData.title || '';
   const sendPOModalOpen   = modal.isOpen('sendPO');
   const selectedPOToSend  = modal.data('sendPO');
+  const paymentModalOpen  = modal.isOpen('payment');
+  const selectedPOToPay   = modal.data('payment');
   const confirmModal      = {
     open: modal.isOpen('confirm'),
     ...(modal.data('confirm') || {}),
   };
 
   const handleOpenPoDetail = (po) => modal.open('detail', po);
+  const handleOpenPayment  = (po) => modal.open('payment', po);
 
   const columnVisibility = useColumnVisibility('admin_po_columns', PO_COLUMNS);
   const { isColumnVisible } = columnVisibility;
+
+  useEffect(() => {
+    const loadWh = async () => {
+      try {
+        const res = await warehouseService.getWarehouses();
+        setWarehouses(res.data?.data?.data || []);
+      } catch (e) {
+        console.warn('Lỗi tải danh sách kho:', e);
+      }
+    };
+    loadWh();
+  }, []);
 
   const { data: res = {}, isLoading } = usePurchaseOrders({
     page,
     limit: pageSize,
     keyword,
     status: statusFilter,
+    warehouseId: warehouseFilter || undefined,
   });
 
   const orders = res.data || [];
@@ -214,44 +237,77 @@ export default function PurchaseOrderListPage() {
     switch (st) {
       case 'completed':
         return (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+          <span className="inline-flex items-center gap-1.5 rounded-[6px] border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
             <CheckCircle2 className="h-3.5 w-3.5" /> 6. Đã Nhập Kho (Hoàn Tất)
           </span>
         );
       case 'inspecting':
         return (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-purple-500/10 px-2.5 py-1 text-xs font-semibold text-purple-600 dark:text-purple-400 whitespace-nowrap">
+          <span className="inline-flex items-center gap-1.5 rounded-[6px] border border-purple-500/20 bg-purple-500/10 px-2.5 py-1 text-xs font-semibold text-purple-600 dark:text-purple-400 whitespace-nowrap">
             <ClipboardCheck className="h-3.5 w-3.5" /> 5. Đang Kiểm Hàng
           </span>
         );
       case 'arrived':
         return (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-cyan-500/10 px-2.5 py-1 text-xs font-semibold text-cyan-600 dark:text-cyan-400 whitespace-nowrap">
+          <span className="inline-flex items-center gap-1.5 rounded-[6px] border border-cyan-500/20 bg-cyan-500/10 px-2.5 py-1 text-xs font-semibold text-cyan-600 dark:text-cyan-400 whitespace-nowrap">
             <PackageCheck className="h-3.5 w-3.5" /> 4. Đã Đến Kho
           </span>
         );
       case 'in_transit':
         return (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-500/10 px-2.5 py-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400 whitespace-nowrap">
+          <span className="inline-flex items-center gap-1.5 rounded-[6px] border border-indigo-500/20 bg-indigo-500/10 px-2.5 py-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400 whitespace-nowrap">
             <Truck className="h-3.5 w-3.5" /> 3. Đang Vận Chuyển
           </span>
         );
       case 'sent':
         return (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-500/10 px-2.5 py-1 text-xs font-semibold text-blue-600 dark:text-blue-400 whitespace-nowrap">
+          <span className="inline-flex items-center gap-1.5 rounded-[6px] border border-blue-500/20 bg-blue-500/10 px-2.5 py-1 text-xs font-semibold text-blue-600 dark:text-blue-400 whitespace-nowrap">
             <Send className="h-3.5 w-3.5" /> 2. Đã Gửi NCC
           </span>
         );
       case 'cancelled':
         return (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-red-500/10 px-2.5 py-1 text-xs font-semibold text-red-600 dark:text-red-400 whitespace-nowrap">
+          <span className="inline-flex items-center gap-1.5 rounded-[6px] border border-red-500/20 bg-red-500/10 px-2.5 py-1 text-xs font-semibold text-red-600 dark:text-red-400 whitespace-nowrap">
             <XCircle className="h-3.5 w-3.5" /> Đã Hủy
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-600 dark:text-amber-400 whitespace-nowrap">
+          <span className="inline-flex items-center gap-1.5 rounded-[6px] border border-amber-500/20 bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-600 dark:text-amber-400 whitespace-nowrap">
             <Clock className="h-3.5 w-3.5" /> 1. Bản Nháp (Đã Tạo)
+          </span>
+        );
+    }
+  };
+
+  const renderPaymentBadge = (po) => {
+    const total = Number(po.totalAmount || 0);
+    const paid = Number(po.paidAmount || 0);
+    const rem = Math.max(0, total - paid);
+    const st = po.paymentStatus || (rem === 0 && total > 0 ? 'paid' : (paid > 0 ? 'partially_paid' : 'unpaid'));
+
+    switch (st) {
+      case 'paid':
+        return (
+          <span className="inline-flex items-center gap-1 rounded-[6px] border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+            <CheckCircle2 className="size-3" /> Đã thanh toán
+          </span>
+        );
+      case 'partially_paid':
+        return (
+          <div className="inline-flex flex-col items-center">
+            <span className="inline-flex items-center gap-1 rounded-[6px] border border-blue-500/20 bg-blue-500/10 px-2 py-0.5 text-[11px] font-semibold text-blue-600 dark:text-blue-400 whitespace-nowrap">
+              Trả 1 phần
+            </span>
+            <span className="text-[10px] font-mono text-muted-foreground tabular-nums">
+              Còn {rem.toLocaleString('vi-VN')} đ
+            </span>
+          </div>
+        );
+      default:
+        return (
+          <span className="inline-flex items-center gap-1 rounded-[6px] border border-amber-500/20 bg-amber-500/10 px-2.5 py-0.5 text-xs font-semibold text-amber-600 dark:text-amber-400 whitespace-nowrap">
+            <Clock className="size-3" /> Chưa thanh toán
           </span>
         );
     }
@@ -270,38 +326,87 @@ export default function PurchaseOrderListPage() {
         );
       case 'sent':
         return (
-          <button
-            onClick={() => handleAdvanceStatus(po, 'in_transit')}
-            className="inline-flex items-center gap-1.5 rounded-[6px] bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700 shadow-xs transition-transform active:scale-[0.98] whitespace-nowrap cursor-pointer"
-          >
-            <Truck className="size-3.5" /> Vận Chuyển Hàng
-          </button>
+          <div className="flex items-center gap-1.5 justify-center">
+            <button
+              onClick={() => navigate(`/stock-receivings/create?poId=${po._id}`)}
+              className="inline-flex items-center gap-1 rounded-[6px] bg-emerald-600 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 shadow-xs transition-transform active:scale-[0.98] whitespace-nowrap cursor-pointer"
+              title="Lập phiếu nhập kho trực tiếp"
+            >
+              <FileCheck className="size-3.5" /> Nhập Kho
+            </button>
+            <button
+              onClick={() => handleAdvanceStatus(po, 'in_transit')}
+              className="inline-flex items-center gap-1 rounded-[6px] border border-input bg-background px-2 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted transition-transform active:scale-[0.98] whitespace-nowrap cursor-pointer"
+              title="Chuyển trạng thái sang Vận chuyển"
+            >
+              <Truck className="size-3.5 text-indigo-500" />
+            </button>
+          </div>
         );
       case 'in_transit':
         return (
-          <button
-            onClick={() => handleAdvanceStatus(po, 'arrived')}
-            className="inline-flex items-center gap-1.5 rounded-[6px] bg-cyan-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-cyan-700 shadow-xs transition-transform active:scale-[0.98] whitespace-nowrap cursor-pointer"
-          >
-            <PackageCheck className="size-3.5" /> Đến Kho Thành Phẩm
-          </button>
+          <div className="flex items-center gap-1.5 justify-center">
+            <button
+              onClick={() => navigate(`/stock-receivings/create?poId=${po._id}`)}
+              className="inline-flex items-center gap-1 rounded-[6px] bg-emerald-600 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 shadow-xs transition-transform active:scale-[0.98] whitespace-nowrap cursor-pointer"
+              title="Lập phiếu nhập kho trực tiếp"
+            >
+              <FileCheck className="size-3.5" /> Nhập Kho
+            </button>
+            <button
+              onClick={() => handleAdvanceStatus(po, 'arrived')}
+              className="inline-flex items-center gap-1 rounded-[6px] border border-input bg-background px-2 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted transition-transform active:scale-[0.98] whitespace-nowrap cursor-pointer"
+              title="Đã đến kho"
+            >
+              <PackageCheck className="size-3.5 text-cyan-500" />
+            </button>
+          </div>
         );
       case 'arrived':
         return (
-          <button
-            onClick={() => handleAdvanceStatus(po, 'inspecting')}
-            className="inline-flex items-center gap-1.5 rounded-[6px] bg-purple-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-purple-700 shadow-xs transition-transform active:scale-[0.98] whitespace-nowrap cursor-pointer"
-          >
-            <ClipboardCheck className="size-3.5" /> Bắt Đầu Kiểm Hàng
-          </button>
+          <div className="flex items-center gap-1.5 justify-center">
+            <button
+              onClick={() => navigate(`/stock-receivings/create?poId=${po._id}`)}
+              className="inline-flex items-center gap-1 rounded-[6px] bg-emerald-600 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 shadow-xs transition-transform active:scale-[0.98] whitespace-nowrap cursor-pointer"
+              title="Lập phiếu nhập kho trực tiếp"
+            >
+              <FileCheck className="size-3.5" /> Nhập Kho
+            </button>
+            <button
+              onClick={() => handleAdvanceStatus(po, 'inspecting')}
+              className="inline-flex items-center gap-1 rounded-[6px] border border-input bg-background px-2 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted transition-transform active:scale-[0.98] whitespace-nowrap cursor-pointer"
+              title="Bắt đầu kiểm hàng"
+            >
+              <ClipboardCheck className="size-3.5 text-purple-500" />
+            </button>
+          </div>
         );
       case 'inspecting':
         return (
+          <div className="flex items-center gap-1.5 justify-center">
+            <button
+              onClick={() => navigate(`/stock-receivings/create?poId=${po._id}`)}
+              className="inline-flex items-center gap-1 rounded-[6px] bg-emerald-600 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 shadow-xs transition-transform active:scale-[0.98] whitespace-nowrap cursor-pointer"
+              title="Lập phiếu nhập kho trực tiếp"
+            >
+              <FileCheck className="size-3.5" /> Lập PNK
+            </button>
+            <button
+              onClick={() => handleAdvanceStatus(po, 'completed')}
+              className="inline-flex items-center gap-1 rounded-[6px] border border-emerald-500/30 bg-emerald-500/10 px-2 py-1.5 text-xs font-bold text-emerald-600 hover:bg-emerald-500/20 transition-transform active:scale-[0.98] whitespace-nowrap cursor-pointer"
+              title="Nghiệm thu toàn bộ & Nhập kho ngay"
+            >
+              <CheckCircle2 className="size-3.5" /> Hoàn tất
+            </button>
+          </div>
+        );
+      case 'partial_received':
+        return (
           <button
-            onClick={() => handleAdvanceStatus(po, 'completed')}
+            onClick={() => navigate(`/stock-receivings/create?poId=${po._id}`)}
             className="inline-flex items-center gap-1.5 rounded-[6px] bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 shadow-xs transition-transform active:scale-[0.98] whitespace-nowrap cursor-pointer"
           >
-            <CheckCircle2 className="size-3.5" /> Xác Nhận & Nhập Kho
+            <FileCheck className="size-3.5" /> Lập PNK Đợt Tiếp
           </button>
         );
       case 'completed':
@@ -381,7 +486,25 @@ export default function PurchaseOrderListPage() {
             />
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="w-56">
+              <select
+                value={warehouseFilter}
+                onChange={(e) => {
+                  setWarehouseFilter(e.target.value);
+                  setPage(1);
+                }}
+                className="w-full h-9 px-3 text-xs bg-background rounded-[6px] border border-input focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+              >
+                <option value="">Tất cả kho nhận hàng</option>
+                {warehouses.map((w) => (
+                  <option key={w._id} value={w._id}>
+                    {w.name} {w.isDefault ? '(Kho mặc định)' : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <div className="w-64">
               <SearchableSelect
                 options={[
@@ -416,11 +539,13 @@ export default function PurchaseOrderListPage() {
               <tr>
                 {isColumnVisible('stt') && <th className="px-4 py-3.5 text-center w-12 whitespace-nowrap">STT</th>}
                 {isColumnVisible('poNumber') && renderSortHeader('poNumber', 'Mã Đơn PO', 'left', 'w-36')}
+                {isColumnVisible('warehouse') && <th className="px-4 py-3.5 whitespace-nowrap text-left text-xs uppercase text-muted-foreground font-semibold">Kho Nhập</th>}
                 {isColumnVisible('supplier') && renderSortHeader('supplierId', 'Nhà Cung Cấp', 'left', 'min-w-[220px]')}
                 {isColumnVisible('itemCount') && renderSortHeader('itemCount', 'Số Loại SP', 'center', 'w-24')}
                 {isColumnVisible('totalQuantity') && renderSortHeader('totalQuantity', 'Tổng SL', 'center', 'w-24')}
                 {isColumnVisible('totalAmount') && renderSortHeader('totalAmount', 'Tổng Giá Nhập', 'right', 'w-36')}
-                {isColumnVisible('status') && renderSortHeader('status', 'Trạng Thái Hiện Tại', 'center', 'w-48')}
+                {isColumnVisible('paymentStatus') && <th className="px-4 py-3.5 whitespace-nowrap w-40 text-center">Thanh Toán</th>}
+                {isColumnVisible('status') && renderSortHeader('status', 'Trạng Thái Kho', 'center', 'w-48')}
                 {isColumnVisible('stepper') && <th className="px-4 py-3.5 whitespace-nowrap w-48 text-center">Nấc Tiến Quy Trình</th>}
                 {isColumnVisible('actions') && <th className="px-4 py-3.5 whitespace-nowrap w-56 text-right">Xem & Tải Excel</th>}
               </tr>
@@ -457,6 +582,11 @@ export default function PurchaseOrderListPage() {
                         </button>
                       </td>
                     )}
+                    {isColumnVisible('warehouse') && (
+                      <td className="px-4 py-3.5 whitespace-nowrap text-xs font-medium text-foreground">
+                        {po.warehouseId?.name || 'Kho Tổng Bình Tân'}
+                      </td>
+                    )}
                     {isColumnVisible('supplier') && (
                       <td className="px-4 py-3.5 font-medium text-foreground">
                         <div className="flex items-center gap-2">
@@ -483,6 +613,27 @@ export default function PurchaseOrderListPage() {
                       </td>
                     )}
 
+                    {/* Payment Status Column */}
+                    {isColumnVisible('paymentStatus') && (
+                      <td className="px-4 py-3.5 text-center whitespace-nowrap">
+                        <div className="flex items-center justify-center gap-1.5">
+                          {renderPaymentBadge(po)}
+                          {po.status !== 'cancelled' && (po.totalAmount - (po.paidAmount || 0)) > 0 && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenPayment(po);
+                              }}
+                              className="p-1 rounded-[4px] border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 transition-colors cursor-pointer"
+                              title="Xác nhận thanh toán ngay"
+                            >
+                              <CreditCard className="size-3" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    )}
+
                     {/* Current Status Badge */}
                     {isColumnVisible('status') && (
                       <td className="px-4 py-3.5 text-center whitespace-nowrap">{renderStatusBadge(po.status)}</td>
@@ -497,7 +648,17 @@ export default function PurchaseOrderListPage() {
 
                     {isColumnVisible('actions') && (
                       <td className="px-4 py-3.5 text-right whitespace-nowrap">
-                        <div className="flex items-center justify-end gap-2">
+                        <div className="flex items-center justify-end gap-1.5">
+                          {['sent', 'in_transit', 'arrived', 'inspecting', 'partial_received'].includes(po.status) && (
+                            <button
+                              onClick={() => navigate(`/stock-receivings/create?poId=${po._id}`)}
+                              className="inline-flex items-center gap-1 rounded-[6px] bg-emerald-600 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 transition-transform active:scale-[0.98] shadow-xs cursor-pointer"
+                              title="Tạo phiếu nhập kho ngay từ đơn mua hàng này"
+                            >
+                              <FileCheck className="size-3.5" /> Lập PNK
+                            </button>
+                          )}
+
                           <button
                             onClick={() => handlePreviewExcelOnWeb(po)}
                             className="inline-flex items-center gap-1 rounded-[6px] border border-primary/30 bg-primary/10 px-2.5 py-1.5 text-xs font-semibold text-primary hover:bg-primary/20 transition-transform active:scale-[0.98] cursor-pointer"
@@ -593,7 +754,11 @@ export default function PurchaseOrderListPage() {
             {/* Content */}
             <div className="p-6 space-y-6 overflow-y-auto flex-1">
               {/* Info Grid */}
-              <div className="grid grid-cols-2 gap-4 rounded-[6px] border border-border bg-card p-4 text-xs sm:grid-cols-4 shadow-2xs">
+              <div className="grid grid-cols-2 gap-4 rounded-[6px] border border-border bg-card p-4 text-xs sm:grid-cols-5 shadow-2xs">
+                <div>
+                  <span className="text-muted-foreground">Kho nhận hàng:</span>
+                  <p className="font-bold text-primary truncate">{selectedPoDetail.warehouseId?.name || 'Kho Tổng Bình Tân'}</p>
+                </div>
                 <div>
                   <span className="text-muted-foreground">Mã nhà cung cấp:</span>
                   <p className="font-mono font-bold text-foreground">{selectedPoDetail.supplierId?.code || 'NCC-01'}</p>
@@ -646,6 +811,53 @@ export default function PurchaseOrderListPage() {
                   </table>
                 </div>
               </div>
+
+              {/* TRẠNG THÁI THANH TOÁN (SAPO STYLE PAYMENT CARD) */}
+              <div className="space-y-3">
+                <div className="rounded-[6px] border border-border bg-card p-4 space-y-3 shadow-2xs">
+                  <div className="flex items-center justify-between border-b border-border pb-2.5">
+                    <div className="flex items-center gap-2">
+                      <CreditCard className="size-4 text-primary" />
+                      <h3 className="text-xs font-bold text-foreground">Trạng Thái Thanh Toán Cho Nhà Cung Cấp</h3>
+                    </div>
+                    {renderPaymentBadge(selectedPoDetail)}
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                    <div className="rounded-[4px] bg-muted/40 p-2.5 border border-border/50">
+                      <span className="text-muted-foreground block text-[11px]">Tổng giá trị đơn:</span>
+                      <span className="font-mono font-bold text-foreground text-sm tabular-nums">
+                        {(selectedPoDetail.totalAmount || 0).toLocaleString('vi-VN')} đ
+                      </span>
+                    </div>
+
+                    <div className="rounded-[4px] bg-muted/40 p-2.5 border border-border/50">
+                      <span className="text-muted-foreground block text-[11px]">Đã thanh toán:</span>
+                      <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-sm tabular-nums">
+                        {(selectedPoDetail.paidAmount || 0).toLocaleString('vi-VN')} đ
+                      </span>
+                    </div>
+
+                    <div className="rounded-[4px] bg-primary/5 p-2.5 border border-primary/20">
+                      <span className="text-muted-foreground block text-[11px]">Tiền còn cần trả NCC:</span>
+                      <span className="font-mono font-bold text-primary text-sm tabular-nums">
+                        {Math.max(0, (selectedPoDetail.totalAmount || 0) - (selectedPoDetail.paidAmount || 0)).toLocaleString('vi-VN')} đ
+                      </span>
+                    </div>
+                  </div>
+
+                  {selectedPoDetail.status !== 'cancelled' && (selectedPoDetail.totalAmount - (selectedPoDetail.paidAmount || 0)) > 0 && (
+                    <div className="flex justify-end pt-1">
+                      <button
+                        onClick={() => handleOpenPayment(selectedPoDetail)}
+                        className="inline-flex items-center gap-1.5 rounded-[6px] bg-primary px-3.5 py-1.5 text-xs font-bold text-primary-foreground shadow-xs hover:bg-primary/90 active:scale-[0.98] transition-transform cursor-pointer"
+                      >
+                        <CreditCard className="size-3.5" /> Xác Nhận Thanh Toán
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
 
             {/* Bottom Actions */}
@@ -664,17 +876,61 @@ export default function PurchaseOrderListPage() {
                 >
                   <FileSpreadsheet className="size-3.5" /> Preview Mẫu Đơn Đặt Hàng Excel
                 </button>
-                <button
-                  onClick={() => navigate(`/stock-receivings/create?poId=${selectedPoDetail._id}`)}
-                  className="inline-flex items-center gap-1.5 rounded-[6px] bg-emerald-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-emerald-700 active:scale-[0.98] cursor-pointer"
-                >
-                  <FileCheck className="size-3.5" /> Lập Phiếu Nhập Kho (PNK)
-                </button>
+
+                {selectedPoDetail.status === 'draft' && (
+                  <button
+                    onClick={() => {
+                      modal.close('detail');
+                      handleOpenSendPOModal(selectedPoDetail);
+                    }}
+                    className="inline-flex items-center gap-1.5 rounded-[6px] bg-blue-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-blue-700 active:scale-[0.98] cursor-pointer"
+                  >
+                    <Send className="size-3.5" /> Gửi PO Cho NCC
+                  </button>
+                )}
+
+                {['sent', 'in_transit', 'arrived', 'inspecting', 'partial_received'].includes(selectedPoDetail.status) && (
+                  <button
+                    onClick={() => navigate(`/stock-receivings/create?poId=${selectedPoDetail._id}`)}
+                    className="inline-flex items-center gap-1.5 rounded-[6px] bg-emerald-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-emerald-700 active:scale-[0.98] cursor-pointer"
+                  >
+                    <FileCheck className="size-3.5" /> Lập Phiếu Nhập Kho (PNK)
+                  </button>
+                )}
+
+                {selectedPoDetail.status !== 'cancelled' && (selectedPoDetail.totalAmount - (selectedPoDetail.paidAmount || 0)) > 0 && (
+                  <button
+                    onClick={() => handleOpenPayment(selectedPoDetail)}
+                    className="inline-flex items-center gap-1.5 rounded-[6px] border border-primary/30 bg-primary/10 px-3.5 py-1.5 text-xs font-bold text-primary hover:bg-primary/20 active:scale-[0.98] cursor-pointer"
+                  >
+                    <CreditCard className="size-3.5" /> Thanh Toán
+                  </button>
+                )}
               </div>
             </div>
           </div>
         </div>
       )}
+
+      {/* Quick Payment Modal for PO */}
+      <PurchaseOrderPaymentModal
+        po={selectedPOToPay}
+        open={paymentModalOpen}
+        onClose={() => modal.close('payment')}
+        onSuccess={async () => {
+          queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
+          if (selectedPoDetail && selectedPOToPay && selectedPoDetail._id === selectedPOToPay._id) {
+            try {
+              const refreshed = await inventoryService.getPurchaseOrderById(selectedPoDetail._id);
+              if (refreshed.data?.data) {
+                modal.open('detail', refreshed.data.data);
+              }
+            } catch (e) {
+              console.warn('Refetch PO detail error:', e);
+            }
+          }
+        }}
+      />
     </div>
   );
 }

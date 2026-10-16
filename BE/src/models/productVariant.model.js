@@ -95,6 +95,16 @@ const productVariantSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    weight: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    dimensions: {
+      length: { type: Number, default: 0, min: 0 },
+      width: { type: Number, default: 0, min: 0 },
+      height: { type: Number, default: 0, min: 0 },
+    },
     // Override fields — null = kế thừa từ sản phẩm cha
     nameOverride: { type: String, default: null },
     descriptionOverride: { type: String, default: null },
@@ -105,6 +115,28 @@ const productVariantSchema = new mongoose.Schema(
         value: { type: String, required: true },
       },
     ],
+    // Bảng giá bán sỉ theo bậc số lượng
+    wholesaleTiers: [
+      {
+        minQuantity: { type: Number, required: true, min: 2 },
+        price: { type: Number, required: true, min: 0 },
+        discountPercent: { type: Number, default: 0 },
+      },
+    ],
+    // Quản lý lô hàng & Hạn sử dụng
+    batchNumber: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+    manufacturingDate: {
+      type: Date,
+      default: null,
+    },
+    expiryDate: {
+      type: Date,
+      default: null,
+    },
   },
   { timestamps: true }
 );
@@ -125,6 +157,8 @@ productVariantSchema.pre('save', function () {
 
 productVariantSchema.index({ productId: 1, sku: 1 });
 productVariantSchema.index({ productId: 1, isDefault: 1 });
+productVariantSchema.index({ sku: 1 });
+productVariantSchema.index({ isActive: 1, stock: 1 });
 
 const ProductVariant = mongoose.model('ProductVariant', productVariantSchema);
 module.exports = ProductVariant;

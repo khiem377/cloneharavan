@@ -60,8 +60,13 @@ const errorHandler = (err, req, res, next) => {
 
   res.status(statusCode).json({
     status:     'error',
+    success:    false,
     statusCode,
     message,
+    ...(err.lockUntil && { lockUntil: err.lockUntil }),
+    ...(err.remainingSeconds !== undefined && { remainingSeconds: err.remainingSeconds }),
+    ...(err.remainingAttempts !== undefined && { remainingAttempts: err.remainingAttempts }),
+    ...(err.data && { data: err.data }),
     ...(err.inUsePosts  && { inUsePosts:  err.inUsePosts  }),
     ...(err.inUseMap    && { inUseMap:    err.inUseMap    }),
     ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
