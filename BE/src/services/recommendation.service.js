@@ -1,3 +1,5 @@
+const fs = require('fs');
+const path = require('path');
 const mongoose = require('mongoose');
 const UserInteraction = require('../models/userInteraction.model');
 const PersonalizedRecommendation = require('../models/personalizedRecommendation.model');
@@ -723,6 +725,44 @@ const buildRecommendReason = (product) => {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// INTERACTIONS.CSV — bản sao realtime của dữ liệu thật trong MongoDB
+// Chỉ ghi SAU KHI đã lưu DB thành công (không phải fallback, không sinh dữ liệu giả).
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const INTERACTIONS_CSV_PATH = path.join(__dirname, '../../python-services/data/interactions.csv');
+const CSV_HEADER = 'interaction_id,user_id,session_id,product_id,event_type,weight,timestamp\n';
+
+const formatInteractionCsvRow = (interaction) => {
+  const intId = `INT-${interaction._id.toString().slice(-6).toUpperCase()}`;
+  const userId = interaction.userId ? interaction.userId.toString() : '';
+  const sessionId = interaction.sessionId || '';
+  const productId = (interaction.productId._id || interaction.productId).toString();
+  const eventType = interaction.interactionType;
+  const weight = Number(interaction.weight).toFixed(1);
+  const d = new Date(interaction.timestamp || Date.now());
+  const pad = (n) => String(n).padStart(2, '0');
+  const ts = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  return `${intId},${userId},${sessionId},${productId},${eventType},${weight},${ts}\n`;
+};
+
+// Xếp hàng ghi tuần tự để không đua nhau khi tạo header / append, và không chặn event loop
+let csvWriteChain = Promise.resolve();
+
+const appendInteractionsToCsv = (interactions) => {
+  if (!interactions || interactions.length === 0) return;
+  const rows = interactions.map(formatInteractionCsvRow).join('');
+  csvWriteChain = csvWriteChain
+    .then(async () => {
+      await fs.promises.mkdir(path.dirname(INTERACTIONS_CSV_PATH), { recursive: true });
+      if (!fs.existsSync(INTERACTIONS_CSV_PATH)) {
+        await fs.promises.writeFile(INTERACTIONS_CSV_PATH, CSV_HEADER, 'utf8');
+      }
+      await fs.promises.appendFile(INTERACTIONS_CSV_PATH, rows, 'utf8');
+    })
+    .catch((err) => console.error('[Recommendation] appendInteractionsToCsv error:', err.message));
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // PUBLIC API: recordUserInteraction
 // In-memory cache chống duplicate event (React StrictMode double-fire trong vòng 1.5s)
 const recentInteractionsDedup = new Map();
@@ -780,6 +820,8 @@ const recordUserInteraction = async (data = {}) => {
     },
     timestamp: new Date(),
   });
+
+  appendInteractionsToCsv([interaction]);
 
   // Trigger cron counter để tự động kích hoạt Python ALS batch khi đủ ngưỡng tương tác
   try {
@@ -867,6 +909,7 @@ const recordUserInteractionsBatch = async ({ userId, sessionId, events } = {}) =
     return { received: list.length, saved: 0 };
   }
 
+  appendInteractionsToCsv(saved);
   // Counter chạy nền, không chặn response
   try {
     const { incrementInteractionCounter } = require('../utils/cronJobs');
