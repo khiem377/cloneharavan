@@ -50,6 +50,13 @@ const supplierSchema = new mongoose.Schema(
       type: [String],
       default: [],
     },
+    // Nhân viên phụ trách NCC này
+    assignedStaffId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+      index: true,
+    },
     // Địa chỉ chi tiết (hỗ trợ phân biệt địa chỉ mới 2 cấp và địa chỉ cũ 3 cấp)
     addressType: {
       type: String,

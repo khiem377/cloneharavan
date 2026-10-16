@@ -33,3 +33,19 @@ export const useDeleteSupplier = () => {
     onSuccess: () => qc.invalidateQueries({ queryKey: SUPPLIERS_KEY }),
   });
 };
+
+export const useSupplierActivity = (supplierId, params) =>
+  useQuery({
+    queryKey: ['supplier-activity', supplierId, params],
+    queryFn: () => supplierService.getActivity(supplierId, params).then((r) => r.data?.data || {}),
+    enabled: Boolean(supplierId),
+    staleTime: 15_000,
+    placeholderData: (prev) => prev, // giữ dữ liệu cũ khi đổi kỳ/trang, tránh nháy layout
+  });
+
+export const useSupplierStaffOptions = () =>
+  useQuery({
+    queryKey: ['supplier-staff-options'],
+    queryFn: () => supplierService.getStaffOptions().then((r) => r.data?.data || []),
+    staleTime: 5 * 60 * 1000,
+  });
