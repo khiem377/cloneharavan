@@ -1,11 +1,28 @@
 const orderService = require('../services/order.service');
 
 /**
- * 1. Đặt hàng thanh toán khi nhận hàng (COD) hoặc Mua Ngay
- * POST /api/v1/orders/checkout-cod
- * Bắt buộc Đăng nhập (protect)
+ * 0. Kiểm tra đơn hàng trước khi đặt (Preview Order)
+ * POST /api/v1/orders/preview
  */
-const checkoutCOD = async (req, res, next) => {
+const previewOrder = async (req, res, next) => {
+  try {
+    const preview = await orderService.previewOrder(req.user._id, req.body);
+    res.json({
+      success: true,
+      message: 'Kiểm tra thông tin đơn hàng thành công',
+      data: preview,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * 1. Đặt hàng thanh toán khi nhận hàng (COD) hoặc Mua Ngay
+ * POST /api/v1/orders
+ * POST /api/v1/orders/checkout-cod (alias)
+ */
+const createOrder = async (req, res, next) => {
   try {
     const order = await orderService.createOrderCOD(req.user._id, req.body);
     res.status(201).json({
@@ -20,7 +37,8 @@ const checkoutCOD = async (req, res, next) => {
 
 /**
  * 2. Khách / Shop hủy đơn hàng
- * PATCH /api/v1/orders/:id/cancel
+ * POST /api/v1/orders/:id/cancel
+ * PATCH /api/v1/orders/:id/cancel (alias)
  */
 const cancelOrder = async (req, res, next) => {
   try {
@@ -55,8 +73,26 @@ const getOrderById = async (req, res, next) => {
 };
 
 /**
- * 4. Lấy danh sách đơn hàng của người dùng hiện tại
- * GET /api/v1/orders/my-orders
+ * 4. Kiểm tra trạng thái đơn hàng nhanh
+ * GET /api/v1/orders/:id/status
+ */
+const getOrderStatus = async (req, res, next) => {
+  try {
+    const userId = req.user._id;
+    const statusData = await orderService.getOrderStatus(req.params.id, userId);
+    res.json({
+      success: true,
+      data: statusData,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * 5. Lấy danh sách đơn hàng của người dùng hiện tại
+ * GET /api/v1/orders
+ * GET /api/v1/orders/my-orders (alias)
  */
 const getMyOrders = async (req, res, next) => {
   try {
@@ -72,7 +108,7 @@ const getMyOrders = async (req, res, next) => {
 };
 
 /**
- * 5. Lấy danh sách toàn bộ đơn hàng (Dành cho Admin)
+ * 6. Lấy danh sách toàn bộ đơn hàng (Dành cho Admin)
  * GET /api/v1/orders/admin/all
  */
 const getAllOrders = async (req, res, next) => {
@@ -89,7 +125,7 @@ const getAllOrders = async (req, res, next) => {
 };
 
 /**
- * 6. Admin cập nhật trạng thái đơn hàng (Điều phối kho nội bộ)
+ * 7. Admin cập nhật trạng thái đơn hàng (Điều phối kho nội bộ)
  * PATCH /api/v1/orders/admin/:id/status
  */
 const updateOrderStatus = async (req, res, next) => {
@@ -111,9 +147,12 @@ const updateOrderStatus = async (req, res, next) => {
 };
 
 module.exports = {
-  checkoutCOD,
+  previewOrder,
+  createOrder,
+  checkoutCOD: createOrder, // alias giữ tương thích ngược
   cancelOrder,
   getOrderById,
+  getOrderStatus,
   getMyOrders,
   getAllOrders,
   updateOrderStatus,

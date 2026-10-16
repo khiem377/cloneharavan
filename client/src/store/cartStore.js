@@ -61,21 +61,43 @@ export const useCartStore = create((set, get) => ({
   /**
    * Helper cập nhật state từ kết quả API Backend
    */
-  _setCartData: (data) => {
+  _setCartData: (data, overrideSelectedIds = null) => {
     const cart = data?.cart || INITIAL_CART;
     const items = cart.items || [];
     const validIds = new Set(items.map((i) => i._id));
-    const currentSelected = get().selectedItemIds || [];
-    // Lọc lại chỉ giữ các item id còn tồn tại trong giỏ
-    let updatedSelected = currentSelected.filter((id) => validIds.has(id));
-    if (currentSelected.length === 0 && items.length > 0) {
-      updatedSelected = items
-        .filter(
-          (i) =>
-            !i.isOutOfStock &&
-            (i.availableStock === undefined || i.availableStock > 0)
-        )
-        .map((i) => i._id);
+
+    let updatedSelected = [];
+
+    if (Array.isArray(overrideSelectedIds)) {
+      // Ưu tiên lựa chọn chỉ định (ví dụ Mua Ngay chỉ chọn đúng món vừa thêm)
+      updatedSelected = overrideSelectedIds.filter((id) => validIds.has(id));
+    } else {
+      const currentSelected = get().selectedItemIds || [];
+      let storedIds = [];
+      if (typeof window !== 'undefined') {
+        try {
+          const raw = sessionStorage.getItem('checkoutItemIds');
+          if (raw) storedIds = JSON.parse(raw);
+        } catch (_) {}
+      }
+
+      const candidateIds = currentSelected.length > 0 ? currentSelected : storedIds;
+      updatedSelected = candidateIds.filter((id) => validIds.has(id));
+
+      // Chỉ khi chưa hề có lựa chọn nào trước đó mới chọn tất cả sản phẩm còn hàng
+      if (updatedSelected.length === 0 && candidateIds.length === 0 && items.length > 0) {
+        updatedSelected = items
+          .filter(
+            (i) =>
+              !i.isOutOfStock &&
+              (i.availableStock === undefined || i.availableStock > 0)
+          )
+          .map((i) => i._id);
+      }
+    }
+
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('checkoutItemIds', JSON.stringify(updatedSelected));
     }
 
     // ĐỒNG BỘ TOÀN VẸN GÓI COMBO:
@@ -153,21 +175,31 @@ export const useCartStore = create((set, get) => ({
 
       if (isCurrentlySelected) {
         // Bỏ chọn tất cả sản phẩm thuộc combo này
-        set({
-          selectedItemIds: selectedItemIds.filter((id) => !comboItemIds.includes(id)),
-        });
+        const newSelected = selectedItemIds.filter((id) => !comboItemIds.includes(id));
+        set({ selectedItemIds: newSelected });
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('checkoutItemIds', JSON.stringify(newSelected));
+        }
       } else {
         // Chọn tất cả sản phẩm thuộc combo này
         const newSelected = Array.from(new Set([...selectedItemIds, ...comboItemIds]));
         set({ selectedItemIds: newSelected });
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('checkoutItemIds', JSON.stringify(newSelected));
+        }
       }
       return;
     }
 
+    let newSelected = [];
     if (selectedItemIds.includes(itemId)) {
-      set({ selectedItemIds: selectedItemIds.filter((id) => id !== itemId) });
+      newSelected = selectedItemIds.filter((id) => id !== itemId);
     } else {
-      set({ selectedItemIds: [...selectedItemIds, itemId] });
+      newSelected = [...selectedItemIds, itemId];
+    }
+    set({ selectedItemIds: newSelected });
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('checkoutItemIds', JSON.stringify(newSelected));
     }
   },
 
@@ -176,18 +208,18 @@ export const useCartStore = create((set, get) => ({
    */
   toggleSelectAll: (checked) => {
     const { items } = get();
-    if (!checked) {
-      set({ selectedItemIds: [] });
-    } else {
-      // Chỉ chọn các sản phẩm còn hàng
-      const availableIds = items
-        .filter(
-          (i) =>
-            !i.isOutOfStock &&
-            (i.availableStock === undefined || i.availableStock > 0)
-        )
-        .map((i) => i._id);
-      set({ selectedItemIds: availableIds });
+    const newSelected = !checked
+      ? []
+      : items
+          .filter(
+            (i) =>
+              !i.isOutOfStock &&
+              (i.availableStock === undefined || i.availableStock > 0)
+          )
+          .map((i) => i._id);
+    set({ selectedItemIds: newSelected });
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('checkoutItemIds', JSON.stringify(newSelected));
     }
   },
 
@@ -251,6 +283,57 @@ export const useCartStore = create((set, get) => ({
   },
 
   /**
+   * Tính tổng tiền niêm yết (giá gốc) của các sản phẩm được chọn
+   */
+  getSelectedOriginalSubtotal: () => {
+    const { items, selectedItemIds } = get();
+    return items
+      .filter((i) => selectedItemIds.includes(i._id))
+      .reduce((sum, item) => {
+        const orig =
+          Number(item.originalPrice) > 0
+            ? Number(item.originalPrice)
+            : Number(item.unitPrice) || 0;
+        return sum + orig * (Number(item.quantity) || 1);
+      }, 0);
+  },
+
+  /**
+   * Tính số tiền giảm giá của Coupon cho các sản phẩm ĐƯỢC CHỌN
+   */
+  getSelectedCouponDiscount: () => {
+    const { cart, getSelectedSubtotal, selectedItemIds, items } = get();
+    const coupon = cart?.appliedCoupon;
+    const subtotal = getSelectedSubtotal();
+
+    if (!cart?.couponCode || subtotal <= 0) return 0;
+
+    // Nếu chọn toàn bộ giỏ hàng và có sẵn couponDiscount từ backend
+    if (selectedItemIds.length >= items.length && items.length > 0 && cart.couponDiscount !== undefined) {
+      return Number(cart.couponDiscount) || 0;
+    }
+
+    if (!coupon) {
+      // Fallback nếu chưa có appliedCoupon object: tính tỷ lệ theo subtotal / cart.subtotal
+      if (cart.subtotal > 0 && cart.couponDiscount > 0) {
+        return Math.min(subtotal, Math.round((subtotal / cart.subtotal) * cart.couponDiscount));
+      }
+      return 0;
+    }
+
+    if (coupon.minOrderValue && subtotal < coupon.minOrderValue) {
+      return 0;
+    }
+
+    if (coupon.type === 'percent') {
+      const discount = Math.round((subtotal * (Number(coupon.value) || 0)) / 100);
+      return coupon.maxDiscount ? Math.min(discount, coupon.maxDiscount) : discount;
+    }
+
+    return Math.min(Number(coupon.value) || 0, subtotal);
+  },
+
+  /**
    * Lấy danh sách item object đang được chọn
    */
   getSelectedItems: () => {
@@ -285,7 +368,7 @@ export const useCartStore = create((set, get) => ({
    * Thêm 1 hoặc nhiều sản phẩm vào giỏ
    */
   addToCart: async (payload, options = {}) => {
-    const { silent = false } = options;
+    const { silent = false, isBuyNow = false } = options;
     try {
       set({ isUpdating: true, error: null });
       if (!silent) {
@@ -299,7 +382,20 @@ export const useCartStore = create((set, get) => ({
       ]);
 
       if (res?.success && res?.data) {
-        get()._setCartData(res.data);
+        const cart = res.data.cart;
+        const items = cart?.items || [];
+        const addedItem = items.find(
+          (it) =>
+            (payload.variantId && String(it.variantId) === String(payload.variantId)) ||
+            (payload.sku && it.sku === payload.sku) ||
+            (payload.productId && String(it.productId) === String(payload.productId))
+        ) || items[items.length - 1];
+
+        if (isBuyNow && addedItem) {
+          get()._setCartData(res.data, [addedItem._id]);
+        } else {
+          get()._setCartData(res.data);
+        }
         if (!silent) {
           get().showCartHud('success', 'Thêm vào giỏ hàng thành công!');
           const timeout = setTimeout(() => {

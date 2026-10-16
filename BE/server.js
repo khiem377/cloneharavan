@@ -293,18 +293,49 @@ const cleanupZeroStockForNonDefaultWarehouses = async () => {
 };
 
 connectDB().then(async () => {
-  await initElasticsearch();
-  await assignCategoriesToProducts();
-  // await fixAllProductCategoriesAndImages();
-  await ensureSamsungVariants();
-  await ensureAdminRolesAndPermissions();
-  await cleanupZeroStockForNonDefaultWarehouses();
-  const assignStaffWarehouses = require('./scripts/assign_staff_warehouses');
-  await assignStaffWarehouses();
+  try {
+    await initElasticsearch();
+  } catch (e) {
+    console.warn('[Elasticsearch] Warning:', e.message);
+  }
+
+  try {
+    await assignCategoriesToProducts();
+  } catch (e) {
+    console.warn('[CategoryAssigner] Warning:', e.message);
+  }
+
+  try {
+    await ensureSamsungVariants();
+  } catch (e) {
+    console.warn('[VariantSeeder] Warning:', e.message);
+  }
+
+  try {
+    await ensureAdminRolesAndPermissions();
+  } catch (e) {
+    console.warn('[AdminSync] Warning:', e.message);
+  }
+
+  try {
+    await cleanupZeroStockForNonDefaultWarehouses();
+  } catch (e) {
+    console.warn('[WarehouseClean] Warning:', e.message);
+  }
+
+  try {
+    const assignStaffWarehouses = require('./scripts/assign_staff_warehouses');
+    await assignStaffWarehouses();
+  } catch (e) {
+    console.warn('[WarehouseInit] Warning:', e.message);
+  }
 
   app.listen(PORT, () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);
     console.log(`📦 Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`⚡ Real-time Interaction Pipeline Active`);
   });
+}).catch((err) => {
+  console.error('❌ Failed to connect to DB and start server:', err);
 });
+

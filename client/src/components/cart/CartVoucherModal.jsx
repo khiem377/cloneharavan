@@ -6,7 +6,15 @@ import useCartStore from '@/store/cartStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
-export default function CartVoucherModal({ isOpen, onClose }) {
+export default function CartVoucherModal({
+  isOpen,
+  onClose,
+  appliedCode,
+  appliedDiscount,
+  orderSubtotal,
+  onApply,
+  onRemove,
+}) {
   const { cart, applyCoupon, removeCoupon, isUpdating } = useCartStore();
   const [coupons, setCoupons] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -14,7 +22,12 @@ export default function CartVoucherModal({ isOpen, onClose }) {
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
-  const cartSubtotal = Number(cart?.subtotal) || Number(cart?.subtotalOriginal) || 0;
+  const currentCouponCode = appliedCode !== undefined ? appliedCode : cart?.couponCode;
+  const currentCouponDiscount = appliedDiscount !== undefined ? appliedDiscount : cart?.couponDiscount;
+  const currentSubtotal =
+    orderSubtotal !== undefined
+      ? Number(orderSubtotal) || 0
+      : Number(cart?.subtotal) || Number(cart?.subtotalOriginal) || 0;
 
   useEffect(() => {
     if (isOpen) {
@@ -48,22 +61,33 @@ export default function CartVoucherModal({ isOpen, onClose }) {
     setErrorMsg('');
     setSuccessMsg('');
 
-    const res = await applyCoupon(code);
-    if (res.success) {
+    let res;
+    if (typeof onApply === 'function') {
+      res = await onApply(code);
+    } else {
+      res = await applyCoupon(code);
+    }
+
+    if (res?.success) {
       setSuccessMsg(res.message || `Đã áp dụng thành công mã ${code}`);
       setTimeout(() => {
         onClose();
       }, 700);
     } else {
-      setErrorMsg(res.message || 'Mã giảm giá không hợp lệ hoặc không đủ điều kiện');
+      setErrorMsg(res?.message || 'Mã giảm giá không hợp lệ hoặc không đủ điều kiện');
     }
   };
 
   const handleRemove = async () => {
     setErrorMsg('');
     setSuccessMsg('');
-    const res = await removeCoupon();
-    if (res.success) {
+    let res;
+    if (typeof onRemove === 'function') {
+      res = await onRemove();
+    } else {
+      res = await removeCoupon();
+    }
+    if (res?.success !== false) {
       setSuccessMsg('Đã gỡ mã giảm giá');
     }
   };
@@ -81,10 +105,10 @@ export default function CartVoucherModal({ isOpen, onClose }) {
 
   // Phân loại voucher hợp lệ và chưa đủ điều kiện
   const eligibleCoupons = coupons.filter(
-    (c) => !c.minOrderValue || cartSubtotal >= c.minOrderValue
+    (c) => !c.minOrderValue || currentSubtotal >= c.minOrderValue
   );
   const ineligibleCoupons = coupons.filter(
-    (c) => c.minOrderValue && cartSubtotal < c.minOrderValue
+    (c) => c.minOrderValue && currentSubtotal < c.minOrderValue
   );
 
   return (
@@ -147,14 +171,14 @@ export default function CartVoucherModal({ isOpen, onClose }) {
           </div>
 
           {/* VOUCHER ĐANG ĐƯỢC ÁP DỤNG NẾU CÓ */}
-          {cart?.couponCode && (
+          {currentCouponCode && (
             <div className="p-3 bg-red-50/70 border border-red-200 rounded-[6px] flex items-center justify-between gap-2">
               <div>
                 <div className="text-xs font-bold text-red-700 flex items-center gap-1.5">
-                  <span>Mã đang dùng: <strong>{cart.couponCode}</strong></span>
+                  <span>Mã đang dùng: <strong>{currentCouponCode}</strong></span>
                 </div>
                 <div className="text-[11px] text-slate-600 mt-0.5">
-                  Giảm: <strong className="text-red-600 font-mono tabular-nums">{formatPrice(cart.couponDiscount || 0)}</strong>
+                  Giảm: <strong className="text-red-600 font-mono tabular-nums">{formatPrice(currentCouponDiscount || 0)}</strong>
                 </div>
               </div>
 
@@ -189,7 +213,7 @@ export default function CartVoucherModal({ isOpen, onClose }) {
             ) : (
               <div className="space-y-2.5">
                 {eligibleCoupons.map((coupon) => {
-                  const isApplied = cart?.couponCode === coupon.code;
+                  const isApplied = currentCouponCode === coupon.code;
                   const discountDisplay =
                     coupon.type === 'percent'
                       ? `Giảm ${coupon.value}%${coupon.maxDiscount ? ` (Tối đa ${formatPrice(coupon.maxDiscount)})` : ''}`
@@ -257,7 +281,7 @@ export default function CartVoucherModal({ isOpen, onClose }) {
 
                 <div className="space-y-2 opacity-75">
                   {ineligibleCoupons.map((coupon) => {
-                    const missingAmount = coupon.minOrderValue - cartSubtotal;
+                    const missingAmount = coupon.minOrderValue - currentSubtotal;
                     return (
                       <div
                         key={coupon._id}

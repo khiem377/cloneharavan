@@ -323,7 +323,7 @@ export default function ProductInfo({
       quantity,
     };
 
-    const res = await addToCart(payload);
+    const res = await addToCart(payload, { isBuyNow });
     setIsAddingToCart(false);
 
     if (res?.success) {

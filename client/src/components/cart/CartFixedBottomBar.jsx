@@ -114,14 +114,14 @@ export default function CartFixedBottomBar({
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-200/90 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
-      {/* TẦNG 1: DÒNG VOUCHER ƯU ĐÃI (CHUẨN SHOPEE) */}
+      {/* TẦNG 1: DÒNG VOUCHER ƯU ĐÃI (CHUẨN HARAVAN) */}
       <div className="border-b border-dashed border-slate-200 bg-white">
         <div className="container mx-auto px-3 sm:px-4 max-w-7xl h-10 flex items-center justify-between text-xs">
           <div className="flex items-center gap-2">
-            <TicketPercent size={15} className="text-[#ee4d2d]" />
-            <span className="font-semibold text-slate-800">Voucher</span>
+            <TicketPercent size={15} className="text-[#284ea1]" />
+            <span className="font-bold text-slate-900">Voucher giảm giá</span>
             {appliedCouponCode && (
-              <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+              <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-[4px] border border-emerald-200 font-mono tabular-nums">
                 Mã: {appliedCouponCode} (-{formatPrice(couponDiscount)})
               </span>
             )}
@@ -130,14 +130,14 @@ export default function CartFixedBottomBar({
           <button
             type="button"
             onClick={onOpenVoucherModal}
-            className="text-xs font-medium text-[#ee4d2d] hover:text-[#d73211] hover:underline flex items-center gap-1 cursor-pointer transition-colors"
+            className="text-xs font-semibold text-[#284ea1] hover:text-[#1e3b82] hover:underline flex items-center gap-1 cursor-pointer transition-colors"
           >
             <span>{appliedCouponCode ? 'Đổi mã voucher khác' : 'Chọn hoặc nhập mã >'}</span>
           </button>
         </div>
       </div>
 
-      {/* TẦNG 2: THAO TÁC HÀNG LOẠT VÀ NÚT MUA HÀNG - RESPONSIVE THÔNG MINH, KHÔNG TRÀN MÉP */}
+      {/* TẦNG 2: THAO TÁC HÀNG LOẠT VÀ NÚT ĐẶT HÀNG - CHUẨN PHỐI MÀU HARAVAN */}
       <div className="bg-white">
         <div className="container mx-auto px-3 sm:px-4 max-w-7xl py-2.5 sm:py-3 flex items-center justify-between gap-3 sm:gap-4 select-none">
           {/* Cụm trái: Checkbox chọn tất cả, Xóa, Lưu vào đã thích */}
@@ -152,18 +152,18 @@ export default function CartFixedBottomBar({
               />
               <label
                 htmlFor="fixed-select-all"
-                className="cursor-pointer select-none font-medium hover:text-slate-900 whitespace-nowrap"
+                className="cursor-pointer select-none font-semibold hover:text-slate-900 whitespace-nowrap"
               >
                 Chọn Tất Cả ({items.length})
               </label>
             </div>
 
-            {/* Nút Xóa các sản phẩm đã chọn (Bấm vào mở Modal popup xác nhận) */}
+            {/* Nút Xóa các sản phẩm đã chọn */}
             <button
               type="button"
               onClick={handleDeleteSelected}
               disabled={selectedCount === 0 || isUpdating}
-              className="text-xs hover:text-red-600 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors font-medium whitespace-nowrap"
+              className="text-xs text-slate-600 hover:text-red-600 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors font-medium whitespace-nowrap"
             >
               Xóa {selectedCount > 0 ? `(${selectedCount})` : ''}
             </button>
@@ -184,7 +184,7 @@ export default function CartFixedBottomBar({
               type="button"
               onClick={handleSaveToWishlist}
               disabled={selectedCount === 0 || isUpdating}
-              className="text-[#ee4d2d] hover:text-[#d73211] font-semibold disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors flex items-center gap-1 whitespace-nowrap"
+              className="text-[#284ea1] hover:text-[#1e3b82] font-semibold disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors flex items-center gap-1 whitespace-nowrap"
             >
               <Heart size={13} className="shrink-0" />
               <span>
@@ -193,37 +193,37 @@ export default function CartFixedBottomBar({
             </button>
           </div>
 
-          {/* Cụm phải: Tổng cộng xếp trên, Giá tiền xếp dưới - Cỡ chữ vừa vặn, nút Mua Hàng nguyên vẹn */}
-          <div className="ml-auto flex items-center justify-end gap-3 sm:gap-5 shrink-0">
-            {/* Khối giá tiền: 2 dòng dọc (Tổng cộng ở trên, Số tiền ở dưới) */}
+          {/* Cụm phải: Tổng cộng xếp trên, Giá tiền màu xanh Haravan, nút Tiếp tục & Đặt hàng */}
+          <div className="ml-auto flex items-center justify-end gap-2.5 sm:gap-4 shrink-0">
+            {/* Khối giá tiền: 2 dòng dọc (Tổng cộng ở trên, Số tiền xanh dương ở dưới) */}
             <div className="text-right whitespace-nowrap flex flex-col items-end justify-center leading-tight">
-              <span className="text-[11px] sm:text-xs text-slate-600 font-normal">
+              <span className="text-[11px] sm:text-xs text-slate-600 font-medium">
                 Tổng cộng ({selectedCount} sản phẩm):
               </span>
-              <span className="text-xs sm:text-sm font-bold text-[#ee4d2d] mt-0.5">
+              <span className="text-sm sm:text-base 2xl:text-lg font-mono tabular-nums font-black text-blue-700 tracking-tight mt-0.5">
                 {selectedCount === 0 ? '0 đ' : formatPrice(finalTotal)}
               </span>
               {selectedCount > 0 && couponDiscount > 0 && (
-                <span className="text-[10px] text-emerald-700 font-medium">
-                  Tiết kiệm: {formatPrice(couponDiscount)}
+                <span className="text-[10px] sm:text-[11px] font-semibold text-emerald-600 font-mono tabular-nums">
+                  (Tiết kiệm: {formatPrice(couponDiscount)})
                 </span>
               )}
             </div>
 
-            {/* Nút Mua Hàng: Giữ nguyên phong cách, đảm bảo luôn hiển thị trọn vẹn 100% không bị tràn */}
+            {/* Nút Đặt hàng ngay (Cam Amber Haravan) */}
             <Button
               type="button"
               onClick={handleProceedCheckout}
               disabled={selectedCount === 0 || isUpdating || checkoutLoading}
-              className="h-10 sm:h-11 px-5 sm:px-8 bg-[#ee4d2d] hover:bg-[#d73211] text-white font-bold text-xs sm:text-sm rounded-[4px] shadow-sm disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap"
+              className="h-10 sm:h-11 px-6 sm:px-8 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs sm:text-sm rounded-[6px] shadow-xs disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap"
             >
               {checkoutLoading ? (
-                <>
-                  <Loader2 size={14} className="animate-spin" />
+                <div className="flex items-center gap-1.5">
+                  <Loader2 size={14} className="animate-spin text-slate-950" />
                   <span>Đang xử lý...</span>
-                </>
+                </div>
               ) : (
-                <span>Mua Hàng</span>
+                <span>Đặt hàng ngay {selectedCount > 0 ? `(${selectedCount})` : ''}</span>
               )}
             </Button>
           </div>
@@ -232,3 +232,4 @@ export default function CartFixedBottomBar({
     </div>
   );
 }
+

@@ -7,6 +7,7 @@ const {
   updateUserProfile,
   // Addresses
   getUserAddresses,
+  getDefaultAddress: getDefaultAddressService,
   addAddress: addAddressService,
   updateAddress: updateAddressService,
   deleteAddress: deleteAddressService,
@@ -96,6 +97,20 @@ const getAddresses = async (req, res, next) => {
       statusCode: 200,
       message: 'Lấy danh sách địa chỉ thành công',
       data: { addresses },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getDefaultAddress = async (req, res, next) => {
+  try {
+    const result = await getDefaultAddressService(req.user._id);
+    res.json({
+      status: 'success',
+      statusCode: 200,
+      message: result.hasDefault ? 'Lấy địa chỉ mặc định thành công' : 'Chưa thiết lập địa chỉ mặc định',
+      data: result,
     });
   } catch (error) {
     next(error);
@@ -327,6 +342,7 @@ module.exports = {
   deleteAvatar,
   // Address Book
   getAddresses,
+  getDefaultAddress,
   addAddress,
   updateAddress,
   deleteAddress,

@@ -133,6 +133,68 @@ const getPostMergerAddress = async (req, res, next) => {
   }
 };
 
+/**
+ * POST /api/v1/shipping/fee (và GET /api/v1/shipping/fee)
+ * Tính phí vận chuyển GHN thực tế, phân biệt rõ phí ước tính nếu xảy ra lỗi
+ */
+const calculateFee = async (req, res, next) => {
+  try {
+    const params = req.method === 'POST' ? req.body : req.query;
+    const {
+      toDistrictId,
+      to_district_id,
+      toWardCode,
+      to_ward_code,
+      fromDistrictId,
+      from_district_id,
+      weight,
+      length,
+      width,
+      height,
+      insuranceValue,
+      insurance_value,
+      allowEstimatedFallback,
+    } = params;
+
+    const targetDistrictId = toDistrictId || to_district_id;
+    const targetWardCode = toWardCode || to_ward_code;
+
+    if (!targetDistrictId || !targetWardCode) {
+      return res.status(400).json({
+        success: false,
+        message: 'Vui lòng cung cấp toDistrictId (hoặc to_district_id) và toWardCode (hoặc to_ward_code)',
+      });
+    }
+
+    const result = await ghnService.calculateShippingFee({
+      toDistrictId: targetDistrictId,
+      toWardCode: targetWardCode,
+      fromDistrictId: fromDistrictId || from_district_id || null,
+      weight,
+      length,
+      width,
+      height,
+      insuranceValue: insuranceValue || insurance_value || 0,
+      allowEstimatedFallback: allowEstimatedFallback !== false,
+    });
+
+    if (!result.success && !result.fee) {
+      return res.status(502).json({
+        success: false,
+        message: result.message || 'Lỗi tính cước từ đơn vị vận chuyển',
+        error: result.error || result.source,
+      });
+    }
+
+    return res.json({
+      success: true,
+      data: result,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   getProvinces,
   getDistricts,
@@ -140,4 +202,5 @@ module.exports = {
   getNewProvinces,
   getNewWards,
   getPostMergerAddress,
+  calculateFee,
 };

@@ -9,6 +9,7 @@ const {
   deleteAvatar,
   // Address Book
   getAddresses,
+  getDefaultAddress,
   addAddress,
   updateAddress,
   deleteAddress,
@@ -54,6 +55,7 @@ router.delete('/avatar', protect, deleteAvatar);
 // 2. ADDRESS BOOK (User Protected)
 // ==========================================
 router.get('/addresses', protect, getAddresses);
+router.get('/addresses/default', protect, getDefaultAddress);
 router.post('/addresses', protect, validate(addressSchema), addAddress);
 router.put('/addresses/:addressId', protect, validate(updateAddressSchema), updateAddress);
 router.delete('/addresses/:addressId', protect, deleteAddress);

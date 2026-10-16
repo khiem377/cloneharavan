@@ -8,6 +8,7 @@ import useAuthStore from '../../store/authStore';
 import userService from '../../services/user.service';
 import authService from '../../services/auth.service';
 import shippingService from '../../services/shipping.service';
+import orderService from '../../services/order.service';
 import { toast } from '../../components/ui/toast';
 import { confirm } from '../../components/ui/confirm-dialog';
 
@@ -94,6 +95,8 @@ function AccountContent() {
   const [passwordMessage, setPasswordMessage] = useState(null);
 
   // Orders State
+  const [orders, setOrders] = useState([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
   const [orderFilter, setOrderFilter] = useState('all');
   const [orderSearch, setOrderSearch] = useState('');
 
@@ -157,10 +160,24 @@ function AccountContent() {
     }
   };
 
+  // Fetch Orders for overview metrics
+  const fetchUserOrders = async () => {
+    setOrdersLoading(true);
+    try {
+      const res = await orderService.getMyOrders({ limit: 50 });
+      setOrders(Array.isArray(res?.data) ? res.data : []);
+    } catch (err) {
+      console.error('Lỗi lấy danh sách đơn hàng overview:', err);
+    } finally {
+      setOrdersLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (mounted && isUserAuth) {
       fetchAddresses();
       ensureProvincesLoaded();
+      fetchUserOrders();
     }
   }, [mounted, isUserAuth]);
 
@@ -765,6 +782,7 @@ function AccountContent() {
                 addresses={addresses}
                 defaultAddress={defaultAddress}
                 handleOpenAddAddress={handleOpenAddAddress}
+                orders={orders}
               />
             )}
 
@@ -774,6 +792,7 @@ function AccountContent() {
                 setOrderSearch={setOrderSearch}
                 orderFilter={orderFilter}
                 setOrderFilter={setOrderFilter}
+                onOrdersUpdated={fetchUserOrders}
               />
             )}
 

@@ -8,8 +8,10 @@ build/
 # Seed / migration scripts
 scripts/*
 !scripts/seed-full-permissions.js
+!scripts/assign_staff_warehouses.js
 seed*
 !scripts/seed-full-permissions.js
+!scripts/assign_staff_warehouses.js
 
 # Route analysis & inspection tools
 *analyze*

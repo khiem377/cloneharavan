@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import useCartStore from '@/store/cartStore';
 import CartCheckoutSteps from './CartCheckoutSteps';
@@ -9,6 +9,8 @@ import CartItemList from './CartItemList';
 import CartGiftItems from './CartGiftItems';
 import CartVoucherCard from './CartVoucherCard';
 import CartOrderSummary from './CartOrderSummary';
+import CartFixedBottomBar from './CartFixedBottomBar';
+import CartVoucherModal from './CartVoucherModal';
 import CartEmptyState from './CartEmptyState';
 import { Button } from '@/components/ui/button';
 
@@ -28,11 +30,15 @@ export default function CartView() {
     toggleSelectAll,
     removeSelectedItems,
     getSelectedSubtotal,
+    getSelectedCouponDiscount,
     updateQuantity,
     removeItem,
     clearCart,
     validateCheckout,
   } = useCartStore();
+
+  const [showVoucherModal, setShowVoucherModal] = useState(false);
+
 
   // Tải giỏ hàng lần đầu khi mount
   useEffect(() => {
@@ -41,6 +47,9 @@ export default function CartView() {
 
   const selectedCount = selectedItemIds ? selectedItemIds.length : 0;
   const selectedSubtotal = getSelectedSubtotal ? getSelectedSubtotal() : 0;
+  const selectedCouponDiscount = getSelectedCouponDiscount
+    ? getSelectedCouponDiscount()
+    : Number(cart.couponDiscount) || 0;
 
   const formatPrice = (val) =>
     new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val || 0);
@@ -83,7 +92,7 @@ export default function CartView() {
   }
 
   return (
-    <div className="bg-slate-50/60 min-h-[100dvh] pb-24 lg:pb-12 2xl:pb-16">
+    <div className="bg-slate-50/60 min-h-[100dvh] pb-36 sm:pb-44">
       <div className="container mx-auto px-3 sm:px-4 2xl:px-8 py-3 sm:py-5 2xl:py-8 max-w-7xl 2xl:max-w-[1536px]">
         {/* BREADCRUMB */}
         <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs 2xl:text-sm text-slate-500 mb-3 sm:mb-4">
@@ -160,25 +169,27 @@ export default function CartView() {
         </div>
       </div>
 
-      {/* THANH GHIM ĐÁY TRÊN ĐIỆN THOẠI (MOBILE STICKY BAR) */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-200 p-3 px-4 shadow-lg flex items-center justify-between gap-3 animate-fadeIn">
-        <div>
-          <div className="text-[10px] text-slate-500 font-medium">Tổng thanh toán:</div>
-          <div className="text-base font-mono tabular-nums font-black text-red-600">
-            {formatPrice(selectedSubtotal > 0 ? Math.max(0, selectedSubtotal - (cart.couponDiscount || 0)) : (cart.finalTotal || cart.subtotal || 0))}
-          </div>
-        </div>
+      {/* THANH GHIM ĐÁY TOÀN TRANG (FIXED BOTTOM BAR CHUẨN SHOPEE) */}
+      <CartFixedBottomBar
+        items={items}
+        selectedItemIds={selectedItemIds}
+        onToggleSelectAll={toggleSelectAll}
+        onRemoveSelected={removeSelectedItems}
+        onOpenVoucherModal={() => setShowVoucherModal(true)}
+        appliedCouponCode={cart.couponCode}
+        couponDiscount={selectedCouponDiscount}
+        isUpdating={isUpdating}
+      />
 
-        <Link href="/checkout" className="shrink-0">
-          <Button
-            size="default"
-            disabled={isUpdating || hasStockIssue || (selectedCount > 0 ? false : items.length === 0)}
-            className="h-10 px-6 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-[6px] active:scale-[0.98] transition cursor-pointer shadow-xs"
-          >
-            Đặt hàng ({selectedCount > 0 ? selectedCount : items.length})
-          </Button>
-        </Link>
-      </div>
+      {/* MODAL DANH SÁCH VOUCHER */}
+      <CartVoucherModal
+        isOpen={showVoucherModal}
+        onClose={() => setShowVoucherModal(false)}
+        appliedCode={cart.couponCode}
+        appliedDiscount={selectedCouponDiscount}
+        orderSubtotal={selectedSubtotal > 0 ? selectedSubtotal : (cart.subtotal || 0)}
+      />
     </div>
   );
 }
+

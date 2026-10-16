@@ -21,7 +21,7 @@ const getSellingPrice = (variant) => {
     salePrice !== undefined &&
     salePrice !== '' &&
     !isNaN(Number(salePrice)) &&
-    Number(salePrice) >= 0 &&
+    Number(salePrice) > 0 &&
     Number(salePrice) < price
   ) {
     return Number(salePrice);
@@ -32,7 +32,7 @@ const getSellingPrice = (variant) => {
 
 /**
  * Normalize salePrice:
- * - Nếu salePrice không hợp lệ (null, âm hoặc >= price) -> đưa về null
+ * - Nếu salePrice không hợp lệ (null, <= 0 hoặc >= price) -> đưa về null
  * - Trả về số hoặc null
  *
  * @param {number} price
@@ -47,7 +47,7 @@ const normalizeSalePrice = (price, salePrice) => {
   const p = Number(price);
   const sp = Number(salePrice);
 
-  if (isNaN(sp) || sp < 0 || sp >= p) {
+  if (isNaN(sp) || sp <= 0 || sp >= p) {
     return null;
   }
 

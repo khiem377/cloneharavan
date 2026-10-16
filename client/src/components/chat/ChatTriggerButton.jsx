@@ -69,11 +69,13 @@ export default function ChatTriggerButton({
     <div
       className={`fixed z-50 flex items-end gap-2.5 select-none transition-all duration-200 ${
         isCartPage
-          ? 'bottom-20 right-3 sm:bottom-6 sm:right-6'
+          ? 'bottom-[175px] right-4 sm:bottom-[185px] sm:right-6'
           : isProductPage
           ? 'bottom-20 right-3 sm:bottom-22 sm:right-6'
           : 'bottom-4 right-3 sm:bottom-6 sm:right-6'
       }`}
+
+
       style={{
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
         paddingRight: 'env(safe-area-inset-right, 0px)',

@@ -45,7 +45,7 @@ export default function StickyPurchaseBar({
       quantity: 1,
     };
 
-    const res = await addToCart(payload);
+    const res = await addToCart(payload, { isBuyNow });
     setIsSubmitting(false);
 
     if (res?.success) {

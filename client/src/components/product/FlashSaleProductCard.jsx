@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { ShoppingCart, Eye, ArrowLeftRight, Check, Loader2 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useRouter } from 'next/navigation';
+import { api } from '@/lib/axios';
 import useQuickViewStore from '@/store/quickViewStore';
 import useCompareStore from '@/store/compareStore';
 import useCartStore from '@/store/cartStore';
@@ -21,16 +22,80 @@ export default function FlashSaleProductCard({ item, onAddToCartMock, onBuyNowMo
   const { addProduct, isCompared } = useCompareStore();
   const { addToCart } = useCartStore();
   const [selectedVariantIdx, setSelectedVariantIdx] = useState(0);
+  const [fetchedVariants, setFetchedVariants] = useState([]);
   const [isAdding, setIsAdding] = useState(false);
 
   if (!item) return null;
 
-  const currentItem = (Array.isArray(item.variantsList) && item.variantsList[selectedVariantIdx]) || item;
+  const initialVariantsList = Array.isArray(item.variantsList) ? item.variantsList : [];
+  const baseProduct = typeof item.productId === 'object' ? item.productId : item.product || {};
+  const productId = baseProduct._id || baseProduct.id || item.productId;
 
-  const product = typeof currentItem.productId === 'object' ? currentItem.productId : currentItem.product || {};
+  useEffect(() => {
+    let isMounted = true;
+    if (initialVariantsList.length <= 1 && productId) {
+      api
+        .get(`/products/${productId}/variants`)
+        .then((res) => {
+          if (!isMounted) return;
+          const list = res.data?.data || res.data || [];
+          if (Array.isArray(list) && list.length > 0) {
+            const isDefaultText = (t) => {
+              if (!t) return true;
+              const s = String(t).trim().toLowerCase();
+              return ['mặc định', 'mac dinh', 'default', 'default title', 'tiêu chuẩn', 'tieu chuan'].includes(s);
+            };
+            const realList = list.filter((v) =>
+              Array.isArray(v.attributes) &&
+              v.attributes.some((a) => a && !isDefaultText(a.value) && !isDefaultText(a.name))
+            );
+            if (realList.length > 0) {
+              setFetchedVariants(realList);
+            }
+          }
+        })
+        .catch(() => {});
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [productId, initialVariantsList.length]);
+
+  const effectiveVariantsList = useMemo(() => {
+    if (initialVariantsList.length > 1) {
+      return initialVariantsList;
+    }
+    if (fetchedVariants.length > 0) {
+      const discountPct =
+        item.discountValue ||
+        (item.originalPrice > item.flashSalePrice
+          ? Math.round(((item.originalPrice - item.flashSalePrice) / item.originalPrice) * 100)
+          : 0);
+
+      return fetchedVariants.map((v) => {
+        const vOrigPrice = v.price || item.originalPrice || baseProduct.price || 0;
+        let vFsPrice = item.flashSalePrice;
+        if (discountPct > 0 && vOrigPrice > 0) {
+          vFsPrice = Math.round(vOrigPrice * (1 - discountPct / 100));
+        }
+        return {
+          ...item,
+          _id: v._id,
+          variantId: v,
+          sku: v.sku,
+          originalPrice: vOrigPrice,
+          flashSalePrice: vFsPrice || item.flashSalePrice,
+        };
+      });
+    }
+    return [item];
+  }, [initialVariantsList, fetchedVariants, item, baseProduct]);
+
+  const currentItem = effectiveVariantsList[selectedVariantIdx] || effectiveVariantsList[0] || item;
+
+  const product = typeof currentItem.productId === 'object' ? currentItem.productId : currentItem.product || baseProduct;
   const variant = typeof currentItem.variantId === 'object' ? currentItem.variantId : null;
 
-  const productId = product._id || product.id || currentItem.productId;
   const productName = product.name || currentItem.productName || 'Sản phẩm Flash Sale';
   const productSlug = product.slug || productId;
 
@@ -97,6 +162,7 @@ export default function FlashSaleProductCard({ item, onAddToCartMock, onBuyNowMo
       flashSaleOriginalPrice: originalPrice,
       price: originalPrice,
       salePrice: flashSalePrice,
+      variants: fetchedVariants.length > 0 ? fetchedVariants : product.variants,
     });
   };
 
@@ -117,15 +183,28 @@ export default function FlashSaleProductCard({ item, onAddToCartMock, onBuyNowMo
     e.preventDefault();
     e.stopPropagation();
     if (isAdding) return;
+
+    const variantIdToUse = variant?._id || (typeof currentItem.variantId === 'string' ? currentItem.variantId : null);
+    const hasMultipleVariants =
+      effectiveVariantsList.length > 1 ||
+      (product.options && product.options.length > 0);
+
+    // Nếu sản phẩm có nhiều biến thể mà chưa xác định được biến thể cụ thể -> mở QuickView để khách hàng tự chọn
+    if (hasMultipleVariants && !variantIdToUse) {
+      handleQuickViewClick(e);
+      return;
+    }
+
     setIsAdding(true);
     if (onAddToCartMock) {
       onAddToCartMock(item);
     }
     try {
+      const variantSku = variant?.sku || currentItem.sku || '';
       await addToCart({
-        productId: product?._id,
-        variantId: currentItem.variantId?._id || currentItem.variantId,
-        sku: currentItem.sku,
+        productId: product?._id || productId,
+        variantId: variantIdToUse,
+        sku: variantSku,
         quantity: 1,
       });
     } finally {
@@ -136,15 +215,31 @@ export default function FlashSaleProductCard({ item, onAddToCartMock, onBuyNowMo
   const handleBuyNow = async (e) => {
     e.preventDefault();
     e.stopPropagation();
+
+    const variantIdToUse = variant?._id || (typeof currentItem.variantId === 'string' ? currentItem.variantId : null);
+    const hasMultipleVariants =
+      effectiveVariantsList.length > 1 ||
+      (product.options && product.options.length > 0);
+
+    // Nếu sản phẩm có nhiều biến thể mà chưa xác định được biến thể cụ thể -> mở QuickView để khách hàng tự chọn
+    if (hasMultipleVariants && !variantIdToUse) {
+      handleQuickViewClick(e);
+      return;
+    }
+
     if (onBuyNowMock) {
       onBuyNowMock(item);
     }
-    await addToCart({
-      productId: product?._id,
-      variantId: currentItem.variantId?._id || currentItem.variantId,
-      sku: currentItem.sku,
-      quantity: 1,
-    });
+    const variantSku = variant?.sku || currentItem.sku || '';
+    await addToCart(
+      {
+        productId: product?._id || productId,
+        variantId: variantIdToUse,
+        sku: variantSku,
+        quantity: 1,
+      },
+      { isBuyNow: true }
+    );
     router.push('/cart');
   };
 
@@ -239,9 +334,9 @@ export default function FlashSaleProductCard({ item, onAddToCartMock, onBuyNowMo
                 {productName}
               </h3>
 
-              {Array.isArray(item.variantsList) && item.variantsList.length > 1 && (
+              {Array.isArray(effectiveVariantsList) && effectiveVariantsList.length > 1 && (
                 <div className="flex flex-wrap items-center gap-1 mt-1 pt-1 border-t border-slate-100">
-                  {item.variantsList.map((vItem, vIdx) => {
+                  {effectiveVariantsList.map((vItem, vIdx) => {
                     const vObj = typeof vItem.variantId === 'object' ? vItem.variantId : null;
                     const validAttrs = vObj?.attributes?.filter(a => {
                       const v = String(a.value || '').trim().toLowerCase();
@@ -251,11 +346,11 @@ export default function FlashSaleProductCard({ item, onAddToCartMock, onBuyNowMo
                       ? validAttrs.map((a) => a.value).join(' ')
                       : vObj?.displayName && !['mặc định', 'mac dinh', 'default', 'default title'].includes(String(vObj.displayName).toLowerCase().trim())
                         ? vObj.displayName
-                        : vObj?.nameOverride || `Bản ${vIdx + 1}`;
+                        : vObj?.name || vObj?.nameOverride || `Bản ${vIdx + 1}`;
                     const isSelected = selectedVariantIdx === vIdx;
                     return (
                       <button
-                        key={vItem._id || vIdx}
+                        key={vItem._id || vObj?._id || vIdx}
                         type="button"
                         onClick={(e) => {
                           e.preventDefault();

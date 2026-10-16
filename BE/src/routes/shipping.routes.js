@@ -8,6 +8,7 @@ const {
   getNewProvinces,
   getNewWards,
   getPostMergerAddress,
+  calculateFee,
 } = require('../controllers/shipping.controller');
 
 // ==========================================
@@ -24,5 +25,12 @@ router.get('/new-wards', getNewWards);
 
 // 3. Đối soát sáp nhập địa chỉ đồng bộ chuẩn GHN
 router.get('/post-merger-lookup', getPostMergerAddress);
+
+// ==========================================
+// TÍNH PHÍ VẬN CHUYỂN GHN (SHIPPING FEE)
+// ==========================================
+// Hỗ trợ cả POST (chuẩn RESTful) và GET (tra cứu nhanh)
+router.post('/fee', calculateFee);
+router.get('/fee', calculateFee);
 
 module.exports = router;
