@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 const BACKEND_URL = process.env.API_SERVER_URL || 'http://127.0.0.1:5000/api/v1';
 
 async function handler(request, context) {
@@ -39,6 +42,7 @@ async function handler(request, context) {
         method,
         headers,
         body,
+        cache: 'no-store',
         duplex: 'half',
       });
     } catch {
@@ -49,6 +53,7 @@ async function handler(request, context) {
         method,
         headers,
         body,
+        cache: 'no-store',
         duplex: 'half',
       });
     }

@@ -1,4 +1,22 @@
 const nodemailer = require('nodemailer');
+const StoreSetting = require('../models/storeSetting.model');
+
+/**
+ * Lấy cấu hình tên cửa hàng và email hỗ trợ động từ StoreSetting
+ */
+const getStoreEmailConfig = async () => {
+  try {
+    const setting = await StoreSetting.getSingleton();
+    const name = setting?.storeInfo?.name || setting?.storeInfo?.businessName || process.env.SHOP_NAME || 'Dak Shop';
+    const email = setting?.storeInfo?.supportEmail || setting?.storeInfo?.adminEmail || process.env.SUPPORT_EMAIL || process.env.EMAIL_USER || 'support@dakshop.vn';
+    return { shopName: name, supportEmail: email };
+  } catch {
+    return {
+      shopName: process.env.SHOP_NAME || 'Dak Shop',
+      supportEmail: process.env.SUPPORT_EMAIL || process.env.EMAIL_USER || 'support@dakshop.vn',
+    };
+  }
+};
 
 /**
  * Khởi tạo Nodemailer Transporter
@@ -27,7 +45,8 @@ const createTransporter = () => {
  */
 const sendEmail = async ({ to, subject, html, text }) => {
   const transporter = createTransporter();
-  const from = process.env.EMAIL_FROM || '"SHOP" <noreply@shop.com>';
+  const { shopName } = await getStoreEmailConfig();
+  const from = process.env.EMAIL_FROM || `"${shopName}" <${process.env.EMAIL_USER || 'noreply@dakshop.vn'}>`;
 
   if (transporter) {
     return transporter.sendMail({ from, to, subject, text, html });
@@ -112,8 +131,7 @@ const emailShell = ({ shopName, supportEmail, bodyHtml }) => `<!DOCTYPE html>
 const sendResetPasswordEmail = async (email, resetToken) => {
   const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
   const resetUrl = `${clientUrl}/reset-password?token=${resetToken}`;
-  const shopName = process.env.SHOP_NAME || 'SHOP';
-  const supportEmail = process.env.SUPPORT_EMAIL || process.env.EMAIL_USER || 'support@shop.com';
+  const { shopName, supportEmail } = await getStoreEmailConfig();
 
   const subject = `Đặt lại mật khẩu tài khoản ${shopName}`;
 
@@ -177,8 +195,7 @@ const sendResetPasswordEmail = async (email, resetToken) => {
 const sendVerificationEmail = async (email, verifyToken) => {
   const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
   const verifyUrl = `${clientUrl}/verify-email?token=${verifyToken}`;
-  const shopName = process.env.SHOP_NAME || 'SHOP';
-  const supportEmail = process.env.SUPPORT_EMAIL || process.env.EMAIL_USER || 'support@shop.com';
+  const { shopName, supportEmail } = await getStoreEmailConfig();
 
   const subject = `Xác minh tài khoản ${shopName} của bạn`;
 
@@ -234,8 +251,7 @@ const sendVerificationEmail = async (email, verifyToken) => {
 // Admin Login OTP Email
 // ─────────────────────────────────────────────────────────────────────────────
 const sendAdminLoginOtpEmail = async (email, otp) => {
-  const shopName = process.env.SHOP_NAME || 'Haravan OMS';
-  const supportEmail = process.env.SUPPORT_EMAIL || process.env.EMAIL_USER || 'support@shop.com';
+  const { shopName, supportEmail } = await getStoreEmailConfig();
   const subject = `[${shopName}] Mã xác thực đăng nhập Quản trị viên: ${otp}`;
 
   const bodyHtml = `

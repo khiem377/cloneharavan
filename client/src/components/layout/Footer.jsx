@@ -8,6 +8,7 @@ import ShopLogo from '@/components/common/ShopLogo';
 import { PALETTE } from '@/constants/palette';
 import { menuService } from '@/services/menu.service';
 import { settingService } from '@/services/setting.service';
+import { formatLogoUrl } from '@/utils/imageUtils';
 
 // Fallback data in case API is not yet seeded or fails to load
 const DEFAULT_FOOTER_ITEMS = [
@@ -94,21 +95,29 @@ export default function Footer({ initialMenu = null }) {
           {/* ========================================================= */}
           <div className="flex flex-col gap-3">
             <Link href="/" className="inline-block w-fit">
-              <ShopLogo className="h-8" />
+              {storeSetting?.logo ? (
+                <img
+                  src={formatLogoUrl(storeSetting.logo)}
+                  alt={storeSetting?.name || 'Logo cửa hàng'}
+                  className="h-9 sm:h-10 max-h-11 max-w-[180px] w-auto object-contain"
+                />
+              ) : (
+                <ShopLogo className="h-8" />
+              )}
             </Link>
 
             <div className="text-base font-bold text-slate-900">
-              {storeSetting?.name || 'SHOP Điện Máy'}
+              {storeSetting?.name || 'SHOP'}
             </div>
 
             <p className="text-xs text-slate-600 leading-relaxed">
-              {storeSetting?.businessName ? `${storeSetting.businessName} - ` : ''}
-              Chuyên cung cấp các thiết bị điện tử, thời trang và sản phẩm chính hãng chất lượng cao.
+              {storeSetting?.description || (
+                <>
+                  {storeSetting?.businessName ? `${storeSetting.businessName} - ` : ''}
+                  Chuyên cung cấp các thiết bị điện tử, thời trang và sản phẩm chính hãng chất lượng cao.
+                </>
+              )}
             </p>
-
-            <div className="text-xs text-slate-600 font-medium">
-              Lĩnh vực: <span className="font-semibold text-slate-800">{storeSetting?.industry || 'Bán lẻ đa kênh'}</span>
-            </div>
 
             {/* Thông tin liên hệ */}
             <div className="flex flex-col gap-2.5 pt-1 text-xs">
@@ -117,10 +126,19 @@ export default function Footer({ initialMenu = null }) {
                 <div>
                   <span className="text-slate-500 block">Địa chỉ</span>
                   <span className="font-semibold text-slate-800">
-                    {storeSetting?.address?.fullAddress ||
-                      (storeSetting?.address?.street
-                        ? `${storeSetting.address.street}, ${storeSetting.address.ward}, ${storeSetting.address.district}, ${storeSetting.address.province}`
-                        : '150/8 Nguyễn Duy Cung, Phường 12, Tp.HCM')}
+                    {(() => {
+                      const addr = storeSetting?.address;
+                      if (!addr) return '123 Đường Nguyễn Huệ, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh';
+                      const parts = [
+                        addr.detailNumber,
+                        addr.street,
+                        addr.ward,
+                        addr.district,
+                        addr.province,
+                      ].map((p) => (typeof p === 'string' ? p.trim() : '')).filter(Boolean);
+                      if (parts.length > 0) return parts.join(', ');
+                      return addr.fullAddress || '123 Đường Nguyễn Huệ, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh';
+                    })()}
                   </span>
                 </div>
               </div>
@@ -130,10 +148,10 @@ export default function Footer({ initialMenu = null }) {
                 <div>
                   <span className="text-slate-500 block">Hotline</span>
                   <a
-                    href={`tel:${storeSetting?.hotline || storeSetting?.phone || '0999999999'}`}
+                    href={`tel:${storeSetting?.hotline || storeSetting?.phone || '1900 1234'}`}
                     className="font-bold text-[#284ea1] hover:underline"
                   >
-                    {storeSetting?.hotline || storeSetting?.phone || '0999999999'}
+                    {storeSetting?.hotline || storeSetting?.phone || '1900 1234'}
                   </a>
                 </div>
               </div>
@@ -143,10 +161,10 @@ export default function Footer({ initialMenu = null }) {
                 <div>
                   <span className="text-slate-500 block">Email</span>
                   <a
-                    href={`mailto:${storeSetting?.supportEmail || storeSetting?.adminEmail || 'support@egany.com'}`}
+                    href={`mailto:${storeSetting?.supportEmail || storeSetting?.adminEmail || 'support@posdemo.vn'}`}
                     className="font-semibold text-slate-800 hover:text-[#284ea1] transition-colors"
                   >
-                    {storeSetting?.supportEmail || storeSetting?.adminEmail || 'support@egany.com'}
+                    {storeSetting?.supportEmail || storeSetting?.adminEmail || 'support@posdemo.vn'}
                   </a>
                 </div>
               </div>
@@ -160,7 +178,7 @@ export default function Footer({ initialMenu = null }) {
               <div className="flex items-center gap-2 flex-wrap">
                 {/* Facebook */}
                 <a
-                  href="https://www.facebook.com/"
+                  href={storeSetting?.socialLinks?.facebook || 'https://www.facebook.com/'}
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="Facebook"
@@ -173,7 +191,7 @@ export default function Footer({ initialMenu = null }) {
 
                 {/* YouTube */}
                 <a
-                  href="https://www.youtube.com/"
+                  href={storeSetting?.socialLinks?.youtube || 'https://www.youtube.com/'}
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="YouTube"
@@ -186,7 +204,7 @@ export default function Footer({ initialMenu = null }) {
 
                 {/* TikTok */}
                 <a
-                  href="https://www.tiktok.com/"
+                  href={storeSetting?.socialLinks?.tiktok || 'https://www.tiktok.com/'}
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="TikTok"
@@ -199,7 +217,7 @@ export default function Footer({ initialMenu = null }) {
 
                 {/* Instagram */}
                 <a
-                  href="https://www.instagram.com/"
+                  href={storeSetting?.socialLinks?.instagram || 'https://www.instagram.com/'}
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="Instagram"
@@ -212,7 +230,7 @@ export default function Footer({ initialMenu = null }) {
 
                 {/* Zalo */}
                 <a
-                  href="https://zalo.me/"
+                  href={storeSetting?.socialLinks?.zalo || (storeSetting?.phone ? `https://zalo.me/${storeSetting.phone.replace(/\s+/g, '')}` : 'https://zalo.me/')}
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="Zalo"
@@ -283,10 +301,10 @@ export default function Footer({ initialMenu = null }) {
                   <span>
                     Gọi mua hàng:{' '}
                     <a
-                      href="tel:0999999999"
+                      href={`tel:${storeSetting?.phone || storeSetting?.hotline || '0949527013'}`}
                       className="font-bold text-[#284ea1] hover:underline"
                     >
-                      0999999999
+                      {storeSetting?.phone || storeSetting?.hotline || '0949527013'}
                     </a>{' '}
                     <span className="text-slate-500">(8h-20h)</span>
                   </span>
@@ -296,10 +314,10 @@ export default function Footer({ initialMenu = null }) {
                   <span>
                     Gọi bảo hành:{' '}
                     <a
-                      href="tel:19009999"
+                      href={`tel:${storeSetting?.hotline || storeSetting?.phone || '1900 1234'}`}
                       className="font-bold text-[#284ea1] hover:underline"
                     >
-                      19009999
+                      {storeSetting?.hotline || storeSetting?.phone || '1900 1234'}
                     </a>{' '}
                     <span className="text-slate-500">(8h-20h)</span>
                   </span>
@@ -383,7 +401,9 @@ export default function Footer({ initialMenu = null }) {
       <div className="border-t border-slate-200 bg-white py-3.5">
         <div className="max-w-[1536px] 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 2xl:px-8 text-center text-xs text-slate-500">
           © Bản quyền thuộc về{' '}
-          <span className="font-semibold text-slate-800">SHOP</span>
+          <span className="font-semibold text-slate-800">
+            {storeSetting?.name || storeSetting?.businessName || 'Cửa hàng'}
+          </span>
           {' '}| Cung cấp bởi{' '}
           <a
             href="https://www.haravan.com/"

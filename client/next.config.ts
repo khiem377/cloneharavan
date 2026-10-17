@@ -57,6 +57,15 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async redirects() {
+    return [
+      {
+        source: "/products",
+        destination: "/collections/all",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;
