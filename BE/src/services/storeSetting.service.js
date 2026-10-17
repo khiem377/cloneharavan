@@ -69,12 +69,26 @@ const DEFAULT_CARRIERS = [
   },
 ];
 
+const Media = require('../models/media.model');
+
 class StoreSettingService {
   /**
    * Lấy cấu hình toàn diện cho Admin
    */
   static async getStoreSettings() {
-    return await StoreSetting.getSingleton();
+    const setting = await StoreSetting.getSingleton();
+    if (setting?.storeInfo?.logo && !setting.storeInfo.logoMediaId) {
+      try {
+        const matched = await Media.findOne({ url: setting.storeInfo.logo }).select('_id');
+        if (matched) {
+          setting.storeInfo.logoMediaId = matched._id;
+          await setting.save();
+        }
+      } catch (err) {
+        // bỏ qua lỗi nếu không tìm thấy
+      }
+    }
+    return setting;
   }
 
   /**
@@ -82,8 +96,21 @@ class StoreSettingService {
    */
   static async getPublicStoreSettings() {
     const setting = await StoreSetting.getSingleton();
+    const storeInfo = setting.storeInfo ? setting.storeInfo.toObject() : {};
+    if (storeInfo.address) {
+      const parts = [
+        storeInfo.address.detailNumber,
+        storeInfo.address.street,
+        storeInfo.address.ward,
+        storeInfo.address.district,
+        storeInfo.address.province,
+      ].map((p) => (typeof p === 'string' ? p.trim() : '')).filter(Boolean);
+      if (parts.length > 0) {
+        storeInfo.address.fullAddress = parts.join(', ');
+      }
+    }
     return {
-      storeInfo: setting.storeInfo,
+      storeInfo,
       standards: setting.standards,
       checkout: {
         layoutType: setting.checkout.layoutType,
@@ -120,7 +147,22 @@ class StoreSettingService {
     const oldData = setting.toObject();
 
     if (section === 'all') {
-      if (payload.storeInfo) setting.storeInfo = { ...setting.storeInfo.toObject(), ...payload.storeInfo };
+      if (payload.storeInfo) {
+        if (payload.storeInfo.address) {
+          const addr = payload.storeInfo.address;
+          const parts = [
+            addr.detailNumber,
+            addr.street,
+            addr.ward,
+            addr.district,
+            addr.province,
+          ].map((p) => (typeof p === 'string' ? p.trim() : '')).filter(Boolean);
+          if (parts.length > 0) {
+            addr.fullAddress = parts.join(', ');
+          }
+        }
+        setting.storeInfo = { ...setting.storeInfo.toObject(), ...payload.storeInfo };
+      }
       if (payload.standards) setting.standards = { ...setting.standards.toObject(), ...payload.standards };
       if (payload.orderCode) setting.orderCode = { ...setting.orderCode.toObject(), ...payload.orderCode };
       if (payload.checkout) setting.checkout = { ...setting.checkout.toObject(), ...payload.checkout };

@@ -13,12 +13,12 @@ const storeSettingSchema = new mongoose.Schema(
     storeInfo: {
       name: {
         type: String,
-        default: 'Cửa hàng PosDemo',
+        default: 'Dak Shop',
         trim: true,
       },
       businessName: {
         type: String,
-        default: 'Công ty Cổ phần Công nghệ PosDemo Việt Nam',
+        default: 'Công ty Cổ phần Dak Shop Việt Nam',
         trim: true,
       },
       logo: {
@@ -41,12 +41,12 @@ const storeSettingSchema = new mongoose.Schema(
       },
       adminEmail: {
         type: String,
-        default: 'admin@posdemo.vn',
+        default: 'admin@dakshop.vn',
         trim: true,
       },
       supportEmail: {
         type: String,
-        default: 'support@posdemo.vn',
+        default: 'support@dakshop.vn',
         trim: true,
       },
       logoMediaId: {
@@ -61,6 +61,18 @@ const storeSettingSchema = new mongoose.Schema(
       industry: {
         type: String,
         default: 'Thời trang & Phụ kiện',
+      },
+      description: {
+        type: String,
+        default: 'Chuyên cung cấp các thiết bị điện tử, thời trang và sản phẩm chính hãng chất lượng cao.',
+        trim: true,
+      },
+      socialLinks: {
+        facebook: { type: String, default: 'https://www.facebook.com/' },
+        youtube: { type: String, default: 'https://www.youtube.com/' },
+        tiktok: { type: String, default: 'https://www.tiktok.com/' },
+        instagram: { type: String, default: 'https://www.instagram.com/' },
+        zalo: { type: String, default: 'https://zalo.me/' },
       },
       address: {
         street: { type: String, default: '123 Đường Nguyễn Huệ' },
@@ -286,6 +298,11 @@ storeSettingSchema.statics.getSingleton = async function () {
   let setting = await this.findOne({ isDefault: true });
   if (!setting) {
     setting = await this.create({ isDefault: true });
+  } else if (!setting.storeInfo?.name || setting.storeInfo?.name === 'Cửa hàng PosDemo') {
+    setting.storeInfo = setting.storeInfo || {};
+    setting.storeInfo.name = 'Dak Shop';
+    setting.storeInfo.businessName = 'Công ty Cổ phần Dak Shop Việt Nam';
+    await setting.save();
   }
   return setting;
 };
