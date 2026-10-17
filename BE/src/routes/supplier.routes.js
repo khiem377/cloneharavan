@@ -8,6 +8,7 @@ const { requirePermission } = require('../middleware/permission.middleware');
 // Basic CRUD
 router.get('/', protect, requirePermission('supplier.view'), supplierController.getSuppliers);
 router.post('/sync-debts', protect, requirePermission('supplier.manage'), supplierDebtController.syncAllExistingOrders);
+router.get('/staff-options', protect, requirePermission('supplier.view'), supplierController.getStaffOptions);
 router.get('/:id', protect, requirePermission('supplier.view'), supplierController.getSupplierById);
 router.post('/', protect, requirePermission('supplier.manage'), supplierController.createSupplier);
 router.put('/:id', protect, requirePermission('supplier.manage'), supplierController.updateSupplier);
@@ -19,5 +20,8 @@ router.post('/:supplierId/debts', protect, requirePermission('supplier.manage'),
 router.post('/:supplierId/debts/:debtId/pay', protect, requirePermission('supplier.manage'), supplierDebtController.payDebt);
 router.post('/:supplierId/debts/offset', protect, requirePermission('supplier.manage'), supplierDebtController.offsetDebts);
 router.get('/:supplierId/debt-history', protect, requirePermission('supplier.view'), supplierDebtController.getDebtHistory);
+
+// Tổng hợp hoạt động NCC: chỉ số theo kỳ + lịch sử đơn nhập/đơn trả
+router.get('/:supplierId/activity', protect, requirePermission('supplier.view'), supplierController.getSupplierActivity);
 
 module.exports = router;

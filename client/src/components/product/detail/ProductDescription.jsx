@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
+import { sanitizeHtml } from '@/utils/sanitizeHtml';
 
 export default function ProductDescription({ product }) {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -15,6 +16,8 @@ export default function ProductDescription({ product }) {
       </div>
     );
   }
+
+  const cleanDescription = sanitizeHtml(rawDescription);
 
   return (
     <div className="rounded-[6px] border border-slate-200 bg-white p-4 sm:p-6 flex flex-col gap-4">
@@ -32,7 +35,7 @@ export default function ProductDescription({ product }) {
           className={`product-content text-slate-700 leading-relaxed transition-all duration-300 ${
             !isExpanded ? 'max-h-[480px] overflow-hidden' : 'max-h-none'
           }`}
-          dangerouslySetInnerHTML={{ __html: rawDescription }}
+          dangerouslySetInnerHTML={{ __html: cleanDescription }}
         />
 
         {/* Mặt nạ làm mờ trắng ở chân nội dung khi chưa mở rộng */}

@@ -40,16 +40,18 @@ export default function ProfileSidebar({
     return name.trim().charAt(0).toUpperCase();
   };
 
+  const avatarUrl = typeof user?.avatar === 'string' ? user.avatar : user?.avatar?.url;
+
   return (
     <Card className="rounded-[6px] border border-border bg-card p-5 shadow-xs">
       <div className="flex flex-col items-center text-center space-y-3">
         {/* Avatar with Upload button */}
         <div className="relative group">
           <div className="size-20 rounded-full border-2 border-border overflow-hidden bg-primary/10 flex items-center justify-center font-bold text-2xl text-primary select-none">
-            {user?.avatar ? (
+            {avatarUrl ? (
               <img
-                src={user.avatar}
-                alt={user.fullName || 'Admin'}
+                src={avatarUrl}
+                alt={user?.fullName || 'Admin'}
                 className="w-full h-full object-cover"
               />
             ) : (

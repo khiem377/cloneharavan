@@ -62,11 +62,171 @@ const registerUser = async (data) => {
   return User.create(data);
 };
 
-const loginUser = async (email, password) => {
-  const user = await User.findOne({ email }).select('+password');
-  const isValid = user && (await user.matchPassword(password));
+// So sánh chuỗi thời gian bất biến (Constant-time comparison) chống Timing Attack
+const safeStringCompare = (a = '', b = '') => {
+  const strA = String(a || '');
+  const strB = String(b || '');
+  const bufA = Buffer.from(strA);
+  const bufB = Buffer.from(strB);
+  if (bufA.length !== bufB.length) return false;
+  return crypto.timingSafeEqual(bufA, bufB);
+};
 
-  if (!isValid) throw new AppError('Email hoặc mật khẩu không chính xác', 401);
+// Chuẩn hóa địa chỉ IP
+const normalizeIp = (rawIp) => {
+  let ip = (rawIp || '127.0.0.1').replace('::ffff:', '').trim();
+  if (ip === '::1' || ip === 'localhost') return '127.0.0.1';
+  return ip;
+};
+
+/**
+ * Trích xuất định danh thiết bị (Device Fingerprint + IP)
+ * Kết hợp IP mạng + User-Agent trình duyệt + Client Session/Device ID
+ */
+const getDeviceFingerprint = (req) => {
+  const rawIp =
+    req?.headers?.['x-forwarded-for']?.split(',')[0]?.trim() ||
+    req?.ip ||
+    req?.socket?.remoteAddress ||
+    '127.0.0.1';
+  const clientIp = normalizeIp(rawIp);
+  const clientUA = req?.headers?.['user-agent'] || 'Unknown';
+  const clientSessionId =
+    req?.headers?.['x-session-id'] ||
+    req?.headers?.['x-device-id'] ||
+    req?.cookies?.sessionId ||
+    req?.body?.sessionId ||
+    '';
+
+  const rawFingerprint = `${clientIp}::${clientUA}::${clientSessionId}`;
+  const fingerprint = crypto.createHash('sha256').update(rawFingerprint).digest('hex').slice(0, 16);
+
+  return {
+    clientIp,
+    clientUA,
+    clientSessionId,
+    fingerprint,
+  };
+};
+
+// Lưu vết số lần nhập sai và thời gian khóa theo từng thiết bị: [email::deviceFingerprint]
+// Cấu trúc: Map<string, { attempts: number, lockUntil: Date | null, lastAttempt: number }>
+const deviceLoginAttempts = new Map();
+
+// Tự động dọn rác các record hết hạn sau 15 phút
+const cleanExpiredDeviceAttempts = () => {
+  const now = Date.now();
+  for (const [key, data] of deviceLoginAttempts.entries()) {
+    if (data.lockUntil && data.lockUntil.getTime() < now && now - data.lastAttempt > 15 * 60 * 1000) {
+      deviceLoginAttempts.delete(key);
+    } else if (!data.lockUntil && now - data.lastAttempt > 15 * 60 * 1000) {
+      deviceLoginAttempts.delete(key);
+    }
+  }
+};
+setInterval(cleanExpiredDeviceAttempts, 5 * 60 * 1000).unref();
+
+// Helper xóa toàn bộ vết khóa của một email khi đăng nhập thành công
+const clearDeviceLoginAttempts = (email) => {
+  if (!email) return;
+  const prefix = `${email.toLowerCase().trim()}::`;
+  for (const key of deviceLoginAttempts.keys()) {
+    if (key.startsWith(prefix)) {
+      deviceLoginAttempts.delete(key);
+    }
+  }
+};
+
+const loginUser = async (email, password, req = null) => {
+  const normalizedEmail = (email || '').toLowerCase().trim();
+  const user = await User.findOne({ email: normalizedEmail }).select('+password');
+
+  if (!user) {
+    throw new AppError('Email hoặc mật khẩu không chính xác', 401);
+  }
+
+  // 1. Nhận diện thiết bị (Device Fingerprint + IP) của người đang gửi request
+  const { fingerprint } = getDeviceFingerprint(req);
+  const attemptKey = `${normalizedEmail}::${fingerprint}`;
+  const deviceAttempt = deviceLoginAttempts.get(attemptKey);
+
+  // 2. Kiểm tra xem THIẾT BỊ NÀY có đang bị khóa 5 phút vì sai pass 5 lần không
+  if (deviceAttempt?.lockUntil && deviceAttempt.lockUntil.getTime() > Date.now()) {
+    const remainingSeconds = Math.max(1, Math.ceil((deviceAttempt.lockUntil.getTime() - Date.now()) / 1000));
+    const unlockTimeStr = deviceAttempt.lockUntil.toLocaleTimeString('vi-VN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    });
+    throw new AppError(
+      `Thiết bị này đã nhập sai mật khẩu 5 lần liên tiếp. Tạm khóa đăng nhập 5 phút trên thiết bị. Thời gian mở lại: ${unlockTimeStr}.`,
+      429,
+      {
+        lockUntil: deviceAttempt.lockUntil,
+        remainingSeconds,
+      }
+    );
+  }
+
+  // 3. Kiểm tra mật khẩu
+  const isValid = await user.matchPassword(password);
+
+  if (!isValid) {
+    const currentAttempts = (deviceAttempt?.attempts || 0) + 1;
+    const now = Date.now();
+
+    if (currentAttempts >= 5) {
+      const lockUntil = new Date(now + 5 * 60 * 1000); // Khóa 5 phút riêng cho thiết bị này
+      deviceLoginAttempts.set(attemptKey, {
+        attempts: 0,
+        lockUntil,
+        lastAttempt: now,
+      });
+
+      const unlockTimeStr = lockUntil.toLocaleTimeString('vi-VN', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+      });
+
+      throw new AppError(
+        `Bạn đã nhập sai mật khẩu 5 lần liên tiếp. Thiết bị tạm khóa 5 phút. Thời gian mở lại: ${unlockTimeStr}.`,
+        429,
+        {
+          lockUntil,
+          remainingSeconds: 300,
+        }
+      );
+    } else {
+      deviceLoginAttempts.set(attemptKey, {
+        attempts: currentAttempts,
+        lockUntil: null,
+        lastAttempt: now,
+      });
+
+      const remainingAttempts = 5 - currentAttempts;
+      throw new AppError(
+        `Email hoặc mật khẩu không chính xác. Bạn còn ${remainingAttempts} lần thử trên thiết bị này trước khi bị tạm khóa 5 phút.`,
+        401,
+        {
+          remainingAttempts,
+        }
+      );
+    }
+  }
+
+  // 4. Mật khẩu ĐÚNG: Xóa toàn bộ vết khóa của thiết bị này
+  deviceLoginAttempts.delete(attemptKey);
+
+  // Nếu trong DB có cờ lock cũ của User thì cũng xóa sạch
+  if (user.failedLoginAttempts > 0 || user.lockUntil) {
+    user.failedLoginAttempts = 0;
+    user.lockUntil = null;
+    await user.save({ validateBeforeSave: false });
+  }
+
   if (!user.isActive) throw new AppError('Tài khoản đã bị vô hiệu hóa', 403);
 
   return user;
@@ -81,12 +241,6 @@ const rotateRefreshToken = async (token) => {
   }
 
   return user;
-};
-
-const normalizeIp = (rawIp) => {
-  let ip = (rawIp || '127.0.0.1').replace('::ffff:', '').trim();
-  if (ip === '::1' || ip === 'localhost') return '127.0.0.1';
-  return ip;
 };
 
 /**
@@ -108,6 +262,7 @@ const recordUserSession = async (userId, req, explicitSessionId = null) => {
       crypto.randomUUID();
 
     const deviceInfo = parseDeviceInfo(clientUA, clientIp);
+    const loc = await lookupGeoLocation(clientIp);
 
     const user = await User.findById(userId);
     if (!user) return sessionId;
@@ -129,6 +284,7 @@ const recordUserSession = async (userId, req, explicitSessionId = null) => {
       user.sessions[existingIndex].browser = deviceInfo.browser;
       user.sessions[existingIndex].os = deviceInfo.os;
       user.sessions[existingIndex].sessionId = sessionId;
+      user.sessions[existingIndex].location = loc || user.sessions[existingIndex].location || 'Hồ Chí Minh, Việt Nam';
     } else {
       user.sessions.unshift({
         sessionId,
@@ -137,15 +293,15 @@ const recordUserSession = async (userId, req, explicitSessionId = null) => {
         browser: deviceInfo.browser,
         os: deviceInfo.os,
         ip: deviceInfo.ip,
+        location: loc || 'Hồ Chí Minh, Việt Nam',
         userAgent: clientUA,
         lastActiveAt: new Date(),
         createdAt: new Date(),
       });
     }
 
-    // Giữ tối đa 20 phiên gần nhất
-    if (user.sessions.length > 20) {
-      user.sessions = user.sessions.slice(0, 20);
+    if (user.sessions.length > 10) {
+      user.sessions = user.sessions.slice(-10);
     }
 
     await user.save({ validateBeforeSave: false });
@@ -196,6 +352,18 @@ const getUserSessions = async (userId, currentSessionId, clientIp, clientUA) => 
     });
   }
 
+  // Đảm bảo mọi session đều có location
+  userSessions.forEach((s) => {
+    if (!s.location) {
+      s.location = loc || 'Hồ Chí Minh, Việt Nam';
+    }
+  });
+
+  // Giữ tối đa 10 phiên gần nhất
+  if (userSessions.length > 10) {
+    userSessions = userSessions.slice(-10);
+  }
+
   user.sessions = userSessions;
   await user.save({ validateBeforeSave: false });
 
@@ -207,6 +375,7 @@ const getUserSessions = async (userId, currentSessionId, clientIp, clientUA) => 
       sObj.sessionId === activeSessionId;
     return {
       ...sObj,
+      location: sObj.location || loc || 'Hồ Chí Minh, Việt Nam',
       isCurrent: !!isMatched,
     };
   });
@@ -281,7 +450,7 @@ const logoutOtherSessions = async (userId, currentSessionId, clientIp, clientUA)
       message: 'Bạn đã đăng xuất khỏi các thiết bị khác.',
       timestamp: Date.now(),
     });
-  } catch (_) {}
+  } catch (_) { }
 
   return { message: 'Đã đăng xuất khỏi tất cả các thiết bị khác thành công' };
 };
@@ -346,11 +515,25 @@ const logoutUser = async (userId) => {
  * Quên mật khẩu - Tạo reset token và gửi email
  */
 const forgotPassword = async (email) => {
-  const user = await User.findOne({ email });
+  const normalizedEmail = (email || '').toLowerCase().trim();
+  const user = await User.findOne({ email: normalizedEmail });
   if (!user) {
     throw new AppError('Không tìm thấy tài khoản với email này', 404);
   }
 
+  // Chống Spam gửi email liên tục (Cooldown 60 giây)
+  if (user.lastPasswordResetRequest) {
+    const elapsedSeconds = Math.floor((Date.now() - user.lastPasswordResetRequest.getTime()) / 1000);
+    if (elapsedSeconds < 60) {
+      const waitSeconds = 60 - elapsedSeconds;
+      throw new AppError(
+        `Bạn vừa yêu cầu đặt lại mật khẩu. Vui lòng kiểm tra hộp thư hoặc chờ ${waitSeconds} giây để gửi lại.`,
+        429
+      );
+    }
+  }
+
+  user.lastPasswordResetRequest = new Date();
   const resetToken = user.createPasswordResetToken();
   await user.save({ validateBeforeSave: false });
 
@@ -472,7 +655,7 @@ const verifyPhoneOtp = async (userId, otp) => {
 
   if (
     !user.phoneOtp ||
-    user.phoneOtp !== hashedOtp ||
+    !safeStringCompare(user.phoneOtp, hashedOtp) ||
     !user.phoneOtpExpires ||
     user.phoneOtpExpires < Date.now()
   ) {
@@ -482,6 +665,13 @@ const verifyPhoneOtp = async (userId, otp) => {
   user.isPhoneVerified = true;
   user.phoneOtp = undefined;
   user.phoneOtpExpires = undefined;
+
+  // Tự động mở khóa tài khoản nếu đang bị khóa
+  if (user.failedLoginAttempts > 0 || user.lockUntil) {
+    user.failedLoginAttempts = 0;
+    user.lockUntil = null;
+  }
+
   await user.save({ validateBeforeSave: false });
 
   return user;
@@ -491,11 +681,14 @@ const verifyPhoneOtp = async (userId, otp) => {
  * Đăng ký tài khoản Admin (qua secret key hoặc khi chưa có admin nào trong DB)
  */
 const registerAdmin = async (data) => {
-  const configuredSecret = process.env.ADMIN_SECRET_KEY || 'admin_secret_key_haravan_2026';
+  const configuredSecret = process.env.ADMIN_SECRET_KEY;
+  if (!configuredSecret) {
+    throw new AppError('Chức năng đăng ký Admin tạm khóa do chưa cấu hình ADMIN_SECRET_KEY trong môi trường', 403);
+  }
 
   const existingAdminCount = await User.countDocuments({ role: 'admin' });
   if (existingAdminCount > 0) {
-    if (!data.adminSecretKey || data.adminSecretKey !== configuredSecret) {
+    if (!data.adminSecretKey || !safeStringCompare(data.adminSecretKey, configuredSecret)) {
       throw new AppError('Mã bí mật tạo Admin (adminSecretKey) không chính xác hoặc bị thiếu', 403);
     }
   }
@@ -608,6 +801,14 @@ const loginWithGoogle = async (credential, isAdminRequest = false) => {
   // Kiểm tra quyền nếu là Admin request
   if (isAdminRequest && user.role === 'user') {
     throw new AppError('Tài khoản của bạn không có quyền truy cập trang quản trị', 403);
+  }
+
+  // Đăng nhập Google thành công: Tự động mở khóa nếu trước đó bị ai gõ sai mật khẩu
+  clearDeviceLoginAttempts(user.email);
+  if (user.failedLoginAttempts > 0 || user.lockUntil) {
+    user.failedLoginAttempts = 0;
+    user.lockUntil = null;
+    await user.save({ validateBeforeSave: false });
   }
 
   return user;
@@ -845,6 +1046,14 @@ const loginWithTikTok = async (code, redirectUri = null, codeVerifier = null, is
     throw new AppError('Tài khoản của bạn không có quyền truy cập trang quản trị', 403);
   }
 
+  // Đăng nhập TikTok thành công: Tự động mở khóa nếu trước đó bị ai gõ sai mật khẩu
+  clearDeviceLoginAttempts(user.email);
+  if (user.failedLoginAttempts > 0 || user.lockUntil) {
+    user.failedLoginAttempts = 0;
+    user.lockUntil = null;
+    await user.save({ validateBeforeSave: false });
+  }
+
   return user;
 };
 
@@ -1038,6 +1247,14 @@ const loginWithZalo = async (code, redirectUri = null, codeVerifier = null, isAd
   // 🛑 KIỂM TRA PHÂN QUYỀN CHẶT CHẼ: Khách hàng thường (role === 'user') không được đăng nhập vào hệ thống Admin
   if (isAdminRequest && user.role === 'user') {
     throw new AppError('Tài khoản của bạn là tài khoản Khách hàng, không có quyền truy cập trang quản trị shop!', 403);
+  }
+
+  // Đăng nhập Zalo thành công: Tự động mở khóa nếu trước đó bị ai gõ sai mật khẩu
+  clearDeviceLoginAttempts(user.email);
+  if (user.failedLoginAttempts > 0 || user.lockUntil) {
+    user.failedLoginAttempts = 0;
+    user.lockUntil = null;
+    await user.save({ validateBeforeSave: false });
   }
 
   return user;
@@ -1505,16 +1722,23 @@ const verifyAdminLoginOtp = async (email, otp) => {
 
   if (
     !user.adminLoginOtp ||
-    user.adminLoginOtp !== hashedOtp ||
+    !safeStringCompare(user.adminLoginOtp, hashedOtp) ||
     !user.adminLoginOtpExpires ||
     user.adminLoginOtpExpires < Date.now()
   ) {
     throw new AppError('Mã OTP không chính xác hoặc đã hết hạn. Vui lòng lấy mã mới!', 400);
   }
 
-  // Clear OTP sau khi sử dụng
+  // Clear OTP sau khi sử dụng và tự động mở khóa mật khẩu
   user.adminLoginOtp = undefined;
   user.adminLoginOtpExpires = undefined;
+
+  clearDeviceLoginAttempts(user.email);
+  if (user.failedLoginAttempts > 0 || user.lockUntil) {
+    user.failedLoginAttempts = 0;
+    user.lockUntil = null;
+  }
+
   await user.save({ validateBeforeSave: false });
 
   return user;
@@ -1534,7 +1758,7 @@ const getWebAuthnRpConfig = (req) => {
     try {
       const u = new URL(originHeader);
       parsedOrigin = u.origin;
-    } catch (_) {}
+    } catch (_) { }
   }
 
   const allowedOrigins = [
@@ -1681,6 +1905,14 @@ const verifyPasskeyLogin = async ({ email, response, credentialId, clientDataJSO
 
   user.passkeyChallenge = undefined;
   user.passkeyChallengeExpires = undefined;
+
+  // Đăng nhập bằng vân tay/Passkey thành công: Tự động mở khóa password
+  clearDeviceLoginAttempts(user.email);
+  if (user.failedLoginAttempts > 0 || user.lockUntil) {
+    user.failedLoginAttempts = 0;
+    user.lockUntil = null;
+  }
+
   await user.save({ validateBeforeSave: false });
 
   return user;
@@ -1852,9 +2084,9 @@ const getPopulatedAuthUser = async (userId, { clientIp, clientUserAgent, provide
   const permissions = isSuperAdmin
     ? ['*']
     : [...new Set([
-        ...(populatedUser.roleId?.permissions || []).map((p) => p.code),
-        ...(populatedUser.customPermissions || []).map((p) => p.code),
-      ])];
+      ...(populatedUser.roleId?.permissions || []).map((p) => p.code),
+      ...(populatedUser.customPermissions || []).map((p) => p.code),
+    ])];
 
   return {
     _id: populatedUser._id,
@@ -1883,9 +2115,9 @@ const getUserProfileWithPermissions = async (userId, req = null) => {
   const permissions = isSuperAdmin
     ? ['*']
     : [...new Set([
-        ...(populatedUser.roleId?.permissions || []).map((p) => p.code),
-        ...(populatedUser.customPermissions || []).map((p) => p.code),
-      ])];
+      ...(populatedUser.roleId?.permissions || []).map((p) => p.code),
+      ...(populatedUser.customPermissions || []).map((p) => p.code),
+    ])];
 
   const userObj = populatedUser.toObject();
   delete userObj.password;
@@ -1893,7 +2125,7 @@ const getUserProfileWithPermissions = async (userId, req = null) => {
   userObj.permissions = permissions;
 
   if (req) {
-    recordUserSession(userId, req).catch(() => {});
+    recordUserSession(userId, req).catch(() => { });
   }
 
   return userObj;

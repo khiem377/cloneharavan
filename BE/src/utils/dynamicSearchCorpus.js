@@ -6,7 +6,8 @@ const SearchLog = require('../models/searchLog.model');
 // In-memory corpus cache
 let cachedCorpus = null;
 let lastCorpusBuildTime = 0;
-const CORPUS_TTL_MS = 30 * 1000;
+const CORPUS_TTL_MS = 5 * 60 * 1000;
+let corpusBuildPromise = null;
 
 // Common Vietnamese E-Commerce Aliases & Synonyms Dictionary
 const COMMON_SEARCH_ALIASES = {
@@ -358,8 +359,14 @@ const buildStoreCorpus = async () => {
  */
 const getStoreCorpus = async (forceRefresh = false) => {
   const now = Date.now();
-  if (!cachedCorpus || forceRefresh || cachedCorpus.version !== 4 || now - lastCorpusBuildTime > CORPUS_TTL_MS) {
-    return await buildStoreCorpus();
+  const isMissing = !cachedCorpus || cachedCorpus.version !== 4;
+  if (isMissing || forceRefresh) {
+    if (!corpusBuildPromise) corpusBuildPromise = buildStoreCorpus().finally(() => { corpusBuildPromise = null; });
+    return corpusBuildPromise;
+  }
+  if (now - lastCorpusBuildTime > CORPUS_TTL_MS && !corpusBuildPromise) {
+    // Stale-while-revalidate: tra ban cu ngay, rebuild ngam o nen (chi 1 lan tai 1 thoi diem)
+    corpusBuildPromise = buildStoreCorpus().finally(() => { corpusBuildPromise = null; });
   }
   return cachedCorpus;
 };

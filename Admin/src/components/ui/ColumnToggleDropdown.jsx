@@ -17,26 +17,30 @@ import { ColumnsIcon, EyeIcon, EyeOffIcon, RotateCcwIcon, CheckSquare } from '@/
  *     onShowAll={showAllColumns}
  *   />
  */
-export default function ColumnToggleDropdown({
-  columnVisibility,
-  columns: propsColumns,
-  visibleKeys: propsVisibleKeys,
-  onToggle: propsOnToggle,
-  onReset: propsOnReset,
-  onShowAll: propsOnShowAll,
-  buttonText = 'Cột hiển thị',
-  align = 'right', // 'left' | 'right'
-  className = '',
-}) {
+export default function ColumnToggleDropdown(props) {
+  const {
+    columnVisibility,
+    columns: propsColumns,
+    visibleKeys: propsVisibleKeys,
+    onToggle: propsOnToggle,
+    toggleColumn,
+    onReset: propsOnReset,
+    resetColumns,
+    onShowAll: propsOnShowAll,
+    showAllColumns,
+    buttonText = 'Cột hiển thị',
+    align = 'right', // 'left' | 'right'
+    className = '',
+  } = props;
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
 
-  // Extract from columnVisibility object if provided
+  // Extract from columnVisibility object if provided or directly from props (spread support)
   const columns = columnVisibility ? columnVisibility.columns : (propsColumns || []);
   const visibleKeys = columnVisibility ? columnVisibility.visibleKeys : (propsVisibleKeys || []);
-  const onToggle = columnVisibility ? columnVisibility.toggleColumn : propsOnToggle;
-  const onReset = columnVisibility ? columnVisibility.resetColumns : propsOnReset;
-  const onShowAll = columnVisibility ? columnVisibility.showAllColumns : propsOnShowAll;
+  const onToggle = columnVisibility ? columnVisibility.toggleColumn : (propsOnToggle || toggleColumn);
+  const onReset = columnVisibility ? columnVisibility.resetColumns : (propsOnReset || resetColumns);
+  const onShowAll = columnVisibility ? columnVisibility.showAllColumns : (propsOnShowAll || showAllColumns);
 
   // Calculate counts
   const totalCount = columns.length;

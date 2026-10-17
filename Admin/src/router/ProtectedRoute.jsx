@@ -2,6 +2,7 @@ import { Navigate, Outlet, useNavigate } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
 import useAuthStore from '../store/authStore';
 import api from '../lib/axios';
+import AdminShellSkeleton from '@/components/layout/AdminShellSkeleton';
 
 function getStoredAuth() {
   try {
@@ -16,16 +17,20 @@ function getStoredAuth() {
 
 /**
  * ProtectedRoute
- * 1. Kiểm tra token trong localStorage (sync, không gây nhấp nháy).
- * 2. Sau khi mount, gọi GET /auth/me để đồng bộ user/permissions mới nhất từ BE.
- *    - Nếu 401 → clearAuth + redirect /login?reason=session_expired
- *    - Nếu thành công → cập nhật store với permissions mới (ví dụ ['*'] sau khi admin được sync)
+ * 1. Optimistic Render: Đọc token & user từ storage để render giao diện ngay lập tức (0ms).
+ * 2. Background Revalidation (SWR): Gọi GET /auth/me ngầm để đồng bộ user/permissions mới nhất.
+ *    - Nếu 401: clearAuth + redirect về /login
+ *    - Nếu thành công: cập nhật thông tin mới nhất vào store
+ * 3. Nếu cần chờ đồng bộ: render AdminShellSkeleton thay vì trả về null gây trắng trang.
  */
 export default function ProtectedRoute() {
   const { token, user } = getStoredAuth();
   const navigate = useNavigate();
   const hasSynced = useRef(false);
-  const [syncing, setSyncing] = useState(true);
+
+  // Nếu đã có token và user hợp lệ trong storage -> render ngay (không chặn màn hình)
+  const isOptimisticReady = Boolean(token && user);
+  const [syncing, setSyncing] = useState(!isOptimisticReady);
 
   useEffect(() => {
     if (!token || hasSynced.current) {
@@ -38,22 +43,19 @@ export default function ProtectedRoute() {
       .then(({ data }) => {
         const freshUser = data?.data?.user;
         if (freshUser) {
-          // Cập nhật store với thông tin user + permissions mới nhất
           useAuthStore.getState().setAuth({
             user: freshUser,
-            accessToken: useAuthStore.getState().accessToken,
+            accessToken: useAuthStore.getState().accessToken || token,
             refreshToken: useAuthStore.getState().refreshToken,
           });
         }
       })
       .catch((err) => {
         const status = err?.response?.status;
-        // 401: token hết hạn / không hợp lệ → đẩy về login
         if (status === 401) {
           useAuthStore.getState().clearAuth();
           navigate('/login?reason=session_expired', { replace: true });
         }
-        // 403, 500, network error: bỏ qua, không làm gián đoạn session
       })
       .finally(() => {
         setSyncing(false);
@@ -68,8 +70,10 @@ export default function ProtectedRoute() {
     return <Navigate to="/login?reason=no_admin_access" replace />;
   }
 
-  // Đang đồng bộ lần đầu → giữ nguyên (không render children để tránh flash permission cũ)
-  if (syncing) return null;
+  // Đang đồng bộ lần đầu mà chưa có dữ liệu lạc quan -> hiển thị Skeleton khung giao diện
+  if (syncing) {
+    return <AdminShellSkeleton />;
+  }
 
   return <Outlet />;
 }

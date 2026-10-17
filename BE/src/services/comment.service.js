@@ -1,52 +1,21 @@
-const path = require('path');
-const fs = require('fs');
-const readline = require('readline');
 const Comment = require('../models/comment.model');
 const Product = require('../models/product.model');
+const Order = require('../models/order.model');
 const { AppError } = require('../utils/AppError');
 const { validateCommentContent } = require('../utils/profanityFilter');
 
-// Đường dẫn file orders.csv để check lịch sử mua hàng mà KHÔNG đụng vào model Order/Cart/Checkout
-const ORDERS_CSV_PATH = path.join(__dirname, '../../python-services/data/orders.csv');
-
 /**
- * Kiểm tra xem User đã từng đặt đơn chứa sản phẩm này chưa (đọc từ orders.csv)
+ * Kiểm tra User đã từng đặt đơn chứa sản phẩm này chưa (đọc trực tiếp từ collection orders, chỉ đọc).
+ * Đơn đã hủy không tính là đã mua.
  */
 const checkUserPurchased = async (userId, productId) => {
   if (!userId || !productId) return false;
-  const targetUid = String(userId);
-  const targetPid = String(productId);
-
-  if (!fs.existsSync(ORDERS_CSV_PATH)) return false;
-
-  return new Promise((resolve) => {
-    let found = false;
-    const rl = readline.createInterface({
-      input: fs.createReadStream(ORDERS_CSV_PATH, { encoding: 'utf-8' }),
-      crlfDelay: Infinity,
-    });
-
-    rl.on('line', (line) => {
-      if (found) return;
-      const parts = line.split(',');
-      if (parts.length >= 3) {
-        const uId = parts[1]?.trim();
-        const pId = parts[2]?.trim();
-        if (uId === targetUid && pId === targetPid) {
-          found = true;
-          rl.close();
-        }
-      }
-    });
-
-    rl.on('close', () => {
-      resolve(found);
-    });
-
-    rl.on('error', () => {
-      resolve(false);
-    });
+  const found = await Order.exists({
+    userId,
+    'items.productId': productId,
+    orderStatus: { $ne: 'CANCELLED' },
   });
+  return Boolean(found);
 };
 
 /**
@@ -106,7 +75,7 @@ const createComment = async ({
       throw new AppError('Thiếu productId cho đánh giá sản phẩm.', 400);
     }
 
-    // Kiểm tra lịch sử mua hàng từ orders.csv (Admin/Staff được phép phản hồi hỗ trợ)
+    // Kiểm tra lịch sử mua hàng từ DB (Admin/Staff được phép phản hồi hỗ trợ)
     if (!isAdminOrStaff) {
       const hasPurchased = await checkUserPurchased(user._id, productId);
       if (!hasPurchased) {

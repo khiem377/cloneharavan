@@ -74,6 +74,42 @@ export const shippingService = {
     }
   },
 
+  // GHTK Administrative Master Data
+  getGhtkProvinces: async () => {
+    try {
+      const res = await api.get('/shipping/ghtk/provinces');
+      return res.data?.data || [];
+    } catch (err) {
+      console.error('Lỗi lấy danh sách tỉnh/thành GHTK:', err);
+      return [];
+    }
+  },
+
+  getGhtkWards: async (provinceId) => {
+    if (!provinceId) return [];
+    try {
+      const res = await api.get('/shipping/ghtk/wards', {
+        params: { province_id: provinceId },
+      });
+      return res.data?.data || [];
+    } catch (err) {
+      console.error('Lỗi lấy danh sách phường/xã GHTK:', err);
+      return [];
+    }
+  },
+
+  getGhtkLevel4Address: async ({ province, district, ward_street, address } = {}) => {
+    try {
+      const res = await api.get('/shipping/ghtk/level4', {
+        params: { province, district, ward_street, address },
+      });
+      return res.data?.data || [];
+    } catch (err) {
+      console.warn('Lỗi gọi GHTK Level 4 API:', err);
+      return [];
+    }
+  },
+
   calculateFee: async (payload) => {
     const res = await api.post('/shipping/fee', payload);
     return res.data?.data?.fee || null;

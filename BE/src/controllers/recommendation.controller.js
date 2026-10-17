@@ -27,6 +27,25 @@ const recordInteraction = async (req, res, next) => {
   }
 };
 
+// ── POST /api/recommendations/interactions/batch ──────────────────────────
+// Nhận tối đa 50 event / request, ghi 1 lần insertMany
+const recordInteractionsBatch = async (req, res, next) => {
+  try {
+    const userId = req.user?._id || null;
+    const sessionId = req.body?.sessionId || req.headers['x-session-id'] || '';
+    const events = req.body?.events;
+
+    if (!Array.isArray(events)) {
+      return res.status(400).json({ status: 'error', message: 'events phải là một mảng' });
+    }
+
+    const data = await recommendationService.recordUserInteractionsBatch({ userId, sessionId, events });
+    res.json({ status: 'success', message: 'Đã ghi nhận tương tác người dùng', data });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // ── GET /api/recommendations/personalized ─────────────────────────────────
 // 7-layer hybrid engine: SVD + Content + ItemCF + Trending
 const getPersonalizedRecommendations = async (req, res, next) => {
@@ -113,29 +132,24 @@ const computeItemCF = async (req, res, next) => {
   }
 };
 
-// ── GET/POST /api/recommendations/sync-csv ────────────────────────────────
-const syncInteractionsCsv = async (req, res, next) => {
-  try {
-    const cleanMock = req.query.cleanMock !== 'false';
-    const result = await recommendationService.syncAllInteractionsToCsv({ cleanMock });
-    res.json({
-      status: 'success',
-      message: 'Đã đồng bộ 100% tương tác thực tế từ MongoDB sang interactions.csv',
-      data: result,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
 // ── POST /api/recommendations/run-python-svd ─────────────────────────────
+// URL giữ nguyên tên cũ để tương thích; thực tế chạy batch Implicit ALS
 const triggerPythonSVD = async (req, res, next) => {
   try {
-    const { runPythonSVDBatch } = require('../utils/cronJobs');
-    await runPythonSVDBatch();
+    const { runAlsBatch } = require('../utils/cronJobs');
+    const result = await runAlsBatch();
+    if (!result.started) {
+      return res.json({
+        status: 'success',
+        message: result.reason === 'running'
+          ? 'Batch ALS đang chạy, bỏ qua lần kích hoạt này.'
+          : 'Batch ALS vừa chạy gần đây (cooldown 10 phút), bỏ qua lần kích hoạt này.',
+        data: result,
+      });
+    }
     res.json({
       status: 'success',
-      message: 'Đã kích hoạt chạy mô hình SVD Machine Learning Python thành công.',
+      message: 'Đã chạy batch Implicit ALS thành công.',
     });
   } catch (error) {
     next(error);
@@ -144,11 +158,11 @@ const triggerPythonSVD = async (req, res, next) => {
 
 module.exports = {
   recordInteraction,
+  recordInteractionsBatch,
   getPersonalizedRecommendations,
   getSessionBasedRecommendations,
   getTrendingRecommendations,
   getSimilarProducts,
   computeItemCF,
-  syncInteractionsCsv,
   triggerPythonSVD,
 };

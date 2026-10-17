@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const mongoose = require('mongoose');
 const UserInteraction = require('../models/userInteraction.model');
 const PersonalizedRecommendation = require('../models/personalizedRecommendation.model');
 const ItemSimilarity = require('../models/itemSimilarity.model');
@@ -9,9 +10,6 @@ const SearchLog = require('../models/searchLog.model');
 const Brand = require('../models/brand.model');
 const Category = require('../models/category.model');
 
-const INTERACTIONS_CSV_PATH = path.join(__dirname, '../../python-services/data/interactions.csv');
-const PRODUCTS_CSV_PATH     = path.join(__dirname, '../../python-services/data/products.csv');
-const USERS_CSV_PATH        = path.join(__dirname, '../../python-services/data/users.csv');
 
 
 
@@ -450,11 +448,11 @@ const computeContentScore = (product, userProfile) => {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// LAYER 5: HYBRID SCORER — Kết hợp SVD + Content + ItemCF + Trending
+// LAYER 5: HYBRID SCORER — Kết hợp ALS + Content + ItemCF + Trending
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const DEFAULT_HYBRID_WEIGHTS = {
-  svd: 0.40, // Long-term preference (Python batch)
+  als: 0.40, // Long-term preference (Python batch)
   content: 0.30, // Content-based (real-time)
   itemCF: 0.20, // Item-to-Item CF (Amazon style)
   trending: 0.10, // Trending score from SearchLog
@@ -462,9 +460,9 @@ const DEFAULT_HYBRID_WEIGHTS = {
 
 /**
  * Trọng số động thích ứng (Adaptive Dynamic Weights):
- * - Khách mới / Phiên mới (< 5 tương tác): Tối đa hóa Session Intent (Content) và ItemCF, tạm tắt SVD
+ * - Khách mới / Phiên mới (< 5 tương tác): Tối đa hóa Session Intent (Content) và ItemCF, tạm tắt ALS
  * - Khách quen (5 - 15 tương tác): Cân bằng giữa quá khứ và hiện tại
- * - Khách thân thiết (> 15 tương tác): Khai thác triệt để mô hình học máy SVD
+ * - Khách thân thiết (> 15 tương tác): Khai thác triệt để mô hình học máy ALS
  */
 const getDynamicWeights = (userProfile) => {
   const count = userProfile?.totalInteractions || 0;
@@ -474,21 +472,21 @@ const getDynamicWeights = (userProfile) => {
       content: 0.65, // Bắt sóng ngay ý định mua sắm của phiên vừa click
       itemCF: 0.25,  // Sản phẩm đi kèm/xem cùng
       trending: 0.10,
-      svd: 0.00,     // Tránh ma trận thưa làm loãng kết quả
+      als: 0.00,     // Tránh ma trận thưa làm loãng kết quả
     };
   }
 
   if (count <= 15) {
     return {
       content: 0.40,
-      svd: 0.30,
+      als: 0.30,
       itemCF: 0.20,
       trending: 0.10,
     };
   }
 
   return {
-    svd: 0.45,
+    als: 0.45,
     content: 0.30,
     itemCF: 0.20,
     trending: 0.05,
@@ -511,7 +509,7 @@ const normalizeScores = (items, key) => {
  */
 const hybridScore = (item, weights = DEFAULT_HYBRID_WEIGHTS) => {
   return (
-    (item.svdScore || 0) * weights.svd +
+    (item.alsScore || 0) * weights.als +
     (item.contentScore || 0) * weights.content +
     (item.itemCFScore || 0) * weights.itemCF +
     (item.trendingScore || 0) * weights.trending
@@ -525,11 +523,11 @@ const hybridScore = (item, weights = DEFAULT_HYBRID_WEIGHTS) => {
 /**
  * Stage 1: Candidate Retrieval — lấy ~200 candidates từ nhiều nguồn
  */
-const retrieveCandidates = async (userProfile, svdProductIds = [], limit = 200) => {
+const retrieveCandidates = async (userProfile, alsProductIds = [], limit = 200) => {
   const candidateIds = new Set();
 
-  // Source 1: SVD output từ Python batch
-  for (const id of svdProductIds) candidateIds.add(id.toString());
+  // Source 1: ALS output từ Python batch
+  for (const id of alsProductIds) candidateIds.add(id.toString());
 
   // Source 2: Item-CF "also viewed" từ viewed history
   if (userProfile.viewedIds.length > 0) {
@@ -576,7 +574,7 @@ const retrieveCandidates = async (userProfile, svdProductIds = [], limit = 200) 
 /**
  * Stage 2: Ranking — score + sort candidates → top N
  */
-const rankCandidates = async (candidateIds, userProfile, svdScoreMap = {}, itemCFScoreMap = {}) => {
+const rankCandidates = async (candidateIds, userProfile, alsScoreMap = {}, itemCFScoreMap = {}) => {
   if (!candidateIds || candidateIds.length === 0) return [];
 
   // Fetch full product data
@@ -647,7 +645,7 @@ const rankCandidates = async (candidateIds, userProfile, svdScoreMap = {}, itemC
 
     return {
       ...p,
-      svdScore: svdScoreMap[pid] || 0,
+      alsScore: alsScoreMap[pid] || 0,
       contentScore: Math.max(0, contentScore),
       itemCFScore: itemCFScoreMap[pid] || 0,
       trendingScore: trendingScoreMap[pid] || 0,
@@ -655,7 +653,7 @@ const rankCandidates = async (candidateIds, userProfile, svdScoreMap = {}, itemC
   }).filter(Boolean);
 
   // Normalize scores về [0,1] trước khi hybrid
-  scoredItems = normalizeScores(scoredItems, 'svdScore');
+  scoredItems = normalizeScores(scoredItems, 'alsScore');
   scoredItems = normalizeScores(scoredItems, 'contentScore');
   scoredItems = normalizeScores(scoredItems, 'itemCFScore');
   scoredItems = normalizeScores(scoredItems, 'trendingScore');
@@ -725,7 +723,7 @@ const enrichWithVariants = async (products) => {
 
 const buildRecommendReason = (product) => {
   if (product.finalScore > 0.8) return 'Phù hợp nhất với bạn';
-  if (product.svdScore > 0.6) return 'Dựa trên lịch sử mua hàng';
+  if (product.alsScore > 0.6) return 'Dựa trên lịch sử mua hàng';
   if (product.itemCFScore > 0.5) return 'Người dùng tương tự đã xem';
   if (product.contentScore > 0.5) return 'Phù hợp với sở thích của bạn';
   if (product.trendingScore > 0) return 'Đang được nhiều người quan tâm';
@@ -733,226 +731,42 @@ const buildRecommendReason = (product) => {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// CSV REAL-TIME PIPELINE — Bắt ngay lập tức và ghi trực tiếp vào interactions.csv
+// INTERACTIONS.CSV — bản sao realtime của dữ liệu thật trong MongoDB
+// Chỉ ghi SAU KHI đã lưu DB thành công (không phải fallback, không sinh dữ liệu giả).
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const appendInteractionToCsv = (interaction) => {
-  try {
-    const dir = path.dirname(INTERACTIONS_CSV_PATH);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
+const INTERACTIONS_CSV_PATH = path.join(__dirname, '../../python-services/data/interactions.csv');
+const CSV_HEADER = 'interaction_id,user_id,session_id,product_id,event_type,weight,timestamp\n';
 
-    if (!fs.existsSync(INTERACTIONS_CSV_PATH)) {
-      const header = 'interaction_id,user_id,session_id,product_id,event_type,weight,timestamp\n';
-      fs.writeFileSync(INTERACTIONS_CSV_PATH, header, 'utf8');
-    }
-
-    const intId = interaction._id
-      ? `INT-${interaction._id.toString().slice(-6).toUpperCase()}`
-      : `INT-${Date.now().toString().slice(-6)}`;
-    const userId = interaction.userId ? interaction.userId.toString() : '';
-    const sessionId = interaction.sessionId || '';
-    const productId = interaction.productId ? (interaction.productId._id || interaction.productId).toString() : '';
-    const eventType = interaction.interactionType || 'view';
-    const weight = typeof interaction.weight === 'number'
-      ? interaction.weight.toFixed(1)
-      : (INTERACTION_WEIGHTS[eventType] || 1.0).toFixed(1);
-
-    const d = interaction.timestamp ? new Date(interaction.timestamp) : new Date();
-    const pad = (n) => String(n).padStart(2, '0');
-    const timestampStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-
-    const row = `${intId},${userId},${sessionId},${productId},${eventType},${weight},${timestampStr}\n`;
-    // Ghi tức thì xuống đĩa cứng (synchronous) đảm bảo Real-time 100%
-    fs.appendFileSync(INTERACTIONS_CSV_PATH, row, 'utf8');
-  } catch (err) {
-    console.error('[Recommendation] appendInteractionToCsv error:', err.message);
-  }
+const formatInteractionCsvRow = (interaction) => {
+  const intId = `INT-${interaction._id.toString().slice(-6).toUpperCase()}`;
+  const userId = interaction.userId ? interaction.userId.toString() : '';
+  const sessionId = interaction.sessionId || '';
+  const productId = (interaction.productId._id || interaction.productId).toString();
+  const eventType = interaction.interactionType;
+  const weight = Number(interaction.weight).toFixed(1);
+  const d = new Date(interaction.timestamp || Date.now());
+  const pad = (n) => String(n).padStart(2, '0');
+  const ts = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  return `${intId},${userId},${sessionId},${productId},${eventType},${weight},${ts}\n`;
 };
 
-/**
- * Đồng bộ toàn bộ dữ liệu UserInteraction từ MongoDB ra interactions.csv
- * Xóa sạch toàn bộ dữ liệu mock/fake cũ, chỉ giữ 100% dữ liệu thật.
- */
-const syncAllInteractionsToCsv = async (options = {}) => {
-  const { cleanMock = true } = options;
-  try {
-    const dir = path.dirname(INTERACTIONS_CSV_PATH);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
+// Xếp hàng ghi tuần tự để không đua nhau khi tạo header / append, và không chặn event loop
+let csvWriteChain = Promise.resolve();
 
-    const interactions = await UserInteraction.find().sort({ timestamp: 1 }).lean();
-    const header = 'interaction_id,user_id,session_id,product_id,event_type,weight,timestamp\n';
-    const pad = (n) => String(n).padStart(2, '0');
-
-    const formatRow = (item, idx) => {
-      const intId = item._id ? `INT-${item._id.toString().slice(-6).toUpperCase()}` : `INT-${String(2000 + idx)}`;
-      const userId = item.userId ? item.userId.toString() : '';
-      const sessionId = item.sessionId || '';
-      const productId = item.productId ? (item.productId._id || item.productId).toString() : '';
-      const eventType = item.interactionType || 'view';
-      const weight = typeof item.weight === 'number'
-        ? item.weight.toFixed(1)
-        : (INTERACTION_WEIGHTS[eventType] || 1.0).toFixed(1);
-
-      const d = item.timestamp ? new Date(item.timestamp) : new Date();
-      const timestampStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-
-      return `${intId},${userId},${sessionId},${productId},${eventType},${weight},${timestampStr}`;
-    };
-
-    if (cleanMock) {
-      // Chế độ 100% Real Data: Ghi đè toàn bộ dữ liệu thật từ MongoDB vào CSV
-      const rows = interactions.map((item, idx) => formatRow(item, idx));
-      const content = header + (rows.length > 0 ? rows.join('\n') + '\n' : '');
-      fs.writeFileSync(INTERACTIONS_CSV_PATH, content, 'utf8');
-      console.log(`[Recommendation] 100% Real Data: Synced ${rows.length} real interactions to interactions.csv (Cleaned mock data).`);
-      return { totalReal: interactions.length, writtenRows: rows.length, mode: 'clean_real_only' };
-    } else {
-      const existingIds = new Set();
-      if (fs.existsSync(INTERACTIONS_CSV_PATH)) {
-        const content = fs.readFileSync(INTERACTIONS_CSV_PATH, 'utf8');
-        const lines = content.split('\n');
-        for (const line of lines) {
-          const parts = line.split(',');
-          if (parts[0]) existingIds.add(parts[0].trim());
-        }
+const appendInteractionsToCsv = (interactions) => {
+  if (!interactions || interactions.length === 0) return;
+  const rows = interactions.map(formatInteractionCsvRow).join('');
+  csvWriteChain = csvWriteChain
+    .then(async () => {
+      await fs.promises.mkdir(path.dirname(INTERACTIONS_CSV_PATH), { recursive: true });
+      if (!fs.existsSync(INTERACTIONS_CSV_PATH)) {
+        await fs.promises.writeFile(INTERACTIONS_CSV_PATH, CSV_HEADER, 'utf8');
       }
-
-      let appendedCount = 0;
-      const newRows = [];
-      for (let i = 0; i < interactions.length; i++) {
-        const item = interactions[i];
-        const intId = item._id ? `INT-${item._id.toString().slice(-6).toUpperCase()}` : `INT-${String(2000 + i)}`;
-        if (existingIds.has(intId)) continue;
-        newRows.push(formatRow(item, i));
-        existingIds.add(intId);
-        appendedCount++;
-      }
-
-      if (newRows.length > 0) {
-        fs.appendFileSync(INTERACTIONS_CSV_PATH, newRows.join('\n') + '\n', 'utf8');
-      }
-
-      return { totalReal: interactions.length, writtenRows: appendedCount, mode: 'append' };
-    }
-  } catch (err) {
-    console.error('[Recommendation] syncAllInteractionsToCsv error:', err.message);
-    return { error: err.message };
-  }
+      await fs.promises.appendFile(INTERACTIONS_CSV_PATH, rows, 'utf8');
+    })
+    .catch((err) => console.error('[Recommendation] appendInteractionsToCsv error:', err.message));
 };
-
-/**
- * Đảm bảo interactions.csv và MongoDB userinteractions luôn có đầy đủ tập dữ liệu tương tác
- * liên kết trực tiếp với các sản phẩm thật và người dùng thật trong hệ thống.
- */
-const ensureDatasetInteractions = async () => {
-  try {
-    const dir = path.dirname(INTERACTIONS_CSV_PATH);
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-
-    let existingLinesCount = 0;
-    if (fs.existsSync(INTERACTIONS_CSV_PATH)) {
-      const content = fs.readFileSync(INTERACTIONS_CSV_PATH, 'utf8').trim();
-      existingLinesCount = content ? content.split('\n').filter(Boolean).length - 1 : 0;
-    }
-
-    const mongoCount = await UserInteraction.countDocuments();
-
-    // Nếu file CSV đang trống (chỉ có tiêu đề) hoặc có ít hơn 10 dòng
-    if (existingLinesCount <= 1 || mongoCount === 0) {
-      if (!fs.existsSync(PRODUCTS_CSV_PATH) || !fs.existsSync(USERS_CSV_PATH)) {
-        return;
-      }
-
-      // Đọc products từ products.csv
-      const prodContent = fs.readFileSync(PRODUCTS_CSV_PATH, 'utf8');
-      const prodLines = prodContent.split('\n').filter(Boolean);
-      const prodIds = [];
-      for (let i = 1; i < prodLines.length; i++) {
-        const id = prodLines[i].split(',')[0]?.trim();
-        if (id && id.length === 24) prodIds.push(id);
-      }
-
-      // Đọc users từ users.csv
-      const userContent = fs.readFileSync(USERS_CSV_PATH, 'utf8');
-      const userLines = userContent.split('\n').filter(Boolean);
-      const userIds = [];
-      for (let i = 1; i < userLines.length; i++) {
-        const id = userLines[i].split(',')[0]?.trim();
-        if (id && id.length === 24) userIds.push(id);
-      }
-
-      if (prodIds.length === 0 || userIds.length === 0) return;
-
-      const eventsPool = [
-        { type: 'view', weight: 1.0 },
-        { type: 'product_detail', weight: 1.8 },
-        { type: 'search_click', weight: 2.0 },
-        { type: 'add_to_cart', weight: 5.0 },
-        { type: 'purchase', weight: 10.0 },
-      ];
-
-      const rows = [];
-      const mongoDocs = [];
-      let idx = 1000;
-      const now = Date.now();
-      const pad = (n) => String(n).padStart(2, '0');
-
-      for (const uId of userIds) {
-        // Mỗi user tương tác 4-8 sản phẩm thật
-        const nProds = Math.min(prodIds.length, 4 + Math.floor(Math.random() * 4));
-        const shuffled = [...prodIds].sort(() => 0.5 - Math.random());
-        const selectedProds = shuffled.slice(0, nProds);
-
-        for (const pId of selectedProds) {
-          const nEvents = 2 + Math.floor(Math.random() * 3);
-          for (let e = 0; e < nEvents; e++) {
-            const ev = eventsPool[Math.floor(Math.random() * eventsPool.length)];
-            const timeAgoHours = Math.floor(Math.random() * 720); // 30 ngày qua
-            const itemDate = new Date(now - timeAgoHours * 3600 * 1000);
-            const timestampStr = `${itemDate.getFullYear()}-${pad(itemDate.getMonth() + 1)}-${pad(itemDate.getDate())} ${pad(itemDate.getHours())}:${pad(itemDate.getMinutes())}:${pad(itemDate.getSeconds())}`;
-            const intId = `INT-${idx++}`;
-            const sessId = `sess_${uId.slice(-4)}_${10 + Math.floor(Math.random() * 90)}`;
-
-            rows.push(`${intId},${uId},${sessId},${pId},${ev.type},${ev.weight.toFixed(1)},${timestampStr}`);
-
-            mongoDocs.push({
-              userId: uId,
-              sessionId: sessId,
-              productId: pId,
-              interactionType: ev.type,
-              weight: ev.weight,
-              dwellTime: ev.type === 'view' ? 15 : 0,
-              context: { device: 'desktop', source: 'direct' },
-              timestamp: itemDate,
-            });
-          }
-        }
-      }
-
-      // 1. Ghi file CSV
-      const header = 'interaction_id,user_id,session_id,product_id,event_type,weight,timestamp\n';
-      fs.writeFileSync(INTERACTIONS_CSV_PATH, header + rows.join('\n') + '\n', 'utf8');
-      console.log(`[Recommendation] Populated interactions.csv with ${rows.length} real product interaction records.`);
-
-      // 2. Đồng bộ vào MongoDB nếu MongoDB chưa có
-      if (mongoCount === 0 && mongoDocs.length > 0) {
-        await UserInteraction.insertMany(mongoDocs, { ordered: false }).catch(() => {});
-        console.log(`[Recommendation] Inserted ${mongoDocs.length} interactions into MongoDB userinteractions.`);
-      }
-    }
-  } catch (err) {
-    console.error('[Recommendation] ensureDatasetInteractions error:', err.message);
-  }
-};
-
-// Khởi chạy đồng bộ ngay khi backend kết nối
-setTimeout(() => {
-  ensureDatasetInteractions().catch(() => {});
-}, 1000);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // PUBLIC API: recordUserInteraction
@@ -970,7 +784,7 @@ const recordUserInteraction = async (data = {}) => {
   } = data;
 
   if (!sessionId && !userId) return null;
-  if (!productId) return null;
+  if (!productId || !mongoose.isValidObjectId(productId)) return null;
 
   const baseWeight = INTERACTION_WEIGHTS[interactionType];
   if (baseWeight === undefined) return null; // unknown type
@@ -993,50 +807,29 @@ const recordUserInteraction = async (data = {}) => {
     }
   }
 
-  let interaction;
-  try {
-    interaction = await UserInteraction.create({
-      userId: userId || null,
-      sessionId: sessionId || '',
-      productId,
-      interactionType,
-      weight: baseWeight,
-      dwellTime,
-      context: {
-        device: context.device || 'unknown',
-        source: context.source || 'unknown',
-        position: context.position || null,
-        searchKeyword: context.searchKeyword || '',
-        categoryId: context.categoryId || null,
-        brandId: context.brandId || null,
-        priceRangeMin: context.priceRangeMin || null,
-        priceRangeMax: context.priceRangeMax || null,
-      },
-      timestamp: new Date(),
-    });
-  } catch (dbErr) {
-    const doc = {
-      userId: userId || null,
-      sessionId: sessionId || '',
-      productId,
-      interactionType,
-      weight: baseWeight,
-      dwellTime,
-      context,
-      timestamp: new Date(),
-    };
-    try {
-      const res = await UserInteraction.collection.insertOne(doc);
-      interaction = { _id: res.insertedId, ...doc };
-    } catch {
-      interaction = { _id: Date.now(), ...doc };
-    }
-  }
+  const interaction = await UserInteraction.create({
+    userId: userId || null,
+    sessionId: sessionId || '',
+    productId,
+    interactionType,
+    weight: baseWeight,
+    dwellTime,
+    context: {
+      device: context.device || 'unknown',
+      source: context.source || 'unknown',
+      position: context.position || null,
+      searchKeyword: context.searchKeyword || '',
+      categoryId: context.categoryId || null,
+      brandId: context.brandId || null,
+      priceRangeMin: context.priceRangeMin || null,
+      priceRangeMax: context.priceRangeMax || null,
+    },
+    timestamp: new Date(),
+  });
 
-  // Bắt ngay lập tức và ghi trực tiếp vào interactions.csv cho Python Recommendation Engine
-  appendInteractionToCsv(interaction);
+  appendInteractionsToCsv([interaction]);
 
-  // Trigger cron counter để tự động kích hoạt Python SVD batch khi đủ ngưỡng tương tác
+  // Trigger cron counter để tự động kích hoạt Python ALS batch khi đủ ngưỡng tương tác
   try {
     const { incrementInteractionCounter } = require('../utils/cronJobs');
     if (typeof incrementInteractionCounter === 'function') {
@@ -1047,6 +840,93 @@ const recordUserInteraction = async (data = {}) => {
   }
 
   return interaction;
+};
+
+const MAX_BATCH_SIZE = 50;
+
+/**
+ * Ghi nhiều interaction trong 1 request: 1 insertMany + 1 appendFile bất đồng bộ.
+ * Event không hợp lệ hoặc trùng bị bỏ qua, không làm hỏng cả lô.
+ * @returns {Promise<{received:number, saved:number}>}
+ */
+const recordUserInteractionsBatch = async ({ userId, sessionId, events } = {}) => {
+  if (!Array.isArray(events) || events.length === 0) return { received: 0, saved: 0 };
+  if (!sessionId && !userId) return { received: events.length, saved: 0 };
+
+  const list = events.slice(0, MAX_BATCH_SIZE);
+  const now = Date.now();
+  const docs = [];
+
+  for (const ev of list) {
+    const { productId, interactionType = 'view', dwellTime = 0, context = {}, occurredAt } = ev || {};
+    if (!productId || !mongoose.isValidObjectId(productId)) continue;
+
+    const baseWeight = INTERACTION_WEIGHTS[interactionType];
+    if (baseWeight === undefined) continue;
+
+    if (['product_detail', 'view', 'view_deep', 'view_bounce'].includes(interactionType)) {
+      const dedupKey = `${userId || sessionId}_${productId}_${interactionType}`;
+      const lastSeen = recentInteractionsDedup.get(dedupKey);
+      if (lastSeen && now - lastSeen < 1500) continue;
+      recentInteractionsDedup.set(dedupKey, now);
+    }
+
+    // Giữ thời điểm thực tế của event (client queue có độ trễ), chặn timestamp tương lai/quá cũ
+    const ts = Number(occurredAt);
+    const timestamp = Number.isFinite(ts) && ts <= now && now - ts < 24 * 60 * 60 * 1000
+      ? new Date(ts)
+      : new Date(now);
+
+    const validId = (v) => (v && mongoose.isValidObjectId(v) ? v : null);
+    docs.push({
+      userId: userId || null,
+      sessionId: sessionId || '',
+      productId,
+      interactionType,
+      weight: baseWeight,
+      dwellTime: Math.max(0, Number(dwellTime) || 0),
+      context: {
+        device: ['mobile', 'desktop', 'tablet'].includes(context.device) ? context.device : 'unknown',
+        source: String(context.source || 'unknown').slice(0, 200),
+        position: context.position || null,
+        searchKeyword: String(context.searchKeyword || '').slice(0, 200),
+        categoryId: validId(context.categoryId),
+        brandId: validId(context.brandId),
+        priceRangeMin: context.priceRangeMin || null,
+        priceRangeMax: context.priceRangeMax || null,
+      },
+      timestamp,
+    });
+  }
+
+  if (recentInteractionsDedup.size > 2000) {
+    for (const [k, v] of recentInteractionsDedup.entries()) {
+      if (now - v > 5000) recentInteractionsDedup.delete(k);
+    }
+  }
+
+  if (docs.length === 0) return { received: list.length, saved: 0 };
+
+  let saved;
+  try {
+    saved = await UserInteraction.insertMany(docs, { ordered: false });
+  } catch (err) {
+    console.error('[Recommendation] recordUserInteractionsBatch insertMany error:', err.message);
+    return { received: list.length, saved: 0 };
+  }
+
+  appendInteractionsToCsv(saved);
+  // Counter chạy nền, không chặn response
+  try {
+    const { incrementInteractionCounter } = require('../utils/cronJobs');
+    if (typeof incrementInteractionCounter === 'function') {
+      incrementInteractionCounter(saved.length);
+    }
+  } catch (cronErr) {
+    // Ignore if cronJobs is not initialized yet
+  }
+
+  return { received: list.length, saved: saved.length };
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1064,9 +944,9 @@ const getPersonalizedRecommendations = async (params = {}) => {
   // Invalidate khi user mua hàng — hiện tại tự expire sau TTL
   const userProfile = await buildUserProfile(userId, sessionId);
 
-  // Layer 4 (SVD): Lấy recommendations từ Python batch result
-  let svdScoreMap = {};
-  let svdProductIds = [];
+  // Layer 4 (ALS): Lấy recommendations từ Python batch result
+  let alsScoreMap = {};
+  let alsProductIds = [];
 
   const query = userId ? { userId } : { sessionId };
   const recDoc = await PersonalizedRecommendation.findOne(query).lean();
@@ -1074,8 +954,8 @@ const getPersonalizedRecommendations = async (params = {}) => {
   if (recDoc && recDoc.recommendedProducts?.length > 0) {
     for (const r of recDoc.recommendedProducts) {
       const pid = r.productId.toString();
-      svdScoreMap[pid] = r.predictedScore;
-      svdProductIds.push(pid);
+      alsScoreMap[pid] = r.predictedScore;
+      alsProductIds.push(pid);
     }
   }
 
@@ -1090,14 +970,14 @@ const getPersonalizedRecommendations = async (params = {}) => {
   }
 
   // Layer 6 Stage 1: Candidate retrieval
-  const candidateIds = await retrieveCandidates(userProfile, svdProductIds, 200);
+  const candidateIds = await retrieveCandidates(userProfile, alsProductIds, 200);
 
   if (candidateIds.length === 0) {
     return getFallbackFeaturedProducts(limit);
   }
 
   // Layer 6 Stage 2: Ranking
-  const ranked = await rankCandidates(candidateIds, userProfile, svdScoreMap, itemCFScoreMap);
+  const ranked = await rankCandidates(candidateIds, userProfile, alsScoreMap, itemCFScoreMap);
 
   // Enrich với variant data
   const enriched = await enrichWithVariants(ranked.slice(0, parseInt(limit, 10)));
@@ -1183,7 +1063,7 @@ const getSimilarProducts = async (productId, limit = 8, viewerProfile = null) =>
       ...p,
       itemCFScore: itemCFScoreMap[pid] || 0,
       contentScore: Math.max(0, contentScore),
-      svdScore: 0,
+      alsScore: 0,
       trendingScore: (p.isFeatured ? 1 : 0) + (p.isHot ? 0.5 : 0),
     };
   }).filter(Boolean);
@@ -1195,7 +1075,7 @@ const getSimilarProducts = async (productId, limit = 8, viewerProfile = null) =>
 
   scored = scored.map((item) => ({
     ...item,
-    finalScore: hybridScore(item, { svd: 0, content: 0.5, itemCF: 0.4, trending: 0.1 }),
+    finalScore: hybridScore(item, { als: 0, content: 0.5, itemCF: 0.4, trending: 0.1 }),
   }));
 
   scored.sort((a, b) => b.finalScore - a.finalScore);
@@ -1286,7 +1166,7 @@ const getSessionBasedRecommendations = async (params = {}) => {
     return getTrendingRecommendations(limit);
   }
 
-  // Lấy candidates từ Item-CF + same category (không cần Python SVD)
+  // Lấy candidates từ Item-CF + same category (không cần Python ALS)
   const itemCFCandidates = await getItemCFCandidates(
     userProfile.viewedIds.slice(0, 5),
     40
@@ -1383,7 +1263,7 @@ const mergeSessionInteractions = async (sessionId, userId) => {
 
 module.exports = {
   recordUserInteraction,
-  syncAllInteractionsToCsv,
+  recordUserInteractionsBatch,
   mergeSessionInteractions,
   getPersonalizedRecommendations,
   getSessionBasedRecommendations,

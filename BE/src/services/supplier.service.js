@@ -27,7 +27,7 @@ class SupplierService {
 
     const skip = (page - 1) * limit;
     const [data, total, allCount, activeCount, inactiveCount, debtAgg] = await Promise.all([
-      Supplier.find(query).sort({ createdAt: -1 }).skip(skip).limit(Number(limit)),
+      Supplier.find(query).populate('assignedStaffId', 'fullName email').sort({ createdAt: -1 }).skip(skip).limit(Number(limit)),
       Supplier.countDocuments(query),
       Supplier.countDocuments(),
       Supplier.countDocuments({ isActive: true }),
@@ -72,7 +72,7 @@ class SupplierService {
   }
 
   static async getSupplierById(id) {
-    const supplier = await Supplier.findById(id);
+    const supplier = await Supplier.findById(id).populate('assignedStaffId', 'fullName email');
     if (!supplier) throw new AppError('Nhà cung cấp không tồn tại', 404);
     return supplier;
   }
@@ -112,6 +112,14 @@ class SupplierService {
   static async updateSupplier(id, payload) {
     const updateData = { ...payload };
 
+    // Chuẩn hóa: chuỗi rỗng -> null (bỏ phụ trách); tags được trim, bỏ trùng
+    if (updateData.assignedStaffId !== undefined && !updateData.assignedStaffId) {
+      updateData.assignedStaffId = null;
+    }
+    if (Array.isArray(updateData.tags)) {
+      updateData.tags = [...new Set(updateData.tags.map((t) => String(t).trim()).filter(Boolean))];
+    }
+
     if (updateData.code) {
       const code = updateData.code.toUpperCase().trim();
       const existing = await Supplier.findOne({ code, _id: { $ne: id } });
@@ -129,7 +137,8 @@ class SupplierService {
       updateData.address = this.formatFullAddress(updateData);
     }
 
-    const supplier = await Supplier.findByIdAndUpdate(id, updateData, { new: true, runValidators: true });
+    const supplier = await Supplier.findByIdAndUpdate(id, updateData, { new: true, runValidators: true })
+      .populate('assignedStaffId', 'fullName email');
     if (!supplier) throw new AppError('Nhà cung cấp không tồn tại', 404);
     return supplier;
   }

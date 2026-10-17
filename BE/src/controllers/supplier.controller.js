@@ -1,4 +1,5 @@
 const SupplierService = require('../services/supplier.service');
+const SupplierActivityService = require('../services/supplierActivity.service');
 const catchAsync = require('../utils/catchAsync');
 
 const getSuppliers = catchAsync(async (req, res) => {
@@ -51,7 +52,19 @@ const deleteSupplier = catchAsync(async (req, res) => {
   });
 });
 
+const getSupplierActivity = catchAsync(async (req, res) => {
+  const data = await SupplierActivityService.getActivity(req.params.supplierId, req.query);
+  res.json({ status: 'success', success: true, data });
+});
+
+const getStaffOptions = catchAsync(async (req, res) => {
+  const data = await SupplierActivityService.getStaffOptions();
+  res.json({ status: 'success', success: true, data });
+});
+
 module.exports = {
+  getSupplierActivity,
+  getStaffOptions,
   getSuppliers,
   getSupplierById,
   createSupplier,

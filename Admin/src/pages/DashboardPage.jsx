@@ -55,7 +55,7 @@ export default function DashboardPage() {
       <DashboardShortcuts />
 
       {/* 3. Executive KPI Cards */}
-      <DashboardKpiCards stats={stats} isLoading={isLoading} />
+      <DashboardKpiCards stats={stats} isLoading={isLoading || isFetching} />
 
       {/* 4. Secondary Operations Metrics */}
       <DashboardSecondaryMetrics stats={stats} />

@@ -1,25 +1,53 @@
-import React, { useState } from 'react';
-import { X, Building2, CreditCard, History, DollarSign } from 'lucide-react';
+import { useState } from 'react';
+import { X, History, DollarSign, Truck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useSupplierActivity } from '@/hooks/useSuppliers';
 import SupplierGeneralInfoCard from './SupplierGeneralInfoCard';
+import SupplierAssignmentCard from './SupplierAssignmentCard';
+import SupplierActivityStats from './SupplierActivityStats';
+import SupplierActivityTab from './SupplierActivityTab';
 import SupplierDebtTab from './SupplierDebtTab';
 import SupplierDebtHistoryTab from './SupplierDebtHistoryTab';
 import SupplierDebtCreateModal from './SupplierDebtCreateModal';
 import SupplierDebtDetailModal from './SupplierDebtDetailModal';
 import SupplierPaymentModal from './SupplierPaymentModal';
+import { monthToRange } from './supplierActivityUtils';
+
+const TABS = [
+  { id: 'activity', label: 'Nhập / trả hàng', Icon: Truck },
+  { id: 'debt', label: 'Công nợ', Icon: DollarSign },
+  { id: 'history', label: 'Lịch sử công nợ', Icon: History },
+];
+
+const ACTIVITY_PAGE_SIZE = 10;
 
 export default function SupplierDetailModal({
-  supplier,
+  supplier: supplierProp,
   open,
   onClose,
   onEditBasic,
 }) {
-  const [activeTab, setActiveTab] = useState('debt'); // 'debt' | 'history'
+  const [supplier, setSupplier] = useState(supplierProp);
+  const [activeTab, setActiveTab] = useState('activity');
   const [createDebtOpen, setCreateDebtOpen] = useState(false);
   const [selectedDebt, setSelectedDebt] = useState(null);
   const [paymentDebt, setPaymentDebt] = useState(null);
+  const [month, setMonth] = useState(''); // '' = tất cả thời gian
+  const [activityPage, setActivityPage] = useState(1);
+
+  const range = month ? monthToRange(month) : {};
+  const activityQuery = useSupplierActivity(supplier?._id, {
+    ...range,
+    page: activityPage,
+    limit: ACTIVITY_PAGE_SIZE,
+  });
 
   if (!open || !supplier) return null;
+
+  const handleMonthChange = (value) => {
+    setMonth(value);
+    setActivityPage(1);
+  };
 
   return (
     <>
@@ -39,7 +67,7 @@ export default function SupplierDetailModal({
                   </span>
                 </h2>
                 <p className="text-[11px] text-muted-foreground">
-                  Chi tiết hồ sơ đối tác & quản lý công nợ tập trung
+                  Chi tiết hồ sơ đối tác &amp; quản lý công nợ tập trung
                 </p>
               </div>
             </div>
@@ -54,57 +82,62 @@ export default function SupplierDetailModal({
 
           {/* Modal Content - Split 2 Cols */}
           <div className="flex-1 grid grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-border overflow-hidden">
-            {/* Left 4 Cols: Supplier Basic Info & Bank */}
+            {/* Left 4 Cols: Supplier Basic Info, Bank, Staff & Tags */}
             <div className="col-span-12 lg:col-span-4 p-5 overflow-y-auto bg-muted/10">
               <SupplierGeneralInfoCard supplier={supplier} onEditBasic={onEditBasic} />
+              <SupplierAssignmentCard supplier={supplier} onSaved={setSupplier} />
             </div>
 
-            {/* Right 8 Cols: Tabs & Debt Operations */}
+            {/* Right 8 Cols: Stats, Tabs & Operations */}
             <div className="col-span-12 lg:col-span-8 flex flex-col overflow-hidden">
+              <SupplierActivityStats
+                stats={activityQuery.data?.stats}
+                month={month}
+                onMonthChange={handleMonthChange}
+                isLoading={activityQuery.isLoading}
+              />
+
               {/* Tab Navigation */}
               <div className="flex items-center border-b border-border px-6 pt-3 shrink-0 gap-6">
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('debt')}
-                  className={`pb-2.5 text-xs font-bold transition-all relative flex items-center gap-1.5 ${
-                    activeTab === 'debt'
-                      ? 'text-primary'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  <DollarSign size={14} /> Công nợ
-                  {activeTab === 'debt' && (
-                    <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t-full" />
-                  )}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('history')}
-                  className={`pb-2.5 text-xs font-bold transition-all relative flex items-center gap-1.5 ${
-                    activeTab === 'history'
-                      ? 'text-primary'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  <History size={14} /> Lịch sử công nợ
-                  {activeTab === 'history' && (
-                    <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t-full" />
-                  )}
-                </button>
+                {TABS.map(({ id, label, Icon }) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setActiveTab(id)}
+                    className={`pb-2.5 text-xs font-bold transition-colors relative flex items-center gap-1.5 ${
+                      activeTab === id
+                        ? 'text-primary'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <Icon size={14} /> {label}
+                    {activeTab === id && (
+                      <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t-full" />
+                    )}
+                  </button>
+                ))}
               </div>
 
               {/* Tab Content */}
               <div className="flex-1 p-6 overflow-y-auto">
-                {activeTab === 'debt' ? (
+                {activeTab === 'activity' && (
+                  <SupplierActivityTab
+                    data={activityQuery.data}
+                    isLoading={activityQuery.isLoading}
+                    isError={activityQuery.isError}
+                    onRetry={() => activityQuery.refetch()}
+                    page={activityPage}
+                    onPageChange={setActivityPage}
+                  />
+                )}
+                {activeTab === 'debt' && (
                   <SupplierDebtTab
                     supplierId={supplier._id}
                     onOpenCreateDebt={() => setCreateDebtOpen(true)}
                     onSelectDebt={(debt) => setSelectedDebt(debt)}
                   />
-                ) : (
-                  <SupplierDebtHistoryTab supplierId={supplier._id} />
                 )}
+                {activeTab === 'history' && <SupplierDebtHistoryTab supplierId={supplier._id} />}
               </div>
             </div>
           </div>

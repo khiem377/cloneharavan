@@ -56,7 +56,10 @@ export const authService = {
   unlinkSocial: (provider) => api.delete(`/auth/unlink/${provider}`),
 
   // Profile Management
+  getProfile: () => api.get('/users/me'),
+  getMe: () => api.get('/users/me'),
   updateProfile: (data) => api.put('/users/profile', data),
+  updateMe: (data) => api.put('/users/profile', data),
   uploadAvatar: (formData) =>
     api.post('/users/avatar', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },

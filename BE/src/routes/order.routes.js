@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const orderCtrl = require('../controllers/order.controller');
-const { protect } = require('../middleware/auth.middleware');
+const { protect, authorize } = require('../middleware/auth.middleware');
 
 // 0. Kiểm tra đơn hàng trước khi đặt (Preview Order)
 router.post('/preview', protect, orderCtrl.previewOrder);
@@ -15,10 +15,10 @@ router.get('/', protect, orderCtrl.getMyOrders);
 router.get('/my-orders', protect, orderCtrl.getMyOrders);
 
 // 3. Admin: Lấy danh sách toàn bộ đơn hàng
-router.get('/admin/all', protect, orderCtrl.getAllOrders);
+router.get('/admin/all', protect, authorize('admin'), orderCtrl.getAllOrders);
 
 // 4. Admin: Cập nhật trạng thái đơn hàng (CONFIRMED -> SHIPPING -> DELIVERED -> RETURNED)
-router.patch('/admin/:id/status', protect, orderCtrl.updateOrderStatus);
+router.patch('/admin/:id/status', protect, authorize('admin'), orderCtrl.updateOrderStatus);
 
 // 5. Kiểm tra trạng thái đơn hàng nhanh (GET /:id/status)
 router.get('/:id/status', protect, orderCtrl.getOrderStatus);

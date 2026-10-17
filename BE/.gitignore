@@ -22,3 +22,7 @@ seed*
 scratch_*
 test_*
 update_postman_collection.js
+
+# Python
+__pycache__/
+*.pyc

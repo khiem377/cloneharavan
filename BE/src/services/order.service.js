@@ -853,12 +853,13 @@ const createOrderCOD = async (userId, orderData) => {
  * - Nhả tồn kho giữ chỗ: allocated -= qty
  * - Hoàn lại lượt dùng Coupon
  */
-const cancelOrder = async (orderId, userId, reason = '') => {
+const cancelOrder = async (orderId, userId, reason = '', userRole = 'user') => {
   const existingOrder = await Order.findById(orderId);
   if (!existingOrder) throw new AppError('Không tìm thấy đơn hàng', 404);
 
-  // Kiểm tra quyền hủy (User sở hữu hoặc Admin)
-  if (userId && existingOrder.userId && existingOrder.userId.toString() !== userId.toString()) {
+  // Kiểm tra quyền hủy (Khách hàng sở hữu đơn hoặc Nhân viên/Admin)
+  const isStaffOrAdmin = userRole !== 'user';
+  if (!isStaffOrAdmin && userId && existingOrder.userId && existingOrder.userId.toString() !== userId.toString()) {
     throw new AppError('Bạn không có quyền hủy đơn hàng này', 403);
   }
 
@@ -1037,12 +1038,13 @@ const updateOrderStatus = async (orderId, { newStatus, note = '', adminUser = nu
 /**
  * 4. LẤY CHI TIẾT ĐƠN HÀNG (TRẢ VỀ SNAPSHOT ĐÓNG BĂNG, KHÔNG RE-QUERY GIÁ HIỆN TẠI)
  */
-const getOrderById = async (orderId, userId = null) => {
+const getOrderById = async (orderId, userId = null, userRole = 'user') => {
   const order = await Order.findById(orderId);
   if (!order) throw new AppError('Không tìm thấy đơn hàng', 404);
 
-  // Nếu user thường tra cứu thì phải đúng đơn của mình
-  if (userId && order.userId && order.userId.toString() !== userId.toString()) {
+  // Nếu user thường tra cứu thì phải đúng đơn của mình, Admin/Nhân viên được xem tất cả
+  const isStaffOrAdmin = userRole !== 'user';
+  if (!isStaffOrAdmin && userId && order.userId && order.userId.toString() !== userId.toString()) {
     throw new AppError('Bạn không có quyền xem đơn hàng này', 403);
   }
 

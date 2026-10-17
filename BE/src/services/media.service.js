@@ -4,7 +4,8 @@ const Media  = require('../models/media.model');
 const Folder = require('../models/folder.model');
 const { AppError } = require('../utils/AppError');
 const { uploadToCloudinary, deleteFromCloudinary } = require('../config/cloudinary');
-const { getOrCreateDateSubFolder } = require('./folder.service');
+const { getOrCreateDateSubFolder, findOrCreateFolder } = require('./folder.service');
+const { slugify } = require('../utils/slugify');
 const mediaRegistry = require('../config/mediaRegistry');
 
 // ---------------------------------------------------------------------------
@@ -43,8 +44,23 @@ const getAllSubFolderIds = async (rootId) => {
 // Helper: resolve upload folder
 // ---------------------------------------------------------------------------
 const resolveUploadFolder = async (folderId) => {
-  const targetFolder = await Folder.findById(folderId);
-  if (!targetFolder) throw new AppError('Không tìm thấy folder', 404);
+  let targetFolder = null;
+  if (folderId && mongoose.Types.ObjectId.isValid(folderId)) {
+    targetFolder = await Folder.findById(folderId);
+  } else if (typeof folderId === 'string' && folderId.trim()) {
+    const s = slugify(folderId.trim());
+    targetFolder = await Folder.findOne({ slug: s });
+    if (!targetFolder) {
+      targetFolder = await findOrCreateFolder(folderId.trim(), null, s);
+    }
+  }
+
+  if (!targetFolder) {
+    targetFolder = (await Folder.findOne({ slug: 'chung', parentId: null })) ||
+      (await Folder.findOne({ parentId: null })) ||
+      (await findOrCreateFolder('Chung', null, 'chung'));
+  }
+
   if (!targetFolder.parentId) {
     const sub = await getOrCreateDateSubFolder(targetFolder._id);
     return { uploadFolder: sub, cloudinaryFolder: `${targetFolder.slug}/${sub.slug}` };
@@ -95,21 +111,76 @@ const uploadMedia = async (file, folderId, uploadedBy = null) => {
 };
 
 // ---------------------------------------------------------------------------
-// Upload từ URL — có BLAKE3 duplicate detection
+// SSRF Protection: Ngăn chặn máy chủ fetch vào các dải IP nội bộ/loopback/cloud metadata
+// ---------------------------------------------------------------------------
+const assertSafePublicUrl = (rawUrl) => {
+  let parsed;
+  try {
+    parsed = new URL(rawUrl);
+  } catch {
+    throw new AppError('Định dạng URL không hợp lệ', 400);
+  }
+
+  if (!['http:', 'https:'].includes(parsed.protocol)) {
+    throw new AppError('Chỉ hỗ trợ tải ảnh qua giao thức HTTP hoặc HTTPS', 400);
+  }
+
+  const hostname = parsed.hostname.toLowerCase();
+
+  // Cho phép test localhost thoải mái trong môi trường development (local test)
+  if (process.env.NODE_ENV === 'development') {
+    return;
+  }
+
+  const blockedHosts = [
+    'localhost',
+    '127.0.0.1',
+    '::1',
+    '0.0.0.0',
+    '169.254.169.254',
+    'metadata.google.internal',
+    'instance-data',
+  ];
+  if (blockedHosts.includes(hostname) || hostname.endsWith('.local') || hostname.endsWith('.internal')) {
+    throw new AppError('Không được phép tải ảnh từ địa chỉ nội bộ (SSRF Protection)', 403);
+  }
+
+  const isPrivateIp =
+    /^10\./.test(hostname) ||
+    /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(hostname) ||
+    /^192\.168\./.test(hostname) ||
+    /^169\.254\./.test(hostname) ||
+    /^127\./.test(hostname) ||
+    /^0\./.test(hostname);
+
+  if (isPrivateIp) {
+    throw new AppError('Không được phép tải ảnh từ dải mạng nội bộ (SSRF Protection)', 403);
+  }
+};
+
+// ---------------------------------------------------------------------------
+// Upload từ URL — có SSRF Protection & duplicate detection
 // ---------------------------------------------------------------------------
 const uploadMediaFromUrl = async (url, folderId, uploadedBy = null) => {
   if (!url) throw new AppError('URL không được để trống', 400);
+  assertSafePublicUrl(url);
 
-  const resp = await fetch(url, {
-    signal: AbortSignal.timeout(15000),
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-      'Referer':    'https://ega-dien-may.myharavan.com/',
-    },
-  });
-  if (!resp.ok) throw new AppError(`Không thể tải ảnh từ URL (${resp.status})`, 400);
+  let resp;
+  try {
+    resp = await fetch(url, {
+      signal: AbortSignal.timeout(15000),
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+        'Referer':    'https://ega-dien-may.myharavan.com/',
+      },
+    });
+  } catch (netErr) {
+    throw new AppError(`Không thể kết nối đến đường dẫn này (${netErr.message || 'Tên miền không tồn tại hoặc lỗi mạng'})`, 400);
+  }
+
+  if (!resp.ok) throw new AppError(`Máy chủ chứa ảnh từ chối tải (Mã HTTP: ${resp.status})`, 400);
   const mimeType = resp.headers.get('content-type') || 'image/jpeg';
-  if (!mimeType.startsWith('image/')) throw new AppError('URL không phải là ảnh', 400);
+  if (!mimeType.startsWith('image/')) throw new AppError('Đường dẫn này không phải là định dạng hình ảnh hợp lệ', 400);
 
   const buffer   = Buffer.from(await resp.arrayBuffer());
   const fileHash = computeHash(buffer);

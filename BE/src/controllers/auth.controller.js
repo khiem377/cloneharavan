@@ -79,7 +79,7 @@ const register = async (req, res, next) => {
 const login = async (req, res, next) => {
   try {
     const { email, password, sessionId, rememberMe } = req.body;
-    const user = await loginUser(email, password);
+    const user = await loginUser(email, password, req);
     const { accessToken, refreshToken } = await buildTokenResponse(user, res, !!rememberMe);
 
     // Merge guest session interactions vào userId (fire-and-forget)

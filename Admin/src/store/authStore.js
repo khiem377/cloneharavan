@@ -26,6 +26,11 @@ const useAuthStore = create(
       setAuth: ({ user, accessToken, refreshToken }) =>
         set({ user, accessToken, refreshToken }),
 
+      setUser: (user) => set({ user }),
+
+      updateUser: (partial) =>
+        set((state) => ({ user: state.user ? { ...state.user, ...partial } : partial })),
+
       setAccessToken: (accessToken) => set({ accessToken }),
 
       clearAuth: () =>

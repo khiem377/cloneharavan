@@ -237,43 +237,43 @@ export default function PurchaseOrderListPage() {
     switch (st) {
       case 'completed':
         return (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+          <span className="inline-flex items-center gap-1.5 rounded-[6px] border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
             <CheckCircle2 className="h-3.5 w-3.5" /> 6. Đã Nhập Kho (Hoàn Tất)
           </span>
         );
       case 'inspecting':
         return (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-purple-500/10 px-2.5 py-1 text-xs font-semibold text-purple-600 dark:text-purple-400 whitespace-nowrap">
+          <span className="inline-flex items-center gap-1.5 rounded-[6px] border border-purple-500/20 bg-purple-500/10 px-2.5 py-1 text-xs font-semibold text-purple-600 dark:text-purple-400 whitespace-nowrap">
             <ClipboardCheck className="h-3.5 w-3.5" /> 5. Đang Kiểm Hàng
           </span>
         );
       case 'arrived':
         return (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-cyan-500/10 px-2.5 py-1 text-xs font-semibold text-cyan-600 dark:text-cyan-400 whitespace-nowrap">
+          <span className="inline-flex items-center gap-1.5 rounded-[6px] border border-cyan-500/20 bg-cyan-500/10 px-2.5 py-1 text-xs font-semibold text-cyan-600 dark:text-cyan-400 whitespace-nowrap">
             <PackageCheck className="h-3.5 w-3.5" /> 4. Đã Đến Kho
           </span>
         );
       case 'in_transit':
         return (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-500/10 px-2.5 py-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400 whitespace-nowrap">
+          <span className="inline-flex items-center gap-1.5 rounded-[6px] border border-indigo-500/20 bg-indigo-500/10 px-2.5 py-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400 whitespace-nowrap">
             <Truck className="h-3.5 w-3.5" /> 3. Đang Vận Chuyển
           </span>
         );
       case 'sent':
         return (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-500/10 px-2.5 py-1 text-xs font-semibold text-blue-600 dark:text-blue-400 whitespace-nowrap">
+          <span className="inline-flex items-center gap-1.5 rounded-[6px] border border-blue-500/20 bg-blue-500/10 px-2.5 py-1 text-xs font-semibold text-blue-600 dark:text-blue-400 whitespace-nowrap">
             <Send className="h-3.5 w-3.5" /> 2. Đã Gửi NCC
           </span>
         );
       case 'cancelled':
         return (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-red-500/10 px-2.5 py-1 text-xs font-semibold text-red-600 dark:text-red-400 whitespace-nowrap">
+          <span className="inline-flex items-center gap-1.5 rounded-[6px] border border-red-500/20 bg-red-500/10 px-2.5 py-1 text-xs font-semibold text-red-600 dark:text-red-400 whitespace-nowrap">
             <XCircle className="h-3.5 w-3.5" /> Đã Hủy
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-600 dark:text-amber-400 whitespace-nowrap">
+          <span className="inline-flex items-center gap-1.5 rounded-[6px] border border-amber-500/20 bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-600 dark:text-amber-400 whitespace-nowrap">
             <Clock className="h-3.5 w-3.5" /> 1. Bản Nháp (Đã Tạo)
           </span>
         );
@@ -289,14 +289,14 @@ export default function PurchaseOrderListPage() {
     switch (st) {
       case 'paid':
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+          <span className="inline-flex items-center gap-1 rounded-[6px] border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
             <CheckCircle2 className="size-3" /> Đã thanh toán
           </span>
         );
       case 'partially_paid':
         return (
           <div className="inline-flex flex-col items-center">
-            <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/10 px-2 py-0.5 text-[11px] font-semibold text-blue-600 dark:text-blue-400 whitespace-nowrap">
+            <span className="inline-flex items-center gap-1 rounded-[6px] border border-blue-500/20 bg-blue-500/10 px-2 py-0.5 text-[11px] font-semibold text-blue-600 dark:text-blue-400 whitespace-nowrap">
               Trả 1 phần
             </span>
             <span className="text-[10px] font-mono text-muted-foreground tabular-nums">
@@ -306,7 +306,7 @@ export default function PurchaseOrderListPage() {
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2.5 py-0.5 text-xs font-semibold text-amber-600 dark:text-amber-400 whitespace-nowrap">
+          <span className="inline-flex items-center gap-1 rounded-[6px] border border-amber-500/20 bg-amber-500/10 px-2.5 py-0.5 text-xs font-semibold text-amber-600 dark:text-amber-400 whitespace-nowrap">
             <Clock className="size-3" /> Chưa thanh toán
           </span>
         );
@@ -648,7 +648,17 @@ export default function PurchaseOrderListPage() {
 
                     {isColumnVisible('actions') && (
                       <td className="px-4 py-3.5 text-right whitespace-nowrap">
-                        <div className="flex items-center justify-end gap-2">
+                        <div className="flex items-center justify-end gap-1.5">
+                          {['sent', 'in_transit', 'arrived', 'inspecting', 'partial_received'].includes(po.status) && (
+                            <button
+                              onClick={() => navigate(`/stock-receivings/create?poId=${po._id}`)}
+                              className="inline-flex items-center gap-1 rounded-[6px] bg-emerald-600 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 transition-transform active:scale-[0.98] shadow-xs cursor-pointer"
+                              title="Tạo phiếu nhập kho ngay từ đơn mua hàng này"
+                            >
+                              <FileCheck className="size-3.5" /> Lập PNK
+                            </button>
+                          )}
+
                           <button
                             onClick={() => handlePreviewExcelOnWeb(po)}
                             className="inline-flex items-center gap-1 rounded-[6px] border border-primary/30 bg-primary/10 px-2.5 py-1.5 text-xs font-semibold text-primary hover:bg-primary/20 transition-transform active:scale-[0.98] cursor-pointer"

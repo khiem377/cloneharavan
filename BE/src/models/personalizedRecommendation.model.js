@@ -8,7 +8,7 @@ const personalizedRecommendationSchema = new mongoose.Schema(
       {
         productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
         predictedScore: { type: Number, required: true },
-        reason: { type: String, default: 'Matrix Factorization Model' },
+        reason: { type: String, default: 'Implicit ALS + Time-Decay' },
       },
     ],
     lastCalculatedAt: { type: Date, default: Date.now },

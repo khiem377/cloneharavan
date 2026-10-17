@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import api from '@/lib/axios';
 import useCompareStore from '@/store/compareStore';
+import { sanitizeHtml } from '@/utils/sanitizeHtml';
 
 // Helper to intelligently resolve comprehensive technical specs for any electronics item
 function resolveProductSpecs(p) {
@@ -541,7 +542,7 @@ export default function CompareClientView({ initialProducts = [], productIdsPara
                       </h5>
                       <div
                         className="text-xs text-gray-600 leading-relaxed prose prose-sm max-w-none line-clamp-6"
-                        dangerouslySetInnerHTML={{ __html: p.description }}
+                        dangerouslySetInnerHTML={{ __html: sanitizeHtml(p.description) }}
                       />
                     </div>
                   )}
