@@ -44,6 +44,7 @@ const commentRoutes = require('./comment.routes');
 const shippingRoutes = require('./shipping.routes');
 const storeSettingRoutes = require('./storeSetting.routes');
 const paymentRoutes = require('./payment.routes');
+const paymentProviderRoutes = require('./paymentProvider.routes');
 
 router.use('/auth', authRoutes);
 router.use('/users', userRoutes);
@@ -90,5 +91,6 @@ router.use('/orders', orderRoutes);
 router.use('/settings', storeSettingRoutes);
 
 router.use('/payments', paymentRoutes);
+router.use('/payment-providers', paymentProviderRoutes);
 
 module.exports = router;

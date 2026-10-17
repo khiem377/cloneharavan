@@ -5,6 +5,7 @@ import GeneralSettingsTab from './components/GeneralSettingsTab';
 import CheckoutSettingsTab from './components/CheckoutSettingsTab';
 import ShippingProvidersTab from './components/ShippingProvidersTab';
 import ShippingRulesTab from './components/ShippingRulesTab';
+import PaymentMethodsTab from './components/PaymentMethodsTab';
 import ActivityLogTab from './components/ActivityLogTab';
 import storeSettingService from '@/services/storeSetting.service';
 import { toast } from '@/providers/ToastProvider';
@@ -12,6 +13,7 @@ import { RefreshCw, X } from 'lucide-react';
 
 const TAB_TITLES = {
   store: 'Cấu hình chung',
+  'payment-methods': 'Phương thức thanh toán',
   checkout: 'Trang thanh toán',
   'shipping-providers': 'Đối tác vận chuyển',
   'shipping-rules': 'Cấu hình vận chuyển',
@@ -21,6 +23,9 @@ const TAB_TITLES = {
 const TAB_ALIASES = {
   store: 'store',
   general: 'store',
+  'payment-methods': 'payment-methods',
+  payments: 'payment-methods',
+  payment: 'payment-methods',
   checkout: 'checkout',
   'checkout-pages': 'checkout',
   'shipping-providers': 'shipping-providers',
@@ -109,6 +114,7 @@ export default function SettingsPage() {
               {activeTab === 'store' && (
                 <GeneralSettingsTab initialData={settings} onRefresh={fetchSettings} />
               )}
+              {activeTab === 'payment-methods' && <PaymentMethodsTab />}
               {activeTab === 'checkout' && (
                 <CheckoutSettingsTab initialData={settings} onRefresh={fetchSettings} />
               )}

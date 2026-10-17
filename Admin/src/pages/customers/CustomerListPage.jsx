@@ -18,6 +18,7 @@ import CustomerDetailModal from './components/CustomerDetailModal';
 const CUSTOMER_COLUMNS = [
   { id: 'select', label: 'Chọn', defaultVisible: true, alwaysVisible: true },
   { id: 'customer', label: 'Khách Hàng', defaultVisible: true, alwaysVisible: true },
+  { id: 'provider', label: 'Nguồn', defaultVisible: true },
   { id: 'contact', label: 'Liên Hệ', defaultVisible: true },
   { id: 'orders', label: 'Đơn Hàng', defaultVisible: true },
   { id: 'totalSpent', label: 'Tổng Chi Tiêu', defaultVisible: true },
@@ -30,6 +31,7 @@ const CUSTOMER_COLUMNS = [
 export default function CustomerListPage() {
   const [keyword, setKeyword] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [providerFilter, setProviderFilter] = useState('all');
   const [phoneFilter, setPhoneFilter] = useState('all');
   const [addressFilter, setAddressFilter] = useState('all');
   const [page, setPage] = useState(1);
@@ -52,6 +54,7 @@ export default function CustomerListPage() {
     limit: pageSize,
     q: keyword || undefined,
     isActive: statusFilter === 'all' ? undefined : statusFilter === 'active',
+    authProvider: providerFilter === 'all' ? undefined : providerFilter,
   };
 
   const { data: res = {}, isLoading, isFetching, refetch } = useUsers(queryParams);
@@ -158,6 +161,11 @@ export default function CustomerListPage() {
           setStatusFilter(s);
           setPage(1);
         }}
+        providerFilter={providerFilter}
+        setProviderFilter={(p) => {
+          setProviderFilter(p);
+          setPage(1);
+        }}
         phoneFilter={phoneFilter}
         setPhoneFilter={(p) => {
           setPhoneFilter(p);
@@ -224,7 +232,7 @@ export default function CustomerListPage() {
         />
       )}
 
-      {/* 7. Bulk Confirm Dialog */}
+
       {bulkConfirm && (
         <ConfirmDialog
           open={!!bulkConfirm}

@@ -70,7 +70,7 @@ const previewOrder = async (userId, previewData = {}) => {
     throw new AppError('Vui lòng đăng nhập để xem thông tin đơn hàng', 401);
   }
 
-  const { addressId, shippingAddress: customAddress, couponCode, buyNowItem, items: directItems, itemIds } = previewData;
+  const { addressId, shippingAddress: customAddress, couponCode, shippingCouponCode, buyNowItem, items: directItems, itemIds } = previewData;
 
   const user = await User.findById(userId);
   if (!user) throw new AppError('Không tìm thấy tài khoản người dùng', 404);
@@ -231,17 +231,28 @@ const previewOrder = async (userId, previewData = {}) => {
     const originalPrice = Number(variant.price) || 0;
     let unitPrice = getSellingPrice(variant);
 
-    const fsKey = `${product._id.toString()}_${variant._id.toString()}`;
-    const fsKeyProduct = `${product._id.toString()}_default`;
-    const matchedFs = flashSaleMap.get(fsKey) || flashSaleMap.get(fsKeyProduct);
+    // Kiểm tra ưu đãi Combo
+    const isComboItem = Boolean(item.isComboItem || item.comboId || item.comboName);
+    const comboPrice = item.comboPrice ? Number(item.comboPrice) : null;
+    const comboName = item.comboName || '';
+    const comboCode = item.comboCode || '';
+    const comboId = item.comboId ? String(item.comboId) : null;
 
-    let isFlashSale = false;
-    if (matchedFs) {
-      const fsPrice = matchedFs.flashSalePrice ?? matchedFs.flashPrice;
-      const fsStock = Math.max(0, (matchedFs.stockLimit || 0) - (matchedFs.soldCount || 0));
-      if (fsPrice !== null && fsPrice < unitPrice && fsStock >= qty) {
-        unitPrice = fsPrice;
-        isFlashSale = true;
+    if (isComboItem && comboPrice && comboPrice > 0) {
+      unitPrice = comboPrice;
+    } else {
+      const fsKey = `${product._id.toString()}_${variant._id.toString()}`;
+      const fsKeyProduct = `${product._id.toString()}_default`;
+      const matchedFs = flashSaleMap.get(fsKey) || flashSaleMap.get(fsKeyProduct);
+
+      let isFlashSale = false;
+      if (matchedFs) {
+        const fsPrice = matchedFs.flashSalePrice ?? matchedFs.flashPrice;
+        const fsStock = Math.max(0, (matchedFs.stockLimit || 0) - (matchedFs.soldCount || 0));
+        if (fsPrice !== null && fsPrice < unitPrice && fsStock >= qty) {
+          unitPrice = fsPrice;
+          isFlashSale = true;
+        }
       }
     }
 
@@ -263,7 +274,11 @@ const previewOrder = async (userId, previewData = {}) => {
       subtotal: itemSubtotal,
       availableStock,
       isAvailable: itemAvailable,
-      isFlashSale,
+      isComboItem,
+      comboName,
+      comboCode,
+      comboId,
+      comboPrice,
     });
   }
 
@@ -374,7 +389,7 @@ const previewOrder = async (userId, previewData = {}) => {
       toDistrictId: targetDistrictId,
       toWardCode: targetWardCode,
       weight: previewItems.reduce((acc, it) => acc + (it.quantity * 300), 200),
-      insuranceValue: Math.max(0, totalSubtotal - totalCouponDiscount),
+      insuranceValue: 0,
       allowEstimatedFallback: true,
     });
 
@@ -391,7 +406,29 @@ const previewOrder = async (userId, previewData = {}) => {
     warnings.push('Địa chỉ giao hàng chưa có mã Quận/Phường GHN, cước vận chuyển sẽ được xác nhận khi đặt hàng.');
   }
 
-  const finalTotalAmount = Math.max(0, totalSubtotal - totalCouponDiscount + shippingFee);
+  // 8. Áp dụng mã giảm giá vận chuyển (Shipping Coupon) nếu có
+  let appliedShippingCouponCode = null;
+  let totalShippingDiscount = 0;
+  const shippingCodeToValidate = shippingCouponCode !== undefined
+    ? shippingCouponCode
+    : (userCart?.shippingCouponCode || null);
+
+  if (shippingCodeToValidate && typeof shippingCodeToValidate === 'string' && shippingCodeToValidate.trim()) {
+    try {
+      const shipCouponRes = await couponService.validateCoupon(
+        shippingCodeToValidate.trim(),
+        totalSubtotal,
+        shippingFee
+      );
+      totalShippingDiscount = shipCouponRes.discountAmount || 0;
+      appliedShippingCouponCode = shipCouponRes.coupon.code;
+    } catch (shipCouponErr) {
+      warnings.push(`Mã vận chuyển "${shippingCodeToValidate}": ${shipCouponErr.message}`);
+    }
+  }
+
+  const finalShippingFee = Math.max(0, shippingFee - totalShippingDiscount);
+  const finalTotalAmount = Math.max(0, totalSubtotal - totalCouponDiscount + finalShippingFee);
 
   if (requiresAddressConfirmation) {
     canCheckout = false;
@@ -406,6 +443,9 @@ const previewOrder = async (userId, previewData = {}) => {
       couponDiscount: totalCouponDiscount,
       couponCode: appliedCouponCode,
       shippingFee,
+      shippingCouponCode: appliedShippingCouponCode,
+      shippingDiscount: totalShippingDiscount,
+      finalShippingFee,
       totalAmount: finalTotalAmount,
     },
     shippingInfo,
@@ -432,7 +472,7 @@ const createOrderCOD = async (userId, orderData) => {
     throw new AppError('Vui lòng đăng nhập tài khoản để tiến hành đặt hàng', 401);
   }
 
-  const { addressId, shippingAddress: customAddress, couponCode, note = '', buyNowItem, items: directItems, itemIds } = orderData;
+  const { addressId, shippingAddress: customAddress, couponCode, shippingCouponCode, note = '', buyNowItem, items: directItems, itemIds } = orderData;
 
   // 1. Xác định người dùng & Địa chỉ giao hàng
   const user = await User.findById(userId);
@@ -562,16 +602,26 @@ const createOrderCOD = async (userId, orderData) => {
     // Giá bán thực tế cơ sở
     let unitPrice = getSellingPrice(variant);
 
-    // Kiểm tra ưu đãi Flash Sale
-    const fsKey = `${product._id.toString()}_${variant._id.toString()}`;
-    const fsKeyProduct = `${product._id.toString()}_default`;
-    const matchedFs = flashSaleMap.get(fsKey) || flashSaleMap.get(fsKeyProduct);
+    const isComboItem = Boolean(item.isComboItem || item.comboId || item.comboName);
+    const comboPrice = item.comboPrice ? Number(item.comboPrice) : null;
+    const comboName = item.comboName || '';
+    const comboCode = item.comboCode || '';
+    const comboId = item.comboId ? String(item.comboId) : null;
 
-    if (matchedFs) {
-      const fsPrice = matchedFs.flashSalePrice ?? matchedFs.flashPrice;
-      const fsStock = Math.max(0, (matchedFs.stockLimit || 0) - (matchedFs.soldCount || 0));
-      if (fsPrice !== null && fsPrice < unitPrice && fsStock >= qty) {
-        unitPrice = fsPrice;
+    if (isComboItem && comboPrice && comboPrice > 0) {
+      unitPrice = comboPrice;
+    } else {
+      // Kiểm tra ưu đãi Flash Sale
+      const fsKey = `${product._id.toString()}_${variant._id.toString()}`;
+      const fsKeyProduct = `${product._id.toString()}_default`;
+      const matchedFs = flashSaleMap.get(fsKey) || flashSaleMap.get(fsKeyProduct);
+
+      if (matchedFs) {
+        const fsPrice = matchedFs.flashSalePrice ?? matchedFs.flashPrice;
+        const fsStock = Math.max(0, (matchedFs.stockLimit || 0) - (matchedFs.soldCount || 0));
+        if (fsPrice !== null && fsPrice < unitPrice && fsStock >= qty) {
+          unitPrice = fsPrice;
+        }
       }
     }
 
@@ -593,6 +643,11 @@ const createOrderCOD = async (userId, orderData) => {
       subtotal: itemSubtotal,
       couponDiscountAllocated: 0,
       lineTotal: itemSubtotal,
+      isComboItem,
+      comboName,
+      comboCode,
+      comboId,
+      comboPrice,
       isGift: false,
     });
   }
@@ -727,7 +782,7 @@ const createOrderCOD = async (userId, orderData) => {
         toDistrictId: targetDistrictId,
         toWardCode: targetWardCode,
         weight: orderItemsData.reduce((acc, it) => acc + (it.quantity * 300), 200),
-        insuranceValue: Math.max(0, totalSubtotal - totalCouponDiscount),
+        insuranceValue: 0,
         allowEstimatedFallback: true,
       });
       if (feeRes.success && feeRes.fee) {
@@ -740,7 +795,32 @@ const createOrderCOD = async (userId, orderData) => {
     shippingFee = Number(orderData.shippingFee);
   }
 
-  const finalTotalAmount = Math.max(0, totalSubtotal - totalCouponDiscount + shippingFee);
+  // 6a. Re-check Shipping Coupon từ Database
+  let appliedShippingCouponCode = null;
+  let totalShippingDiscount = 0;
+  let shippingCouponDoc = null;
+
+  const shippingCodeToValidate = shippingCouponCode !== undefined
+    ? shippingCouponCode
+    : (userCart?.shippingCouponCode || null);
+
+  if (shippingCodeToValidate && typeof shippingCodeToValidate === 'string' && shippingCodeToValidate.trim()) {
+    try {
+      const shipCouponRes = await couponService.validateCoupon(
+        shippingCodeToValidate.trim(),
+        totalSubtotal,
+        shippingFee
+      );
+      totalShippingDiscount = shipCouponRes.discountAmount || 0;
+      appliedShippingCouponCode = shipCouponRes.coupon.code;
+      shippingCouponDoc = shipCouponRes.coupon;
+    } catch (shipErr) {
+      console.warn('[Order Service] Mã vận chuyển không hợp lệ khi tạo đơn:', shipErr.message);
+    }
+  }
+
+  const finalShippingFee = Math.max(0, shippingFee - totalShippingDiscount);
+  const finalTotalAmount = Math.max(0, totalSubtotal - totalCouponDiscount + finalShippingFee);
 
   // 6b. Chống tạo đơn trùng lặp (Idempotency Guard trong vòng 10 giây)
   const tenSecondsAgo = new Date(Date.now() - 10000);
@@ -785,12 +865,17 @@ const createOrderCOD = async (userId, orderData) => {
       }
     }
 
-    // 7.2. Tăng số lượt dùng của Coupon
+    // 7.2. Tăng số lượt dùng của Coupon đơn hàng
     if (couponDoc) {
-      await couponService.applyCoupon(couponDoc._id, totalSubtotal, session);
+      await couponService.applyCoupon(couponDoc._id, totalSubtotal, 0, session);
     }
 
-    // 7.2b. Tăng số lượt dùng (Quota) của Chương trình Quà tặng kèm
+    // 7.2b. Tăng số lượt dùng của Coupon vận chuyển
+    if (shippingCouponDoc) {
+      await couponService.applyCoupon(shippingCouponDoc._id, totalSubtotal, shippingFee, session);
+    }
+
+    // 7.2c. Tăng số lượt dùng (Quota) của Chương trình Quà tặng kèm
     if (giftProgramsUsed.length > 0) {
       await giftProgramService.markGiftProgramsUsed(giftProgramsUsed, session);
     }
@@ -811,6 +896,9 @@ const createOrderCOD = async (userId, orderData) => {
             shippingFee,
             couponCode: appliedCouponCode,
             couponDiscount: totalCouponDiscount,
+            shippingCouponCode: appliedShippingCouponCode,
+            shippingDiscount: totalShippingDiscount,
+            finalShippingFee,
             totalAmount: finalTotalAmount,
           },
           note,
@@ -835,7 +923,7 @@ const createOrderCOD = async (userId, orderData) => {
       { userId },
       {
         $pull: { items: { variantId: { $in: orderedVariantIds } } },
-        $set: { couponCode: null, lastValidatedAt: new Date() },
+        $set: { couponCode: null, shippingCouponCode: null, lastValidatedAt: new Date() },
       },
       { session }
     );
@@ -912,6 +1000,9 @@ const cancelOrder = async (orderId, userId, reason = '', userRole = 'user') => {
     // 2. Hoàn lại lượt dùng Coupon (nếu có) ĐÚNG 1 LẦN
     if (lockedOrder.pricing?.couponCode) {
       await couponService.releaseCoupon(lockedOrder.pricing.couponCode, session);
+    }
+    if (lockedOrder.pricing?.shippingCouponCode) {
+      await couponService.releaseCoupon(lockedOrder.pricing.shippingCouponCode, session);
     }
 
     return await Order.findById(orderId).session(session);

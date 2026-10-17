@@ -47,6 +47,22 @@ export const shippingService = {
   },
 
   /**
+   * Lấy danh sách Phường / Xã trực tiếp theo provinceId (Hành chính 2 cấp GHN v3)
+   */
+  getNewWards: async (provinceId) => {
+    if (!provinceId) return [];
+    try {
+      const res = await api.get('/shipping/new-wards', {
+        params: { province_id: provinceId },
+      });
+      return res.data?.data?.wards || [];
+    } catch (err) {
+      console.error('Lỗi lấy danh sách phường/xã 2 cấp từ GHN:', err);
+      return [];
+    }
+  },
+
+  /**
    * Chuẩn hóa và đối soát địa chỉ bưu chính 100% Giao Hàng Nhanh (GHN)
    */
   getPostMergerAddress: async ({

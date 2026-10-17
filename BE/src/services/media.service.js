@@ -288,10 +288,30 @@ const checkMediaUsages = async (ids) => {
     try { return new mongoose.Types.ObjectId(id); } catch { return null; }
   }).filter(Boolean);
 
+  // Lay them URLs cua cac media items de ho tro cac model/entity tham chieu bang URL (nhu StoreSetting logo, Brand logo.url...)
+  const mediaDocs = await Media.find({ _id: { $in: objectIds } }, '_id url').lean();
+  const urlToIdMap = new Map();
+  mediaDocs.forEach((m) => {
+    if (m.url) urlToIdMap.set(m.url, m._id.toString());
+  });
+  const mediaUrls = Array.from(urlToIdMap.keys());
+
   for (const entry of mediaRegistry) {
-    const { model, displayName, mediaFields, getEntityName, getAdminUrl } = entry;
-    const docs = await model.find({ $or: mediaFields.map((f) => ({ [f]: { $in: objectIds } })) }).lean();
+    const { model, displayName, mediaFields = [], urlFields = [], getEntityName, getAdminUrl } = entry;
+    const orConditions = [];
+
+    if (mediaFields.length && objectIds.length) {
+      orConditions.push(...mediaFields.map((f) => ({ [f]: { $in: objectIds } })));
+    }
+    if (urlFields.length && mediaUrls.length) {
+      orConditions.push(...urlFields.map((f) => ({ [f]: { $in: mediaUrls } })));
+    }
+
+    if (!orConditions.length) continue;
+
+    const docs = await model.find({ $or: orConditions }).lean();
     for (const doc of docs) {
+      // 1. Check theo mediaFields (ObjectIds)
       for (const field of mediaFields) {
         let values = [doc];
         for (const part of field.split('.')) {
@@ -306,6 +326,22 @@ const checkMediaUsages = async (ids) => {
           if (!dup) result[mid].push({ displayName, entityId: doc._id.toString(), entityName: getEntityName(doc), adminUrl: getAdminUrl(doc) });
         }
       }
+
+      // 2. Check theo urlFields (Strings)
+      for (const field of urlFields) {
+        let values = [doc];
+        for (const part of field.split('.')) {
+          values = values.flatMap((v) => { if (!v) return []; const val = v[part]; return Array.isArray(val) ? val : [val]; });
+        }
+        for (const urlVal of values) {
+          if (!urlVal) continue;
+          const matchedMid = urlToIdMap.get(urlVal);
+          if (!matchedMid) continue;
+          if (!result[matchedMid]) result[matchedMid] = [];
+          const dup = result[matchedMid].some((u) => u.entityId === doc._id.toString() && u.displayName === displayName);
+          if (!dup) result[matchedMid].push({ displayName, entityId: doc._id.toString(), entityName: getEntityName(doc), adminUrl: getAdminUrl(doc) });
+        }
+      }
     }
   }
   return result;
@@ -318,10 +354,13 @@ const getUnusedMedia = async ({ page = 1, limit = 30 } = {}) => {
   // 1. Thu thập tất cả media IDs đang được dùng
   const usedIds = new Set();
   for (const entry of mediaRegistry) {
-    const { model, mediaFields } = entry;
+    const { model, mediaFields = [], urlFields = [] } = entry;
+    const allFields = [...mediaFields, ...urlFields];
+    if (!allFields.length) continue;
+
     const docs = await model.find({
-      $or: mediaFields.map((f) => ({ [f]: { $exists: true, $ne: null } })),
-    }, mediaFields.join(' ')).lean();
+      $or: allFields.map((f) => ({ [f]: { $exists: true, $ne: null, $ne: '' } })),
+    }, allFields.join(' ')).lean();
 
     for (const doc of docs) {
       for (const field of mediaFields) {
@@ -330,6 +369,18 @@ const getUnusedMedia = async ({ page = 1, limit = 30 } = {}) => {
           values = values.flatMap((v) => { if (!v) return []; const val = v[part]; return Array.isArray(val) ? val : [val]; });
         }
         values.forEach((id) => { if (id) usedIds.add(id.toString()); });
+      }
+
+      for (const field of urlFields) {
+        let values = [doc];
+        for (const part of field.split('.')) {
+          values = values.flatMap((v) => { if (!v) return []; const val = v[part]; return Array.isArray(val) ? val : [val]; });
+        }
+        const usedUrls = values.filter(Boolean);
+        if (usedUrls.length > 0) {
+          const matchedMedia = await Media.find({ url: { $in: usedUrls } }, '_id').lean();
+          matchedMedia.forEach((m) => usedIds.add(m._id.toString()));
+        }
       }
     }
   }

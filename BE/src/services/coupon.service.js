@@ -1,18 +1,39 @@
 const Coupon = require('../models/coupon.model');
 const { AppError } = require('../utils/AppError');
 
-const calcDiscount = (coupon, orderTotal) => {
+const calcDiscount = (coupon, orderTotal = 0, shippingFee = 0) => {
+  if (coupon.category === 'shipping') {
+    // 1. Giảm 100% toàn bộ cước ship (Free ship all)
+    if (coupon.type === 'free_shipping') {
+      return Math.max(0, Number(shippingFee) || 0);
+    }
+    // 2. Giảm theo % cước ship (có trần maxDiscount nếu có)
+    if (coupon.type === 'percent') {
+      const fee = Math.max(0, Number(shippingFee) || 0);
+      const discount = Math.round((fee * (Number(coupon.value) || 0)) / 100);
+      return coupon.maxDiscount ? Math.min(discount, coupon.maxDiscount) : discount;
+    }
+    // 3. Giảm số tiền cố định vào cước ship
+    return Math.min(Number(coupon.value) || 0, Math.max(0, Number(shippingFee) || 0));
+  }
+
+  // category === 'order' (Mã giảm giá đơn hàng)
   if (coupon.type === 'percent') {
-    const discount = Math.round((orderTotal * coupon.value) / 100);
+    const discount = Math.round((orderTotal * (Number(coupon.value) || 0)) / 100);
     return coupon.maxDiscount ? Math.min(discount, coupon.maxDiscount) : discount;
   }
   // fixed
-  return Math.min(coupon.value, orderTotal);
+  return Math.min(Number(coupon.value) || 0, orderTotal);
 };
 
 const getAllCoupons = async (query = {}) => {
   const filter = {};
   const now = new Date();
+
+  // Lọc theo phân loại: 'order' | 'shipping'
+  if (query.category) {
+    filter.category = query.category;
+  }
 
   // Tìm kiếm theo tên hoặc mã code
   if (query.keyword) {
@@ -101,7 +122,7 @@ const toggleCouponStatus = async (id, isActive) => {
   return coupon;
 };
 
-const validateCoupon = async (code, orderTotal) => {
+const validateCoupon = async (code, orderTotal = 0, shippingFee = 0) => {
   const coupon = await Coupon.findOne({ code: code.toUpperCase() });
 
   if (!coupon) throw new AppError('Mã giảm giá không tồn tại', 404);
@@ -122,27 +143,40 @@ const validateCoupon = async (code, orderTotal) => {
     );
   }
 
-  const discountAmount = calcDiscount(coupon, orderTotal);
+  const discountAmount = calcDiscount(coupon, orderTotal, shippingFee);
 
   return {
     coupon: {
       _id: coupon._id,
       code: coupon.code,
       name: coupon.name,
+      category: coupon.category || 'order',
       type: coupon.type,
       value: coupon.value,
       maxDiscount: coupon.maxDiscount,
       minOrderValue: coupon.minOrderValue || 0,
     },
+    category: coupon.category || 'order',
     discountAmount,
-    finalTotal: orderTotal - discountAmount,
+    finalTotal: coupon.category === 'shipping' ? orderTotal : Math.max(0, orderTotal - discountAmount),
   };
 };
 
-const applyCoupon = async (couponId, orderTotal, session = null) => {
+const applyCoupon = async (couponId, orderTotal = 0, shippingFeeOrSession = null, session = null) => {
   const now = new Date();
+  let shippingFee = 0;
+  let actualSession = session;
+
+  if (shippingFeeOrSession && typeof shippingFeeOrSession === 'object' && shippingFeeOrSession.constructor?.name === 'ClientSession') {
+    actualSession = shippingFeeOrSession;
+  } else if (typeof shippingFeeOrSession === 'number') {
+    shippingFee = shippingFeeOrSession;
+  } else if (shippingFeeOrSession && typeof shippingFeeOrSession === 'object') {
+    actualSession = shippingFeeOrSession;
+  }
+
   const options = { new: true };
-  if (session) options.session = session;
+  if (actualSession) options.session = actualSession;
 
   const coupon = await Coupon.findOneAndUpdate(
     {
@@ -163,7 +197,7 @@ const applyCoupon = async (couponId, orderTotal, session = null) => {
     throw new AppError('Mã giảm giá đã hết lượt sử dụng hoặc không còn hiệu lực', 400);
   }
 
-  return calcDiscount(coupon, orderTotal);
+  return calcDiscount(coupon, orderTotal, shippingFee);
 };
 
 const releaseCoupon = async (couponCode, session = null) => {

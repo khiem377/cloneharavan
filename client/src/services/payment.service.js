@@ -10,6 +10,23 @@ export const paymentService = {
   },
 
   /**
+   * Lấy danh sách cổng thanh toán trực tuyến & thủ công đang kích hoạt cho Checkout
+   */
+  getActivePaymentProviders: async () => {
+    try {
+      const res = await api.get('/payment-providers/active', {
+        params: { _t: Date.now() },
+        headers: {
+          'Cache-Control': 'no-cache, no-store',
+        },
+      });
+      return res.data?.data || [];
+    } catch {
+      return [];
+    }
+  },
+
+  /**
    * Khởi tạo hoặc xác nhận thanh toán đơn hàng
    */
   createPayment: async (payload = {}) => {

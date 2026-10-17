@@ -15,6 +15,7 @@ const INITIAL_CART = {
   couponCode: null,
   appliedCoupon: null,
   couponDiscount: 0,
+  shippingCouponCode: null,
   totalDiscount: 0,
   finalTotal: 0,
   giftPrograms: [],
@@ -69,23 +70,15 @@ export const useCartStore = create((set, get) => ({
     let updatedSelected = [];
 
     if (Array.isArray(overrideSelectedIds)) {
-      // Ưu tiên lựa chọn chỉ định (ví dụ Mua Ngay chỉ chọn đúng món vừa thêm)
+      // Ưu tiên lựa chọn chỉ định (ví dụ Mua Ngay hoặc vừa thêm Combo)
       updatedSelected = overrideSelectedIds.filter((id) => validIds.has(id));
     } else {
       const currentSelected = get().selectedItemIds || [];
-      let storedIds = [];
-      if (typeof window !== 'undefined') {
-        try {
-          const raw = sessionStorage.getItem('checkoutItemIds');
-          if (raw) storedIds = JSON.parse(raw);
-        } catch (_) {}
-      }
-
-      const candidateIds = currentSelected.length > 0 ? currentSelected : storedIds;
-      updatedSelected = candidateIds.filter((id) => validIds.has(id));
-
-      // Chỉ khi chưa hề có lựa chọn nào trước đó mới chọn tất cả sản phẩm còn hàng
-      if (updatedSelected.length === 0 && candidateIds.length === 0 && items.length > 0) {
+      if (currentSelected.length > 0) {
+        // Giữ lại các lựa chọn người dùng đang chọn trong phiên hiện tại
+        updatedSelected = currentSelected.filter((id) => validIds.has(id));
+      } else {
+        // Mặc định chọn tất cả sản phẩm còn hàng trong giỏ (bao gồm cả gói Combo)
         updatedSelected = items
           .filter(
             (i) =>
@@ -94,10 +87,6 @@ export const useCartStore = create((set, get) => ({
           )
           .map((i) => i._id);
       }
-    }
-
-    if (typeof window !== 'undefined') {
-      sessionStorage.setItem('checkoutItemIds', JSON.stringify(updatedSelected));
     }
 
     // ĐỒNG BỘ TOÀN VẸN GÓI COMBO:
@@ -128,6 +117,13 @@ export const useCartStore = create((set, get) => ({
         }
       }
     });
+
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('checkoutItemIds', JSON.stringify(updatedSelected));
+        sessionStorage.setItem('checkoutItemIds', JSON.stringify(updatedSelected));
+      } catch (_) {}
+    }
 
     set({
       cart,
@@ -178,14 +174,20 @@ export const useCartStore = create((set, get) => ({
         const newSelected = selectedItemIds.filter((id) => !comboItemIds.includes(id));
         set({ selectedItemIds: newSelected });
         if (typeof window !== 'undefined') {
-          sessionStorage.setItem('checkoutItemIds', JSON.stringify(newSelected));
+          try {
+            localStorage.setItem('checkoutItemIds', JSON.stringify(newSelected));
+            sessionStorage.setItem('checkoutItemIds', JSON.stringify(newSelected));
+          } catch (_) {}
         }
       } else {
         // Chọn tất cả sản phẩm thuộc combo này
         const newSelected = Array.from(new Set([...selectedItemIds, ...comboItemIds]));
         set({ selectedItemIds: newSelected });
         if (typeof window !== 'undefined') {
-          sessionStorage.setItem('checkoutItemIds', JSON.stringify(newSelected));
+          try {
+            localStorage.setItem('checkoutItemIds', JSON.stringify(newSelected));
+            sessionStorage.setItem('checkoutItemIds', JSON.stringify(newSelected));
+          } catch (_) {}
         }
       }
       return;
@@ -199,7 +201,10 @@ export const useCartStore = create((set, get) => ({
     }
     set({ selectedItemIds: newSelected });
     if (typeof window !== 'undefined') {
-      sessionStorage.setItem('checkoutItemIds', JSON.stringify(newSelected));
+      try {
+        localStorage.setItem('checkoutItemIds', JSON.stringify(newSelected));
+        sessionStorage.setItem('checkoutItemIds', JSON.stringify(newSelected));
+      } catch (_) {}
     }
   },
 
@@ -219,7 +224,10 @@ export const useCartStore = create((set, get) => ({
           .map((i) => i._id);
     set({ selectedItemIds: newSelected });
     if (typeof window !== 'undefined') {
-      sessionStorage.setItem('checkoutItemIds', JSON.stringify(newSelected));
+      try {
+        localStorage.setItem('checkoutItemIds', JSON.stringify(newSelected));
+        sessionStorage.setItem('checkoutItemIds', JSON.stringify(newSelected));
+      } catch (_) {}
     }
   },
 
@@ -457,7 +465,13 @@ export const useCartStore = create((set, get) => ({
       ]);
 
       if (res?.success && res?.data) {
-        get()._setCartData(res.data);
+        const cartItems = res.data.cart?.items || [];
+        const comboItemIds = cartItems
+          .filter((it) => String(it.comboId) === String(comboId) || it.isComboItem)
+          .map((it) => it._id);
+        const currentSel = get().selectedItemIds || [];
+        const newSel = Array.from(new Set([...currentSel, ...comboItemIds]));
+        get()._setCartData(res.data, newSel);
         if (!silent) {
           get().showCartHud('success', 'Đã thêm trọn bộ combo vào giỏ hàng!');
           const timeout = setTimeout(() => {
@@ -570,12 +584,12 @@ export const useCartStore = create((set, get) => ({
   },
 
   /**
-   * Áp dụng mã Coupon
+   * Áp dụng mã Coupon (Hỗ trợ mã đơn hàng hoặc mã vận chuyển)
    */
-  applyCoupon: async (couponCode) => {
+  applyCoupon: async (couponCode, category = null) => {
     try {
       set({ isUpdating: true, error: null });
-      const res = await cartService.applyCoupon(couponCode);
+      const res = await cartService.applyCoupon(couponCode, category);
       if (res?.success && res?.data) {
         get()._setCartData(res.data);
         return {
@@ -602,13 +616,16 @@ export const useCartStore = create((set, get) => ({
   /**
    * Gỡ mã Coupon
    */
-  removeCoupon: async () => {
+  removeCoupon: async (category = null) => {
     try {
       set({ isUpdating: true, error: null });
-      const res = await cartService.removeCoupon();
+      const res = await cartService.removeCoupon(category);
       if (res?.success && res?.data) {
         get()._setCartData(res.data);
-        return { success: true, message: 'Đã gỡ mã giảm giá' };
+        return {
+          success: true,
+          message: category === 'shipping' ? 'Đã gỡ mã vận chuyển' : 'Đã gỡ mã giảm giá',
+        };
       }
       return { success: false };
     } catch (err) {

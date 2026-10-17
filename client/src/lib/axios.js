@@ -3,7 +3,7 @@ import useAuthStore from '../store/authStore';
 
 const BASE_URL =
   typeof window !== 'undefined'
-    ? '/api/v1'
+    ? process.env.NEXT_PUBLIC_API_SERVER_URL || '/api/v1'
     : process.env.API_SERVER_URL || 'http://localhost:5000/api/v1';
 
 const AUTH_ROUTES = ['/auth/login', '/auth/google', '/auth/refresh-token', '/auth/register', '/auth/forgot-password'];

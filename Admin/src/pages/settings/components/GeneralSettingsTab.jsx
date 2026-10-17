@@ -63,7 +63,27 @@ export default function GeneralSettingsTab({ initialData, onRefresh }) {
     e.preventDefault();
     try {
       setSaving(true);
-      await storeSettingService.updateSettings('all', formData);
+      const addr = formData.storeInfo?.address || {};
+      const addressParts = [
+        addr.detailNumber,
+        addr.street,
+        addr.ward,
+        addr.district,
+        addr.province,
+      ].map((s) => (s || '').trim()).filter(Boolean);
+
+      const payloadToSend = {
+        ...formData,
+        storeInfo: {
+          ...formData.storeInfo,
+          address: {
+            ...addr,
+            fullAddress: addressParts.length > 0 ? addressParts.join(', ') : (addr.fullAddress || ''),
+          },
+        },
+      };
+
+      await storeSettingService.updateSettings('all', payloadToSend);
       toast.success('Đã lưu cấu hình chung thành công!');
       if (onRefresh) onRefresh();
     } catch (err) {
@@ -136,15 +156,14 @@ export default function GeneralSettingsTab({ initialData, onRefresh }) {
 
           <div>
             <label className="block text-[13px] font-medium text-[#212b36] dark:text-foreground mb-1.5">
-              Quốc gia
+              Hotline (Tổng đài CSKH)
             </label>
-            <select
-              value="Vietnam"
-              disabled
-              className="w-full h-9 px-3 text-[13px] border border-[#c4cdd5] dark:border-border rounded-[4px] bg-[#f4f6f8] dark:bg-muted/40 text-[#637381] dark:text-muted-foreground"
-            >
-              <option value="Vietnam">Vietnam</option>
-            </select>
+            <Input
+              value={formData.storeInfo?.hotline || ''}
+              onChange={(e) => handleStoreChange('hotline', e.target.value)}
+              placeholder="VD: 1900 1234"
+              className="h-9 text-[13px] rounded-[4px] border-[#c4cdd5] dark:border-border dark:bg-background dark:text-foreground focus:border-[#0088ff]"
+            />
           </div>
 
           <AddressApiSelect
@@ -262,6 +281,18 @@ export default function GeneralSettingsTab({ initialData, onRefresh }) {
               <option value="Cá nhân / Hộ kinh doanh">Cá nhân / Hộ kinh doanh</option>
               <option value="Doanh nghiệp / Công ty">Doanh nghiệp / Công ty</option>
             </select>
+          </div>
+
+          <div className="md:col-span-2">
+            <label className="block text-[13px] font-medium text-[#212b36] dark:text-foreground mb-1.5">
+              Mô tả giới thiệu cửa hàng (hiển thị chân trang Footer)
+            </label>
+            <Input
+              value={formData.storeInfo?.description || ''}
+              onChange={(e) => handleStoreChange('description', e.target.value)}
+              placeholder="VD: Chuyên cung cấp các thiết bị điện tử, thời trang và sản phẩm chính hãng chất lượng cao."
+              className="h-9 text-[13px] rounded-[4px] border-[#c4cdd5] dark:border-border dark:bg-background dark:text-foreground focus:border-[#0088ff]"
+            />
           </div>
         </div>
       </div>

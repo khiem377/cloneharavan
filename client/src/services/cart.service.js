@@ -69,19 +69,23 @@ export const cartService = {
   },
 
   /**
-   * Áp dụng mã giảm giá Coupon
+   * Áp dụng mã giảm giá Coupon (Đơn hàng hoặc Vận chuyển)
    * @param {string} couponCode - Mã voucher
+   * @param {string} [category] - 'order' | 'shipping'
    */
-  async applyCoupon(couponCode) {
-    const response = await api.post('/cart/apply-coupon', { couponCode });
+  async applyCoupon(couponCode, category = null) {
+    const response = await api.post('/cart/apply-coupon', { couponCode, category });
     return response.data;
   },
 
   /**
    * Gỡ bỏ mã giảm giá Coupon
+   * @param {string} [category] - 'order' | 'shipping'
    */
-  async removeCoupon() {
-    const response = await api.delete('/cart/remove-coupon');
+  async removeCoupon(category = null) {
+    const response = await api.delete('/cart/remove-coupon', {
+      params: category ? { category } : undefined,
+    });
     return response.data;
   },
 

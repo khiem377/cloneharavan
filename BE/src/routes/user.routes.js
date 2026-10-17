@@ -62,6 +62,7 @@ router.delete('/addresses/:addressId', protect, deleteAddress);
 router.patch('/addresses/:addressId/default', protect, setDefaultAddress);
 router.post('/addresses/sync-order', protect, validate(addressSchema), syncOrderAddress);
 
+
 // ==========================================
 // 3. ADMIN MANAGEMENT (RBAC Protected)
 // ==========================================

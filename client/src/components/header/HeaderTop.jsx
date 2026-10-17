@@ -8,8 +8,9 @@ import ShopLogo from '../common/ShopLogo';
 import SearchBar from './SearchBar';
 import AccountMenu from './AccountMenu';
 import useCartStore from '@/store/cartStore';
+import { formatLogoUrl } from '@/utils/imageUtils';
 
-export const HeaderTop = ({ onOpenCategoryDrawer }) => {
+export const HeaderTop = ({ onOpenCategoryDrawer, storeSetting = null }) => {
   const { items, totalItems, fetchCart, initialized } = useCartStore();
 
   useEffect(() => {
@@ -36,8 +37,16 @@ export const HeaderTop = ({ onOpenCategoryDrawer }) => {
             </button>
           )}
 
-          <Link href="/" className="flex items-center shrink-0 py-1 hover:opacity-95 transition">
-            <ShopLogo />
+          <Link href="/" className="flex items-center shrink-0 py-0.5 hover:opacity-95 transition">
+            {storeSetting?.logo ? (
+              <img
+                src={formatLogoUrl(storeSetting.logo)}
+                alt={storeSetting.name || 'Logo'}
+                className="h-9 sm:h-10 md:h-11 max-h-12 w-auto max-w-[180px] sm:max-w-[220px] object-contain"
+              />
+            ) : (
+              <ShopLogo />
+            )}
           </Link>
         </div>
 

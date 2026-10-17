@@ -190,7 +190,7 @@ export default function AiChatWidget() {
               ? {
                   ...m,
                   text: streamTargetText,
-                  products: pendingProducts,
+                  products: pendingProducts.length > 0 ? pendingProducts : (m.products || []),
                   streaming: false,
                 }
               : m
@@ -236,6 +236,13 @@ export default function AiChatWidget() {
           },
           onProducts: (products) => {
             pendingProducts = products || [];
+            if (pendingProducts.length > 0) {
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === botMsgId ? { ...m, products: pendingProducts } : m
+                )
+              );
+            }
           },
           onEnd: () => {
             isNetworkDone = true;

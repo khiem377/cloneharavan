@@ -551,9 +551,9 @@ const calculateShippingFee = async ({
       const ghnData = res.data.data;
       return {
         success: true,
-        fee: ghnData.total || ghnData.service_fee || 0,
+        fee: ghnData.service_fee !== undefined ? ghnData.service_fee : (ghnData.total || 0),
         serviceFee: ghnData.service_fee || 0,
-        insuranceFee: ghnData.insurance_fee || 0,
+        insuranceFee: 0,
         isEstimated: false,
         source: 'GHN',
         fromDistrictId: finalFromDistrictId,

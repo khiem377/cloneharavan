@@ -6,6 +6,7 @@ const ProductVariant = require('../models/productVariant.model');
 const BlogPost = require('../models/blogPost.model');
 const BlogCategory = require('../models/blogCategory.model');
 const FlashSale = require('../models/flashSale.model');
+const StoreSetting = require('../models/storeSetting.model');
 
 const mediaRegistry = [
   {
@@ -19,6 +20,7 @@ const mediaRegistry = [
     model: Brand,
     displayName: 'Thương hiệu',
     mediaFields: ['logo.mediaId'],
+    urlFields: ['logo.url'],
     getEntityName: (doc) => doc.name,
     getAdminUrl: (doc) => `/brands?highlight=${doc._id}`,
   },
@@ -53,7 +55,6 @@ const mediaRegistry = [
   {
     model: BlogCategory,
     displayName: 'Danh mục Blog',
-
     mediaFields: ['thumbnailMediaId'],
     getEntityName: (doc) => doc.name,
     getAdminUrl: (doc) => `/blog/categories?highlight=${doc._id}`,
@@ -64,6 +65,14 @@ const mediaRegistry = [
     mediaFields: ['banner.mediaId'],
     getEntityName: (doc) => doc.name,
     getAdminUrl: (doc) => `/promotions/flash-sales?highlight=${doc._id}`,
+  },
+  {
+    model: StoreSetting,
+    displayName: 'Cấu hình cửa hàng',
+    mediaFields: ['storeInfo.logoMediaId'],
+    urlFields: ['storeInfo.logo'],
+    getEntityName: (doc) => doc.storeInfo?.name || 'Logo cửa hàng',
+    getAdminUrl: () => '/settings',
   },
 ];
 

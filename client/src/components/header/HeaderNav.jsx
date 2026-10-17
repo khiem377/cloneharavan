@@ -7,7 +7,7 @@ import FireIcon from '../common/FireIcon';
 import PALETTE from '../../constants/palette';
 import { useStoreData } from '../../providers/StoreProvider';
 
-export const HeaderNav = ({ onOpenCategoryDrawer }) => {
+export const HeaderNav = ({ onOpenCategoryDrawer, storeSetting = null }) => {
   const { menuData } = useStoreData();
   const [dropdown, setDropdown] = useState(null);
   const navRef = useRef(null);
@@ -120,7 +120,7 @@ export const HeaderNav = ({ onOpenCategoryDrawer }) => {
           </Link>
           <span className="flex items-center gap-1 font-semibold text-white whitespace-nowrap">
             <Icon name="phone" size={13} color="#ffffff" />
-            <span>Hotline: 099999998</span>
+            <span>Hotline: {storeSetting?.hotline || storeSetting?.phone || '1900 1234'}</span>
           </span>
         </div>
 

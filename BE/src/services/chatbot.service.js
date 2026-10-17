@@ -250,6 +250,12 @@ const parsePriceFilter = (str = '') => {
     return { minPrice, maxPrice };
   }
 
+  const underMatchK = clean.match(/(?:dưới|<|<=|không quá|nhỏ hơn|tối đa|tầm dưới|ít hơn)\s*(\d+(?:[.,]\d+)?)\s*(?:k|nghìn|ngàn)\b/i);
+  if (underMatchK) {
+    maxPrice = parseFloat(underMatchK[1].replace(',', '.')) * 1_000;
+    return { minPrice: null, maxPrice };
+  }
+
   return { minPrice: null, maxPrice: null };
 };
 
@@ -336,11 +342,12 @@ Danh mục cửa hàng hiện có: ${JSON.stringify(catNames)}
 Thương hiệu cửa hàng hiện có: ${JSON.stringify(brandNames)}
 
 Quy tắc suy luận:
-1. Hiểu ngữ cảnh đời sống Việt Nam: "củ khoai", "củ tỏi", "cành", "chai" = triệu VNĐ khi mua đồ công nghệ/điện tử. "lít", "xị" = trăm nghìn VNĐ. "dế" = điện thoại, "dế gập" = điện thoại gập (Z Flip/Fold). "máy cỏ" = điện thoại cơ bản phím bấm. "1 ngựa" = điều hòa 1 HP (9.000 BTU). "tv" / "tivi" / "vô tuyến" = Tivi.
-2. Nếu khách nói "tầm X" hoặc "khoảng X", hãy tự động suy luận khoảng giá minPrice = X * 0.85 và maxPrice = X * 1.2.
-3. Nếu khách nói "dưới X", minPrice = null, maxPrice = X. Nếu khách nói "trên X", minPrice = X, maxPrice = null.
-4. Chọn 1 "category" chuẩn duy nhất từ danh mục của cửa hàng (hoặc null nếu không xác định).
-5. Trả về DUY NHẤT một chuỗi JSON hợp lệ:
+1. Hiểu ngữ cảnh đời sống Việt Nam: "củ khoai", "củ tỏi", "cành", "chai" = triệu VNĐ khi mua đồ công nghệ/điện tử. "lít", "xị" = trăm nghìn VNĐ. "dế" = điện thoại, "dế gập" = điện thoại gập (Z Flip/Fold). "máy cỏ" = điện thoại cơ bản phím bấm. "1 ngựa" = điều hòa 1 HP (9.000 BTU). "tv" / "tivi" / "vô tuyến" = Tivi. "máy giặc" = "Máy giặt" (lỗi chính tả phổ biến). Chữ "k" ở cuối câu (ví dụ "dưới 20 củ k") là chữ "không" (từ để hỏi), không phải nghìn.
+2. BẮT BUỘC: Đơn vị tiền tệ trong JSON phải là VNĐ đầy đủ dạng số nguyên (ví dụ: 20 củ = 20000000, 15 triệu = 15000000, 8tr = 8000000, 500k = 500000, tuyệt đối không trả về 20 hay 15).
+3. Nếu khách nói "tầm X" hoặc "khoảng X", hãy tự động suy luận khoảng giá minPrice = X * 0.85 và maxPrice = X * 1.2 tính theo VNĐ đầy đủ.
+4. Nếu khách nói "dưới X", minPrice = null, maxPrice = X (VNĐ đầy đủ). Nếu khách nói "trên X", minPrice = X (VNĐ đầy đủ), maxPrice = null.
+5. Chọn 1 "category" chuẩn duy nhất từ danh mục của cửa hàng (hoặc null nếu không xác định).
+6. Trả về DUY NHẤT một chuỗi JSON hợp lệ:
 {
   "isGreetingOnly": boolean,
   "isOrderInquiry": boolean,
@@ -381,12 +388,12 @@ const fallbackRegexIntent = (clean, { history = [], profile = {}, allCategories 
   const { minPrice, maxPrice } = parsePriceFilter(clean);
   let category = null;
   if (/(\btv\b|tivi|ti vi|smart tv)/i.test(clean)) category = 'Tivi';
-  else if (/(điện thoại|dien thoai|smartphone|galaxy|iphone)/i.test(clean)) category = 'Điện thoại';
+  else if (/(điện thoại|dien thoai|smartphone|galaxy|iphone|dế)/i.test(clean)) category = 'Điện thoại';
   else if (/(laptop|macbook)/i.test(clean)) category = 'Laptop';
   else if (/(máy tính bảng|tablet|ipad)/i.test(clean)) category = 'Máy tính bảng';
   else if (/(tủ lạnh|tu lanh)/i.test(clean)) category = 'Tủ lạnh';
-  else if (/(máy giặt|may giat)/i.test(clean)) category = 'Máy giặt';
-  else if (/(điều hòa|dieu hoa|máy lạnh)/i.test(clean)) category = 'Điều hòa';
+  else if (/(máy giặt|máy giặc|may giat|may giac|máy sấy|may say)/i.test(clean)) category = 'Máy giặt';
+  else if (/(điều hòa|dieu hoa|máy lạnh|may lanh)/i.test(clean)) category = 'Điều hòa';
   else if (/(loa|soundbar|tai nghe)/i.test(clean)) category = 'Âm thanh';
   else if (/(đồng hồ|smartwatch)/i.test(clean)) category = 'Đồng hồ';
 
@@ -442,8 +449,8 @@ const scoreProductRelevance = (p, ctx = {}) => {
     });
     if (isBrand) {
       score += 100;
-    } else {
-      score -= 300; // Phạt nặng nếu hỏi hãng này mà sản phẩm thuộc hãng khác
+    } else if (ctx.hasExplicitBrand) {
+      score -= 300; // CHỈ phạt nặng nếu khách đích danh hỏi hãng này trong câu hiện tại mà sản phẩm thuộc hãng khác
     }
   }
 
@@ -502,7 +509,7 @@ const scoreProductRelevance = (p, ctx = {}) => {
       score -= 1000;
     }
   } else if (isWashingQuery) {
-    if (/(máy giặt|máy sấy)/i.test(pName) || /máy giặt/i.test(catNames)) {
+    if (/(máy giặt|máy giặc|may giat|may giac|máy sấy|may say)/i.test(pName) || /(máy giặt|giặt|sấy)/i.test(catNames)) {
       score += 150;
     }
     if (/(tivi|tủ lạnh|điều hòa|điện thoại)/i.test(pName)) {
@@ -605,18 +612,33 @@ const fetchProductContext = async (message = '', { history = [], profile = {}, s
     const resolvedBrand = intent.brand || null;
     let minPrice = intent.minPrice;
     let maxPrice = intent.maxPrice;
+
+    // Chuẩn hóa tiền tệ: Nếu AI trả về dạng rút gọn (ví dụ 20 thay vì 20.000.000)
+    if (minPrice !== null && minPrice > 0 && minPrice < 1000) {
+      minPrice = minPrice * 1_000_000;
+    }
+    if (maxPrice !== null && maxPrice > 0 && maxPrice < 1000) {
+      maxPrice = maxPrice * 1_000_000;
+    }
+
+    // Bổ sung chuẩn hóa bằng parsePriceFilter từ câu nói thực tế
+    const regexPrice = parsePriceFilter(clean);
+    if (minPrice === null && regexPrice.minPrice !== null) minPrice = regexPrice.minPrice;
+    if (maxPrice === null && regexPrice.maxPrice !== null) maxPrice = regexPrice.maxPrice;
+
     const hasPriceFilter = minPrice !== null || maxPrice !== null;
     const reasoningNote = intent.reasoningNote || '';
 
-    const isPhoneQuery   = resolvedCategory === 'Điện thoại';
-    const isLaptopQuery  = resolvedCategory === 'Laptop';
-    const isTabletQuery  = resolvedCategory === 'Máy tính bảng';
-    const isTvQuery      = resolvedCategory === 'Tivi';
-    const isFridgeQuery  = resolvedCategory === 'Tủ lạnh';
-    const isWashingQuery = resolvedCategory === 'Máy giặt';
-    const isAcQuery      = resolvedCategory === 'Điều hòa';
-    const isAudioQuery   = resolvedCategory === 'Âm thanh';
-    const isWatchQuery   = resolvedCategory === 'Đồng hồ';
+    const normCategory = (resolvedCategory || '').toLowerCase();
+    const isPhoneQuery   = normCategory.includes('điện thoại') || normCategory.includes('phone') || /(điện thoại|dien thoai|smartphone|dế\b|dế gập|máy cỏ|iphone)/i.test(clean);
+    const isLaptopQuery  = normCategory.includes('laptop') || /(laptop|macbook|máy tính xách tay)/i.test(clean);
+    const isTabletQuery  = normCategory.includes('máy tính bảng') || normCategory.includes('tablet') || /(máy tính bảng|tablet|ipad|tab s)/i.test(clean);
+    const isTvQuery      = normCategory.includes('tivi') || normCategory.includes('tv') || /(\btv\b|tivi|ti vi|smart tv|vô tuyến)/i.test(clean);
+    const isFridgeQuery  = normCategory.includes('tủ lạnh') || /(tủ lạnh|tu lanh|tủ đông|tủ mát|side by side)/i.test(clean);
+    const isWashingQuery = normCategory.includes('máy giặt') || normCategory.includes('giặt') || /(máy giặt|máy giặc|may giat|may giac|máy sấy|may say|giặt sấy)/i.test(clean);
+    const isAcQuery      = normCategory.includes('điều hòa') || normCategory.includes('máy lạnh') || /(điều hòa|dieu hoa|máy lạnh|may lanh|1 ngựa|2 ngựa)/i.test(clean);
+    const isAudioQuery   = normCategory.includes('âm thanh') || normCategory.includes('loa') || normCategory.includes('tai nghe') || /(loa\b|soundbar|tai nghe|headphone|earbuds|airpods|dàn âm thanh)/i.test(clean);
+    const isWatchQuery   = normCategory.includes('đồng hồ') || normCategory.includes('watch') || /(đồng hồ|smartwatch|apple watch|galaxy watch)/i.test(clean);
 
     // Nhận diện thương hiệu
     let matchedBrands = [];
@@ -744,7 +766,7 @@ const fetchProductContext = async (message = '', { history = [], profile = {}, s
         $and: [
           {
             $or: [
-              { name: /(máy giặt|may giat|máy sấy|may say)/i },
+              { name: /(máy giặt|máy giặc|may giat|may giac|máy sấy|may say)/i },
               ...(matchedCategoryIds.length > 0 ? [{ categories: { $in: matchedCategoryIds } }] : []),
             ],
           },
@@ -1136,7 +1158,7 @@ const fetchProductContext = async (message = '', { history = [], profile = {}, s
       candidatePool = candidatePool.filter((p) => {
         const n = (p.name || '').toLowerCase();
         if (n.includes('tivi') || n.includes('tv') || n.includes('tủ lạnh') || n.includes('máy lạnh')) return false;
-        return /(máy giặt|máy sấy)/i.test(n) || p.categories?.some((c) => /máy giặt|may giat/i.test(c.name || ''));
+        return /(máy giặt|máy giặc|máy sấy)/i.test(n) || p.categories?.some((c) => /máy giặt|may giat|giặt|sấy/i.test(c.name || ''));
       });
     } else if (isAudioQuery) {
       candidatePool = candidatePool.filter((p) => {
@@ -1255,8 +1277,19 @@ const fetchProductContext = async (message = '', { history = [], profile = {}, s
         matchedProducts = inRange;
         priceNoteForPrompt = `(KHO HÀNG CÓ ${inRange.length} SẢN PHẨM PHÙ HỢP CÓ GIÁ BÁN THỰC TẾ ĐÚNG TRONG TẦM GIÁ ${priceRangeLabel}. HÃY TƯ VẤN CÁC SẢN PHẨM NÀY, NÊU RÕ GIÁ BÁN THỰC TẾ VÀ CÁC LỰA CHỌN PHIÊN BẢN KÈM THEO.)`;
       } else {
-        matchedProducts = [];
-        priceNoteForPrompt = `(LƯU Ý: Hiện tại kho của shop chưa có sản phẩm nào có giá đúng trong khoảng ${priceRangeLabel}. Hãy giải thích lịch sự và nhiệt tình tư vấn các mẫu đang có sẵn gần với tầm giá đó nhất.)`;
+        // Tìm các sản phẩm khác trong cửa hàng có giá thực sự thỏa mãn ngân sách khách yêu cầu
+        const alternativeInRange = processedProducts.filter((p) => {
+          const pPrice = p.effectivePrice;
+          return pPrice > 0 && (minPrice === null || pPrice >= minPrice) && (maxPrice === null || pPrice <= maxPrice);
+        });
+
+        if (alternativeInRange.length > 0) {
+          matchedProducts = alternativeInRange;
+          priceNoteForPrompt = `(LƯU Ý: Kho của shop hiện chưa có dòng sản phẩm khách vừa hỏi ở tầm giá ${priceRangeLabel} (mẫu giá thấp nhất hiện có là ${candidatePool[0]?.name || ''} - ${candidatePool[0]?.effectivePrice?.toLocaleString('vi-VN')}đ). Tuy nhiên shop CÓ CÁC SẢN PHẨM GIA DỤNG/CÔNG NGHỆ KHÁC THỎA MÃN TẦM GIÁ ${priceRangeLabel}. Hãy giải thích rõ ràng và gợi ý các mẫu này.)`;
+        } else {
+          matchedProducts = [];
+          priceNoteForPrompt = `(LƯU Ý: Hiện tại toàn bộ kho của shop chưa có sản phẩm nào có giá đúng trong khoảng ${priceRangeLabel}. Hãy giải thích lịch sự và gợi ý các mẫu đang có sẵn gần với tầm giá đó nhất.)`;
+        }
       }
     } else {
       matchedProducts = candidatePool;
@@ -1346,8 +1379,8 @@ const fetchProductContext = async (message = '', { history = [], profile = {}, s
       });
     }
 
-    // CHỈ hiển thị product cards khi có sản phẩm khớp với câu hỏi của khách (loại bỏ hoàn toàn sản phẩm điểm âm)
-    const finalProductsForUI = (matchedProducts.length > 0 ? matchedProducts : candidatePool)
+    // ĐỒNG BỘ TUYỆT ĐỐI: Thẻ sản phẩm gửi lên UI (Product Card) phải trùng khớp 100% với danh sách displayProducts mà AI đang tư vấn
+    const finalProductsForUI = (displayProducts.length > 0 ? displayProducts : (matchedProducts.length > 0 ? matchedProducts : candidatePool))
       .filter((p) => scoreProductRelevance(p, queryContextForScore) >= 0)
       .slice(0, 3);
 

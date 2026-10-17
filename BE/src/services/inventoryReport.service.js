@@ -4,6 +4,7 @@ const ProductVariant = require('../models/productVariant.model');
 const StockMovement = require('../models/stockMovement.model');
 const PurchaseOrder = require('../models/purchaseOrder.model');
 const StockExport = require('../models/stockExport.model');
+const StoreSetting = require('../models/storeSetting.model');
 
 /**
  * Tính toán Bảng Tổng hợp Vật tư Nhập - Xuất - Tồn trong khoảng thời gian.
@@ -169,8 +170,14 @@ const getInventoryBalanceReport = async (query = {}) => {
 const exportInventoryReportExcel = async (query = {}, res) => {
   const reportData = await getInventoryBalanceReport(query);
 
+  let storeName = 'Dak Shop';
+  try {
+    const setting = await StoreSetting.getSingleton();
+    if (setting?.storeInfo?.name) storeName = setting.storeInfo.name;
+  } catch {}
+
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = 'Clone Haravan ERP';
+  workbook.creator = `${storeName} ERP`;
   workbook.lastModifiedBy = 'Admin';
   workbook.created = new Date();
 

@@ -16,10 +16,11 @@ const errorHandler = (err, req, res, next) => {
     console.error(`   Stack: ${err.stack}\n`);
   }
 
-  if (err instanceof ZodError) {
+  if (err instanceof ZodError || err.name === 'ZodError') {
     statusCode = 400;
-    const msgs = err.errors.map((e) => e.message).filter(Boolean);
-    message = msgs.length ? msgs[0] : 'Dữ liệu không hợp lệ';
+    const issues = err.issues || err.errors || [];
+    const msgs = Array.isArray(issues) ? issues.map((e) => e.message).filter(Boolean) : [];
+    message = msgs.length ? msgs[0] : (err.message || 'Dữ liệu không hợp lệ');
   }
 
   if (err.name === 'CastError') {
@@ -45,7 +46,7 @@ const errorHandler = (err, req, res, next) => {
 
   if (err.name === 'ValidationError') {
     statusCode = 400;
-    message    = Object.values(err.errors).map((e) => e.message).join(', ');
+    message    = Object.values(err.errors || {}).map((e) => e.message).join(', ');
   }
 
   if (err.name === 'JsonWebTokenError') {

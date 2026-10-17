@@ -7,6 +7,8 @@ export default function CustomerToolbar({
   setKeyword,
   statusFilter,
   setStatusFilter,
+  providerFilter,
+  setProviderFilter,
   phoneFilter,
   setPhoneFilter,
   addressFilter,
@@ -78,6 +80,19 @@ export default function CustomerToolbar({
             <option value="all">Tất cả trạng thái</option>
             <option value="active">Đang hoạt động</option>
             <option value="inactive">Đã khóa</option>
+          </select>
+
+          {/* Provider Filter */}
+          <select
+            value={providerFilter}
+            onChange={(e) => setProviderFilter(e.target.value)}
+            className="h-8 px-2.5 rounded-[6px] border border-border bg-card text-xs text-foreground outline-none focus:border-ring transition-colors cursor-pointer"
+          >
+            <option value="all">Nguồn: Tất cả</option>
+            <option value="zalo">Zalo</option>
+            <option value="google">Google</option>
+            <option value="tiktok">TikTok</option>
+            <option value="local">Email / Mật khẩu</option>
           </select>
 
           {/* Phone Filter */}

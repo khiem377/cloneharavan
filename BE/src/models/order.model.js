@@ -168,6 +168,22 @@ const orderSchema = new mongoose.Schema(
         default: 0,
         min: 0,
       },
+      shippingCouponCode: {
+        type: String,
+        default: null,
+        trim: true,
+        uppercase: true,
+      },
+      shippingDiscount: {
+        type: Number,
+        default: 0,
+        min: 0,
+      },
+      finalShippingFee: {
+        type: Number,
+        default: 0,
+        min: 0,
+      },
       totalAmount: {
         type: Number,
         required: true,

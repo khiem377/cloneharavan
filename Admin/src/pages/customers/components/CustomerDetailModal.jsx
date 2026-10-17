@@ -1,5 +1,7 @@
 import { X, Mail, Phone, MapPin, CheckCircle2, Lock, Unlock } from '@/components/ui/Icons';
 import { Button } from '@/components/ui/button';
+import { useUserDetail } from '@/hooks/useUsers';
+import CustomerProviderBadge, { getProviderInfo } from './CustomerProviderBadge';
 
 const formatDate = (dateStr) => {
   if (!dateStr) return '—';
@@ -21,11 +23,16 @@ const formatCurrency = (amount) => {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount || 0);
 };
 
-export default function CustomerDetailModal({ user, onClose, onToggleStatus }) {
-  if (!user) return null;
+export default function CustomerDetailModal({ user: initialUser, onClose, onToggleStatus }) {
+  if (!initialUser) return null;
+
+  const { data: detailRes } = useUserDetail(initialUser._id);
+  const user = detailRes?.data?.user || detailRes?.data || initialUser;
 
   const initials = (user.fullName?.[0] || user.email?.[0] || '?').toUpperCase();
   const avgOrderValue = user.orderCount > 0 ? Math.round((user.totalSpent || 0) / user.orderCount) : 0;
+  const providerInfo = getProviderInfo(user);
+  const fallbackPhone = user.phone || user.addresses?.[0]?.phone;
 
   return (
     <div
@@ -56,15 +63,15 @@ export default function CustomerDetailModal({ user, onClose, onToggleStatus }) {
               <img
                 src={user.avatar.url}
                 alt={user.fullName}
-                className="size-16 rounded-[6px] object-cover border border-border"
+                className="size-16 rounded-[6px] object-cover border border-border shrink-0"
               />
             ) : (
-              <div className="size-16 rounded-[6px] bg-primary text-primary-foreground font-mono text-2xl font-bold flex items-center justify-center">
+              <div className="size-16 rounded-[6px] bg-primary text-primary-foreground font-mono text-2xl font-bold flex items-center justify-center shrink-0">
                 {initials}
               </div>
             )}
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="text-base font-bold text-foreground truncate">{user.fullName || 'Khách hàng'}</h3>
                 <span
                   className={`inline-flex items-center gap-1 rounded-[4px] px-2 py-0.5 text-[10px] font-semibold border ${
@@ -75,13 +82,20 @@ export default function CustomerDetailModal({ user, onClose, onToggleStatus }) {
                 >
                   {user.isActive ? 'Hoạt động' : 'Đã khóa'}
                 </span>
+                <CustomerProviderBadge user={user} />
                 {user.totalSpent >= 5000000 && (
                   <span className="inline-flex items-center rounded-[4px] px-2 py-0.5 text-[10px] font-semibold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-mono">
                     ★ VIP
                   </span>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground font-mono truncate mt-0.5">{user.email}</p>
+              <p className="text-xs text-muted-foreground font-mono truncate mt-0.5">
+                {user.email || (
+                  <span className="italic text-muted-foreground/80">
+                    Đăng nhập qua {providerInfo.label}
+                  </span>
+                )}
+              </p>
               <p className="text-[11px] text-muted-foreground font-mono tabular-nums mt-1">
                 Tham gia: {formatDate(user.createdAt)}
               </p>
@@ -116,15 +130,23 @@ export default function CustomerDetailModal({ user, onClose, onToggleStatus }) {
           {/* Contact Details */}
           <div className="space-y-2">
             <h4 className="text-xs font-semibold uppercase font-mono text-muted-foreground">Thông tin liên hệ</h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
+              <div className="p-3 rounded-[6px] border border-border bg-secondary/30">
+                <span className="text-muted-foreground block text-[11px]">Nguồn tài khoản</span>
+                <div className="mt-1">
+                  <CustomerProviderBadge user={user} showDetails={true} />
+                </div>
+              </div>
               <div className="p-3 rounded-[6px] border border-border bg-secondary/30">
                 <span className="text-muted-foreground block text-[11px]">Email đăng ký</span>
-                <span className="font-medium text-foreground truncate block mt-0.5">{user.email}</span>
+                <span className="font-medium text-foreground truncate block mt-0.5" title={user.email || 'Chưa liên kết email'}>
+                  {user.email || <span className="italic text-muted-foreground text-[11px]">Chưa liên kết</span>}
+                </span>
               </div>
               <div className="p-3 rounded-[6px] border border-border bg-secondary/30">
                 <span className="text-muted-foreground block text-[11px]">Số điện thoại</span>
                 <span className="font-medium text-foreground font-mono tabular-nums block mt-0.5">
-                  {user.phone || 'Chưa cung cấp'}
+                  {fallbackPhone || <span className="italic text-muted-foreground text-[11px]">Chưa cung cấp</span>}
                 </span>
               </div>
             </div>
@@ -139,21 +161,21 @@ export default function CustomerDetailModal({ user, onClose, onToggleStatus }) {
               <div className="space-y-2">
                 {user.addresses.map((addr, idx) => (
                   <div
-                    key={idx}
+                    key={addr._id || idx}
                     className="p-3 rounded-[6px] border border-border bg-secondary/20 flex flex-col gap-1 text-xs"
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-semibold text-foreground">
-                        {addr.name || user.fullName} ({addr.phone || user.phone})
+                        {addr.fullName || addr.name || user.fullName} ({addr.phone || user.phone || 'Chưa có SĐT'})
                       </span>
                       {addr.isDefault && (
-                        <span className="px-1.5 py-0.2 rounded-[4px] bg-primary/10 text-primary border border-primary/20 text-[10px] font-semibold">
+                        <span className="px-1.5 py-0.5 rounded-[4px] bg-primary/10 text-primary border border-primary/20 text-[10px] font-semibold">
                           Mặc định
                         </span>
                       )}
                     </div>
                     <p className="text-muted-foreground">
-                      {[addr.street, addr.ward, addr.district, addr.city].filter(Boolean).join(', ')}
+                      {[addr.detailAddress || addr.street, addr.ward, addr.district, addr.province || addr.city].filter(Boolean).join(', ')}
                     </p>
                   </div>
                 ))}
