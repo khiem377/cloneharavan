@@ -102,6 +102,7 @@ export default function AccountOrdersTab({
   orderFilter = 'all',
   setOrderFilter,
   onOrdersUpdated,
+  allOrders = [],
 }) {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -110,13 +111,33 @@ export default function AccountOrdersTab({
   const [copiedCode, setCopiedCode] = useState(null);
   const searchDebounceTimer = useRef(null);
 
+  const counts = React.useMemo(() => {
+    const res = {
+      all: allOrders.length,
+      pending: 0,
+      processing: 0,
+      shipping: 0,
+      completed: 0,
+      cancelled: 0,
+    };
+    allOrders.forEach((o) => {
+      const st = (o.orderStatus || '').toUpperCase();
+      if (st === 'PENDING') res.pending++;
+      else if (st === 'CONFIRMED') res.processing++;
+      else if (st === 'SHIPPING') res.shipping++;
+      else if (st === 'DELIVERED') res.completed++;
+      else if (st === 'CANCELLED' || st === 'RETURNED') res.cancelled++;
+    });
+    return res;
+  }, [allOrders]);
+
   const filterTabs = [
-    { id: 'all', label: 'Tất cả' },
-    { id: 'pending', label: 'Chờ xác nhận' },
-    { id: 'processing', label: 'Đang xử lý' },
-    { id: 'shipping', label: 'Đang giao hàng' },
-    { id: 'completed', label: 'Đã hoàn tất' },
-    { id: 'cancelled', label: 'Đã hủy' },
+    { id: 'all', label: 'Tất cả', count: counts.all },
+    { id: 'pending', label: 'Chờ xác nhận', count: counts.pending },
+    { id: 'processing', label: 'Đang xử lý', count: counts.processing },
+    { id: 'shipping', label: 'Đang giao hàng', count: counts.shipping },
+    { id: 'completed', label: 'Đã hoàn tất', count: counts.completed },
+    { id: 'cancelled', label: 'Đã hủy', count: counts.cancelled },
   ];
 
   const formatPrice = (val) =>
@@ -252,22 +273,36 @@ export default function AccountOrdersTab({
         <CardContent className="space-y-4">
           {/* Filter Status Bar */}
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs border-b border-slate-100">
-            {filterTabs.map((tab) => (
-              <Button
-                key={tab.id}
-                type="button"
-                variant={orderFilter === tab.id ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setOrderFilter?.(tab.id)}
-                className={`h-7 px-3 text-xs rounded-[6px] transition whitespace-nowrap active:scale-[0.98] ${
-                  orderFilter === tab.id
-                    ? 'bg-slate-900 text-white font-semibold shadow-2xs hover:bg-slate-800'
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                }`}
-              >
-                {tab.label}
-              </Button>
-            ))}
+            {filterTabs.map((tab) => {
+              const isActive = orderFilter === tab.id;
+              return (
+                <Button
+                  key={tab.id}
+                  type="button"
+                  variant={isActive ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setOrderFilter?.(tab.id)}
+                  className={`h-7 px-3 text-xs rounded-[6px] transition whitespace-nowrap active:scale-[0.98] cursor-pointer flex items-center gap-1.5 ${
+                    isActive
+                      ? 'bg-slate-900 text-white font-semibold shadow-2xs hover:bg-slate-800'
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                  }`}
+                >
+                  <span>{tab.label}</span>
+                  {tab.count !== undefined && tab.count > 0 && (
+                    <span
+                      className={`inline-flex items-center justify-center min-w-4 h-4 px-1 rounded-full text-[10px] font-mono font-bold tabular-nums ${
+                        isActive
+                          ? 'bg-white/25 text-white'
+                          : 'bg-slate-200/80 text-slate-700'
+                      }`}
+                    >
+                      {tab.count}
+                    </span>
+                  )}
+                </Button>
+              );
+            })}
           </div>
 
           {/* Loading State */}
@@ -286,13 +321,17 @@ export default function AccountOrdersTab({
               </div>
               <div>
                 <h4 className="text-xs font-bold text-slate-800">
-                  {orderSearch || orderFilter !== 'all'
-                    ? 'Không tìm thấy đơn hàng phù hợp'
-                    : 'Chưa tìm thấy đơn hàng nào'}
+                  {orderFilter !== 'all'
+                    ? `Không có đơn hàng nào ở trạng thái "${filterTabs.find((t) => t.id === orderFilter)?.label || ''}"`
+                    : orderSearch
+                    ? 'Không tìm thấy đơn hàng phù hợp với từ khóa'
+                    : 'Chưa có đơn hàng nào'}
                 </h4>
-                <p className="text-[11px] text-slate-400 mt-0.5">
-                  {orderSearch || orderFilter !== 'all'
-                    ? 'Thử thay đổi từ khóa tìm kiếm hoặc chọn bộ lọc trạng thái khác.'
+                <p className="text-[11px] text-slate-400 mt-1 max-w-md mx-auto">
+                  {orderFilter !== 'all'
+                    ? 'Đơn hàng của bạn có thể đang ở trạng thái khác (ví dụ: Chờ xác nhận hoặc Đang xử lý). Hãy bấm nút dưới đây để xem toàn bộ đơn hàng.'
+                    : orderSearch
+                    ? 'Thử thay đổi từ khóa tìm kiếm (mã đơn hoặc tên sản phẩm).'
                     : 'Đơn hàng của bạn sẽ hiển thị tại đây sau khi bạn đặt mua sản phẩm.'}
                 </p>
               </div>
@@ -304,9 +343,9 @@ export default function AccountOrdersTab({
                     handleSearchChange('');
                     setOrderFilter?.('all');
                   }}
-                  className="text-xs rounded-[6px] h-8 px-3"
+                  className="text-xs rounded-[6px] h-8 px-4 cursor-pointer font-medium hover:bg-slate-50"
                 >
-                  Xóa bộ lọc
+                  Xem tất cả đơn hàng
                 </Button>
               ) : (
                 <Button

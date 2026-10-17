@@ -13,6 +13,7 @@ import ProductVariantsPage from '@/pages/products/ProductVariantsPage';
 import VariantEditPage from '@/pages/products/VariantEditPage';
 import ImportExportPage from '@/pages/products/ImportExportPage';
 import ComboListPage from '@/pages/products/ComboListPage';
+import OrderListPage from '@/pages/orders/OrderListPage';
 import CouponPage from '@/pages/promotions/CouponPage';
 import PromotionPage from '@/pages/promotions/PromotionPage';
 import GiftProgramPage from '@/pages/promotions/GiftProgramPage';
@@ -96,6 +97,7 @@ const router = createBrowserRouter([
                     { path: 'products/:id/edit', element: <PermissionGuard requiredPermission="product.edit"><ProductFormPage /></PermissionGuard> },
                     { path: 'products/:id/variants', element: <PermissionGuard requiredPermission="product.view"><ProductVariantsPage /></PermissionGuard> },
                     { path: 'products/:id/variants/:variantId/edit', element: <PermissionGuard requiredPermission="product.edit"><VariantEditPage /></PermissionGuard> },
+                    { path: 'orders', element: <OrderListPage /> },
                     { path: 'products/combos', element: <PermissionGuard requiredPermission="product.view"><ComboListPage /></PermissionGuard> },
                     { path: 'promotions/coupons', element: <PermissionGuard requiredPermission="promotion.view"><CouponPage /></PermissionGuard> },
                     { path: 'promotions/discounts', element: <PermissionGuard requiredPermission="promotion.manage"><PromotionPage /></PermissionGuard> },

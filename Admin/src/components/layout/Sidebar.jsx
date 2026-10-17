@@ -74,6 +74,12 @@ const NAV_GROUPS = [
     ],
   },
   {
+    label: 'Bán hàng & Đơn hàng',
+    items: [
+      { to: '/orders', icon: StoreFrontIcon, label: 'Quản lý Đơn hàng' },
+    ],
+  },
+  {
     label: 'Sản phẩm & Danh mục',
     items: [
       {

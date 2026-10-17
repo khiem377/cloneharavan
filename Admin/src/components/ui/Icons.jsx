@@ -1854,4 +1854,7 @@ export const RotateCcwIcon = (p) => (
 /** ArrowDownRightIcon — alias */
 export const ArrowDownRightIcon = ArrowDownRight;
 
+// Re-export all standard Lucide icons for compatibility across pages
+export * from 'lucide-react';
+
 

@@ -215,10 +215,12 @@ export default function CheckoutPage() {
         if (defaultRes?.hasDefault && defaultRes.address) {
           setDefaultAddress(defaultRes.address);
           setSelectedAddressId(defaultRes.address._id);
+          setIsCustomAddress(false);
         } else if (Array.isArray(listRes) && listRes.length > 0) {
           const first = listRes.find((a) => a.isDefault) || listRes[0];
           setDefaultAddress(first);
           setSelectedAddressId(first._id);
+          setIsCustomAddress(false);
         } else {
           setIsCustomAddress(true);
           setIsDefaultNewAddress(true);
@@ -611,39 +613,46 @@ export default function CheckoutPage() {
               {/* Chọn từ danh sách địa chỉ đã lưu */}
               {!isCustomAddress && addresses.length > 0 ? (
                 <div className="space-y-3">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-2.5">
                     {sortedAddresses.map((addr) => {
                       const isSelected = selectedAddressId === addr._id;
                       return (
                         <div
                           key={addr._id}
                           onClick={() => setSelectedAddressId(addr._id)}
-                          className={`p-3 rounded-[6px] border text-xs cursor-pointer transition-all relative ${
+                          className={`p-3.5 rounded-[6px] border text-xs cursor-pointer transition-all relative ${
                             isSelected
-                              ? 'border-blue-600 bg-blue-50/50 shadow-xs'
+                              ? 'border-blue-600 bg-blue-50/40 shadow-xs ring-1 ring-blue-600/30'
                               : 'border-slate-200 hover:border-slate-300 bg-white'
                           }`}
                         >
-                          <div className="flex items-center justify-between mb-1.5">
-                            <span className="font-bold text-slate-900 truncate">
-                              {addr.fullName}
-                            </span>
-                            {addr.isDefault && (
-                              <Badge className="bg-amber-500 text-slate-950 font-bold text-[10px] px-1.5 py-0">
-                                Mặc định
+                          <div className="flex items-center justify-between mb-1.5 flex-wrap gap-2">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-slate-900 truncate text-xs sm:text-sm">
+                                {addr.fullName}
+                              </span>
+                              <span className="text-slate-300">|</span>
+                              <span className="text-slate-600 font-mono text-xs">
+                                {addr.phone}
+                              </span>
+                            </div>
+                            {addr.isDefault ? (
+                              <Badge className="bg-amber-500 text-slate-950 font-bold text-[10px] px-2 py-0.5 rounded-[4px] shadow-2xs">
+                                Địa chỉ mặc định
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="bg-slate-50 text-slate-500 border border-slate-200 text-[10px] font-medium px-2 py-0.5 rounded-[4px]">
+                                Địa chỉ phụ
                               </Badge>
                             )}
                           </div>
-                          <p className="text-slate-600 font-mono text-[11px] mb-1">
-                            {addr.phone}
-                          </p>
-                          <p className="text-slate-700 line-clamp-2">
+                          <p className="text-slate-600 leading-relaxed text-xs">
                             {addr.detailAddress}, {addr.ward}, {addr.district}, {addr.province}
                           </p>
                           {isSelected && (
-                            <div className="mt-2 flex items-center gap-1 text-[11px] text-blue-700 font-semibold">
+                            <div className="mt-2.5 flex items-center gap-1.5 text-[11px] text-blue-700 font-semibold pt-2 border-t border-blue-100/70">
                               <CheckCircle2 size={13} />
-                              <span>Đang chọn địa chỉ này</span>
+                              <span>Đang chọn địa chỉ này để nhận hàng</span>
                             </div>
                           )}
                         </div>
@@ -667,6 +676,18 @@ export default function CheckoutPage() {
               ) : (
                 /* Form nhập địa chỉ mới (Tỉnh / Quận / Phường kết nối GHN) */
                 <div className="space-y-3.5">
+                  {addresses.length > 0 && (
+                    <div className="p-2.5 rounded-[6px] bg-blue-50/70 border border-blue-200 text-blue-800 text-xs flex items-center justify-between gap-2">
+                      <span>Bạn đang ở form nhập địa chỉ mới.</span>
+                      <button
+                        type="button"
+                        onClick={() => setIsCustomAddress(false)}
+                        className="font-semibold underline hover:text-blue-900 cursor-pointer"
+                      >
+                        Quay lại chọn Địa chỉ mặc định / Địa chỉ phụ
+                      </button>
+                    </div>
+                  )}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 mb-1">

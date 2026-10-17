@@ -28,6 +28,7 @@ const PAGE_TITLES = {
   '/products/new':     'Tạo sản phẩm mới',
   '/products/import':  'Nhập / Xuất dữ liệu',
   '/products/combos':  'Combo sản phẩm',
+  '/orders':           'Quản lý đơn hàng',
   '/customers':        'Quản lý khách hàng',
   '/staffs':           'Nhân viên & Quản trị',
   '/roles':            'Vai trò & Quyền',
