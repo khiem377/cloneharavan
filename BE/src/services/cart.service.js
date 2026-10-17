@@ -531,6 +531,7 @@ const formatAndValidateCart = async (cartDoc) => {
       couponCode: cartDoc.couponCode || null,
       appliedCoupon: calculation?.appliedCoupon || null,
       couponDiscount: calcSummary?.couponDiscount || 0,
+      shippingCouponCode: cartDoc.shippingCouponCode || null,
       totalDiscount: calcSummary?.totalDiscountAll || 0,
       finalTotal: calcSummary?.finalTotal ?? finalSubtotal,
       giftPrograms: calculation?.giftItems || [],
@@ -847,9 +848,9 @@ const clearCart = async (cartOwner) => {
 };
 
 /**
- * Áp dụng mã giảm giá Coupon vào giỏ hàng
+ * Áp dụng mã giảm giá Coupon vào giỏ hàng (Hỗ trợ cả mã đơn hàng lẫn mã vận chuyển)
  */
-const applyCoupon = async (cartOwner, couponCode) => {
+const applyCoupon = async (cartOwner, couponCode, category = null) => {
   if (!couponCode || typeof couponCode !== 'string' || !couponCode.trim()) {
     throw new AppError('Vui lòng nhập mã giảm giá', 400);
   }
@@ -861,19 +862,41 @@ const applyCoupon = async (cartOwner, couponCode) => {
     throw new AppError('Giỏ hàng đang trống, không thể áp dụng mã giảm giá', 400);
   }
 
-  cart.couponCode = cleanCode;
+  // Tra cứu mã coupon trong database
+  const coupon = await Coupon.findOne({ code: cleanCode });
+  if (!coupon) {
+    throw new AppError('Mã giảm giá không tồn tại', 404);
+  }
+  if (!coupon.isActive) {
+    throw new AppError('Mã giảm giá không còn hiệu lực', 400);
+  }
+
+  const targetCategory = category || coupon.category || 'order';
+
+  if (targetCategory === 'shipping') {
+    cart.shippingCouponCode = cleanCode;
+  } else {
+    cart.couponCode = cleanCode;
+  }
   await cart.save();
 
-  // Validate qua formatAndValidateCart (gọi checkoutService)
+  // Validate qua formatAndValidateCart
   return formatAndValidateCart(cart);
 };
 
 /**
  * Gỡ mã giảm giá Coupon khỏi giỏ hàng
  */
-const removeCoupon = async (cartOwner) => {
+const removeCoupon = async (cartOwner, category = null) => {
   const cart = await getOrCreateCart(cartOwner);
-  cart.couponCode = null;
+  if (category === 'shipping') {
+    cart.shippingCouponCode = null;
+  } else if (category === 'order') {
+    cart.couponCode = null;
+  } else {
+    cart.couponCode = null;
+    cart.shippingCouponCode = null;
+  }
   await cart.save();
 
   return formatAndValidateCart(cart);

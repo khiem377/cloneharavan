@@ -19,14 +19,23 @@ const couponSchema = new mongoose.Schema(
       default: '',
       trim: true,
     },
+    category: {
+      type: String,
+      enum: ['order', 'shipping'],
+      default: 'order',
+      index: true,
+    },
     type: {
       type: String,
-      enum: ['percent', 'fixed'],
+      enum: ['percent', 'fixed', 'free_shipping'],
       required: [true, 'Loại giảm giá là bắt buộc'],
     },
     value: {
       type: Number,
-      required: [true, 'Giá trị giảm là bắt buộc'],
+      required: function () {
+        return this.type !== 'free_shipping';
+      },
+      default: 0,
       min: [0, 'Giá trị giảm không được âm'],
     },
     // Trần giảm tối đa, chỉ áp dụng khi type = percent. VD: giảm 20% nhưng tối đa 150,000đ

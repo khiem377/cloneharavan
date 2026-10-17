@@ -96,11 +96,11 @@ const clearCart = async (req, res, next) => {
 
 const applyCoupon = async (req, res, next) => {
   try {
-    const { couponCode } = req.body;
-    const result = await cartService.applyCoupon(req.cartOwner, couponCode);
+    const { couponCode, category } = req.body;
+    const result = await cartService.applyCoupon(req.cartOwner, couponCode, category);
     res.json({
       success: true,
-      message: `Đã áp dụng mã giảm giá "${couponCode.trim().toUpperCase()}" thành công`,
+      message: `Đã áp dụng mã "${couponCode.trim().toUpperCase()}" thành công`,
       data: result,
     });
   } catch (error) {
@@ -110,10 +110,11 @@ const applyCoupon = async (req, res, next) => {
 
 const removeCoupon = async (req, res, next) => {
   try {
-    const result = await cartService.removeCoupon(req.cartOwner);
+    const category = req.query?.category || req.body?.category || null;
+    const result = await cartService.removeCoupon(req.cartOwner, category);
     res.json({
       success: true,
-      message: 'Đã gỡ mã giảm giá khỏi giỏ hàng',
+      message: category === 'shipping' ? 'Đã gỡ mã vận chuyển khỏi giỏ hàng' : 'Đã gỡ mã giảm giá khỏi giỏ hàng',
       data: result,
     });
   } catch (error) {

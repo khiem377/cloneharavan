@@ -51,6 +51,7 @@ const DEFAULT_FORM = {
   name: '',
   code: '',
   description: '',
+  category: 'order',
   type: 'percent',
   value: 10,
   maxDiscount: '',
@@ -67,6 +68,7 @@ export default function CouponPage() {
 
   const [keyword, setKeyword] = useState(initialSearch);
   const [filterStatus, setFilterStatus] = useState('');
+  const [filterCategory, setFilterCategory] = useState('');
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
 
@@ -81,6 +83,7 @@ export default function CouponPage() {
   const params = {
     keyword,
     isActive: filterStatus || undefined,
+    category: filterCategory || undefined,
     page,
     limit,
   };
@@ -113,8 +116,9 @@ export default function CouponPage() {
       name: coupon.name,
       code: coupon.code,
       description: coupon.description || '',
-      type: coupon.type,
-      value: coupon.value,
+      category: coupon.category || 'order',
+      type: coupon.type || 'percent',
+      value: coupon.value ?? (coupon.type === 'free_shipping' ? 100 : 0),
       maxDiscount: coupon.maxDiscount || '',
       minOrderValue: coupon.minOrderValue || 0,
       startDate: coupon.startDate ? new Date(coupon.startDate).toISOString().slice(0, 16) : '',
@@ -146,15 +150,24 @@ export default function CouponPage() {
     if (e && e.preventDefault) e.preventDefault();
     if (!form.name.trim()) return toast.error('Vui lòng nhập tên chương trình');
     if (!form.code.trim()) return toast.error('Vui lòng nhập mã code');
-    if (Number(form.value) <= 0) return toast.error('Giá trị giảm phải lớn hơn 0');
-    if (form.type === 'percent' && Number(form.value) > 100)
-      return toast.error('Giảm theo phần trăm không được vượt quá 100%');
+
+    let finalValue = Number(form.value) || 0;
+    if (form.category === 'shipping' && form.type === 'free_shipping') {
+      finalValue = 100;
+    } else {
+      if (finalValue <= 0) return toast.error('Giá trị giảm phải lớn hơn 0');
+      if (form.type === 'percent' && finalValue > 100) {
+        return toast.error('Giảm theo phần trăm không được vượt quá 100%');
+      }
+    }
 
     const payload = {
       ...form,
       name: form.name.trim(),
       code: form.code.trim().toUpperCase(),
-      value: Number(form.value),
+      category: form.category || 'order',
+      type: form.type,
+      value: finalValue,
       maxDiscount: form.maxDiscount ? Number(form.maxDiscount) : undefined,
       minOrderValue: Number(form.minOrderValue || 0),
       usageLimit: form.usageLimit ? Number(form.usageLimit) : undefined,
@@ -255,6 +268,18 @@ export default function CouponPage() {
             <option value="true">Đang hoạt động</option>
             <option value="false">Tắt</option>
           </select>
+          <select
+            className="h-8 rounded-[6px] border border-input bg-background px-2.5 text-xs font-medium text-foreground outline-none focus:border-ring cursor-pointer"
+            value={filterCategory}
+            onChange={(e) => {
+              setFilterCategory(e.target.value);
+              setPage(1);
+            }}
+          >
+            <option value="">Tất cả loại mã</option>
+            <option value="order">Giảm đơn hàng</option>
+            <option value="shipping">Miễn/Giảm phí ship (Freeship)</option>
+          </select>
         </div>
         {selectedIds.length > 0 && (
           <Button
@@ -326,8 +351,19 @@ export default function CouponPage() {
                         />
                       </TableCell>
                       <TableCell className="py-2">
-                        <div className="flex flex-col">
-                          <span className="font-semibold text-xs text-foreground">{item.name}</span>
+                        <div className="flex flex-col gap-0.5">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-semibold text-xs text-foreground">{item.name}</span>
+                            {item.category === 'shipping' ? (
+                              <span className="inline-flex items-center rounded-[3px] px-1.5 py-0.2 text-[10px] font-semibold bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20">
+                                Freeship
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center rounded-[3px] px-1.5 py-0.2 text-[10px] font-semibold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+                                Đơn hàng
+                              </span>
+                            )}
+                          </div>
                           {item.description && (
                             <span className="text-[11px] text-muted-foreground line-clamp-1">{item.description}</span>
                           )}
@@ -354,13 +390,38 @@ export default function CouponPage() {
 
                       <TableCell className="py-2">
                         <div className="flex flex-col">
-                          <span className="font-semibold text-xs font-mono tabular-nums text-emerald-600 dark:text-emerald-400">
-                            {item.type === 'percent' ? `Giảm ${item.value}%` : `Giảm ${formatCurrency(item.value)}`}
-                          </span>
-                          {item.type === 'percent' && item.maxDiscount && (
-                            <span className="text-[10px] text-muted-foreground font-mono tabular-nums">
-                              Tối đa: {formatCurrency(item.maxDiscount)}
-                            </span>
+                          {item.category === 'shipping' ? (
+                            item.type === 'free_shipping' ? (
+                              <span className="font-semibold text-xs font-mono tabular-nums text-sky-600 dark:text-sky-400">
+                                Freeship 100%
+                              </span>
+                            ) : item.type === 'percent' ? (
+                              <>
+                                <span className="font-semibold text-xs font-mono tabular-nums text-sky-600 dark:text-sky-400">
+                                  Giảm {item.value}% ship
+                                </span>
+                                {item.maxDiscount && (
+                                  <span className="text-[10px] text-muted-foreground font-mono tabular-nums">
+                                    Tối đa: {formatCurrency(item.maxDiscount)}
+                                  </span>
+                                )}
+                              </>
+                            ) : (
+                              <span className="font-semibold text-xs font-mono tabular-nums text-sky-600 dark:text-sky-400">
+                                Giảm {formatCurrency(item.value)} ship
+                              </span>
+                            )
+                          ) : (
+                            <>
+                              <span className="font-semibold text-xs font-mono tabular-nums text-emerald-600 dark:text-emerald-400">
+                                {item.type === 'percent' ? `Giảm ${item.value}%` : `Giảm ${formatCurrency(item.value)}`}
+                              </span>
+                              {item.type === 'percent' && item.maxDiscount && (
+                                <span className="text-[10px] text-muted-foreground font-mono tabular-nums">
+                                  Tối đa: {formatCurrency(item.maxDiscount)}
+                                </span>
+                              )}
+                            </>
                           )}
                         </div>
                       </TableCell>
@@ -568,32 +629,81 @@ export default function CouponPage() {
               <div className="flex flex-col gap-3 rounded-[6px] border border-border p-3.5 bg-muted/20">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Cấu hình khuyến mãi</h3>
 
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-medium text-foreground">
+                    Phân loại Voucher <span className="text-destructive">*</span>
+                  </label>
+                  <select
+                    className="h-8 w-full rounded-[6px] border border-input bg-background px-2.5 text-xs font-medium text-foreground outline-none focus:border-ring cursor-pointer"
+                    value={form.category}
+                    onChange={(e) => {
+                      const newCat = e.target.value;
+                      setForm((f) => ({
+                        ...f,
+                        category: newCat,
+                        type: newCat === 'shipping' ? 'free_shipping' : 'percent',
+                        value: newCat === 'shipping' ? 100 : 10,
+                      }));
+                    }}
+                  >
+                    <option value="order">Mã giảm giá đơn hàng (Giảm tiền hàng)</option>
+                    <option value="shipping">Mã miễn / giảm phí vận chuyển (Freeship)</option>
+                  </select>
+                </div>
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-medium text-foreground">Loại giảm giá</label>
+                    <label className="text-xs font-medium text-foreground">
+                      {form.category === 'shipping' ? 'Hình thức giảm phí ship' : 'Loại giảm giá'}
+                    </label>
                     <select
                       className="h-8 w-full rounded-[6px] border border-input bg-background px-2.5 text-xs font-medium text-foreground outline-none focus:border-ring cursor-pointer"
                       value={form.type}
-                      onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}
+                      onChange={(e) => {
+                        const newType = e.target.value;
+                        setForm((f) => ({
+                          ...f,
+                          type: newType,
+                          value: newType === 'free_shipping' ? 100 : f.value,
+                        }));
+                      }}
                     >
-                      <option value="percent">Giảm theo phần trăm (%)</option>
-                      <option value="fixed">Giảm số tiền cố định (đ)</option>
+                      {form.category === 'shipping' ? (
+                        <>
+                          <option value="free_shipping">Miễn phí toàn bộ (Giảm 100% phí ship)</option>
+                          <option value="percent">Giảm theo % phí ship</option>
+                        </>
+                      ) : (
+                        <>
+                          <option value="percent">Giảm theo phần trăm (%)</option>
+                          <option value="fixed">Giảm số tiền cố định (đ)</option>
+                        </>
+                      )}
                     </select>
                   </div>
 
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-medium text-foreground">
-                      Giá trị giảm ({form.type === 'percent' ? '%' : 'VNĐ'}) <span className="text-destructive">*</span>
-                    </label>
-                    <Input
-                      type="number"
-                      min={1}
-                      max={form.type === 'percent' ? 100 : undefined}
-                      className="h-8 rounded-[6px] text-xs font-mono tabular-nums"
-                      value={form.value}
-                      onChange={(e) => setForm((f) => ({ ...f, value: e.target.value }))}
-                    />
-                  </div>
+                  {form.type !== 'free_shipping' ? (
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-medium text-foreground">
+                        Giá trị giảm ({form.type === 'percent' ? '%' : 'VNĐ'}) <span className="text-destructive">*</span>
+                      </label>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={form.type === 'percent' ? 100 : undefined}
+                        className="h-8 rounded-[6px] text-xs font-mono tabular-nums"
+                        value={form.value}
+                        onChange={(e) => setForm((f) => ({ ...f, value: e.target.value }))}
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-1.5 justify-center">
+                      <span className="text-xs font-medium text-muted-foreground">Mức giảm:</span>
+                      <span className="inline-flex items-center rounded-[4px] px-2 py-1 text-xs font-semibold bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20">
+                        Miễn phí 100% cước ship
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {form.type === 'percent' && (
@@ -604,7 +714,7 @@ export default function CouponPage() {
                     <Input
                       type="number"
                       className="h-8 rounded-[6px] text-xs font-mono tabular-nums"
-                      placeholder="VD: 150000"
+                      placeholder={form.category === 'shipping' ? 'VD: 25000 (giảm tối đa 25k ship)' : 'VD: 150000'}
                       value={form.maxDiscount}
                       onChange={(e) => setForm((f) => ({ ...f, maxDiscount: e.target.value }))}
                     />

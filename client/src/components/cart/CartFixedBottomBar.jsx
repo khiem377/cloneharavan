@@ -69,7 +69,10 @@ export default function CartFixedBottomBar({
     setCheckoutLoading(true);
     try {
       if (typeof window !== 'undefined') {
-        sessionStorage.setItem('checkoutItemIds', JSON.stringify(selectedItemIds));
+        try {
+          localStorage.setItem('checkoutItemIds', JSON.stringify(selectedItemIds));
+          sessionStorage.setItem('checkoutItemIds', JSON.stringify(selectedItemIds));
+        } catch (_) {}
       }
       router.push('/checkout');
     } catch (err) {

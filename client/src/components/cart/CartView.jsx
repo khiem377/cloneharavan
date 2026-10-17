@@ -1,18 +1,20 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { Ticket, ChevronRight, X } from 'lucide-react';
 import useCartStore from '@/store/cartStore';
 import CartCheckoutSteps from './CartCheckoutSteps';
 import CartRewardBar from './CartRewardBar';
 import CartItemList from './CartItemList';
 import CartGiftItems from './CartGiftItems';
-import CartVoucherCard from './CartVoucherCard';
+import CartVoucherModal from './CartVoucherModal';
 import CartOrderSummary from './CartOrderSummary';
 import CartEmptyState from './CartEmptyState';
 import { Button } from '@/components/ui/button';
 
 export default function CartView() {
+  const [showVoucherModal, setShowVoucherModal] = useState(false);
   const {
     cart,
     items,
@@ -142,8 +144,41 @@ export default function CartView() {
 
           {/* CỘT PHẢI (4 CỘT - STICKY) */}
           <div className="lg:col-span-4 space-y-4 lg:sticky lg:top-20 2xl:top-24">
-            {/* 1. Khối chọn Voucher giảm giá */}
-            <CartVoucherCard />
+            {/* 1. Khối chọn Voucher khuyến mãi */}
+            <div className="bg-white border border-slate-200 rounded-[6px] p-3.5 shadow-2xs">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-[4px] bg-red-50 text-[#e30019] flex items-center justify-center">
+                    <Ticket size={15} />
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-slate-900">
+                      {cart.couponCode ? `Mã: ${cart.couponCode}` : 'Khuyến mãi & Mã giảm giá'}
+                    </div>
+                    {cart.couponDiscount > 0 ? (
+                      <div className="text-[11px] text-emerald-600 font-medium">
+                        Đã giảm -{formatPrice(cart.couponDiscount)}
+                      </div>
+                    ) : (
+                      <div className="text-[11px] text-slate-500">
+                        Chọn hoặc nhập mã ưu đãi
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowVoucherModal(true)}
+                  className="h-7 px-2.5 text-xs text-[#0088ff] border-blue-200 hover:bg-blue-50 font-semibold rounded-[4px] flex items-center gap-1"
+                >
+                  <span>{cart.couponCode ? 'Đổi mã' : 'Chọn mã'}</span>
+                  <ChevronRight size={13} />
+                </Button>
+              </div>
+            </div>
 
             {/* 2. Khối thông tin đơn hàng & nút Đặt hàng */}
             <CartOrderSummary
@@ -159,6 +194,13 @@ export default function CartView() {
           </div>
         </div>
       </div>
+
+      {/* Modal chọn Voucher khuyến mãi */}
+      <CartVoucherModal
+        isOpen={showVoucherModal}
+        onClose={() => setShowVoucherModal(false)}
+        orderSubtotal={selectedSubtotal > 0 ? selectedSubtotal : (cart.subtotal || 0)}
+      />
     </div>
   );
 }

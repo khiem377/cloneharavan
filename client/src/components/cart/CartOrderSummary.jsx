@@ -46,11 +46,15 @@ export default function CartOrderSummary({
       }
 
       if (typeof window !== 'undefined') {
-        if (selectedItemIds && selectedItemIds.length > 0) {
-          sessionStorage.setItem('checkoutItemIds', JSON.stringify(selectedItemIds));
-        } else {
-          sessionStorage.removeItem('checkoutItemIds');
-        }
+        try {
+          if (selectedItemIds && selectedItemIds.length > 0) {
+            localStorage.setItem('checkoutItemIds', JSON.stringify(selectedItemIds));
+            sessionStorage.setItem('checkoutItemIds', JSON.stringify(selectedItemIds));
+          } else {
+            localStorage.removeItem('checkoutItemIds');
+            sessionStorage.removeItem('checkoutItemIds');
+          }
+        } catch (_) {}
       }
       router.push('/checkout');
     } catch (err) {
@@ -217,7 +221,7 @@ export default function CartOrderSummary({
         </Button>
 
         {/* NÚT 2: TIẾP TỤC MUA HÀNG */}
-        <Link href="/products" className="w-full">
+        <Link href="/collections/all" className="w-full">
           <Button
             type="button"
             variant="default"

@@ -83,6 +83,12 @@ const cartSchema = new mongoose.Schema(
       trim: true,
       uppercase: true,
     },
+    shippingCouponCode: {
+      type: String,
+      default: null,
+      trim: true,
+      uppercase: true,
+    },
     lastValidatedAt: {
       type: Date,
       default: Date.now,
