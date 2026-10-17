@@ -7,6 +7,8 @@ const ItemSimilarity = require('../models/itemSimilarity.model');
 const Product = require('../models/product.model');
 const ProductVariant = require('../models/productVariant.model');
 const SearchLog = require('../models/searchLog.model');
+const Brand = require('../models/brand.model');
+const Category = require('../models/category.model');
 
 
 
@@ -695,7 +697,9 @@ const rankCandidates = async (candidateIds, userProfile, alsScoreMap = {}, itemC
 
 const enrichWithVariants = async (products) => {
   if (!products || products.length === 0) return [];
-  const productIds = products.map((p) => p._id);
+  if (!Array.isArray(products) || products.length === 0) return [];
+
+  const productIds = products.map((p) => p._id).filter(Boolean);
 
   // Chỉ fetch default variant để lấy stock — price/salePrice dùng cachedPrice
   const defaultVariants = await ProductVariant.find({
@@ -704,13 +708,15 @@ const enrichWithVariants = async (products) => {
   }).select('productId stock').lean();
 
   const stockMap = {};
-  defaultVariants.forEach((v) => { stockMap[v.productId.toString()] = v.stock ?? 0; });
+  defaultVariants.forEach((v) => {
+    if (v.productId) stockMap[v.productId.toString()] = v.stock ?? 0;
+  });
 
   return products.map((p) => ({
     ...p,
     price: p.cachedPrice ?? p.price ?? 0,
     salePrice: p.cachedSalePrice ?? p.salePrice ?? 0,
-    stock: stockMap[p._id.toString()] ?? p.stock ?? 0,
+    stock: (p._id && stockMap[p._id.toString()] !== undefined) ? stockMap[p._id.toString()] : (p.stock ?? 0),
     recommendReason: buildRecommendReason(p),
   }));
 };
@@ -1118,10 +1124,12 @@ const getTrendingRecommendations = async (limit = 10) => {
 
   if (trending.length === 0) return getFallbackFeaturedProducts(limit);
 
-  const productIds = trending.map((t) => t._id);
+  const productIds = trending.map((t) => t._id).filter(Boolean);
   const trendScoreMap = {};
   for (const t of trending) {
-    trendScoreMap[t._id.toString()] = t.totalWeight;
+    if (t._id) {
+      trendScoreMap[t._id.toString()] = t.totalWeight;
+    }
   }
 
   const products = await Product.find({
@@ -1133,8 +1141,10 @@ const getTrendingRecommendations = async (limit = 10) => {
     .populate('categories', 'name slug')
     .lean();
 
+  if (products.length === 0) return getFallbackFeaturedProducts(limit);
+
   const sorted = products
-    .map((p) => ({ ...p, trendingScore: trendScoreMap[p._id.toString()] || 0 }))
+    .map((p) => ({ ...p, trendingScore: trendScoreMap[p._id?.toString()] || 0 }))
     .sort((a, b) => b.trendingScore - a.trendingScore)
     .slice(0, parseInt(limit, 10));
 
