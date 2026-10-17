@@ -39,7 +39,7 @@ const addressSchema = z.object({
 
   phone: z
     .string()
-    .regex(/^0\d{9}$/, 'Số điện thoại phải có 10 chữ số và bắt đầu bằng 0'),
+    .regex(/^0\d{9}$/, 'Số điện thoại phải có đúng 10 chữ số và bắt đầu bằng số 0'),
 
   province: z.string().min(1, 'Tỉnh/Thành phố là bắt buộc'),
   provinceId: z.number().nullable().optional(),

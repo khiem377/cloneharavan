@@ -45,6 +45,8 @@ export default function CheckoutPage() {
   const [selectedAddressId, setSelectedAddressId] = useState('');
   const [defaultAddress, setDefaultAddress] = useState(null);
   const [isCustomAddress, setIsCustomAddress] = useState(false);
+  const [saveToAddressBook, setSaveToAddressBook] = useState(true);
+  const [isDefaultNewAddress, setIsDefaultNewAddress] = useState(false);
   const [customAddress, setCustomAddress] = useState({
     fullName: '',
     phone: '',
@@ -56,6 +58,91 @@ export default function CheckoutPage() {
     wardCode: '',
     detailAddress: '',
   });
+
+  const handleToggleDefaultNewAddress = (e) => {
+    const checked = e.target.checked;
+    setIsDefaultNewAddress(checked);
+    if (checked) {
+      setSaveToAddressBook(true);
+    }
+  };
+
+  const handleToggleSaveToAddressBook = (e) => {
+    const checked = e.target.checked;
+    setSaveToAddressBook(checked);
+    if (!checked) {
+      setIsDefaultNewAddress(false);
+    }
+  };
+
+  const [savingAddressOnly, setSavingAddressOnly] = useState(false);
+
+  const handleSaveCustomAddressNow = async () => {
+    if (!customAddress?.fullName?.trim()) {
+      toast('Vui lòng nhập họ và tên người nhận', { type: 'warning' });
+      return;
+    }
+    if (!customAddress?.phone?.trim()) {
+      toast('Vui lòng nhập số điện thoại người nhận', { type: 'warning' });
+      return;
+    }
+    if (!/^0\d{9}$/.test(customAddress?.phone?.trim())) {
+      toast('Số điện thoại phải có đúng 10 chữ số và bắt đầu bằng số 0 (Ví dụ: 0901234567)', { type: 'warning' });
+      return;
+    }
+    if (!customAddress?.province) {
+      toast('Vui lòng chọn Tỉnh / Thành phố', { type: 'warning' });
+      return;
+    }
+    if (!customAddress?.district) {
+      toast('Vui lòng chọn Quận / Huyện', { type: 'warning' });
+      return;
+    }
+    if (!customAddress?.ward) {
+      toast('Vui lòng chọn Phường / Xã', { type: 'warning' });
+      return;
+    }
+    if (!customAddress?.detailAddress?.trim()) {
+      toast('Vui lòng nhập địa chỉ chi tiết', { type: 'warning' });
+      return;
+    }
+
+    setSavingAddressOnly(true);
+    try {
+      const savePayload = {
+        fullName: customAddress.fullName.trim(),
+        phone: customAddress.phone.trim(),
+        province: customAddress.province,
+        provinceId: customAddress.provinceId ? Number(customAddress.provinceId) : undefined,
+        district: customAddress.district,
+        districtId: customAddress.districtId ? Number(customAddress.districtId) : undefined,
+        ward: customAddress.ward,
+        wardCode: customAddress.wardCode ? String(customAddress.wardCode) : undefined,
+        detailAddress: customAddress.detailAddress.trim(),
+        isDefault: Boolean(isDefaultNewAddress),
+      };
+
+      const res = await userService.addAddress(savePayload);
+      const newAddr = res?.data?.address || res?.data;
+      toast('🎉 Đã lưu địa chỉ vào sổ địa chỉ thành công!', { type: 'success' });
+
+      const updatedList = await userService.getAddresses();
+      setAddresses(updatedList || []);
+
+      if (newAddr?._id) {
+        setSelectedAddressId(newAddr._id);
+        if (isDefaultNewAddress) {
+          setDefaultAddress(newAddr);
+        }
+      }
+      setIsCustomAddress(false);
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Có lỗi xảy ra khi lưu địa chỉ';
+      toast(msg, { type: 'error' });
+    } finally {
+      setSavingAddressOnly(false);
+    }
+  };
 
   // GHN Dropdowns
   const [provinces, setProvinces] = useState([]);
@@ -134,6 +221,7 @@ export default function CheckoutPage() {
           setSelectedAddressId(first._id);
         } else {
           setIsCustomAddress(true);
+          setIsDefaultNewAddress(true);
         }
 
         setAddresses(listRes || []);
@@ -219,6 +307,11 @@ export default function CheckoutPage() {
       ward: selectedW?.WardName || '',
     }));
   };
+
+  // Sắp xếp danh sách địa chỉ: Địa chỉ mặc định luôn ở khung đầu tiên, các địa chỉ phụ ở dưới
+  const sortedAddresses = useMemo(() => {
+    return [...addresses].sort((a, b) => (b.isDefault ? 1 : 0) - (a.isDefault ? 1 : 0));
+  }, [addresses]);
 
   // Địa chỉ đang được chọn hiện tại (Địa chỉ lưu sẵn hoặc Địa chỉ tự nhập)
   const currentActiveAddress = useMemo(() => {
@@ -369,6 +462,11 @@ export default function CheckoutPage() {
       return;
     }
 
+    if (!/^0\d{9}$/.test(currentActiveAddress.phone?.trim())) {
+      toast('Số điện thoại nhận hàng phải có đúng 10 chữ số và bắt đầu bằng số 0 (Ví dụ: 0901234567)', { type: 'warning' });
+      return;
+    }
+
     if (!currentActiveAddress?.detailAddress) {
       toast('Vui lòng cung cấp địa chỉ nhận hàng chi tiết', { type: 'warning' });
       return;
@@ -376,10 +474,43 @@ export default function CheckoutPage() {
 
     setSubmittingOrder(true);
     try {
+      let finalAddressId = !isCustomAddress && selectedAddressId ? selectedAddressId : undefined;
+
+      // Nếu nhập địa chỉ mới và người dùng đăng nhập có tích "Lưu địa chỉ vào sổ địa chỉ"
+      if (isCustomAddress && isAuthenticated && saveToAddressBook) {
+        try {
+          const savePayload = {
+            fullName: currentActiveAddress.fullName?.trim(),
+            phone: currentActiveAddress.phone?.trim(),
+            province: currentActiveAddress.province,
+            provinceId: currentActiveAddress.provinceId ? Number(currentActiveAddress.provinceId) : undefined,
+            district: currentActiveAddress.district,
+            districtId: currentActiveAddress.districtId ? Number(currentActiveAddress.districtId) : undefined,
+            ward: currentActiveAddress.ward,
+            wardCode: currentActiveAddress.wardCode ? String(currentActiveAddress.wardCode) : undefined,
+            detailAddress: currentActiveAddress.detailAddress?.trim(),
+            isDefault: Boolean(isDefaultNewAddress),
+          };
+          const savedRes = await userService.addAddress(savePayload);
+          const newAddrId = savedRes?.data?.address?._id || savedRes?.data?._id;
+          if (newAddrId) {
+            finalAddressId = newAddrId;
+          }
+          // Tự động làm mới danh sách địa chỉ cho phiên làm việc
+          userService.getAddresses().then((freshList) => {
+            if (freshList) setAddresses(freshList);
+          }).catch(() => {});
+        } catch (saveErr) {
+          const msg = saveErr.response?.data?.message || 'Lỗi lưu địa chỉ vào sổ địa chỉ';
+          console.warn('Lỗi tự động lưu địa chỉ vào sổ địa chỉ:', msg);
+          toast(msg, { type: 'warning' });
+        }
+      }
+
       const activeItemIds = getSelectedCheckoutIds();
       const orderPayload = {
-        addressId: !isCustomAddress && selectedAddressId ? selectedAddressId : undefined,
-        shippingAddress: isCustomAddress ? currentActiveAddress : undefined,
+        addressId: finalAddressId,
+        shippingAddress: finalAddressId ? undefined : currentActiveAddress,
         couponCode: couponInput || previewData?.pricing?.couponCode || undefined,
         note: orderNote,
         itemIds: activeItemIds.length > 0 ? activeItemIds : undefined,
@@ -481,7 +612,7 @@ export default function CheckoutPage() {
               {!isCustomAddress && addresses.length > 0 ? (
                 <div className="space-y-3">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {addresses.map((addr) => {
+                    {sortedAddresses.map((addr) => {
                       const isSelected = selectedAddressId === addr._id;
                       return (
                         <div
@@ -519,6 +650,19 @@ export default function CheckoutPage() {
                       );
                     })}
                   </div>
+
+                  {/* Ghi chú cho shipper khi chọn địa chỉ đã lưu */}
+                  <div className="pt-2.5 border-t border-slate-100">
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Ghi chú cho shipper / đơn hàng
+                    </label>
+                    <Input
+                      value={orderNote}
+                      onChange={(e) => setOrderNote(e.target.value)}
+                      placeholder="Ví dụ: Giao giờ hành chính, gọi trước khi đến..."
+                      className="h-9 text-xs"
+                    />
+                  </div>
                 </div>
               ) : (
                 /* Form nhập địa chỉ mới (Tỉnh / Quận / Phường kết nối GHN) */
@@ -543,10 +687,12 @@ export default function CheckoutPage() {
                       </label>
                       <Input
                         value={customAddress.phone}
-                        onChange={(e) =>
-                          setCustomAddress({ ...customAddress, phone: e.target.value })
-                        }
-                        placeholder="Ví dụ: 0901234567"
+                        maxLength={10}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                          setCustomAddress({ ...customAddress, phone: val });
+                        }}
+                        placeholder="Ví dụ: 0901234567 (10 số)"
                         className="h-9 text-xs"
                       />
                     </div>
@@ -625,6 +771,76 @@ export default function CheckoutPage() {
                       className="h-9 text-xs"
                     />
                   </div>
+
+                  {/* Ghi chú cho shipper / đơn hàng ngay dưới phần địa chỉ chi tiết */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Ghi chú cho shipper / đơn hàng
+                    </label>
+                    <Input
+                      value={orderNote}
+                      onChange={(e) => setOrderNote(e.target.value)}
+                      placeholder="Ví dụ: Giao giờ hành chính, gọi trước khi đến..."
+                      className="h-9 text-xs"
+                    />
+                  </div>
+
+                  {/* 2 button tích chọn: Lưu địa chỉ & Đặt làm địa chỉ mặc định */}
+                  {isAuthenticated && (
+                    <div className="pt-2.5 border-t border-slate-100 space-y-2">
+                      <label className="flex items-center gap-2 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={saveToAddressBook}
+                          onChange={handleToggleSaveToAddressBook}
+                          className="rounded-[4px] text-blue-600 focus:ring-blue-500 accent-blue-600"
+                        />
+                        <span className="text-xs text-slate-700 font-medium">
+                          Lưu địa chỉ vào sổ địa chỉ
+                        </span>
+                      </label>
+
+                      <label className="flex items-start gap-2 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={isDefaultNewAddress}
+                          onChange={handleToggleDefaultNewAddress}
+                          className="mt-0.5 rounded-[4px] text-blue-600 focus:ring-blue-500 accent-blue-600"
+                        />
+                        <div className="text-xs leading-snug">
+                          <span className="text-slate-800 font-medium block">
+                            Đặt làm địa chỉ nhận hàng mặc định
+                          </span>
+                          <span className="text-[11px] text-slate-500 block">
+                            (Địa chỉ mặc định cũ sẽ tự động chuyển thành địa chỉ phụ)
+                          </span>
+                        </div>
+                      </label>
+
+                      <div className="pt-1.5 flex items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={savingAddressOnly}
+                          onClick={handleSaveCustomAddressNow}
+                          className="h-8 text-xs text-blue-700 border-blue-200 hover:bg-blue-50 font-semibold cursor-pointer"
+                        >
+                          {savingAddressOnly ? (
+                            <>
+                              <Loader2 size={13} className="animate-spin mr-1" />
+                              <span>Đang lưu vào sổ...</span>
+                            </>
+                          ) : (
+                            <span>+ Lưu địa chỉ này ngay</span>
+                          )}
+                        </Button>
+                        <span className="text-[11px] text-slate-400">
+                          (Hoặc bấm &quot;Đặt hàng ngay&quot; để tự động lưu)
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -736,19 +952,6 @@ export default function CheckoutPage() {
                   </div>
                   <span className="text-xs font-semibold text-slate-700 font-mono">0 đ phụ phí</span>
                 </label>
-              </div>
-
-              {/* Ghi chú đơn hàng */}
-              <div className="mt-4">
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Ghi chú cho shipper / đơn hàng
-                </label>
-                <Input
-                  value={orderNote}
-                  onChange={(e) => setOrderNote(e.target.value)}
-                  placeholder="Ví dụ: Giao giờ hành chính, gọi trước khi đến..."
-                  className="h-9 text-xs"
-                />
               </div>
             </div>
           </div>
