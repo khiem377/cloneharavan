@@ -148,6 +148,22 @@ const updateOrderStatus = async (req, res, next) => {
   }
 };
 
+/**
+ * 8. Lấy số lượng đơn hàng đang chờ duyệt (Dành cho Admin Badge)
+ * GET /api/v1/orders/admin/pending-count
+ */
+const getPendingOrdersCount = async (req, res, next) => {
+  try {
+    const count = await orderService.getPendingOrdersCount();
+    res.json({
+      success: true,
+      data: { pendingCount: count },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   previewOrder,
   createOrder,
@@ -158,4 +174,6 @@ module.exports = {
   getMyOrders,
   getAllOrders,
   updateOrderStatus,
+  getPendingOrdersCount,
 };
+

@@ -21,6 +21,29 @@ const generateOrderCode = () => {
 };
 
 /**
+ * Đếm số lượng đơn hàng đang chờ duyệt (PENDING)
+ */
+const getPendingOrdersCount = async () => {
+  return await Order.countDocuments({ orderStatus: 'PENDING' });
+};
+
+/**
+ * Phát tín hiệu Realtime qua WebSocket tới Admin room khi số lượng đơn PENDING thay đổi
+ */
+const broadcastPendingOrdersCount = async (additionalData = {}) => {
+  try {
+    const { emitToAdmin } = require('../config/socket');
+    const pendingCount = await getPendingOrdersCount();
+    emitToAdmin('order:pending_count', {
+      pendingCount,
+      ...additionalData,
+    });
+  } catch (err) {
+    console.warn('[Socket Broadcast Error]:', err.message);
+  }
+};
+
+/**
  * Runner thực thi Transaction an toàn với rollback và retry khi có WriteConflict
  */
 const withTransaction = async (work, maxRetries = 3) => {
@@ -843,6 +866,18 @@ const createOrderCOD = async (userId, orderData) => {
     return order;
   });
 
+  // Phát tín hiệu Realtime cho Admin Sidebar cập nhật số lượng đơn chờ duyệt
+  broadcastPendingOrdersCount({
+    type: 'ORDER_CREATED',
+    order: {
+      _id: createdOrder._id,
+      orderCode: createdOrder.orderCode,
+      totalAmount: createdOrder.pricing?.totalAmount,
+      customerName: createdOrder.shippingAddress?.fullName,
+      createdAt: createdOrder.createdAt,
+    },
+  });
+
   return createdOrder;
 };
 
@@ -916,6 +951,15 @@ const cancelOrder = async (orderId, userId, reason = '', userRole = 'user') => {
 
     return await Order.findById(orderId).session(session);
   });
+
+  // Nếu đơn bị hủy từng ở trạng thái PENDING thì cập nhật lại số lượng đơn chờ duyệt cho Admin
+  if (existingOrder.orderStatus === 'PENDING') {
+    broadcastPendingOrdersCount({
+      type: 'ORDER_CANCELLED',
+      orderId,
+      orderCode: existingOrder.orderCode,
+    });
+  }
 
   return cancelledOrder;
 };
@@ -1031,6 +1075,17 @@ const updateOrderStatus = async (orderId, { newStatus, note = '', adminUser = nu
     await order.save({ session });
     return order;
   });
+
+  // Nếu trạng thái cũ hoặc mới liên quan tới PENDING thì cập nhật lại số lượng cho Admin
+  if (currentStatus === 'PENDING' || newStatus === 'PENDING') {
+    broadcastPendingOrdersCount({
+      type: 'STATUS_UPDATED',
+      orderId: updatedOrder._id,
+      orderCode: updatedOrder.orderCode,
+      oldStatus: currentStatus,
+      newStatus,
+    });
+  }
 
   return updatedOrder;
 };
@@ -1161,4 +1216,5 @@ module.exports = {
   getOrderStatus,
   getMyOrders,
   getAllOrders,
+  getPendingOrdersCount,
 };

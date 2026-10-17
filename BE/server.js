@@ -347,6 +347,10 @@ connectDB().then(async () => {
       .getStoreCorpus()
       .catch((err) => console.warn('[SearchCorpus] Pre-warm failed:', err.message));
   });
+
+  const { initSocket } = require('./src/config/socket');
+  initSocket(server);
+
   // Slowloris DDoS Mitigation: Đóng kết nối nếu client treo gửi headers hoặc body quá 60s
   server.headersTimeout = 65000;
   server.requestTimeout = 60000;

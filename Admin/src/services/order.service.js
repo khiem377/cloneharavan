@@ -30,6 +30,12 @@ export const orderService = {
     const res = await api.get(`/orders/${id}/status`);
     return res.data;
   },
+
+  // Lấy số lượng đơn hàng đang chờ duyệt (PENDING)
+  getPendingCount: async () => {
+    const res = await api.get('/orders/admin/pending-count');
+    return res.data?.data?.pendingCount ?? 0;
+  },
 };
 
 export default orderService;
