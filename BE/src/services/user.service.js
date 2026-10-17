@@ -196,6 +196,10 @@ const addAddress = async (userId, addressData) => {
     } catch (_) {}
   }
 
+  if (!user.phone && addressData.phone) {
+    user.phone = addressData.phone;
+  }
+
   user.addresses.push(addressData);
   await user.save();
 
@@ -248,6 +252,10 @@ const updateAddress = async (userId, addressId, updateData) => {
         address.wardCode = resolved.wardCode;
       }
     } catch (_) {}
+  }
+
+  if (!user.phone && updateData.phone) {
+    user.phone = updateData.phone;
   }
 
   await user.save();
@@ -346,6 +354,7 @@ const getAllUsers = async (query = {}) => {
     role,
     userType,
     isActive,
+    authProvider,
     isEmailVerified,
     isPhoneVerified,
     sort = '-createdAt',
@@ -360,6 +369,20 @@ const getAllUsers = async (query = {}) => {
       { email: searchRegex },
       { phone: searchRegex },
     ];
+  }
+
+  if (authProvider && authProvider !== 'all') {
+    if (authProvider === 'zalo') {
+      filter.$or = [{ authProvider: 'zalo' }, { zaloId: { $ne: null } }];
+    } else if (authProvider === 'tiktok') {
+      filter.$or = [{ authProvider: 'tiktok' }, { tiktokId: { $ne: null } }];
+    } else if (authProvider === 'google') {
+      filter.$or = [{ authProvider: 'google' }, { googleId: { $ne: null } }];
+    } else if (authProvider === 'local') {
+      filter.authProvider = 'local';
+    } else {
+      filter.authProvider = authProvider;
+    }
   }
 
   if (userType === 'customer') {
@@ -433,6 +456,11 @@ const getAllUsers = async (query = {}) => {
 
   const enrichedUsers = users.map((u) => {
     const uObj = u.toObject();
+    if (!uObj.authProvider || uObj.authProvider === 'local') {
+      if (uObj.zaloId) uObj.authProvider = 'zalo';
+      else if (uObj.tiktokId) uObj.authProvider = 'tiktok';
+      else if (uObj.googleId) uObj.authProvider = 'google';
+    }
     if (!uObj.assignedWarehouseId && staffWhMap.has(uObj._id.toString())) {
       uObj.assignedWarehouseId = staffWhMap.get(uObj._id.toString());
     }

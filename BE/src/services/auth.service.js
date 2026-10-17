@@ -1772,7 +1772,8 @@ const getWebAuthnRpConfig = (req) => {
     allowedOrigins.push(parsedOrigin);
   }
 
-  return { rpID, allowedOrigins, rpName: 'Haravan OMS' };
+  const rpName = process.env.SHOP_NAME || 'Dak Shop';
+  return { rpID, allowedOrigins, rpName };
 };
 
 /**

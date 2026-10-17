@@ -17,6 +17,8 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 
+import CustomerProviderBadge from './CustomerProviderBadge';
+
 const formatDate = (dateStr) => {
   if (!dateStr) return '—';
   try {
@@ -65,6 +67,7 @@ export default function CustomerTable({
               </TableHead>
             )}
             {isColumnVisible('customer') && <TableHead>Khách hàng</TableHead>}
+            {isColumnVisible('provider') && <TableHead className="w-28">Nguồn</TableHead>}
             {isColumnVisible('contact') && <TableHead>Liên hệ</TableHead>}
             {isColumnVisible('orders') && <TableHead className="text-center w-24">Đơn hàng</TableHead>}
             {isColumnVisible('totalSpent') && <TableHead className="text-right w-32">Tổng chi tiêu</TableHead>}
@@ -77,7 +80,7 @@ export default function CustomerTable({
         <TableBody>
           {customers.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={9} className="py-12 text-center text-xs text-muted-foreground font-mono">
+              <TableCell colSpan={10} className="py-12 text-center text-xs text-muted-foreground font-mono">
                 Không tìm thấy khách hàng nào
               </TableCell>
             </TableRow>
@@ -137,6 +140,13 @@ export default function CustomerTable({
                     </TableCell>
                   )}
 
+                  {/* Provider */}
+                  {isColumnVisible('provider') && (
+                    <TableCell className="px-3 py-2">
+                      <CustomerProviderBadge user={user} />
+                    </TableCell>
+                  )}
+
                   {/* Contact */}
                   {isColumnVisible('contact') && (
                     <TableCell className="px-3 py-2">
@@ -157,12 +167,17 @@ export default function CustomerTable({
                             <span className="truncate max-w-[180px]">TikTok: @{user.tiktokUsername || user.tiktokId}</span>
                           </div>
                         ) : (
-                          <span className="text-[10px] text-muted-foreground italic">Chưa có email</span>
+                          <span className="text-[10px] text-muted-foreground italic">Chưa liên kết email</span>
                         )}
                         {user.phone ? (
                           <div className="flex items-center gap-1 text-muted-foreground font-mono tabular-nums text-[11px]">
                             <Phone className="size-3 shrink-0" />
                             <span>{user.phone}</span>
+                          </div>
+                        ) : defaultAddr?.phone ? (
+                          <div className="flex items-center gap-1 text-muted-foreground/80 font-mono tabular-nums text-[11px]" title="Lấy từ sổ địa chỉ nhận hàng">
+                            <Phone className="size-3 shrink-0" />
+                            <span>{defaultAddr.phone}</span>
                           </div>
                         ) : (
                           <span className="text-[10px] text-muted-foreground font-mono italic">Chưa có SĐT</span>
@@ -203,7 +218,12 @@ export default function CustomerTable({
                         <div className="flex items-start gap-1 text-xs text-muted-foreground max-w-[200px]">
                           <MapPin className="size-3 text-muted-foreground shrink-0 mt-0.5" />
                           <span className="line-clamp-2">
-                            {[defaultAddr.street, defaultAddr.ward, defaultAddr.district, defaultAddr.city]
+                            {[
+                              defaultAddr.detailAddress || defaultAddr.street,
+                              defaultAddr.ward,
+                              defaultAddr.district,
+                              defaultAddr.province || defaultAddr.city,
+                            ]
                               .filter(Boolean)
                               .join(', ')}
                           </span>
