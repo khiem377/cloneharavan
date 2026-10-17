@@ -1,14 +1,15 @@
-import React from 'react';
 import {
   Store,
   CreditCard,
   Truck,
   Package,
   History,
+  WalletCards,
 } from 'lucide-react';
 
 const SAPO_MENUS = [
   { id: 'store', label: 'Cấu hình chung', icon: Store },
+  { id: 'payment-methods', label: 'Phương thức thanh toán', icon: WalletCards },
   { id: 'checkout', label: 'Trang thanh toán', icon: CreditCard },
   { id: 'shipping-providers', label: 'Đối tác vận chuyển', icon: Truck },
   { id: 'shipping-rules', label: 'Cấu hình vận chuyển', icon: Package },
@@ -17,7 +18,7 @@ const SAPO_MENUS = [
 
 export default function SettingsSidebar({ activeTab, onSelectTab }) {
   return (
-    <aside className="w-full lg:w-60 shrink-0">
+    <aside className="w-full lg:w-60 shrink-0 lg:sticky lg:top-2 self-start z-10">
       <nav className="space-y-0.5 bg-white dark:bg-card border border-[#e1e4e8] dark:border-border rounded-[6px] p-2 shadow-xs">
         {SAPO_MENUS.map((item) => {
           const Icon = item.icon;
