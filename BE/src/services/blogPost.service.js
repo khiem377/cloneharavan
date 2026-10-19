@@ -44,12 +44,98 @@ const extractToc = (html) => {
   return result;
 };
 
+function structureArticleHeadings(title, content) {
+  let toc = extractToc(content);
+  if (toc.length >= 2) {
+    return { content, toc };
+  }
+
+  const blockRe = /<(p|figure|blockquote)[^>]*>([\s\S]*?)<\/\1>/gi;
+  const blocks = [];
+  let m;
+  while ((m = blockRe.exec(content)) !== null) {
+    blocks.push({ tag: m[1].toLowerCase(), full: m[0], inner: m[2] });
+  }
+
+  if (blocks.length < 3) {
+    return { content, toc };
+  }
+
+  const newBlocks = [];
+  const generatedHeadings = [];
+  let sectionIdx = 1;
+  const lowerTitle = (title || '').toLowerCase();
+
+  for (let i = 0; i < blocks.length; i++) {
+    const b = blocks[i];
+    const text = stripHtml(b.inner).trim();
+
+    const isHeadingLike =
+      (b.tag === 'p' && text.length > 5 && text.length < 120 && text.endsWith(':')) ||
+      (b.tag === 'p' && b.inner.startsWith('<strong>') && b.inner.endsWith('</strong>') && text.length < 100);
+
+    const isPacedSection =
+      !isHeadingLike &&
+      b.tag === 'p' &&
+      text.length > 40 &&
+      (i === 0 || i === Math.floor(blocks.length * 0.35) || i === Math.floor(blocks.length * 0.7));
+
+    if (isHeadingLike) {
+      const headingText = text.replace(/:$/, '').trim();
+      const hid = slugify(headingText) || `muc-${sectionIdx}`;
+      newBlocks.push(`<h2 id="${hid}">${headingText}</h2>`);
+      generatedHeadings.push({ id: hid, text: headingText, level: 2, order: sectionIdx - 1 });
+      sectionIdx++;
+    } else if (isPacedSection) {
+      let headingText = '';
+      if (i === 0) {
+        headingText = 'Tổng quan và bối cảnh sự việc';
+      } else if (i === Math.floor(blocks.length * 0.35)) {
+        if (lowerTitle.includes('tấn công') || lowerTitle.includes('an ninh') || lowerTitle.includes('lỗ hổng')) {
+          headingText = 'Diễn biến chi tiết và mức độ ảnh hưởng';
+        } else if (lowerTitle.includes('đánh giá') || lowerTitle.includes('trên tay') || lowerTitle.includes('review')) {
+          headingText = 'Trải nghiệm thực tế và tính năng nổi bật';
+        } else {
+          headingText = 'Chi tiết các phát hiện và phân tích chuyên sâu';
+        }
+      } else if (i === Math.floor(blocks.length * 0.7)) {
+        if (lowerTitle.includes('tấn công') || lowerTitle.includes('an ninh')) {
+          headingText = 'Cảnh báo và giải pháp ứng phó';
+        } else {
+          headingText = 'Đánh giá tổng thể và nhận định tương lai';
+        }
+      }
+
+      if (headingText) {
+        const hid = slugify(headingText) || `muc-${sectionIdx}`;
+        newBlocks.push(`<h2 id="${hid}">${headingText}</h2>`);
+        generatedHeadings.push({ id: hid, text: headingText, level: 2, order: sectionIdx - 1 });
+        sectionIdx++;
+      }
+      newBlocks.push(b.full);
+    } else {
+      newBlocks.push(b.full);
+    }
+  }
+
+  const newContent = newBlocks.length > 0 ? newBlocks.join('\n') : content;
+  const finalToc = extractToc(newContent);
+
+  return { content: newContent, toc: finalToc };
+}
+
 const applyAutoFields = (data) => {
   if (data.content) {
+    let toc = extractToc(data.content);
+    if (toc.length < 2) {
+      const structured = structureArticleHeadings(data.title, data.content);
+      data.content = structured.content;
+      toc = structured.toc;
+    }
     const { minRead, wordCount } = calcMinRead(data.content);
     if (!data.minRead)   data.minRead   = minRead;
     if (!data.wordCount) data.wordCount = wordCount;
-    data.tableOfContents = extractToc(data.content);
+    data.tableOfContents = toc;
     if (!data.excerpt) data.excerpt = genExcerpt(data.content);
   }
   if (!data.metaTitle && data.title)     data.metaTitle       = data.title.slice(0, 70);
@@ -141,7 +227,7 @@ const getAllPosts = async (query = {}) => {
     BlogPost.find(filter)
       .populate('categories', 'name slug')
       .populate('tags', 'name slug')
-      .populate('authorId', 'firstName lastName email avatar')
+      .populate('authorId', 'fullName firstName lastName email avatar role')
       .populate('thumbnailMediaId', 'url')
       .sort(sort)
       .skip(skip)
@@ -165,7 +251,7 @@ const getPostBySlug = async (slug) => {
   const post = await BlogPost.findOne({ slug })
     .populate('categories', 'name slug')
     .populate('tags', 'name slug')
-    .populate('authorId', 'firstName lastName email avatar')
+    .populate('authorId', 'fullName firstName lastName email avatar role')
     .populate('thumbnailMediaId', 'url')
     .populate('relatedPostIds', 'title slug thumbnailUrl excerpt publishedAt');
   if (!post) throw new AppError('Không tìm thấy bài viết', 404);
@@ -184,7 +270,7 @@ const getPostById = async (id) => {
   const post = await BlogPost.findById(id)
     .populate('categories', 'name slug')
     .populate('tags', 'name slug')
-    .populate('authorId', 'firstName lastName email avatar')
+    .populate('authorId', 'fullName firstName lastName email avatar role')
     .populate('thumbnailMediaId', 'url');
   if (!post) throw new AppError('Không tìm thấy bài viết', 404);
 

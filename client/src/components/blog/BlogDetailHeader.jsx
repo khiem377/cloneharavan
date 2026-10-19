@@ -51,9 +51,15 @@ export const BlogDetailHeader = ({ post }) => {
 
   const category = post.categories?.[0];
   const authorName =
-    post.authorId?.firstName && post.authorId?.lastName
+    post.authorId?.fullName ||
+    (post.authorId?.firstName && post.authorId?.lastName
       ? `${post.authorId.lastName} ${post.authorId.firstName}`
-      : post.authorId?.email?.split('@')[0] || 'Ban Biên Tập';
+      : post.authorId?.email?.split('@')[0] || 'Ban Biên Tập');
+
+  const authorAvatarUrl =
+    typeof post.authorId?.avatar === 'string'
+      ? post.authorId.avatar
+      : post.authorId?.avatar?.url || null;
 
   const authorInitial = authorName.charAt(0).toUpperCase();
 
@@ -178,9 +184,9 @@ export const BlogDetailHeader = ({ post }) => {
         {/* Tác giả & Thông tin bài */}
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-[#edf2fa] text-[#284ea1] font-bold flex items-center justify-center shrink-0 uppercase shadow-2xs border border-[#284ea1]/20">
-            {post.authorId?.avatar ? (
+            {authorAvatarUrl ? (
               <img
-                src={post.authorId.avatar}
+                src={authorAvatarUrl}
                 alt={authorName}
                 className="w-full h-full object-cover rounded-full"
               />

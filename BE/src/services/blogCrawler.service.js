@@ -153,6 +153,86 @@ const extractToc = (html) => {
   return result;
 };
 
+function structureArticleHeadings(title, content) {
+  let toc = extractToc(content);
+  if (toc.length >= 2) {
+    return { content, toc };
+  }
+
+  const blockRe = /<(p|figure|blockquote)[^>]*>([\s\S]*?)<\/\1>/gi;
+  const blocks = [];
+  let m;
+  while ((m = blockRe.exec(content)) !== null) {
+    blocks.push({ tag: m[1].toLowerCase(), full: m[0], inner: m[2] });
+  }
+
+  if (blocks.length < 3) {
+    return { content, toc };
+  }
+
+  const newBlocks = [];
+  const generatedHeadings = [];
+  let sectionIdx = 1;
+  const lowerTitle = (title || '').toLowerCase();
+
+  for (let i = 0; i < blocks.length; i++) {
+    const b = blocks[i];
+    const text = stripHtml(b.inner).trim();
+
+    const isHeadingLike =
+      (b.tag === 'p' && text.length > 5 && text.length < 120 && text.endsWith(':')) ||
+      (b.tag === 'p' && b.inner.startsWith('<strong>') && b.inner.endsWith('</strong>') && text.length < 100);
+
+    const isPacedSection =
+      !isHeadingLike &&
+      b.tag === 'p' &&
+      text.length > 40 &&
+      (i === 0 || i === Math.floor(blocks.length * 0.35) || i === Math.floor(blocks.length * 0.7));
+
+    if (isHeadingLike) {
+      const headingText = text.replace(/:$/, '').trim();
+      const hid = slugify(headingText) || `muc-${sectionIdx}`;
+      newBlocks.push(`<h2 id="${hid}">${headingText}</h2>`);
+      generatedHeadings.push({ id: hid, text: headingText, level: 2, order: sectionIdx - 1 });
+      sectionIdx++;
+    } else if (isPacedSection) {
+      let headingText = '';
+      if (i === 0) {
+        headingText = 'Tổng quan và bối cảnh sự việc';
+      } else if (i === Math.floor(blocks.length * 0.35)) {
+        if (lowerTitle.includes('tấn công') || lowerTitle.includes('an ninh') || lowerTitle.includes('lỗ hổng')) {
+          headingText = 'Diễn biến chi tiết và mức độ ảnh hưởng';
+        } else if (lowerTitle.includes('đánh giá') || lowerTitle.includes('trên tay') || lowerTitle.includes('review')) {
+          headingText = 'Trải nghiệm thực tế và tính năng nổi bật';
+        } else {
+          headingText = 'Chi tiết các phát hiện và phân tích chuyên sâu';
+        }
+      } else if (i === Math.floor(blocks.length * 0.7)) {
+        if (lowerTitle.includes('tấn công') || lowerTitle.includes('an ninh')) {
+          headingText = 'Cảnh báo và giải pháp ứng phó';
+        } else {
+          headingText = 'Đánh giá tổng thể và nhận định tương lai';
+        }
+      }
+
+      if (headingText) {
+        const hid = slugify(headingText) || `muc-${sectionIdx}`;
+        newBlocks.push(`<h2 id="${hid}">${headingText}</h2>`);
+        generatedHeadings.push({ id: hid, text: headingText, level: 2, order: sectionIdx - 1 });
+        sectionIdx++;
+      }
+      newBlocks.push(b.full);
+    } else {
+      newBlocks.push(b.full);
+    }
+  }
+
+  const newContent = newBlocks.length > 0 ? newBlocks.join('\n') : content;
+  const finalToc = extractToc(newContent);
+
+  return { content: newContent, toc: finalToc };
+}
+
 async function scrapeFullArticle(link, source) {
   try {
     const res = await axios.get(link, { headers: HEADERS, timeout: 15000 });
@@ -422,11 +502,14 @@ async function crawlAndInsert10BlogPosts() {
       }
     }
 
-    // 8. Calculate reading metrics & Table of Contents
+    // 8. Tự động chuẩn hóa H2 và trích xuất Table of Contents
+    const structured = structureArticleHeadings(article.title, article.content);
+    article.content = structured.content;
+    const toc = structured.toc;
+
     const plainText = stripHtml(article.content);
     const wordCount = plainText.split(/\s+/).filter(Boolean).length;
     const minRead = Math.max(1, Math.ceil(wordCount / 220));
-    const toc = extractToc(article.content);
 
     // 9. Create BlogPost document
     const newBlogPost = await BlogPost.create({
