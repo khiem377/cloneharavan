@@ -26,8 +26,18 @@ export const userService = {
   },
 
   getAddresses: async () => {
-    const res = await api.get('/users/addresses');
-    return res.data?.data?.addresses || [];
+    try {
+      const res = await api.get('/users/addresses');
+      return (
+        res.data?.data?.addresses ||
+        res.data?.addresses ||
+        (Array.isArray(res.data) ? res.data : []) ||
+        []
+      );
+    } catch (err) {
+      console.warn('Lỗi lấy danh sách địa chỉ:', err?.response?.data || err.message);
+      return [];
+    }
   },
 
   addAddress: async (payload) => {

@@ -178,11 +178,13 @@ export default function AddressModal({
                 id="recipientPhone"
                 type="tel"
                 required
+                maxLength={10}
                 value={addressForm.phone}
-                onChange={(e) =>
-                  setAddressForm({ ...addressForm, phone: e.target.value })
-                }
-                placeholder="0949527013"
+                onChange={(e) => {
+                  const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                  setAddressForm({ ...addressForm, phone: val });
+                }}
+                placeholder="0949527013 (10 số)"
                 className="h-9 text-xs font-mono rounded-[6px] border-slate-200 focus-visible:ring-[#e30019] focus-visible:border-[#e30019]"
               />
             </div>
@@ -310,8 +312,8 @@ export default function AddressModal({
           )}
 
           {/* Default address checkbox */}
-          <div className="pt-1">
-            <label className="flex items-center gap-2 cursor-pointer select-none">
+          <div className="pt-1 p-2.5 rounded-[6px] bg-slate-50 border border-slate-100">
+            <label className="flex items-start gap-2.5 cursor-pointer select-none">
               <input
                 type="checkbox"
                 checked={addressForm.isDefault}
@@ -321,11 +323,16 @@ export default function AddressModal({
                     isDefault: e.target.checked,
                   })
                 }
-                className="rounded-[4px] text-[#e30019] focus:ring-[#e30019] accent-[#e30019]"
+                className="mt-0.5 rounded-[4px] text-[#e30019] focus:ring-[#e30019] accent-[#e30019]"
               />
-              <span className="text-xs text-slate-700 font-medium">
-                Đặt làm địa chỉ nhận hàng mặc định
-              </span>
+              <div className="space-y-0.5">
+                <span className="text-xs text-slate-800 font-semibold block">
+                  Đặt làm địa chỉ nhận hàng mặc định
+                </span>
+                <span className="text-[11px] text-slate-500 block">
+                  Nếu chọn, địa chỉ này sẽ là mặc định khi đặt hàng. Địa chỉ mặc định trước đó sẽ tự động chuyển thành địa chỉ phụ.
+                </span>
+              </div>
             </label>
           </div>
 

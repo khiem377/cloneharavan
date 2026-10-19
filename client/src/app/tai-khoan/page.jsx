@@ -105,10 +105,11 @@ function AccountContent() {
 
   // Addresses State
   const [addresses, setAddresses] = useState([]);
-  const [addressLoading, setAddressLoading] = useState(false);
+  const [addressLoading, setAddressLoading] = useState(true);
   const [addressModalOpen, setAddressModalOpen] = useState(false);
   const [editingAddressId, setEditingAddressId] = useState(null);
   const [addressSaving, setAddressSaving] = useState(false);
+
 
   // GHN Master Data State
   const [provinces, setProvinces] = useState([]);
@@ -180,6 +181,13 @@ function AccountContent() {
       fetchUserOrders();
     }
   }, [mounted, isUserAuth]);
+
+  // Tự động tải lại địa chỉ khi chuyển sang tab 'addresses' hoặc 'overview'
+  useEffect(() => {
+    if (mounted && isUserAuth && (activeTab === 'addresses' || activeTab === 'overview')) {
+      fetchAddresses();
+    }
+  }, [activeTab, mounted, isUserAuth]);
 
   // Avatar Upload Handlers
   const handleAvatarFileChange = async (e) => {
@@ -793,6 +801,7 @@ function AccountContent() {
                 orderFilter={orderFilter}
                 setOrderFilter={setOrderFilter}
                 onOrdersUpdated={fetchUserOrders}
+                allOrders={orders}
               />
             )}
 
