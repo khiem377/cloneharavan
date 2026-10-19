@@ -1,8 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useOrders } from '@/hooks/useOrders';
 import DataTablePagination from '@/components/ui/DataTablePagination';
 import useColumnVisibility from '@/hooks/useColumnVisibility';
 import { toast } from '@/providers/ToastProvider';
+import shipmentService from '@/services/shipment.service';
 
 import OrderStatsGrid from './components/OrderStatsGrid';
 import OrderToolbar from './components/OrderToolbar';
@@ -18,17 +20,24 @@ const ORDER_COLUMNS = [
   { id: 'itemsSummary', label: 'Sản phẩm', defaultVisible: true },
   { id: 'address', label: 'Địa chỉ nhận hàng', defaultVisible: true },
   { id: 'totalAmount', label: 'Tổng tiền', defaultVisible: true },
-  { id: 'payment', label: 'Thanh toán', defaultVisible: true },
-  { id: 'status', label: 'Trạng thái đơn', defaultVisible: true },
+  { id: 'payment', label: 'Trạng thái thanh toán', defaultVisible: true },
+  { id: 'status', label: 'Trạng thái xử lý', defaultVisible: true },
+  { id: 'shipping', label: 'Dịch vụ vận chuyển', defaultVisible: true },
   { id: 'actions', label: 'Thao tác', defaultVisible: true, alwaysVisible: true },
 ];
 
 export default function OrderListPage() {
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('ALL');
-  const [paymentFilter, setPaymentFilter] = useState('ALL');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialSearch = searchParams.get('search') || '';
+  const initialStatus = searchParams.get('status') || 'ALL';
+  const initialPayment = searchParams.get('paymentStatus') || 'ALL';
+
+  const [search, setSearch] = useState(initialSearch);
+  const [statusFilter, setStatusFilter] = useState(initialStatus);
+  const [paymentFilter, setPaymentFilter] = useState(initialPayment);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [shipmentsMap, setShipmentsMap] = useState({});
 
   // Modals state
   const [viewOrder, setViewOrder] = useState(null);
@@ -45,6 +54,15 @@ export default function OrderListPage() {
   const columnVisibility = useColumnVisibility('admin_orders_columns_v1', ORDER_COLUMNS);
   const { isColumnVisible } = columnVisibility;
 
+  // Sync khi query param search thay đổi từ URL
+  useEffect(() => {
+    const q = searchParams.get('search');
+    if (q !== null && q !== search) {
+      setSearch(q);
+      setPage(1);
+    }
+  }, [searchParams]);
+
   // Query params
   const queryParams = useMemo(() => {
     const params = {
@@ -60,6 +78,21 @@ export default function OrderListPage() {
   const { data: res, isLoading, isFetching, refetch } = useOrders(queryParams);
   const orders = res?.data || [];
   const pagination = res?.pagination || { page: 1, limit: 10, total: 0, totalPages: 1 };
+
+  // Tải thông tin vận đơn đối tác cho các đơn hàng hiển thị
+  useEffect(() => {
+    if (!orders || orders.length === 0) {
+      setShipmentsMap({});
+      return;
+    }
+    const orderCodes = orders.map((o) => o.orderCode).filter(Boolean);
+    if (orderCodes.length === 0) return;
+
+    shipmentService
+      .getShipmentsByOrderCodes(orderCodes)
+      .then((map) => setShipmentsMap(map || {}))
+      .catch((err) => console.warn('Lỗi lấy bản đồ vận đơn:', err));
+  }, [orders]);
 
   // Handlers for modals
   const handleOpenStatusModal = (order, nextStatus) => {
@@ -162,6 +195,7 @@ export default function OrderListPage() {
       {/* Main Table */}
       <OrderTable
         orders={orders}
+        shipmentsMap={shipmentsMap}
         isLoading={isLoading}
         onViewOrder={(order) => setViewOrder(order)}
         onOpenStatusModal={handleOpenStatusModal}

@@ -29,6 +29,12 @@ const shippingProviderSchema = new mongoose.Schema(
       default: 'disconnected',
       index: true,
     },
+    // Đánh dấu đơn vị vận chuyển mặc định của cửa hàng
+    isDefault: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
     // Chuỗi mã hóa 2 chiều AES-256-GCM chứa toàn bộ thông tin nhạy cảm (token, password, key...)
     encryptedCredentials: {
       type: String,

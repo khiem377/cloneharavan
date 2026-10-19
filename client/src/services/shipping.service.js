@@ -113,6 +113,19 @@ export const shippingService = {
       return err.response?.data?.data || null;
     }
   },
+
+  /**
+   * Tra cứu vận đơn và lộ trình vận chuyển theo mã đơn hàng
+   */
+  getShipmentByOrderCode: async (orderCode) => {
+    if (!orderCode) return null;
+    try {
+      const res = await api.get(`/shipments/by-order/${orderCode}`);
+      return res.data?.data || null;
+    } catch {
+      return null;
+    }
+  },
 };
 
 export default shippingService;

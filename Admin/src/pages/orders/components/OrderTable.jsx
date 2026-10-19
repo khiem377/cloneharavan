@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Eye,
   CheckCircle2,
@@ -101,12 +102,15 @@ export const PAYMENT_STATUS_CONFIG = {
 
 export default function OrderTable({
   orders = [],
+  shipmentsMap = {},
   isLoading = false,
   onViewOrder,
   onOpenStatusModal,
   onOpenCancelModal,
   isColumnVisible,
 }) {
+  const navigate = useNavigate();
+
   const copyOrderCode = (code) => {
     navigator.clipboard.writeText(code);
     toast.success(`Đã sao chép mã đơn: ${code}`);
@@ -123,8 +127,9 @@ export default function OrderTable({
             {isColumnVisible('itemsSummary') && <TableHead>Sản phẩm</TableHead>}
             {isColumnVisible('address') && <TableHead>Địa chỉ giao</TableHead>}
             {isColumnVisible('totalAmount') && <TableHead className="text-right w-32">Tổng tiền</TableHead>}
-            {isColumnVisible('payment') && <TableHead className="w-32 text-center">Thanh toán</TableHead>}
-            {isColumnVisible('status') && <TableHead className="w-36 text-center">Trạng thái</TableHead>}
+            {isColumnVisible('payment') && <TableHead className="w-32 text-center">Trạng thái thanh toán</TableHead>}
+            {isColumnVisible('status') && <TableHead className="w-36 text-center">Trạng thái xử lý</TableHead>}
+            {isColumnVisible('shipping') && <TableHead className="w-40">Dịch vụ vận chuyển</TableHead>}
             {isColumnVisible('actions') && <TableHead className="text-right w-36">Thao tác</TableHead>}
           </TableRow>
         </TableHeader>
@@ -132,13 +137,13 @@ export default function OrderTable({
         <TableBody>
           {isLoading ? (
             <TableRow>
-              <TableCell colSpan={9} className="py-12 text-center text-xs text-muted-foreground font-mono">
+              <TableCell colSpan={10} className="py-12 text-center text-xs text-muted-foreground font-mono">
                 Đang tải dữ liệu đơn hàng...
               </TableCell>
             </TableRow>
           ) : orders.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={9} className="py-12 text-center text-xs text-muted-foreground font-mono">
+              <TableCell colSpan={10} className="py-12 text-center text-xs text-muted-foreground font-mono">
                 Không tìm thấy đơn hàng nào phù hợp
               </TableCell>
             </TableRow>
@@ -290,6 +295,32 @@ export default function OrderTable({
                           {statusCfg.inventoryNote}
                         </span>
                       </div>
+                    </TableCell>
+                  )}
+
+                  {/* Dịch vụ vận chuyển / Vận đơn */}
+                  {isColumnVisible('shipping') && (
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      {shipmentsMap[order.orderCode] ? (
+                        <div className="flex flex-col gap-1">
+                          <span className="text-[11px] font-semibold text-foreground flex items-center gap-1">
+                            <Truck className="size-3 text-blue-600 shrink-0" />
+                            <span>{shipmentsMap[order.orderCode].carrierName}</span>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/shipments?search=${shipmentsMap[order.orderCode].trackingCode}`)}
+                            className="font-mono text-[11px] font-bold text-blue-600 hover:underline flex items-center gap-1 text-left cursor-pointer"
+                            title="Bấm để chuyển đến vận đơn này"
+                          >
+                            <span>{shipmentsMap[order.orderCode].trackingCode}</span>
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="inline-block px-1.5 py-0.5 rounded-[4px] text-[10px] text-muted-foreground bg-muted border border-border">
+                          Chưa tạo vận đơn
+                        </span>
+                      )}
                     </TableCell>
                   )}
 

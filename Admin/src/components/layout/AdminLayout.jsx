@@ -29,6 +29,8 @@ const PAGE_TITLES = {
   '/products/import':  'Nhập / Xuất dữ liệu',
   '/products/combos':  'Combo sản phẩm',
   '/orders':           'Quản lý đơn hàng',
+  '/shipments':        'Danh sách vận đơn',
+  '/shipments/overview': 'Tổng quan vận chuyển',
   '/customers':        'Quản lý khách hàng',
   '/staffs':           'Nhân viên & Quản trị',
   '/roles':            'Vai trò & Quyền',

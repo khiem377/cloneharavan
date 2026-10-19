@@ -41,6 +41,7 @@ import {
   Users,
   ShieldCheck,
 } from '@/components/ui/Icons';
+import { Truck } from 'lucide-react';
 import useAuthStore from '@/store/authStore';
 import { authService } from '@/services/auth.service';
 import { toast } from '@/providers/ToastProvider';
@@ -78,6 +79,15 @@ const NAV_GROUPS = [
     label: 'Bán hàng & Đơn hàng',
     items: [
       { to: '/orders', icon: StoreFrontIcon, label: 'Quản lý Đơn hàng' },
+      {
+        icon: Truck,
+        label: 'Vận chuyển',
+        permission: 'order.view',
+        children: [
+          { to: '/shipments/overview', icon: DashboardIcon, label: 'Tổng quan', permission: 'order.view' },
+          { to: '/shipments', icon: StockDocNavIcon, label: 'Vận đơn', permission: 'order.view' },
+        ],
+      },
     ],
   },
   {

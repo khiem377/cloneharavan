@@ -14,6 +14,8 @@ import VariantEditPage from '@/pages/products/VariantEditPage';
 import ImportExportPage from '@/pages/products/ImportExportPage';
 import ComboListPage from '@/pages/products/ComboListPage';
 import OrderListPage from '@/pages/orders/OrderListPage';
+import ShipmentsOverviewPage from '@/pages/shipments/ShipmentsOverviewPage';
+import ShipmentsListPage from '@/pages/shipments/ShipmentsListPage';
 import CouponPage from '@/pages/promotions/CouponPage';
 import PromotionPage from '@/pages/promotions/PromotionPage';
 import GiftProgramPage from '@/pages/promotions/GiftProgramPage';
@@ -98,6 +100,8 @@ const router = createBrowserRouter([
                     { path: 'products/:id/variants', element: <PermissionGuard requiredPermission="product.view"><ProductVariantsPage /></PermissionGuard> },
                     { path: 'products/:id/variants/:variantId/edit', element: <PermissionGuard requiredPermission="product.edit"><VariantEditPage /></PermissionGuard> },
                     { path: 'orders', element: <OrderListPage /> },
+                    { path: 'shipments', element: <PermissionGuard requiredPermission="order.view"><ShipmentsListPage /></PermissionGuard> },
+                    { path: 'shipments/overview', element: <PermissionGuard requiredPermission="order.view"><ShipmentsOverviewPage /></PermissionGuard> },
                     { path: 'products/combos', element: <PermissionGuard requiredPermission="product.view"><ComboListPage /></PermissionGuard> },
                     { path: 'promotions/coupons', element: <PermissionGuard requiredPermission="promotion.view"><CouponPage /></PermissionGuard> },
                     { path: 'promotions/discounts', element: <PermissionGuard requiredPermission="promotion.manage"><PromotionPage /></PermissionGuard> },
@@ -114,7 +118,7 @@ const router = createBrowserRouter([
                     { path: 'staffs', element: <PermissionGuard requiredPermission="role.assign"><StaffListPage /></PermissionGuard> },
                     { path: 'roles', element: <PermissionGuard requiredPermission="role.manage"><RoleListPage /></PermissionGuard> },
                     { path: 'audit-logs', element: <PermissionGuard requiredPermission="audit_log.view"><AuditLogListPage /></PermissionGuard> },
-                    { path: 'settings', element: <SettingsPage /> },
+                    { path: 'settings', element: <PermissionGuard requiredPermission="setting.view"><SettingsPage /></PermissionGuard> },
 
                     // ── Kho & Cung Ứng ─────────────────────────────────────────────────────────────────────
                     { path: 'warehouses',              element: <PermissionGuard requiredPermission="purchase_order.view"><WarehouseListPage /></PermissionGuard> },

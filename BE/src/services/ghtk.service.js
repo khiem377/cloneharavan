@@ -1,6 +1,7 @@
 const axios = require('axios');
 const ShippingProvider = require('../models/shippingProvider.model');
 const { decryptObject } = require('../utils/crypto.util');
+const AppError = require('../utils/AppError');
 
 let cachedGhtkProvinces = null;
 let lastProvincesFetch = 0;
@@ -199,6 +200,86 @@ class GhtkService {
       return { success: !!res.data?.success, message: res.data?.message || 'Token GHTK hợp lệ' };
     } catch (err) {
       return { success: false, message: err.response?.data?.message || err.message };
+    }
+  }
+
+  /**
+   * Tạo đơn vận chuyển trên GHTK (Sandbox hoặc Production)
+   */
+  static async createShippingOrder({ order, warehouse, packageInfo = {}, payer = 'shop', credentials = {}, codAmount = 0 }) {
+    let token = credentials.apiToken || process.env.GHTK_API_TOKEN;
+    let partnerCode = credentials.partnerCode || process.env.GHTK_PARTNER_CODE;
+
+    if (!token) {
+      const auth = await this.getHeaders();
+      if (!auth.hasToken) {
+        throw new AppError('Chưa cấu hình Token GHTK trong cài đặt hoặc file .env', 400);
+      }
+    }
+
+    const headers = {
+      'Content-Type': 'application/json',
+      Token: (token || process.env.GHTK_API_TOKEN || '').trim(),
+    };
+    if (partnerCode || process.env.GHTK_PARTNER_CODE) {
+      headers['X-Client-Source'] = (partnerCode || process.env.GHTK_PARTNER_CODE || '').trim();
+    }
+
+    const shippingAddr = order.shippingAddress || {};
+    const items = order.items || [];
+    const totalWeightKg = Math.max(0.1, ((Number(packageInfo.weight) || 500) / 1000));
+    const weightPerItemKg = Math.max(0.05, totalWeightKg / (items.length || 1));
+
+    const products = items.map((it) => ({
+      name: it.productName || 'Sản phẩm',
+      weight: Number(weightPerItemKg.toFixed(2)),
+      quantity: it.quantity || 1,
+      product_code: it.sku || String(it.productId || ''),
+    }));
+
+    const orderPayload = {
+      id: `${order.orderCode}_${Date.now().toString().slice(-4)}`,
+      pick_name: warehouse?.name || 'Dak Shop',
+      pick_address: warehouse?.address?.detailAddress || warehouse?.address?.fullAddress || 'Kho trung tâm Dak Shop',
+      pick_province: warehouse?.address?.province || 'Hồ Chí Minh',
+      pick_district: warehouse?.address?.district || 'Quận Bình Tân',
+      pick_ward: warehouse?.address?.ward || '',
+      pick_tel: warehouse?.phone || '0949527013',
+      tel: shippingAddr.phone || '',
+      name: shippingAddr.fullName || 'Khách hàng',
+      address: shippingAddr.detailAddress || shippingAddr.fullAddress || '',
+      province: shippingAddr.province || '',
+      district: shippingAddr.district || '',
+      ward: shippingAddr.ward || '',
+      is_freeship: payer === 'shop' ? 1 : 0,
+      pick_money: Math.round(Number(codAmount) || 0),
+      value: Math.round(order.pricing?.totalAmount || 100000),
+      transport: 'road',
+      note: packageInfo.note || 'Giao giờ hành chính',
+    };
+
+    try {
+      const res = await axios.post(
+        `${this.getBaseUrl()}/services/shipment/order`,
+        { products, order: orderPayload },
+        { headers, timeout: 15000, validateStatus: () => true }
+      );
+
+      if (res.data && res.data.success && res.data.order?.label) {
+        return {
+          success: true,
+          carrier: 'ghtk',
+          trackingCode: String(res.data.order.label),
+          shippingFee: Number(res.data.order.fee) || order.pricing?.finalShippingFee || 22000,
+          rawResponse: res.data.order,
+        };
+      }
+
+      const errMsg = res.data?.message || (res.data?.error ? JSON.stringify(res.data) : `Mã lỗi GHTK ${res.status}`);
+      throw new AppError(`GHTK Sandbox từ chối tạo đơn: ${errMsg}`, 400);
+    } catch (err) {
+      if (err instanceof AppError) throw err;
+      throw new AppError(`Lỗi kết nối API GHTK: ${err.message}`, 500);
     }
   }
 }

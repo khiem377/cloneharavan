@@ -4,79 +4,14 @@ import { toast } from '@/providers/ToastProvider';
 import storeSettingService from '@/services/storeSetting.service';
 import ConnectShippingModal from './ConnectShippingModal';
 import { CarrierLogo } from './CarrierLogos';
+import { SHIPPING_CARRIERS } from './shippingCarriersData';
 import {
   MoreHorizontal,
   CheckCircle2,
   RefreshCw,
-  ExternalLink,
-  ShieldCheck,
-  Zap,
+  Star,
+  Check,
 } from 'lucide-react';
-
-const SHIPPING_CARRIERS = [
-  {
-    code: 'green_sm',
-    name: 'GREEN SM',
-    desc: 'Dịch vụ giao nhận siêu tốc cho nhà bán hàng thương mại điện tử',
-    status: 'disconnected',
-  },
-  {
-    code: 'vnpost',
-    name: 'VIETNAM POST',
-    desc: 'Cung cấp bưu chuyển phát nhanh EMS và chuyển phát bưu kiện',
-    status: 'disconnected',
-  },
-  {
-    code: 'best_express',
-    name: 'BEST EXPRESS',
-    desc: 'Giải pháp vận chuyển thông minh, nhanh chóng, an toàn, tiết kiệm',
-    status: 'disconnected',
-  },
-  {
-    code: 'spx',
-    name: 'SPX',
-    desc: 'Giải pháp vận chuyển thông minh, nhanh chóng, an toàn, tiết kiệm',
-    status: 'disconnected',
-  },
-  {
-    code: 'ghn',
-    name: 'GiaoHangNhanh',
-    desc: 'Giải pháp giao hàng, thu hộ chuyên nghiệp trải dài mọi miền đất nước',
-    status: 'disconnected',
-  },
-  {
-    code: 'ghtk',
-    name: 'GHTK',
-    desc: 'Dịch vụ giao hàng thu tiền tận nơi, tốc độ nhanh, phủ sóng toàn quốc',
-    status: 'disconnected',
-    isRegisterBtn: true,
-  },
-  {
-    code: 'grab_express',
-    name: 'Grab Express',
-    desc: 'Dịch vụ nhận gửi, vận chuyển và phát nhanh bằng đường bộ',
-    subLink: 'Đăng ký xuất hóa đơn (VAT)',
-    status: 'disconnected',
-  },
-  {
-    code: 'viettelpost',
-    name: 'ViettelPost',
-    desc: 'Dịch vụ nhận gửi, vận chuyển và phát nhanh bằng đường bộ',
-    status: 'disconnected',
-  },
-  {
-    code: 'ahamove',
-    name: 'Ahamove',
-    desc: 'Dịch vụ giao hàng nội thành siêu tốc',
-    status: 'disconnected',
-  },
-  {
-    code: 'jt_express',
-    name: 'J&T Express',
-    desc: 'Hỗ trợ các hoạt động giao nhận hàng hóa nhanh chóng',
-    status: 'disconnected',
-  },
-];
 
 export default function ShippingProvidersTab() {
   const [carriers, setCarriers] = useState(SHIPPING_CARRIERS);
@@ -88,7 +23,6 @@ export default function ShippingProvidersTab() {
     try {
       const res = await storeSettingService.getShippingProviders();
       if (res.data && res.data.length > 0) {
-        // Merge trạng thái thực tế từ backend
         const serverMap = {};
         res.data.forEach((p) => {
           serverMap[p.code] = p;
@@ -98,6 +32,7 @@ export default function ShippingProvidersTab() {
           prev.map((c) => ({
             ...c,
             status: serverMap[c.code]?.status || c.status,
+            isDefault: Boolean(serverMap[c.code]?.isDefault),
             maskedCredentials: serverMap[c.code]?.maskedCredentials || {},
           }))
         );
@@ -140,6 +75,20 @@ export default function ShippingProvidersTab() {
     }
   };
 
+  const handleSetDefault = async (code) => {
+    try {
+      const res = await storeSettingService.setDefaultShippingProvider(code);
+      if (res.success) {
+        toast.success(res.message || 'Đã đặt đối tác mặc định thành công!');
+        fetchCarriers();
+      }
+    } catch (err) {
+      toast.error('Lỗi đặt mặc định: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setActiveMenu(null);
+    }
+  };
+
   return (
     <div className="space-y-4">
       {/* DANH SÁCH ĐỐI TÁC VẬN CHUYỂN TRỰC TIẾP */}
@@ -153,7 +102,7 @@ export default function ShippingProvidersTab() {
           </span>
         </div>
 
-        {/* SINGLE FLAT CARD CONTAINER DIVIDED BY 1PX LINES */}
+        {/* CONTAINER CHIA DÒNG 1PX */}
         <div className="bg-white dark:bg-card border border-[#dfe3e8] dark:border-border rounded-[6px] shadow-xs divide-y divide-[#dfe3e8] dark:divide-border">
           {carriers.map((carrier) => {
             const isConnected = carrier.status === 'connected';
@@ -168,7 +117,7 @@ export default function ShippingProvidersTab() {
                   <CarrierLogo code={carrier.code} />
                 </div>
 
-                {/* Cột Mô tả */}
+                {/* Cột Mô tả & Trạng thái */}
                 <div className="flex-1 min-w-0 pr-4">
                   <p className="text-[13px] text-[#212b36] dark:text-foreground leading-normal">{carrier.desc}</p>
                   {carrier.subLink && (
@@ -180,8 +129,27 @@ export default function ShippingProvidersTab() {
                     </a>
                   )}
                   {isConnected && (
-                    <div className="flex items-center gap-1.5 mt-1 text-[11.5px] text-[#008848] dark:text-emerald-400 font-medium">
-                      <CheckCircle2 className="w-3.5 h-3.5" /> Đã kết nối
+                    <div className="flex items-center gap-3 mt-1.5">
+                      <span className="flex items-center gap-1.5 text-[11.5px] text-[#008848] dark:text-emerald-400 font-medium">
+                        <CheckCircle2 className="w-3.5 h-3.5" /> Đã kết nối
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => !carrier.isDefault && handleSetDefault(carrier.code)}
+                        className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[4px] text-[11.5px] transition-all cursor-pointer ${
+                          carrier.isDefault
+                            ? 'bg-[#e6f4ff] text-[#0088ff] border border-[#b3ddff] dark:bg-sky-950/50 dark:text-sky-300 dark:border-sky-800 font-semibold'
+                            : 'bg-slate-50 text-slate-600 hover:bg-[#f0f7ff] hover:text-[#0088ff] hover:border-[#b3ddff] border border-slate-200 dark:bg-muted dark:text-muted-foreground'
+                        }`}
+                        title={carrier.isDefault ? 'Đang là đối tác mặc định' : 'Bấm để đặt làm đối tác mặc định'}
+                      >
+                        <span className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${
+                          carrier.isDefault ? 'border-[#0088ff] bg-[#0088ff] text-white' : 'border-slate-400 bg-white'
+                        }`}>
+                          {carrier.isDefault && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                        </span>
+                        <span>{carrier.isDefault ? 'Mặc định' : 'Chọn mặc định'}</span>
+                      </button>
                     </div>
                   )}
                 </div>
@@ -201,9 +169,19 @@ export default function ShippingProvidersTab() {
                         <MoreHorizontal className="w-4 h-4" />
                       </button>
 
-                      {/* Dropdown menu Sapo */}
+                      {/* Dropdown menu */}
                       {activeMenu === carrier.code && (
                         <div className="absolute right-0 top-8 w-44 bg-white dark:bg-card border border-[#dfe3e8] dark:border-border rounded-[6px] shadow-lg py-1 z-30 text-[13px] text-[#212b36] dark:text-foreground">
+                          {!carrier.isDefault && (
+                            <button
+                              type="button"
+                              onClick={() => handleSetDefault(carrier.code)}
+                              className="w-full text-left px-3 py-1.5 hover:bg-[#f4f6f8] dark:hover:bg-accent flex items-center gap-2 cursor-pointer text-[#0088ff] font-medium"
+                            >
+                              <Star className="w-3.5 h-3.5" />
+                              <span>Đặt làm mặc định</span>
+                            </button>
+                          )}
                           <button
                             type="button"
                             onClick={() => handleTestHandshake(carrier.code)}
@@ -239,7 +217,7 @@ export default function ShippingProvidersTab() {
         </div>
       </div>
 
-      {/* 3. MODAL KẾT NỐI TỪNG HÃNG CHUẨN SAPO 100% */}
+      {/* MODAL KẾT NỐI */}
       <ConnectShippingModal
         isOpen={!!selectedCarrier}
         onClose={() => setSelectedCarrier(null)}
