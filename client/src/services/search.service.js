@@ -3,9 +3,9 @@ import { api } from '@/lib/axios';
 const API_BASE = process.env.API_SERVER_URL || 'http://127.0.0.1:5000/api/v1';
 
 export const searchService = {
-  getSuggestions: async (query) => {
+  getSuggestions: async (query, signal) => {
     if (!query || !query.trim()) return { categories: [], products: [], blogs: [], brands: [] };
-    const res = await api.get('/search/suggest', { params: { q: query.trim() } });
+    const res = await api.get('/search/suggest', { params: { q: query.trim() }, signal });
     return res.data?.data || { categories: [], products: [], blogs: [], brands: [] };
   },
 

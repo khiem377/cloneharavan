@@ -42,6 +42,14 @@ export const SearchBar = () => {
   const containerRef = useRef(null);
   const categoryRef = useRef(null);
   const debounceRef = useRef(null);
+  const abortControllerRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      if (abortControllerRef.current) abortControllerRef.current.abort();
+    };
+  }, []);
 
   useEffect(() => {
     if (trendingKeywords && trendingKeywords.length > 0) {
@@ -81,6 +89,10 @@ export const SearchBar = () => {
     setActiveIndex(-1);
 
     if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
 
     if (!val.trim()) {
       setSuggestData({
@@ -93,13 +105,17 @@ export const SearchBar = () => {
         blogs: [],
         brands: [],
       });
+      setLoading(false);
       return;
     }
 
     debounceRef.current = setTimeout(async () => {
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
       setLoading(true);
+
       try {
-        const res = await searchService.getSuggestions(val);
+        const res = await searchService.getSuggestions(val, controller.signal);
         setSuggestData({
           prediction: res.prediction || null,
           didYouMean: res.didYouMean || null,
@@ -111,9 +127,20 @@ export const SearchBar = () => {
           brands: res.brands || [],
         });
       } catch (err) {
+        if (
+          err.name === 'CanceledError' ||
+          err.name === 'AbortError' ||
+          err.code === 'ERR_CANCELED' ||
+          err.message === 'canceled'
+        ) {
+          return;
+        }
         console.error('Suggest error:', err);
       } finally {
-        setLoading(false);
+        if (abortControllerRef.current === controller) {
+          setLoading(false);
+          abortControllerRef.current = null;
+        }
       }
     }, 180);
   };

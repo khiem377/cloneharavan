@@ -9,6 +9,7 @@ import ChatMessageItem from './ChatMessageItem';
 import ChatQuickPrompts from './ChatQuickPrompts';
 import ChatInput from './ChatInput';
 import ChatTriggerButton from './ChatTriggerButton';
+import useAuthStore from '@/store/authStore';
 
 const STORAGE_SESSION_KEY = 'shop_ai_chat_session_id';
 const STORAGE_MESSAGES_KEY = 'shop_ai_chat_messages';
@@ -284,10 +285,15 @@ export default function AiChatWidget() {
       timestamp: nowTime,
     };
 
+    const { user, accessToken } = useAuthStore.getState();
+    const isAuth = Boolean(user && accessToken);
+
     const botMsg = {
       id: `bot-${Date.now()}`,
       role: 'bot',
-      text: 'Dạ anh/chị vui lòng nhập mã đơn hàng cùng số điện thoại hoặc email đặt hàng vào khung yêu cầu bên dưới để em kiểm tra tiến độ giao hàng cho mình nhé:',
+      text: isAuth
+        ? 'Dạ em kiểm tra thấy các đơn hàng gần nhất của anh/chị, mình có thể theo dõi nhanh tiến độ ngay bên dưới nhé:'
+        : 'Dạ anh/chị vui lòng nhập mã đơn hàng cùng số điện thoại hoặc email đặt hàng vào khung yêu cầu bên dưới để em kiểm tra tiến độ giao hàng cho mình nhé:',
       showOrderLookup: true,
       timestamp: nowTime,
     };
