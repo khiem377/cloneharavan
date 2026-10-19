@@ -41,10 +41,12 @@ import {
   Users,
   ShieldCheck,
 } from '@/components/ui/Icons';
+import { Truck } from 'lucide-react';
 import useAuthStore from '@/store/authStore';
 import { authService } from '@/services/auth.service';
 import { toast } from '@/providers/ToastProvider';
 import { cn } from '@/lib/utils';
+import { usePendingOrdersCount } from '@/hooks/useOrders';
 import {
   Sidebar,
   SidebarContent,
@@ -71,6 +73,21 @@ const NAV_GROUPS = [
       { to: '/media', icon: MediaIcon, label: 'Thư viện Media', permission: 'media.manage' },
       { to: '/media/unused', icon: BannersIcon, label: 'Dọn dẹp ảnh thừa', permission: 'media.manage' },
       { to: '/banners', icon: BannersIcon, label: 'Banner', permission: 'media.manage' },
+    ],
+  },
+  {
+    label: 'Bán hàng & Đơn hàng',
+    items: [
+      { to: '/orders', icon: StoreFrontIcon, label: 'Quản lý Đơn hàng' },
+      {
+        icon: Truck,
+        label: 'Vận chuyển',
+        permission: 'order.view',
+        children: [
+          { to: '/shipments/overview', icon: DashboardIcon, label: 'Tổng quan', permission: 'order.view' },
+          { to: '/shipments', icon: StockDocNavIcon, label: 'Vận đơn', permission: 'order.view' },
+        ],
+      },
     ],
   },
   {
@@ -245,27 +262,65 @@ function NavSingleItem({ item }) {
   const navigate = useNavigate();
   const { state } = useSidebar();
   const isCollapsed = state === 'collapsed';
+  const { pendingCount } = usePendingOrdersCount();
+  const isOrders = item.to === '/orders';
+  const [showTooltip, setShowTooltip] = useState(false);
 
   const Icon = item.icon;
   const isActive = item.to === '/dashboard'
     ? location.pathname === item.to
     : location.pathname.startsWith(item.to);
 
+  const displayPendingCount = pendingCount > 99 ? '99+' : pendingCount;
+
   return (
-    <SidebarMenuItem>
+    <SidebarMenuItem className="relative">
       <SidebarMenuButton
         isActive={isActive}
         onClick={() => navigate(item.to)}
-        title={isCollapsed ? item.label : undefined}
         className={cn(
-          "rounded-[6px] transition-colors active:scale-[0.98] text-sidebar-foreground",
+          "rounded-[6px] transition-colors active:scale-[0.98] font-normal text-sidebar-foreground",
           isActive
-            ? "bg-primary text-primary-foreground font-medium shadow-xs"
-            : "hover:bg-accent/60 hover:text-foreground"
+            ? "bg-primary/10 text-primary font-medium"
+            : "hover:bg-accent/60 hover:text-foreground",
+          isOrders && "!overflow-visible"
         )}
       >
-        <Icon className={cn("size-4 shrink-0", isActive ? "text-primary-foreground" : "text-muted-foreground")} />
-        <span className="truncate">{item.label}</span>
+        <div className="relative flex items-center justify-center shrink-0">
+          <Icon className={cn("size-4 shrink-0 transition-colors", isActive ? "text-primary" : "text-muted-foreground")} />
+          {isCollapsed && isOrders && pendingCount > 0 && (
+            <span
+              className="absolute -top-1 -right-1 flex h-2 w-2 rounded-full bg-rose-500 ring-2 ring-sidebar animate-pulse"
+              title={`${pendingCount} đơn hàng chờ duyệt`}
+            />
+          )}
+        </div>
+        <span className="flex-1 truncate">{item.label}</span>
+        {!isCollapsed && isOrders && pendingCount > 0 && (
+          <div
+            className="relative ml-auto flex items-center"
+            onMouseEnter={() => setShowTooltip(true)}
+            onMouseLeave={() => setShowTooltip(false)}
+          >
+            <span
+              className="inline-flex items-center justify-center h-[20px] min-w-[24px] px-1.5 rounded-full text-[11px] font-semibold tabular-nums leading-none tracking-tight shrink-0 select-none bg-rose-500 text-white shadow-xs cursor-pointer"
+            >
+              <span className="size-1.5 rounded-full mr-1 shrink-0 bg-white animate-pulse" />
+              {displayPendingCount}
+            </span>
+
+            {/* Tooltip hiển thị tức thì khi giữ chuột vào Badge */}
+            {showTooltip && (
+              <div className="absolute bottom-full right-0 mb-2 z-50 pointer-events-none animate-in fade-in-0 zoom-in-95 duration-100">
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-zinc-900 text-white text-[11px] font-medium shadow-xl border border-zinc-700/80 whitespace-nowrap">
+                  <span className="size-1.5 rounded-full bg-rose-400 shrink-0 animate-pulse" />
+                  <span>{pendingCount} đơn hàng chờ duyệt</span>
+                </div>
+                <div className="w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-zinc-900 ml-auto mr-2.5" />
+              </div>
+            )}
+          </div>
+        )}
       </SidebarMenuButton>
     </SidebarMenuItem>
   );

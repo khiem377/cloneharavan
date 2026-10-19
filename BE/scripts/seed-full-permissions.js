@@ -86,6 +86,10 @@ const PERMISSIONS = [
   { code: 'stock_audit.view', name: 'Xem phiếu kiểm kê kho', module: 'stock_audits', description: 'Xem lịch sử và kết quả các đợt kiểm kê' },
   { code: 'stock_audit.manage', name: 'Quản lý kiểm kê kho', module: 'stock_audits', description: 'Tạo đợt kiểm kê và cân bằng số lượng tồn kho' },
   { code: 'stock_movement.view', name: 'Xem biến động kho', module: 'stock_movements', description: 'Xem thẻ kho, lịch sử xuất/nhập/tồn chi tiết' },
+
+  // Settings & System Configuration
+  { code: 'setting.view', name: 'Xem cài đặt hệ thống', module: 'settings', description: 'Xem cấu hình thông tin cửa hàng, vận chuyển, cổng thanh toán' },
+  { code: 'setting.manage', name: 'Quản lý cài đặt hệ thống', module: 'settings', description: 'Cập nhật cấu hình cửa hàng, tích hợp đối tác vận chuyển và kết nối cổng thanh toán' },
 ];
 
 const PRESET_ROLES = [
@@ -118,6 +122,7 @@ const PRESET_ROLES = [
       'stock_audit.view', 'stock_audit.manage',
       'stock_movement.view',
       'audit_log.view',
+      'setting.view', 'setting.manage',
     ],
   },
   {

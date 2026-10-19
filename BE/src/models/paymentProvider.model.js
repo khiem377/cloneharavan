@@ -8,7 +8,7 @@ const paymentProviderSchema = new mongoose.Schema(
       unique: true,
       trim: true,
       lowercase: true,
-      enum: ['vnpay', 'momo', 'zalopay', 'cod'],
+      enum: ['vnpay', 'momo', 'zalopay', 'onepay', 'cod'],
       index: true,
     },
     name: {

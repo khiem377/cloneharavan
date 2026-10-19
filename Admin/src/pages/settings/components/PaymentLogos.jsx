@@ -2,6 +2,7 @@ import React from 'react';
 import vnpayImg from '@/assets/payments/vnpay.png';
 import momoImg from '@/assets/payments/momo.png';
 import zalopayImg from '@/assets/payments/zalopay.png';
+import onepayImg from '@/assets/payments/onepay.png';
 
 export const VnpayLogo = ({ className = 'h-7' }) => (
   <img
@@ -30,6 +31,15 @@ export const ZalopayLogo = ({ className = 'h-7' }) => (
   />
 );
 
+export const OnepayLogo = ({ className = 'h-7' }) => (
+  <img
+    src={onepayImg}
+    alt="OnePay"
+    className={`${className} object-contain object-left`}
+    loading="lazy"
+  />
+);
+
 export const CodLogo = ({ className = 'h-7' }) => (
   <div className={`flex items-center gap-1.5 ${className}`}>
     <div className="w-7 h-7 rounded-[4px] bg-emerald-50 border border-emerald-300 text-emerald-700 flex items-center justify-center font-bold text-xs">
@@ -49,6 +59,8 @@ export const PaymentMethodLogo = ({ code, className = 'h-7' }) => {
       return <MomoLogo className={className} />;
     case 'zalopay':
       return <ZalopayLogo className={className} />;
+    case 'onepay':
+      return <OnepayLogo className={className} />;
     case 'cod':
       return <CodLogo className={className} />;
     default:
@@ -59,3 +71,4 @@ export const PaymentMethodLogo = ({ code, className = 'h-7' }) => {
       );
   }
 };
+

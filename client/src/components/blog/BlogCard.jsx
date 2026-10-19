@@ -19,9 +19,10 @@ export const BlogCard = ({ post, viewMode = 'grid' }) => {
 
   const category = post.categories?.[0]?.name || 'Tin công nghệ';
   const authorName =
-    post.authorId?.firstName && post.authorId?.lastName
+    post.authorId?.fullName ||
+    (post.authorId?.firstName && post.authorId?.lastName
       ? `${post.authorId.lastName} ${post.authorId.firstName}`
-      : post.authorId?.email?.split('@')[0] || 'Ban Biên Tập';
+      : post.authorId?.email?.split('@')[0] || 'Ban Biên Tập');
 
   const thumbnail =
     post.thumbnailUrl ||

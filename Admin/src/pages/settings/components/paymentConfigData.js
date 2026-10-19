@@ -89,4 +89,36 @@ export const PAYMENT_MODAL_CONFIG = {
       { label: 'Tài liệu tích hợp ZaloPay Sandbox', url: 'https://docs.zalopay.vn/' },
     ],
   },
+  onepay: {
+    title: 'Kết nối Cổng thanh toán OnePay',
+    notice: 'Môi trường hỗ trợ: Sandbox (mtf.onepay.vn) & Production (onepay.vn)',
+    fields: [
+      {
+        key: 'merchantId',
+        label: 'Mã đơn vị (Merchant ID)*',
+        type: 'text',
+        placeholder: 'Nhập Merchant ID...',
+        required: true,
+        fullWidth: true,
+      },
+      {
+        key: 'accessCode',
+        label: 'Mã truy cập (Access Code)*',
+        type: 'text',
+        placeholder: 'Nhập Access Code...',
+        required: true,
+      },
+      {
+        key: 'secureSecret',
+        label: 'Khóa bí mật băm (Secure Secret)*',
+        type: 'password',
+        placeholder: 'Nhập khóa bí mật HMAC-SHA256...',
+        required: true,
+      },
+    ],
+    links: [
+      { label: 'Cổng thanh toán Sandbox OnePay', url: 'https://mtf.onepay.vn' },
+      { label: 'Trang chủ OnePay Việt Nam', url: 'https://www.onepay.vn' },
+    ],
+  },
 };

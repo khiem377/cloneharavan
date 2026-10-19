@@ -1,5 +1,6 @@
 const axios = require('axios');
 const Warehouse = require('../models/warehouse.model');
+const AppError = require('../utils/AppError');
 
 const cache = {
   provinces: null,
@@ -308,7 +309,7 @@ const lookupGhnPostMergerAddress = async ({
           return false;
         });
       }
-    } catch (_) {}
+    } catch (_) { }
 
     const normTarget = normalizeVnString(tdcNewProvince);
     const isDirectCity = ['ha noi', 'ho chi minh', 'da nang', 'hai phong', 'can tho', 'hue'].includes(normTarget);
@@ -441,13 +442,7 @@ const lookupGhnPostMergerAddress = async ({
   };
 };
 
-/**
- * Tính phí vận chuyển thực tế từ GHN API
- * - Lấy fromDistrictId từ Warehouse mặc định (nếu không truyền)
- * - Gọi trực tiếp GHN /v2/shipping-order/fee
- * - Nếu GHN trả về phí thực tế: isEstimated = false, source = 'GHN'
- * - Nếu GHN lỗi / timeout: isEstimated = true, ghi rõ lỗi, không giả mạo phí GHN thật
- */
+
 const calculateShippingFee = async ({
   toDistrictId,
   toWardCode,
@@ -605,7 +600,21 @@ const calculateShippingFee = async ({
 /**
  * Tự động phân giải ProvinceID, DistrictID, WardCode từ chuỗi văn bản Tỉnh, Quận, Phường
  */
-const resolveAddressGhnCodes = async ({ province = '', district = '', ward = '' }) => {
+const resolveAddressGhnCodes = async (arg1 = {}, arg2 = '', arg3 = '') => {
+  let province = '';
+  let district = '';
+  let ward = '';
+
+  if (typeof arg1 === 'object' && arg1 !== null) {
+    province = arg1.province || '';
+    district = arg1.district || '';
+    ward = arg1.ward || '';
+  } else {
+    province = arg1 || '';
+    district = arg2 || '';
+    ward = arg3 || '';
+  }
+
   if (!province && !district && !ward) return null;
 
   try {
@@ -701,6 +710,181 @@ const resolveAddressGhnCodes = async ({ province = '', district = '', ward = '' 
   }
 };
 
+const createShippingOrder = async ({ order, warehouse, packageInfo = {}, payer = 'shop', credentials = {}, codAmount = 0 }) => {
+  const token = credentials.token || process.env.GHN_API_TOKEN || process.env.GHN_TOKEN;
+  const shopId = credentials.shopId || process.env.GHN_SHOP_ID;
+
+  if (!token) {
+    throw new AppError('Chưa cấu hình GHN API Token trong cài đặt đối tác hoặc file .env', 400);
+  }
+
+  // Xác định URL (Production hoặc Dev Sandbox)
+  const isDev = process.env.GHN_DEV_MODE === 'true';
+  const baseUrl = isDev
+    ? 'https://dev-online-gateway.ghn.vn/shiip/public-api'
+    : (process.env.GHN_API_URL || 'https://online-gateway.ghn.vn/shiip/public-api');
+
+  const headers = {
+    'Content-Type': 'application/json',
+    Token: token.trim(),
+    token: token.trim(),
+  };
+  if (shopId) {
+    headers['ShopId'] = Number(shopId);
+  }
+
+  const shippingAddr = order.shippingAddress || {};
+  let toDistrictId = shippingAddr.districtId;
+  let toWardCode = shippingAddr.wardCode;
+
+  if (!toDistrictId || !toWardCode) {
+    const resolved = await resolveAddressGhnCodes({
+      province: shippingAddr.province,
+      district: shippingAddr.district,
+      ward: shippingAddr.ward,
+    });
+    if (resolved) {
+      toDistrictId = resolved.districtId;
+      toWardCode = resolved.wardCode;
+    }
+  }
+
+  if (!toDistrictId || !toWardCode) {
+    throw new AppError(`Không thể xác định mã Quận/Huyện hoặc Phường/Xã GHN cho địa chỉ: ${shippingAddr.ward || ''}, ${shippingAddr.district || ''}, ${shippingAddr.province || ''}`, 400);
+  }
+
+  const items = (order.items || []).map((it) => ({
+    name: it.productName || 'Sản phẩm',
+    code: it.sku || String(it.productId || ''),
+    quantity: it.quantity || 1,
+    price: it.price || it.unitPrice || 0,
+    weight: Math.max(50, Math.round((Number(packageInfo.weight) || 500) / (order.items.length || 1))),
+  }));
+
+  // Ánh xạ an toàn required_note sang 3 giá trị GHN API chấp nhận: CHOTHUHANG | CHOXEMHANGKHONGTHU | KHONGCHOXEMHANG
+  const rawNote = String(packageInfo.requiredNote || '').toUpperCase();
+  let ghnRequiredNote = 'CHOXEMHANGKHONGTHU';
+  if (rawNote.includes('THU') && !rawNote.includes('KHONG')) {
+    ghnRequiredNote = 'CHOTHUHANG';
+  } else if (rawNote.includes('KHONGCHO') || rawNote.includes('KHONG_CHO')) {
+    ghnRequiredNote = 'KHONGCHOXEMHANG';
+  }
+
+  const payload = {
+    payment_type_id: payer === 'receiver' ? 2 : 1,
+    note: packageInfo.note || '',
+    required_note: ghnRequiredNote,
+    client_order_code: `${order.orderCode}_${Date.now().toString().slice(-4)}`,
+    to_name: shippingAddr.fullName || 'Khách hàng',
+    to_phone: shippingAddr.phone || '',
+    to_address: shippingAddr.detailAddress || shippingAddr.fullAddress || '',
+    to_ward_code: String(toWardCode),
+    to_district_id: Number(toDistrictId),
+    cod_amount: Math.round(Number(codAmount) || 0),
+    weight: Math.max(100, Math.round(Number(packageInfo.weight) || 500)),
+    length: Math.round(Number(packageInfo.length) || 15),
+    width: Math.round(Number(packageInfo.width) || 15),
+    height: Math.round(Number(packageInfo.height) || 10),
+    service_type_id: 2, // Gói chuẩn
+    items,
+  };
+
+  try {
+    const res = await axios.post(`${baseUrl}/v2/shipping-order/create`, payload, {
+      headers,
+      timeout: 15000,
+      validateStatus: () => true,
+    });
+
+    if (res.data && res.data.code === 200 && res.data.data?.order_code) {
+      return {
+        success: true,
+        carrier: 'ghn',
+        trackingCode: String(res.data.data.order_code),
+        shippingFee: res.data.data.total_fee || order.pricing?.finalShippingFee || 25000,
+        rawResponse: res.data.data,
+      };
+    }
+
+    const errMsg = res.data?.message || res.data?.code_message_value || `Mã lỗi GHN ${res.status}`;
+    throw new AppError(`GHN Sandbox từ chối tạo đơn: ${errMsg}`, 400);
+  } catch (err) {
+    if (err instanceof AppError) throw err;
+    throw new AppError(`Lỗi kết nối API GHN Sandbox: ${err.message}`, 500);
+  }
+};
+
+/**
+ * Tra cứu chi tiết và trạng thái vận đơn từ GHN API
+ */
+const getOrderDetail = async (orderCode, credentials = {}) => {
+  const token = credentials.token || process.env.GHN_API_TOKEN || process.env.GHN_TOKEN;
+  if (!token) {
+    throw new AppError('Chưa cấu hình GHN API Token', 400);
+  }
+
+  const isDev = process.env.GHN_DEV_MODE === 'true';
+  const baseUrl = isDev
+    ? 'https://dev-online-gateway.ghn.vn/shiip/public-api'
+    : (process.env.GHN_API_URL || 'https://online-gateway.ghn.vn/shiip/public-api');
+
+  const headers = {
+    'Content-Type': 'application/json',
+    Token: token.trim(),
+    token: token.trim(),
+  };
+
+  try {
+    const res = await axios.post(
+      `${baseUrl}/v2/shipping-order/detail`,
+      { order_code: orderCode },
+      { headers, timeout: 10000, validateStatus: () => true }
+    );
+
+    if (res.data && res.data.code === 200 && res.data.data) {
+      return res.data.data;
+    }
+
+    const msg = res.data?.message || `Lỗi GHN (${res.status})`;
+    throw new AppError(`Tra cứu đơn hàng GHN thất bại: ${msg}`, 400);
+  } catch (err) {
+    if (err instanceof AppError) throw err;
+    throw new AppError(`Không thể kết nối API tra cứu GHN: ${err.message}`, 500);
+  }
+};
+
+/**
+ * Ánh xạ trạng thái GHN sang trạng thái chuẩn
+ */
+const mapGhnStatus = (statusStr) => {
+  const s = String(statusStr || '').toLowerCase();
+  if (s === 'ready_to_pick') {
+    return { status: 'ready_to_pick', statusText: 'Chờ lấy hàng' };
+  }
+  if (['picking', 'storing'].includes(s)) {
+    return { status: 'picking', statusText: 'Đang lấy hàng' };
+  }
+  if (['delivering', 'transporting', 'sorting'].includes(s)) {
+    return { status: 'delivering', statusText: 'Đang giao hàng' };
+  }
+  if (s === 'delivered') {
+    return { status: 'delivered', statusText: 'Đã giao hàng' };
+  }
+  if (s === 'delivery_fail') {
+    return { status: 'delivery_fail', statusText: 'Chờ giao lại' };
+  }
+  if (s === 'waiting_to_return') {
+    return { status: 'returning', statusText: 'Đang hoàn hàng' };
+  }
+  if (['return', 'returned'].includes(s)) {
+    return { status: 'returned', statusText: 'Đã hoàn hàng' };
+  }
+  if (['cancel', 'damage', 'lost'].includes(s)) {
+    return { status: 'cancelled', statusText: 'Đã hủy giao' };
+  }
+  return null;
+};
+
 module.exports = {
   getProvinces,
   getDistricts,
@@ -710,4 +894,7 @@ module.exports = {
   lookupGhnPostMergerAddress,
   calculateShippingFee,
   resolveAddressGhnCodes,
+  createShippingOrder,
+  getOrderDetail,
+  mapGhnStatus,
 };

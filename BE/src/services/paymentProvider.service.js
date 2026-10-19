@@ -33,6 +33,11 @@ const buildMaskedCredentials = (code, rawCreds = {}) => {
       masked.key1 = rawCreds.key1 ? '••••••••••••••••' : '';
       masked.key2 = rawCreds.key2 ? '••••••••••••••••' : '';
       break;
+    case 'onepay':
+      masked.merchantId = rawCreds.merchantId || '';
+      masked.accessCode = rawCreds.accessCode ? '••••••••' : '';
+      masked.secureSecret = rawCreds.secureSecret ? '••••••••••••••••' : '';
+      break;
     case 'cod':
       break;
     default:
@@ -436,6 +441,130 @@ const verifyVnpayHandshake = async ({ tmnCode, hashSecret, environment = 'sandbo
   }
 };
 
+/**
+ * Kiểm tra tính hợp lệ của thông số kết nối OnePay
+ */
+const verifyOnepayHandshake = async ({ merchantId, accessCode, secureSecret, environment = 'sandbox' }) => {
+  const mId = (merchantId || '').trim();
+  const aCode = (accessCode || '').trim();
+  const sSecret = (secureSecret || '').trim();
+
+  if (!mId) {
+    throw new AppError('Mã đơn vị (Merchant ID) là bắt buộc đối với OnePay', 400);
+  }
+  if (!/^[a-zA-Z0-9_-]{3,30}$/.test(mId)) {
+    throw new AppError('Mã đơn vị (Merchant ID) của OnePay không đúng định dạng', 400);
+  }
+
+  if (!aCode) {
+    throw new AppError('Mã truy cập (Access Code) là bắt buộc đối với OnePay', 400);
+  }
+  if (!/^[a-zA-Z0-9]{6,16}$/.test(aCode)) {
+    throw new AppError('Mã truy cập (Access Code) của OnePay phải gồm 6-16 ký tự chữ và số', 400);
+  }
+
+  if (!sSecret) {
+    throw new AppError('Khóa bí mật băm (Secure Secret) là bắt buộc đối với OnePay', 400);
+  }
+  if (!/^[0-9a-fA-F]{32}$|^[0-9a-fA-F]{64}$/.test(sSecret)) {
+    throw new AppError(
+      'Khóa bí mật băm (Secure Secret) của OnePay không hợp lệ (phải là chuỗi mã Hex 32 hoặc 64 ký tự)',
+      400
+    );
+  }
+
+  const endpoint =
+    environment === 'production'
+      ? 'https://onepay.vn/paygate/vpcpay.op'
+      : 'https://mtf.onepay.vn/paygate/vpcpay.op';
+
+  try {
+    const params = {
+      vpc_Version: '2',
+      vpc_Command: 'pay',
+      vpc_AccessCode: aCode,
+      vpc_Merchant: mId,
+      vpc_MerchTxnRef: 'VERIFY_' + Date.now(),
+      vpc_OrderInfo: 'CheckKeys',
+      vpc_Amount: '1000000',
+      vpc_ReturnURL: 'https://example.com/callback',
+      vpc_Locale: 'vn',
+      vpc_Currency: 'VND',
+      vpc_TicketNo: '127.0.0.1',
+    };
+
+    const sortedKeys = Object.keys(params).sort();
+    const rawParts = [];
+    for (const k of sortedKeys) {
+      if ((k.startsWith('vpc_') || k.startsWith('user_')) && params[k]) {
+        rawParts.push(`${k}=${params[k]}`);
+      }
+    }
+    const raw = rawParts.join('&');
+
+    let secretBuffer;
+    try {
+      secretBuffer = Buffer.from(sSecret, 'hex');
+    } catch {
+      throw new AppError('Khóa bí mật băm (Secure Secret) không phải là mã Hex hợp lệ.', 400);
+    }
+
+    const hash = crypto
+      .createHmac('sha256', secretBuffer)
+      .update(raw)
+      .digest('hex')
+      .toUpperCase();
+
+    const probeUrl = `${endpoint}?${raw}&vpc_SecureHash=${hash}`;
+
+    const response = await axios.get(probeUrl, {
+      timeout: 8000,
+      maxRedirects: 0,
+      validateStatus: () => true,
+    });
+
+    const location = String(response.headers?.location || '');
+    const bodyText = typeof response.data === 'string' ? response.data : JSON.stringify(response.data || '');
+
+    // Nếu OnePay điều hướng tới trang báo lỗi hóa đơn / chữ ký
+    if (
+      location.includes('payment-error') ||
+      location.includes('INVALID_INVOICE') ||
+      location.includes('INVALID_HASH') ||
+      bodyText.includes('INVALID_INVOICE') ||
+      bodyText.includes('Merchant khong ton tai') ||
+      bodyText.includes('Invalid merchant id')
+    ) {
+      throw new AppError(
+        'Thông tin xác thực OnePay không chính xác (sai Merchant ID, Access Code hoặc Secure Secret). Vui lòng kiểm tra lại thông số OnePay.',
+        400
+      );
+    }
+
+    // Nếu là mã 302 điều hướng sang cổng thanh toán tạo invoice (generalv2 / id=INV) -> Keys chuẩn xác 100%
+    if (
+      response.status === 302 ||
+      response.status === 301 ||
+      response.status === 303 ||
+      location.includes('generalv2') ||
+      location.includes('id=INV') ||
+      bodyText.includes('generalv2')
+    ) {
+      return { success: true, message: 'Xác thực OnePay thành công' };
+    }
+
+    // Trường hợp mã 200 không có lỗi
+    if (response.status === 200 && !bodyText.includes('error')) {
+      return { success: true, message: 'Xác thực OnePay thành công' };
+    }
+
+    throw new AppError('Máy chủ OnePay từ chối xác thực thông số kết nối. Vui lòng kiểm tra lại.', 400);
+  } catch (err) {
+    if (err instanceof AppError) throw err;
+    throw new AppError(`Không thể kết nối đến máy chủ OnePay (${err.message})`, 400);
+  }
+};
+
 const DEFAULT_PROVIDERS = [
   {
     code: 'vnpay',
@@ -465,6 +594,15 @@ const DEFAULT_PROVIDERS = [
     environment: 'sandbox',
   },
   {
+    code: 'onepay',
+    name: 'OnePay',
+    shortDesc: 'Cổng thanh toán thẻ ATM nội địa Napas và thẻ quốc tế hàng đầu Việt Nam',
+    type: 'gateway',
+    status: 'disconnected',
+    isEnabled: false,
+    environment: 'sandbox',
+  },
+  {
     code: 'cod',
     name: 'Thanh toán khi nhận hàng (COD)',
     shortDesc: 'Thanh toán bằng tiền mặt trực tiếp cho nhân viên giao hàng khi nhận kiện hàng',
@@ -482,7 +620,7 @@ const ensureDefaultProviders = async () => {
 
   try {
     const existingCount = await PaymentProvider.countDocuments({
-      code: { $in: ['vnpay', 'momo', 'zalopay', 'cod'] },
+      code: { $in: ['vnpay', 'momo', 'zalopay', 'onepay', 'cod'] },
     });
 
     if (existingCount >= DEFAULT_PROVIDERS.length) {
@@ -606,6 +744,35 @@ const connectProvider = async (code, { credentials = {}, environment = 'sandbox'
         appId: cleanCreds.appId,
         key1: cleanCreds.key1,
         key2: cleanCreds.key2,
+        environment,
+      });
+      break;
+    }
+    case 'onepay': {
+      cleanCreds.merchantId = (newCreds.merchantId && !isMaskedValue(newCreds.merchantId))
+        ? newCreds.merchantId.trim()
+        : existingCreds.merchantId;
+      cleanCreds.accessCode = (newCreds.accessCode && !isMaskedValue(newCreds.accessCode))
+        ? newCreds.accessCode.trim()
+        : existingCreds.accessCode;
+      cleanCreds.secureSecret = (newCreds.secureSecret && !isMaskedValue(newCreds.secureSecret))
+        ? newCreds.secureSecret.trim()
+        : existingCreds.secureSecret;
+
+      if (!cleanCreds.merchantId) {
+        throw new AppError('Mã đơn vị (Merchant ID) là bắt buộc đối với OnePay', 400);
+      }
+      if (!cleanCreds.accessCode) {
+        throw new AppError('Mã truy cập (Access Code) là bắt buộc đối với OnePay', 400);
+      }
+      if (!cleanCreds.secureSecret) {
+        throw new AppError('Khóa bí mật (Secure Secret) là bắt buộc đối với OnePay', 400);
+      }
+
+      await verifyOnepayHandshake({
+        merchantId: cleanCreds.merchantId,
+        accessCode: cleanCreds.accessCode,
+        secureSecret: cleanCreds.secureSecret,
         environment,
       });
       break;
@@ -736,6 +903,13 @@ const testProviderHandshake = async (code) => {
         appId: creds.appId,
         key1: creds.key1,
         key2: creds.key2,
+        environment: provider.environment,
+      });
+    case 'onepay':
+      return await verifyOnepayHandshake({
+        merchantId: creds.merchantId,
+        accessCode: creds.accessCode,
+        secureSecret: creds.secureSecret,
         environment: provider.environment,
       });
     case 'vnpay':

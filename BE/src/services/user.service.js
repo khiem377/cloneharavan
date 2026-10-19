@@ -140,7 +140,7 @@ const getUserAddresses = async (userId) => {
   if (!user) {
     throw new AppError('Không tìm thấy người dùng', 404);
   }
-  return user.addresses;
+  return [...user.addresses].sort((a, b) => (b.isDefault ? 1 : 0) - (a.isDefault ? 1 : 0));
 };
 
 /**
@@ -177,7 +177,8 @@ const addAddress = async (userId, addressData) => {
     });
     addressData.isDefault = true;
   } else {
-    addressData.isDefault = false;
+    const hasDefault = user.addresses.some((addr) => addr.isDefault === true);
+    addressData.isDefault = !hasDefault;
   }
 
   // Tự động phân giải mã GHN nếu chưa có
@@ -220,11 +221,19 @@ const updateAddress = async (userId, addressId, updateData) => {
     throw new AppError('Không tìm thấy địa chỉ', 404);
   }
 
-  if (updateData.isDefault) {
+  if (updateData.isDefault === true) {
     user.addresses.forEach((addr) => {
-      addr.isDefault = false;
+      addr.isDefault = addr._id.toString() === addressId.toString();
     });
     address.isDefault = true;
+  } else if (updateData.isDefault === false) {
+    address.isDefault = false;
+    const anotherAddr = user.addresses.find((addr) => addr._id.toString() !== addressId.toString());
+    if (anotherAddr) {
+      anotherAddr.isDefault = true;
+    } else {
+      address.isDefault = true;
+    }
   }
 
   if (updateData.fullName !== undefined) address.fullName = updateData.fullName;
@@ -236,7 +245,6 @@ const updateAddress = async (userId, addressId, updateData) => {
   if (updateData.ward !== undefined) address.ward = updateData.ward;
   if (updateData.wardCode !== undefined) address.wardCode = updateData.wardCode;
   if (updateData.detailAddress !== undefined) address.detailAddress = updateData.detailAddress;
-  if (updateData.isDefault !== undefined) address.isDefault = updateData.isDefault;
 
   // Tự động phân giải mã GHN nếu sửa địa chỉ mà thiếu mã
   if ((!address.districtId || !address.wardCode) && address.province && address.ward) {
@@ -307,7 +315,7 @@ const setDefaultAddress = async (userId, addressId) => {
   });
 
   await user.save();
-  return user.addresses;
+  return [...user.addresses].sort((a, b) => (b.isDefault ? 1 : 0) - (a.isDefault ? 1 : 0));
 };
 
 /**

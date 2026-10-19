@@ -15,6 +15,10 @@ export default function AccountAddressesTab({
   handleDeleteAddress,
   handleSetDefaultAddress,
 }) {
+  const sortedAddresses = React.useMemo(() => {
+    return [...addresses].sort((a, b) => (b.isDefault ? 1 : 0) - (a.isDefault ? 1 : 0));
+  }, [addresses]);
+
   return (
     <Card className="animate-fadeIn">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
@@ -61,7 +65,7 @@ export default function AccountAddressesTab({
           </div>
         ) : (
           <div className="space-y-3">
-            {addresses.map((addr) => (
+            {sortedAddresses.map((addr) => (
               <Card
                 key={addr._id}
                 className={`p-4 transition ${
@@ -80,12 +84,19 @@ export default function AccountAddressesTab({
                       <span className="font-mono text-slate-600 text-xs">
                         {addr.phone}
                       </span>
-                      {addr.isDefault && (
+                      {addr.isDefault ? (
                         <Badge
                           variant="secondary"
                           className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2 py-0.5 rounded-[4px]"
                         >
                           Mặc định
+                        </Badge>
+                      ) : (
+                        <Badge
+                          variant="outline"
+                          className="bg-slate-50 text-slate-500 border border-slate-200 text-[10px] font-medium px-2 py-0.5 rounded-[4px]"
+                        >
+                          Địa chỉ phụ
                         </Badge>
                       )}
                     </div>

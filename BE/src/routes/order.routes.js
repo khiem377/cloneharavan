@@ -16,6 +16,7 @@ router.get('/my-orders', protect, orderCtrl.getMyOrders);
 
 // 3. Admin: Lấy danh sách toàn bộ đơn hàng
 router.get('/admin/all', protect, authorize('admin'), orderCtrl.getAllOrders);
+router.get('/admin/pending-count', protect, authorize('admin'), orderCtrl.getPendingOrdersCount);
 
 // 4. Admin: Cập nhật trạng thái đơn hàng (CONFIRMED -> SHIPPING -> DELIVERED -> RETURNED)
 router.patch('/admin/:id/status', protect, authorize('admin'), orderCtrl.updateOrderStatus);
