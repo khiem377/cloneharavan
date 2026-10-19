@@ -70,6 +70,13 @@ const testShippingProvider = catchAsync(async (req, res) => {
   });
 });
 
+// Đặt đối tác vận chuyển làm mặc định
+const setDefaultShippingProvider = catchAsync(async (req, res) => {
+  const { code } = req.params;
+  const result = await StoreSettingService.setDefaultShippingProvider(code, req.user, req);
+  res.status(200).json(result);
+});
+
 module.exports = {
   getStoreSettings,
   getPublicStoreSettings,
@@ -78,4 +85,5 @@ module.exports = {
   connectShippingProvider,
   disconnectShippingProvider,
   testShippingProvider,
+  setDefaultShippingProvider,
 };

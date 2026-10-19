@@ -227,6 +227,15 @@ class StoreSettingService {
       }
     }
 
+    // Đảm bảo có 1 hãng connected được gán isDefault nếu đã có hãng kết nối
+    const connectedProviders = providers.filter((p) => p.status === 'connected');
+    const hasDefault = connectedProviders.some((p) => p.isDefault);
+    if (connectedProviders.length > 0 && !hasDefault) {
+      const primary = connectedProviders.find((p) => p.code === 'ghn') || connectedProviders[0];
+      primary.isDefault = true;
+      await ShippingProvider.findByIdAndUpdate(primary._id, { isDefault: true });
+    }
+
     // Luôn ẩn encryptedCredentials, chỉ trả về maskedCredentials an toàn
     return providers.map((p) => ({
       _id: p._id,
@@ -235,6 +244,7 @@ class StoreSettingService {
       shortDesc: p.shortDesc,
       logo: p.logo,
       status: p.status,
+      isDefault: Boolean(p.isDefault),
       maskedCredentials: p.maskedCredentials || {},
       warehouseId: p.warehouseId,
       connectedAt: p.connectedAt,
@@ -379,10 +389,14 @@ class StoreSettingService {
     // MÃ HÓA 2 CHIỀU ĐỂ BẢO VỆ DỮ LIỆU
     const encryptedCredentials = encryptObject(credentials);
 
+    const existingDefault = await ShippingProvider.findOne({ status: 'connected', isDefault: true, code: { $ne: code } });
+    const shouldBeDefault = !existingDefault;
+
     const provider = await ShippingProvider.findOneAndUpdate(
       { code },
       {
         status: 'connected',
+        isDefault: shouldBeDefault,
         encryptedCredentials,
         maskedCredentials: masked,
         warehouseId: warehouseId || null,
@@ -426,11 +440,21 @@ class StoreSettingService {
       throw new AppError('Không tìm thấy đối tác vận chuyển', 404);
     }
 
+    const wasDefault = provider.isDefault;
     provider.status = 'disconnected';
+    provider.isDefault = false;
     provider.encryptedCredentials = null;
     provider.maskedCredentials = {};
     provider.updatedBy = user?._id;
     await provider.save();
+
+    if (wasDefault) {
+      const nextConnected = await ShippingProvider.findOne({ status: 'connected', code: { $ne: code } });
+      if (nextConnected) {
+        nextConnected.isDefault = true;
+        await nextConnected.save();
+      }
+    }
 
     // Ghi nhận Audit Log
     try {
@@ -448,6 +472,50 @@ class StoreSettingService {
     }
 
     return { success: true, message: `Đã ngắt kết nối với đối tác ${provider.name}` };
+  }
+
+  /**
+   * Đặt đơn vị vận chuyển làm mặc định
+   */
+  static async setDefaultShippingProvider(code, user, req) {
+    const provider = await ShippingProvider.findOne({ code });
+    if (!provider) {
+      throw new AppError('Không tìm thấy đối tác vận chuyển', 404);
+    }
+    if (provider.status !== 'connected') {
+      throw new AppError('Chỉ có thể đặt đối tác đã kết nối làm mặc định', 400);
+    }
+
+    // Đưa tất cả đối tác khác về false
+    await ShippingProvider.updateMany({ _id: { $ne: provider._id } }, { isDefault: false });
+    provider.isDefault = true;
+    provider.updatedBy = user?._id;
+    await provider.save();
+
+    // Ghi nhận Audit Log
+    try {
+      await recordAuditLog({
+        req,
+        user,
+        action: 'UPDATE',
+        module: 'SHIPPING_PROVIDER',
+        targetId: provider._id,
+        targetName: `Đặt đối tác vận chuyển mặc định: ${provider.name}`,
+        newData: { code, isDefault: true },
+      });
+    } catch (auditErr) {
+      console.warn('[StoreSettingService] Lỗi ghi audit log:', auditErr.message);
+    }
+
+    return {
+      success: true,
+      message: `Đã đặt ${provider.name} làm đơn vị vận chuyển mặc định của cửa hàng.`,
+      data: {
+        code: provider.code,
+        name: provider.name,
+        isDefault: true,
+      },
+    };
   }
 
   /**
@@ -547,55 +615,59 @@ class StoreSettingService {
       }
     }
 
-    // 2. GHTK (Hỗ trợ cả Production services.giaohangtietkiem.vn và Sandbox services-staging.ghtklab.com)
+    // 2. GHTK (Tự động nhận diện cả Sandbox Staging và Production chính thức)
     else if (code === 'ghtk') {
       try {
         const token = (credentials.apiToken || '').trim();
+        const partnerCode = (credentials.partnerCode || '').trim();
         if (!token) {
           return { success: false, message: 'Vui lòng nhập API Token của GHTK.' };
         }
 
+        const headers = {
+          Token: token,
+          'Content-Type': 'application/json',
+        };
+        if (partnerCode) {
+          headers['X-Client-Source'] = partnerCode;
+        }
+
         const endpoints = [
-          { name: 'Chính thức (Production)', url: 'https://services.giaohangtietkiem.vn' },
-          { name: 'Thử nghiệm (Staging Sandbox)', url: 'https://services-staging.ghtklab.com' },
+          { name: 'Thử nghiệm (Staging Sandbox)', url: 'https://services-staging.ghtklab.com', env: 'sandbox' },
+          { name: 'Chính thức (Production)', url: 'https://services.giaohangtietkiem.vn', env: 'production' },
         ];
 
         let lastError = null;
-        for (const env of endpoints) {
+        for (const target of endpoints) {
           try {
             const res = await axios.get(
-              `${env.url}/services/shipment/fee?pick_province=Hà%20Nội&pick_district=Quận%20Cầu%20Giấy&province=Hà%20Nội&district=Quận%20Đống%20Đa&address=123&weight=1000`,
+              `${target.url}/services/shipment/fee?pick_province=Hà%20Nội&pick_district=Quận%20Cầu%20Giấy&province=Hà%20Nội&district=Quận%20Đống%20Đa&address=123&weight=1000`,
               {
-                headers: {
-                  Token: token,
-                  'Content-Type': 'application/json',
-                },
+                headers,
                 timeout: 8000,
+                validateStatus: () => true,
               }
             );
 
             if (res.data && (res.data.success || res.data.fee !== undefined)) {
               return {
                 success: true,
-                environment: env.name.includes('Production') ? 'production' : 'sandbox',
-                message: `Xác thực tài khoản GHTK thành công [Môi trường ${env.name}]! Token đối tác hợp lệ.`,
+                environment: target.env,
+                message: `Xác thực tài khoản GHTK thành công [Môi trường ${target.name}]! Token đối tác hợp lệ.`,
               };
+            }
+
+            if (res.data?.message) {
+              lastError = res.data.message;
             }
           } catch (err) {
             lastError = err.response?.data?.message || err.message;
           }
         }
 
-        if (token.length >= 20) {
-          return {
-            success: true,
-            message: 'Đã nhận diện định dạng API Token GHTK hợp lệ và sẵn sàng kết nối.',
-          };
-        }
-
         return {
           success: false,
-          message: `Xác thực GHTK thất bại: ${lastError || 'Token GHTK không hợp lệ trên cả Production và Staging.'}`,
+          message: `Xác thực GHTK thất bại: ${lastError || 'Token GHTK không hợp lệ trên cả hệ thống Sandbox lẫn Production.'}`,
         };
       } catch (err) {
         return {
@@ -605,36 +677,39 @@ class StoreSettingService {
       }
     }
 
-    // 3. ViettelPost Sandbox (partnerdev.viettelpost.vn)
+    // 3. ViettelPost Sandbox Dev (Chỉ chạy duy nhất trên môi trường thử nghiệm partnerdev.viettelpost.vn)
     else if (code === 'viettelpost') {
       try {
         const username = (credentials.username || '').trim();
         const password = (credentials.password || '').trim();
         if (!username || !password) {
-          return { success: false, message: 'Vui lòng nhập đầy đủ Tên đăng nhập và Mật khẩu ViettelPost.' };
+          return { success: false, message: 'Vui lòng nhập đầy đủ Tên đăng nhập và Mật khẩu ViettelPost Sandbox.' };
         }
 
+        const devUrl = 'https://partnerdev.viettelpost.vn/v2/user/Login';
         const res = await axios.post(
-          'https://partnerdev.viettelpost.vn/v2/user/Login',
+          devUrl,
           { USERNAME: username, PASSWORD: password },
-          { headers: { 'Content-Type': 'application/json' }, timeout: 8000 }
+          { headers: { 'Content-Type': 'application/json' }, timeout: 8000, validateStatus: () => true }
         );
 
-        if (res.data && res.data.status === 200) {
+        if (res.data && (res.data.status === 200 || res.data.data?.token)) {
           return {
             success: true,
-            message: 'Đăng nhập ViettelPost Sandbox thành công! Kết nối API hoạt động bình thường.',
-          };
-        } else {
-          return {
-            success: false,
-            message: res.data?.message || 'Tài khoản hoặc mật khẩu ViettelPost Sandbox không chính xác.',
+            environment: 'sandbox',
+            message: 'Đăng nhập ViettelPost Sandbox (partnerdev) thành công! Kết nối API hoạt động bình thường.',
           };
         }
+
+        const errorMsg = res.data?.message || (res.status === 401 ? 'Tài khoản hoặc mật khẩu không chính xác' : `Mã lỗi HTTP ${res.status}`);
+        return {
+          success: false,
+          message: `ViettelPost Sandbox từ chối: ${errorMsg}. Vui lòng kiểm tra lại thông tin tài khoản Development.`,
+        };
       } catch (err) {
         return {
           success: false,
-          message: `Lỗi kết nối ViettelPost Sandbox: ${err.response?.data?.message || err.message}`,
+          message: `Lỗi kết nối ViettelPost Sandbox (${err.message})`,
         };
       }
     }

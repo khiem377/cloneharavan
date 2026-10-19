@@ -8,18 +8,19 @@ const {
   getActiveProvidersForCheckout,
   testProvider,
 } = require('../controllers/paymentProvider.controller');
-const { protect, authorize } = require('../middleware/auth.middleware');
+const { protect } = require('../middleware/auth.middleware');
+const { requirePermission } = require('../middleware/permission.middleware');
 
 // Public route cho trang Checkout người mua lấy danh sách phương thức thanh toán đã kích hoạt
 router.get('/active', getActiveProvidersForCheckout);
 
 // Private routes dành cho Admin quản trị kết nối cổng thanh toán
-router.use(protect, authorize('admin'));
+router.use(protect);
 
-router.get('/list', getProviders);
-router.post('/:code/connect', connectProvider);
-router.patch('/:code/toggle', toggleEnable);
-router.post('/:code/disconnect', disconnectProvider);
-router.post('/:code/test', testProvider);
+router.get('/list', requirePermission(['setting.manage', 'setting.view']), getProviders);
+router.post('/:code/connect', requirePermission('setting.manage'), connectProvider);
+router.patch('/:code/toggle', requirePermission('setting.manage'), toggleEnable);
+router.post('/:code/disconnect', requirePermission('setting.manage'), disconnectProvider);
+router.post('/:code/test', requirePermission('setting.manage'), testProvider);
 
 module.exports = router;

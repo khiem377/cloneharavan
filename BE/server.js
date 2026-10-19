@@ -35,3 +35,5 @@ connectDB()
   .catch((err) => {
     console.error('Failed to connect to DB and start server:', err);
   });
+// reload nodemon
+

@@ -36,6 +36,12 @@ const storeSettingService = {
     const response = await api.post(`/settings/shipping-providers/${code}/test`);
     return response.data;
   },
+
+  // Đặt đối tác vận chuyển làm mặc định
+  setDefaultShippingProvider: async (code) => {
+    const response = await api.post(`/settings/shipping-providers/${code}/default`);
+    return response.data;
+  },
 };
 
 export default storeSettingService;
