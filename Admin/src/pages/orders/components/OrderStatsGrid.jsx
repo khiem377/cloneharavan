@@ -1,5 +1,6 @@
 import React from 'react';
 import { Package, Clock, CheckCircle2, Truck, Check, XCircle } from 'lucide-react';
+import { Card } from '@/components/ui/card';
 
 export default function OrderStatsGrid({ orders = [] }) {
   const stats = React.useMemo(() => {
@@ -86,9 +87,9 @@ export default function OrderStatsGrid({ orders = [] }) {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
       {ITEMS.map((item) => (
-        <div
+        <Card
           key={item.label}
-          className="border border-border bg-card rounded-[6px] p-3 sm:p-4 flex flex-col justify-between gap-1.5 shadow-2xs"
+          className="border-border bg-card rounded-[6px] p-3 sm:p-4 flex flex-col justify-between gap-1.5 shadow-2xs"
         >
           <div className="flex items-center justify-between">
             <span className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-muted-foreground font-mono truncate">
@@ -106,7 +107,7 @@ export default function OrderStatsGrid({ orders = [] }) {
               {item.sub}
             </p>
           </div>
-        </div>
+        </Card>
       ))}
     </div>
   );

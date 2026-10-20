@@ -1,11 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from '@/components/ui/table';
 import { toast } from '@/providers/ToastProvider';
 import shipmentService from '@/services/shipment.service';
 import CreateShipmentModal from './components/CreateShipmentModal';
 import ShipmentDetailModal from './components/ShipmentDetailModal';
-import { Truck, Plus, Search, Download, RefreshCw, Eye } from 'lucide-react';
+import { Truck, Plus, Search, RefreshCw, Eye } from 'lucide-react';
 
 const TABS = [
   { id: 'all', label: 'Tất cả' },
@@ -66,60 +77,43 @@ export default function ShipmentsListPage() {
     fetchShipments(1, search);
   }, [activeTab]);
 
-  useEffect(() => {
-    const q = searchParams.get('search');
-    if (q !== null && q !== search) {
-      setSearch(q);
-      fetchShipments(1, q);
-    }
-  }, [searchParams]);
-
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     fetchShipments(1, search);
   };
 
-  const handleExportCSV = () => {
-    if (shipments.length === 0) return toast.info('Không có dữ liệu để xuất');
-    const rows = shipments.map((s) => `"${s.shipmentCode}","${s.trackingCode}","${s.orderCode}","${s.carrierName}","${s.receiverInfo?.fullName}","${s.receiverInfo?.phone}",${s.codAmount},${s.shippingFee},"${s.statusText || s.status}"\n`);
-    const blob = new Blob(['\uFEFF' + ['Mã giao hàng,Mã vận đơn,Mã đơn hàng,Đối tác,Người nhận,SĐT,COD,Phí ship,Trạng thái\n'].concat(rows).join('')], { type: 'text/csv;charset=utf-8;' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `van_don_${Date.now()}.csv`;
-    a.click();
-    toast.success('Đã xuất file vận đơn thành công');
-  };
-
   return (
-    <div className="space-y-4">
-      {/* Banner / Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <div className="p-3 sm:p-6 flex flex-col gap-4 sm:gap-6 w-full max-w-full overflow-x-hidden min-h-full bg-background text-foreground">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-border">
         <div>
-          <h2 className="text-[18px] font-semibold text-[#212b36] dark:text-foreground">Danh sách vận đơn</h2>
-          <p className="text-[13px] text-[#637381] dark:text-muted-foreground">
-            Quản lý toàn bộ phiếu giao hàng, đối soát COD và mã vận đơn từ đối tác
+          <h1 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
+            <Truck className="size-5 text-primary" />
+            Vận đơn & Giao hàng
+          </h1>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Quản lý vận đơn, tra cứu hành trình GHN, Viettel Post, AhaMove
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button type="button" variant="outline" onClick={handleExportCSV} className="h-8 px-3 text-[12.5px] border-[#dfe3e8] cursor-pointer">
-            <Download className="w-3.5 h-3.5 mr-1.5" /> Xuất file
-          </Button>
-          <Button type="button" onClick={() => setIsCreateOpen(true)} className="h-8 px-3 text-[12.5px] bg-[#0088ff] hover:bg-[#0077e6] text-white cursor-pointer active:scale-[0.98]">
-            <Plus className="w-3.5 h-3.5 mr-1" /> Tạo vận đơn
-          </Button>
-        </div>
+        <Button
+          onClick={() => setIsCreateOpen(true)}
+          size="sm"
+          className="h-8 rounded-[6px] text-xs font-semibold active:scale-[0.98]"
+        >
+          <Plus size={15} className="mr-1" /> Tạo vận đơn mới
+        </Button>
       </div>
 
       {/* Main Container */}
-      <div className="bg-white dark:bg-card border border-[#dfe3e8] dark:border-border rounded-[6px] shadow-xs overflow-hidden">
+      <div className="bg-card border border-border rounded-[6px] shadow-2xs overflow-hidden">
         {/* Filter Tabs */}
-        <div className="flex items-center border-b border-[#dfe3e8] dark:border-border overflow-x-auto px-2">
+        <div className="flex items-center border-b border-border overflow-x-auto px-2">
           {TABS.map((tab) => (
             <button
               key={tab.id}
               onClick={() => { setActiveTab(tab.id); setSearchParams(tab.id === 'all' ? {} : { status: tab.id }); }}
-              className={`px-4 py-2.5 text-[13px] font-medium border-b-2 whitespace-nowrap cursor-pointer transition-colors ${
-                activeTab === tab.id ? 'border-[#0088ff] text-[#0088ff]' : 'border-transparent text-[#637381] hover:text-[#212b36]'
+              className={`px-4 py-2.5 text-xs font-medium border-b-2 whitespace-nowrap cursor-pointer transition-colors ${
+                activeTab === tab.id ? 'border-primary text-primary font-semibold' : 'border-transparent text-muted-foreground hover:text-foreground'
               }`}
             >
               {tab.label}
@@ -128,121 +122,140 @@ export default function ShipmentsListPage() {
         </div>
 
         {/* Search Bar */}
-        <form onSubmit={handleSearchSubmit} className="p-3 border-b border-[#dfe3e8] dark:border-border flex gap-2">
+        <form onSubmit={handleSearchSubmit} className="p-3 border-b border-border flex gap-2">
           <div className="relative flex-1">
-            <Search className="w-4 h-4 text-[#8a99a8] absolute left-3 top-2.5" />
-            <input
+            <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-2.5" />
+            <Input
               type="text"
               placeholder="Tìm kiếm theo mã đơn hàng, mã vận đơn, mã giao hàng, người nhận..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full h-9 pl-9 pr-3 rounded-[6px] border border-[#dfe3e8] dark:border-border bg-white dark:bg-muted text-[13px]"
+              className="h-9 pl-9 pr-3 rounded-[6px] text-xs"
             />
           </div>
-          <Button type="submit" variant="outline" className="h-9 px-3 text-[13px] border-[#dfe3e8] cursor-pointer">Tìm</Button>
-          <Button type="button" variant="outline" onClick={() => fetchShipments(pagination.page)} className="h-9 px-2.5 cursor-pointer">
+          <Button type="submit" variant="outline" size="sm" className="h-9 px-3 text-xs">Tìm</Button>
+          <Button type="button" variant="outline" size="sm" onClick={() => fetchShipments(pagination.page)} className="h-9 px-2.5">
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
           </Button>
         </form>
 
         {/* Table */}
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-[12.5px] border-collapse">
-            <thead>
-              <tr className="bg-[#f9fafb] dark:bg-muted/40 border-b border-[#dfe3e8] dark:border-border text-[#637381] font-medium">
-                <th className="py-2.5 px-3">Mã giao hàng</th>
-                <th className="py-2.5 px-3">Mã vận đơn</th>
-                <th className="py-2.5 px-3">Mã đơn hàng</th>
-                <th className="py-2.5 px-3">Trạng thái</th>
-                <th className="py-2.5 px-3 text-right">Tiền thu hộ COD</th>
-                <th className="py-2.5 px-3 text-right">Phí trả ĐTGH</th>
-                <th className="py-2.5 px-3">Đối tác</th>
-                <th className="py-2.5 px-3">Người nhận</th>
-                <th className="py-2.5 px-3">Kho lấy hàng</th>
-                <th className="py-2.5 px-3 text-center">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#dfe3e8] dark:divide-border text-[#212b36] dark:text-foreground">
-              {shipments.length === 0 ? (
-                <tr>
-                  <td colSpan={10} className="text-center py-10 text-[#8a99a8]">
-                    {loading ? 'Đang tải dữ liệu vận đơn...' : 'Chưa có vận đơn nào phù hợp'}
-                  </td>
-                </tr>
+          <Table>
+            <TableHeader className="bg-muted/40">
+              <TableRow>
+                <TableHead className="text-xs font-semibold py-2.5">Mã giao hàng</TableHead>
+                <TableHead className="text-xs font-semibold py-2.5">Mã vận đơn</TableHead>
+                <TableHead className="text-xs font-semibold py-2.5">Mã đơn hàng</TableHead>
+                <TableHead className="text-xs font-semibold py-2.5">Trạng thái</TableHead>
+                <TableHead className="text-xs font-semibold py-2.5 text-right">Tiền thu hộ COD</TableHead>
+                <TableHead className="text-xs font-semibold py-2.5 text-right">Phí trả ĐTGH</TableHead>
+                <TableHead className="text-xs font-semibold py-2.5">Đối tác</TableHead>
+                <TableHead className="text-xs font-semibold py-2.5">Người nhận</TableHead>
+                <TableHead className="text-xs font-semibold py-2.5">Kho lấy hàng</TableHead>
+                <TableHead className="text-xs font-semibold py-2.5 text-center w-20">Thao tác</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <TableRow key={`ship-skel-${i}`}>
+                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-20" /></TableCell>
+                    <TableCell className="text-right"><Skeleton className="h-4 w-16 ml-auto" /></TableCell>
+                    <TableCell className="text-right"><Skeleton className="h-4 w-16 ml-auto" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                    <TableCell className="text-center"><Skeleton className="h-7 w-14 mx-auto" /></TableCell>
+                  </TableRow>
+                ))
+              ) : shipments.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={10} className="text-center py-12 text-xs text-muted-foreground font-mono">
+                    Chưa có vận đơn nào phù hợp
+                  </TableCell>
+                </TableRow>
               ) : (
                 shipments.map((s) => (
-                  <tr key={s._id} className="hover:bg-[#fafbfb] dark:hover:bg-muted/30 transition-colors">
-                    <td className="py-2.5 px-3 font-mono font-medium text-[#0088ff] hover:underline cursor-pointer" onClick={() => setSelectedShipment(s)}>
+                  <TableRow key={s._id} className="hover:bg-muted/30 transition-colors">
+                    <TableCell className="py-2.5 font-mono text-xs font-medium text-primary hover:underline cursor-pointer" onClick={() => setSelectedShipment(s)}>
                       {s.shipmentCode}
-                    </td>
-                    <td className="py-2.5 px-3 font-mono font-semibold">{s.trackingCode}</td>
-                    <td
-                      className="py-2.5 px-3 font-mono font-medium text-[#0088ff] hover:underline cursor-pointer"
+                    </TableCell>
+                    <TableCell className="py-2.5 font-mono text-xs font-semibold">{s.trackingCode || '—'}</TableCell>
+                    <TableCell
+                      className="py-2.5 font-mono text-xs font-medium text-primary hover:underline cursor-pointer"
                       onClick={() => navigate(`/orders?search=${s.orderCode}`)}
                       title="Bấm để xem đơn hàng này"
                     >
                       {s.orderCode}
-                    </td>
-                    <td className="py-2.5 px-3">
-                      <span className="inline-block px-2 py-0.5 rounded-[4px] text-[11px] font-medium bg-[#f0f7ff] text-[#0088ff] border border-[#b3ddff]">
+                    </TableCell>
+                    <TableCell className="py-2.5">
+                      <Badge variant="outline" className="px-2 py-0.5 text-[11px] font-medium bg-primary/10 text-primary border-primary/20">
                         {s.statusText || s.status}
-                      </span>
-                    </td>
-                    <td className="py-2.5 px-3 text-right font-mono tabular-nums font-semibold">{(s.codAmount || 0).toLocaleString('vi-VN')}₫</td>
-                    <td className="py-2.5 px-3 text-right font-mono tabular-nums text-[#637381]">{(s.shippingFee || 0).toLocaleString('vi-VN')}₫</td>
-                    <td className="py-2.5 px-3 font-medium">{s.carrierName}</td>
-                    <td className="py-2.5 px-3">
-                      <p className="font-medium truncate max-w-[130px]">{s.receiverInfo?.fullName}</p>
-                      <span className="text-[11px] text-[#8a99a8] font-mono">{s.receiverInfo?.phone}</span>
-                    </td>
-                    <td className="py-2.5 px-3 text-[#637381] truncate max-w-[120px]">{s.warehouseName || 'Cửa hàng chính'}</td>
-                    <td className="py-2.5 px-3 text-center">
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="py-2.5 text-right font-mono tabular-nums text-xs font-semibold">{(s.codAmount || 0).toLocaleString('vi-VN')}₫</TableCell>
+                    <TableCell className="py-2.5 text-right font-mono tabular-nums text-xs text-muted-foreground">{(s.shippingFee || 0).toLocaleString('vi-VN')}₫</TableCell>
+                    <TableCell className="py-2.5 text-xs font-medium">{s.carrierName}</TableCell>
+                    <TableCell className="py-2.5">
+                      <p className="font-medium text-xs truncate max-w-[130px]">{s.receiverInfo?.fullName}</p>
+                      <span className="text-[11px] text-muted-foreground font-mono">{s.receiverInfo?.phone}</span>
+                    </TableCell>
+                    <TableCell className="py-2.5 text-xs text-muted-foreground truncate max-w-[120px]">{s.warehouseName || 'Cửa hàng chính'}</TableCell>
+                    <TableCell className="py-2.5 text-center">
                       <div className="flex items-center justify-center gap-1">
-                        <button
-                          type="button"
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           disabled={syncingId === s._id}
                           onClick={() => handleQuickSync(s._id)}
-                          className="p-1 rounded-[4px] hover:bg-slate-100 dark:hover:bg-muted text-emerald-600 dark:text-emerald-400 cursor-pointer disabled:opacity-50"
+                          className="size-7 rounded-[4px] text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10"
                           title="Đồng bộ trạng thái từ hãng"
                         >
-                          <RefreshCw className={`w-4 h-4 ${syncingId === s._id ? 'animate-spin' : ''}`} />
-                        </button>
-                        <button
-                          type="button"
+                          <RefreshCw className={`w-3.5 h-3.5 ${syncingId === s._id ? 'animate-spin' : ''}`} />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => setSelectedShipment(s)}
-                          className="p-1 rounded-[4px] hover:bg-slate-100 dark:hover:bg-muted text-[#0088ff] cursor-pointer"
+                          className="size-7 rounded-[4px] text-primary hover:bg-primary/10"
                           title="Xem chi tiết phiếu"
                         >
-                          <Eye className="w-4 h-4" />
-                        </button>
+                          <Eye className="w-3.5 h-3.5" />
+                        </Button>
                       </div>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))
               )}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
 
         {/* Footer pagination */}
-        <div className="p-3 border-t border-[#dfe3e8] dark:border-border flex justify-between items-center text-[12.5px] text-[#637381]">
+        <div className="p-3 border-t border-border flex justify-between items-center text-xs text-muted-foreground">
           <span>Hiển thị {shipments.length} trên tổng {pagination.total} vận đơn</span>
           <div className="flex gap-1">
             <Button
               type="button"
               variant="outline"
+              size="sm"
               disabled={pagination.page <= 1}
               onClick={() => fetchShipments(pagination.page - 1)}
-              className="h-7 px-2.5 text-[12px]"
+              className="h-7 px-2.5 text-xs"
             >
               Trang trước
             </Button>
             <Button
               type="button"
               variant="outline"
+              size="sm"
               disabled={pagination.page >= pagination.totalPages}
               onClick={() => fetchShipments(pagination.page + 1)}
-              className="h-7 px-2.5 text-[12px]"
+              className="h-7 px-2.5 text-xs"
             >
               Trang sau
             </Button>
@@ -265,4 +278,3 @@ export default function ShipmentsListPage() {
     </div>
   );
 }
-

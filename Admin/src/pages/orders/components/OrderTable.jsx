@@ -20,6 +20,8 @@ import {
   TableCell,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/providers/ToastProvider';
 
 const formatDate = (dateStr) => {
@@ -136,11 +138,20 @@ export default function OrderTable({
 
         <TableBody>
           {isLoading ? (
-            <TableRow>
-              <TableCell colSpan={10} className="py-12 text-center text-xs text-muted-foreground font-mono">
-                Đang tải dữ liệu đơn hàng...
-              </TableCell>
-            </TableRow>
+            Array.from({ length: 5 }).map((_, idx) => (
+              <TableRow key={idx}>
+                {isColumnVisible('orderCode') && <TableCell><Skeleton className="h-4 w-24" /></TableCell>}
+                {isColumnVisible('createdAt') && <TableCell><Skeleton className="h-4 w-28" /></TableCell>}
+                {isColumnVisible('customer') && <TableCell><Skeleton className="h-4 w-32" /></TableCell>}
+                {isColumnVisible('itemsSummary') && <TableCell><Skeleton className="h-4 w-36" /></TableCell>}
+                {isColumnVisible('address') && <TableCell><Skeleton className="h-4 w-40" /></TableCell>}
+                {isColumnVisible('totalAmount') && <TableCell className="text-right"><Skeleton className="h-4 w-20 ml-auto" /></TableCell>}
+                {isColumnVisible('payment') && <TableCell className="text-center"><Skeleton className="h-5 w-20 mx-auto rounded-[4px]" /></TableCell>}
+                {isColumnVisible('status') && <TableCell className="text-center"><Skeleton className="h-5 w-24 mx-auto rounded-[4px]" /></TableCell>}
+                {isColumnVisible('shipping') && <TableCell><Skeleton className="h-4 w-24" /></TableCell>}
+                {isColumnVisible('actions') && <TableCell className="text-right"><Skeleton className="h-7 w-16 ml-auto rounded-[4px]" /></TableCell>}
+              </TableRow>
+            ))
           ) : orders.length === 0 ? (
             <TableRow>
               <TableCell colSpan={10} className="py-12 text-center text-xs text-muted-foreground font-mono">
@@ -269,11 +280,12 @@ export default function OrderTable({
                   {isColumnVisible('payment') && (
                     <TableCell className="text-center">
                       <div className="flex flex-col items-center gap-1">
-                        <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded-[4px] text-[10px] font-semibold ${paymentCfg.badgeClass}`}
+                        <Badge
+                          variant="secondary"
+                          className={`text-[10px] font-semibold py-0.5 px-2 rounded-[4px] border ${paymentCfg.badgeClass}`}
                         >
                           {paymentCfg.label}
-                        </span>
+                        </Badge>
                         <span className="text-[10px] font-mono text-muted-foreground uppercase">
                           {order.paymentMethod || 'COD'}
                         </span>
@@ -285,12 +297,13 @@ export default function OrderTable({
                   {isColumnVisible('status') && (
                     <TableCell className="text-center">
                       <div className="flex flex-col items-center gap-1">
-                        <span
-                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-[4px] text-[11px] font-semibold ${statusCfg.badgeClass}`}
+                        <Badge
+                          variant="secondary"
+                          className={`text-[11px] font-semibold py-0.5 px-2 rounded-[4px] border gap-1 ${statusCfg.badgeClass}`}
                         >
                           <statusCfg.icon className="size-3 shrink-0" />
                           <span>{statusCfg.label}</span>
-                        </span>
+                        </Badge>
                         <span className="text-[10px] text-muted-foreground">
                           {statusCfg.inventoryNote}
                         </span>
@@ -317,9 +330,9 @@ export default function OrderTable({
                           </button>
                         </div>
                       ) : (
-                        <span className="inline-block px-1.5 py-0.5 rounded-[4px] text-[10px] text-muted-foreground bg-muted border border-border">
+                        <Badge variant="outline" className="text-[10px] text-muted-foreground py-0.5 px-1.5 font-normal">
                           Chưa tạo vận đơn
-                        </span>
+                        </Badge>
                       )}
                     </TableCell>
                   )}

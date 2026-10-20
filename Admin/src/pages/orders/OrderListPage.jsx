@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useOrders } from '@/hooks/useOrders';
 import DataTablePagination from '@/components/ui/DataTablePagination';
 import useColumnVisibility from '@/hooks/useColumnVisibility';
@@ -27,6 +27,7 @@ const ORDER_COLUMNS = [
 ];
 
 export default function OrderListPage() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const initialSearch = searchParams.get('search') || '';
   const initialStatus = searchParams.get('status') || 'ALL';
@@ -197,7 +198,7 @@ export default function OrderListPage() {
         orders={orders}
         shipmentsMap={shipmentsMap}
         isLoading={isLoading}
-        onViewOrder={(order) => setViewOrder(order)}
+        onViewOrder={(order) => navigate(`/orders/${order._id}`)}
         onOpenStatusModal={handleOpenStatusModal}
         onOpenCancelModal={handleOpenCancelModal}
         isColumnVisible={isColumnVisible}

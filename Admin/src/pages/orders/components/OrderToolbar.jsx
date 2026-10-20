@@ -2,6 +2,7 @@ import React from 'react';
 import { Search, RefreshCw, Download, Filter } from '@/components/ui/Icons';
 import ColumnToggleDropdown from '@/components/ui/ColumnToggleDropdown';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 export default function OrderToolbar({
   search,
@@ -40,7 +41,7 @@ export default function OrderToolbar({
             size="sm"
             onClick={onRefresh}
             disabled={isFetching}
-            className="h-8 rounded-[6px] gap-1.5 text-xs font-semibold"
+            className="h-8 rounded-[6px] gap-1.5 text-xs font-semibold cursor-pointer"
           >
             <RefreshCw className={`size-3.5 ${isFetching ? 'animate-spin' : ''}`} />
             <span>Làm mới</span>
@@ -50,7 +51,7 @@ export default function OrderToolbar({
             variant="outline"
             size="sm"
             onClick={onExportCsv}
-            className="h-8 rounded-[6px] gap-1.5 text-xs font-semibold"
+            className="h-8 rounded-[6px] gap-1.5 text-xs font-semibold cursor-pointer"
           >
             <Download className="size-3.5" />
             <span>Xuất CSV</span>
@@ -65,13 +66,13 @@ export default function OrderToolbar({
         {ORDER_STATUS_TABS.map((tab) => {
           const isActive = statusFilter === tab.key;
           return (
-            <button
+            <Button
               key={tab.key}
+              variant={isActive ? 'default' : 'secondary'}
+              size="sm"
               onClick={() => setStatusFilter(tab.key)}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[6px] text-xs font-medium transition-colors shrink-0 cursor-pointer ${
-                isActive
-                  ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
-                  : 'bg-secondary/60 text-muted-foreground hover:bg-secondary hover:text-foreground'
+              className={`h-7 px-3 rounded-[6px] text-xs font-medium gap-1.5 shrink-0 cursor-pointer shadow-none ${
+                isActive ? 'font-semibold' : 'text-muted-foreground hover:text-foreground'
               }`}
             >
               {tab.dot && (
@@ -81,8 +82,8 @@ export default function OrderToolbar({
                   }`}
                 />
               )}
-              {tab.label}
-            </button>
+              <span>{tab.label}</span>
+            </Button>
           );
         })}
       </div>
@@ -92,13 +93,13 @@ export default function OrderToolbar({
         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
           {/* Search */}
           <div className="relative w-full sm:w-72">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
-            <input
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground z-10" />
+            <Input
               type="text"
               placeholder="Tìm mã đơn, tên khách, số điện thoại..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full h-8 pl-8 pr-3 rounded-[6px] border border-border bg-card text-xs text-foreground placeholder:text-muted-foreground outline-none focus:border-ring focus:ring-1 focus:ring-ring transition-colors"
+              className="w-full h-8 pl-8 pr-3 text-xs bg-card rounded-[6px]"
             />
           </div>
 
