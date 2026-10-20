@@ -15,6 +15,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const decodeHtml = (html) => {
   if (!html) return '';
@@ -378,15 +379,16 @@ export default function BlogPostFormPage() {
                   { key: 'isFeatured', label: 'Nổi bật' },
                   { key: 'allowComment', label: 'Cho phép bình luận' },
                 ].map(({ key, label }) => (
-                  <label key={key} className="flex items-center gap-2 cursor-pointer text-xs">
-                    <input
-                      type="checkbox"
+                  <div key={key} className="flex items-center gap-2">
+                    <Checkbox
+                      id={`post-${key}`}
                       checked={form[key]}
-                      onChange={e => set(key, e.target.checked)}
-                      className="rounded-[3px] border-border size-3.5"
+                      onCheckedChange={checked => set(key, checked)}
                     />
-                    <span className="text-foreground">{label}</span>
-                  </label>
+                    <label htmlFor={`post-${key}`} className="text-xs text-foreground cursor-pointer select-none">
+                      {label}
+                    </label>
+                  </div>
                 ))}
               </div>
             </CardContent>

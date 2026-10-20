@@ -197,6 +197,7 @@ export default function BlogPostListPage() {
       <BlogPostTable
         posts={posts}
         selected={selected}
+        loading={loading}
         onToggleSelect={toggleSelect}
         onToggleAll={toggleAll}
         onEdit={(post) => navigate(`/blog/posts/${post._id}/edit`)}

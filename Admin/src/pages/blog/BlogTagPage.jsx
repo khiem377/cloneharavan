@@ -10,6 +10,8 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table, TableHeader, TableBody, TableHead, TableRow, TableCell,
 } from '@/components/ui/table';
@@ -127,12 +129,13 @@ export default function BlogTagPage() {
           <TableHeader className="bg-muted/40">
             <TableRow>
               <TableHead className="w-10 px-3 py-2 text-center">
-                <input
-                  type="checkbox"
-                  checked={selected.length === data.length && data.length > 0}
-                  onChange={toggleAll}
-                  className="rounded-[3px] border-border size-3.5"
-                />
+                <div className="flex items-center justify-center">
+                  <Checkbox
+                    checked={selected.length === data.length && data.length > 0}
+                    onCheckedChange={toggleAll}
+                    aria-label="Chọn tất cả thẻ"
+                  />
+                </div>
               </TableHead>
               <TableHead className="text-xs font-semibold py-2">Tag</TableHead>
               <TableHead className="text-xs font-semibold py-2 w-40">Slug</TableHead>
@@ -143,11 +146,16 @@ export default function BlogTagPage() {
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow>
-                <TableCell colSpan={6} className="py-12 text-center">
-                  <Loader2 className="size-5 animate-spin mx-auto text-primary" />
-                </TableCell>
-              </TableRow>
+              Array.from({ length: 5 }).map((_, i) => (
+                <TableRow key={`tag-skel-${i}`}>
+                  <TableCell className="w-10 text-center"><Skeleton className="size-4 mx-auto" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                  <TableCell className="text-right"><Skeleton className="h-4 w-8 ml-auto" /></TableCell>
+                  <TableCell className="text-center"><Skeleton className="h-5 w-16 mx-auto" /></TableCell>
+                  <TableCell className="text-right"><Skeleton className="h-7 w-16 ml-auto" /></TableCell>
+                </TableRow>
+              ))
             ) : data.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="py-12 text-center text-xs text-muted-foreground font-mono">
@@ -157,26 +165,30 @@ export default function BlogTagPage() {
             ) : data.map(tag => (
               <TableRow key={tag._id} className="hover:bg-muted/30">
                 <TableCell className="px-3 py-2 text-center">
-                  <input
-                    type="checkbox"
-                    checked={selected.includes(tag._id)}
-                    onChange={() => toggleOne(tag._id)}
-                    className="rounded-[3px] border-border size-3.5"
-                  />
+                  <div className="flex items-center justify-center">
+                    <Checkbox
+                      checked={selected.includes(tag._id)}
+                      onCheckedChange={() => toggleOne(tag._id)}
+                      aria-label={`Chọn thẻ ${tag.name}`}
+                    />
+                  </div>
                 </TableCell>
                 <TableCell className="py-2">
-                  <span className="inline-flex items-center gap-1 rounded-[4px] bg-primary/10 border border-primary/20 text-primary px-2 py-0.5 text-xs font-medium font-mono">
+                  <Badge variant="secondary" className="gap-1 bg-primary/10 border-primary/20 text-primary px-2 py-0.5 text-xs font-medium font-mono hover:bg-primary/15">
                     #{tag.name}
-                  </span>
+                  </Badge>
                 </TableCell>
                 <TableCell className="py-2 text-muted-foreground text-xs font-mono">{tag.slug}</TableCell>
                 <TableCell className="py-2 text-right text-foreground font-mono text-xs tabular-nums font-semibold">{tag.postCount || 0}</TableCell>
                 <TableCell className="py-2 text-center">
-                  <span className={`px-2 py-0.5 rounded-[4px] text-[10px] font-semibold ${
-                    tag.isActive ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'bg-muted text-muted-foreground border border-border'
-                  }`}>
+                  <Badge
+                    variant="outline"
+                    className={`px-2 py-0.5 text-[10px] font-semibold ${
+                      tag.isActive ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 hover:bg-emerald-500/15' : 'bg-muted text-muted-foreground border-border hover:bg-muted/80'
+                    }`}
+                  >
                     {tag.isActive ? 'Hoạt động' : 'Ẩn'}
-                  </span>
+                  </Badge>
                 </TableCell>
                 <TableCell className="py-2 text-right">
                   <div className="flex items-center justify-end gap-1">
@@ -246,15 +258,16 @@ export default function BlogTagPage() {
                     placeholder="Mô tả ngắn về tag..."
                   />
                 </div>
-                <label className="flex items-center gap-2 text-xs pt-1 cursor-pointer">
-                  <input
-                    type="checkbox"
+                <div className="flex items-center gap-2 pt-1">
+                  <Checkbox
+                    id="tag-is-active"
                     checked={form.isActive}
-                    onChange={e => set('isActive', e.target.checked)}
-                    className="rounded-[3px] size-3.5"
+                    onCheckedChange={checked => set('isActive', checked)}
                   />
-                  <span>Hiển thị tag</span>
-                </label>
+                  <label htmlFor="tag-is-active" className="text-xs cursor-pointer select-none">
+                    Hiển thị tag
+                  </label>
+                </div>
                 <div className="flex justify-end gap-2 pt-2 border-t border-border">
                   <Button type="button" variant="outline" size="sm" onClick={() => setModal(null)} className="h-8 rounded-[6px] text-xs">
                     Hủy

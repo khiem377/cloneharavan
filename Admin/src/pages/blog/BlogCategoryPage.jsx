@@ -24,6 +24,8 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table, TableHeader, TableBody, TableHead, TableRow, TableCell,
 } from '@/components/ui/table';
@@ -53,7 +55,9 @@ function SortableRow({ cat, selected, onSelect, onEdit, onDelete }) {
       className={`hover:bg-muted/30 transition-colors select-none ${isDragging ? 'bg-muted/50 ring-1 ring-border' : ''}`}
     >
       <TableCell className="px-3 py-2 w-10 text-center" onPointerDown={stopProp} onClick={stopProp}>
-        <input type="checkbox" checked={selected} onChange={onSelect} className="rounded-[3px] border-border size-3.5" />
+        <div className="flex items-center justify-center">
+          <Checkbox checked={selected} onCheckedChange={onSelect} aria-label={`Chọn danh mục ${cat.name}`} />
+        </div>
       </TableCell>
       <TableCell className="px-4 py-2">
         <div className="flex items-center gap-3">
@@ -73,15 +77,15 @@ function SortableRow({ cat, selected, onSelect, onEdit, onDelete }) {
       <TableCell className="px-4 py-2 text-muted-foreground text-xs font-mono tabular-nums">{cat.order}</TableCell>
       <TableCell className="px-4 py-2 text-right text-foreground text-xs font-mono tabular-nums font-semibold">{cat.postCount || 0}</TableCell>
       <TableCell className="px-4 py-2 text-center" onPointerDown={stopProp} onClick={stopProp}>
-        <button
-          type="button"
+        <Badge
+          variant="outline"
           onClick={() => blogCategoryService.toggleStatus(cat._id, !cat.isActive).then(() => window.location.reload())}
-          className={`px-2 py-0.5 rounded-[4px] text-[10px] font-semibold transition-colors active:scale-[0.98] ${
-            cat.isActive ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'bg-muted text-muted-foreground border border-border'
+          className={`cursor-pointer px-2 py-0.5 text-[10px] font-semibold transition-colors active:scale-[0.98] ${
+            cat.isActive ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 hover:bg-emerald-500/15' : 'bg-muted text-muted-foreground border-border hover:bg-muted/80'
           }`}
         >
           {cat.isActive ? 'Hoạt động' : 'Ẩn'}
-        </button>
+        </Badge>
       </TableCell>
       <TableCell className="px-4 py-2 text-right" onPointerDown={stopProp} onClick={stopProp}>
         <div className="flex items-center justify-end gap-1">
@@ -284,9 +288,20 @@ export default function BlogCategoryPage() {
 
       <Card className="rounded-[6px] border border-border shadow-none overflow-hidden">
         {loading ? (
-          <div className="flex items-center justify-center py-16">
-            <Loader2 className="size-6 animate-spin text-primary" />
-          </div>
+          <Table>
+            <TableBody>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <TableRow key={`cat-skel-${i}`}>
+                  <TableCell className="w-10 text-center"><Skeleton className="size-4 mx-auto" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-40" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-12" /></TableCell>
+                  <TableCell className="text-right"><Skeleton className="h-4 w-8 ml-auto" /></TableCell>
+                  <TableCell className="text-center"><Skeleton className="h-5 w-16 mx-auto" /></TableCell>
+                  <TableCell className="text-right"><Skeleton className="h-7 w-16 ml-auto" /></TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         ) : data.length === 0 ? (
           <div className="text-center py-16 text-muted-foreground text-xs font-mono">Chưa có danh mục nào</div>
         ) : (
@@ -295,7 +310,9 @@ export default function BlogCategoryPage() {
               <TableHeader className="bg-muted/40">
                 <TableRow>
                   <TableHead className="px-3 py-2 w-10 text-center">
-                    <input type="checkbox" checked={allSelected} onChange={toggleAll} className="rounded-[3px] border-border size-3.5" />
+                    <div className="flex items-center justify-center">
+                      <Checkbox checked={allSelected} onCheckedChange={toggleAll} aria-label="Chọn tất cả danh mục" />
+                    </div>
                   </TableHead>
                   <TableHead className="text-xs font-semibold py-2">Tên</TableHead>
                   <TableHead className="text-xs font-semibold py-2 w-20">Thứ tự</TableHead>
@@ -399,15 +416,16 @@ export default function BlogCategoryPage() {
                     </div>
                   </div>
                 </div>
-                <label className="flex items-center gap-2 text-xs pt-1 cursor-pointer">
-                  <input
-                    type="checkbox"
+                <div className="flex items-center gap-2 pt-1">
+                  <Checkbox
+                    id="form-is-active"
                     checked={form.isActive}
-                    onChange={e => set('isActive', e.target.checked)}
-                    className="rounded-[3px] size-3.5"
+                    onCheckedChange={checked => set('isActive', checked)}
                   />
-                  <span>Hiển thị danh mục</span>
-                </label>
+                  <label htmlFor="form-is-active" className="text-xs cursor-pointer select-none">
+                    Hiển thị danh mục
+                  </label>
+                </div>
                 <div className="flex justify-end gap-2 pt-2 border-t border-border">
                   <Button type="button" variant="outline" size="sm" onClick={() => setModal(null)} className="h-8 rounded-[6px] text-xs">
                     Hủy
