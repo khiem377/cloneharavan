@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/providers/ToastProvider';
 import storeSettingService from '@/services/storeSetting.service';
 import { CarrierLogo } from './CarrierLogos';
@@ -246,10 +247,12 @@ export default function ConnectShippingModal({ isOpen, onClose, provider, onSucc
           </div>
 
           {config.hasVAT && (
-            <label className="flex items-center gap-2 cursor-pointer text-[#212b36] dark:text-foreground pt-1">
-              <input type="checkbox" className="rounded-[4px] text-[#0088ff]" />
-              <span>Đăng ký xuất hóa đơn (VAT)</span>
-            </label>
+            <div className="flex items-center gap-2 pt-1">
+              <Checkbox id="shipping-vat" />
+              <label htmlFor="shipping-vat" className="cursor-pointer text-[#212b36] dark:text-foreground select-none text-[13px]">
+                Đăng ký xuất hóa đơn (VAT)
+              </label>
+            </div>
           )}
 
           {config.notice && (
@@ -260,19 +263,19 @@ export default function ConnectShippingModal({ isOpen, onClose, provider, onSucc
           )}
 
           {/* AGREEMENT CHECKBOX */}
-          <label className="flex items-start gap-2.5 pt-2 cursor-pointer text-[#637381] dark:text-muted-foreground text-[12px] leading-relaxed select-none">
-            <input
-              type="checkbox"
+          <div className="flex items-start gap-2.5 pt-2">
+            <Checkbox
+              id="shipping-agreed"
               checked={agreed}
-              onChange={(e) => setAgreed(e.target.checked)}
-              className="mt-0.5 rounded-[4px] text-[#0088ff]"
+              onCheckedChange={(checked) => setAgreed(checked)}
+              className="mt-0.5"
             />
-            <span>
+            <label htmlFor="shipping-agreed" className="cursor-pointer text-[#637381] dark:text-muted-foreground text-[12px] leading-relaxed select-none">
               Tôi đã đọc, hiểu và đồng ý với{' '}
-              <span className="text-[#0088ff] font-medium">Chính sách bảo mật dữ liệu</span>{' '}
+              <span className="text-primary font-medium">Chính sách bảo mật dữ liệu</span>{' '}
               của Shop và cho phép chia sẻ dữ liệu cần thiết giữa Shop và {provider.name} để sử dụng dịch vụ.
-            </span>
-          </label>
+            </label>
+          </div>
 
           {/* BULLETED BLUE REFERENCE LINKS SAPO 100% */}
           {config.links && config.links.length > 0 && (

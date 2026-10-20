@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Card } from '@/components/ui/card';
 import { toast } from '@/providers/ToastProvider';
 import storeSettingService from '@/services/storeSetting.service';
 import { Info, X } from 'lucide-react';
@@ -225,48 +227,48 @@ export default function ShippingRulesTab({ initialData, onRefresh }) {
           </div>
         </div>
 
-        {/* 3 CHECKBOXES SAPO 100% */}
-        <div className="pt-4 border-t border-[#f4f6f8] dark:border-border space-y-3.5 text-[13px]">
-          <label className="flex items-start gap-2.5 cursor-pointer text-[#212b36] dark:text-foreground">
-            <input
-              type="checkbox"
-              checked={shipping.syncOrderNote || false}
-              onChange={(e) => handleChange('syncOrderNote', e.target.checked)}
-              className="mt-0.5 rounded-[3px] text-[#0088ff]"
-            />
+        {/* 3 CHECKBOXES */}
+        <div className="pt-4 border-t border-border space-y-3.5 text-xs">
+          <label className="flex items-start gap-2.5 cursor-pointer text-foreground">
+            <div className="mt-0.5">
+              <Checkbox
+                checked={shipping.syncOrderNote || false}
+                onCheckedChange={(checked) => handleChange('syncOrderNote', checked)}
+              />
+            </div>
             <div>
-              <span className="font-medium">Tự động đồng bộ ghi chú đơn hàng sang ghi chú giao hàng</span>
-              <p className="text-[12px] text-[#637381] dark:text-muted-foreground mt-0.5 leading-relaxed">
+              <span className="font-semibold">Tự động đồng bộ ghi chú đơn hàng sang ghi chú giao hàng</span>
+              <p className="text-[11.5px] text-muted-foreground mt-0.5 leading-relaxed">
                 Khi tạo đơn vận chuyển, hệ thống sẽ tự động điền Ghi chú giao hàng bằng nội dung trong Ghi chú đơn hàng.
               </p>
             </div>
           </label>
 
-          <label className="flex items-start gap-2.5 cursor-pointer text-[#212b36] dark:text-foreground">
-            <input
-              type="checkbox"
-              checked={shipping.syncReturnedStatus || false}
-              onChange={(e) => handleChange('syncReturnedStatus', e.target.checked)}
-              className="mt-0.5 rounded-[3px] text-[#0088ff]"
-            />
+          <label className="flex items-start gap-2.5 cursor-pointer text-foreground">
+            <div className="mt-0.5">
+              <Checkbox
+                checked={shipping.syncReturnedStatus || false}
+                onCheckedChange={(checked) => handleChange('syncReturnedStatus', checked)}
+              />
+            </div>
             <div>
-              <span className="font-medium">Tự động đồng bộ trạng thái "Đã hoàn hàng" với đối tác vận chuyển tích hợp</span>
-              <p className="text-[12px] text-[#637381] dark:text-muted-foreground mt-0.5 leading-relaxed">
+              <span className="font-semibold">Tự động đồng bộ trạng thái "Đã hoàn hàng" với đối tác vận chuyển tích hợp</span>
+              <p className="text-[11.5px] text-muted-foreground mt-0.5 leading-relaxed">
                 Khi bật tính năng này, các đơn không giao được hàng của đối tác giao hàng tích hợp ở trạng thái chuyển hoàn thành công, hệ thống sẽ tự động nhập kho toàn bộ sản phẩm. Nếu không bật tính năng này, các đơn sẽ được treo ở trạng thái "Chờ xác nhận hoàn hàng" để cửa hàng xác nhận hoàn kho thủ công.
               </p>
             </div>
           </label>
 
-          <label className="flex items-start gap-2.5 cursor-pointer text-[#212b36] dark:text-foreground">
-            <input
-              type="checkbox"
-              checked={shipping.syncCancelledStatus !== false}
-              onChange={(e) => handleChange('syncCancelledStatus', e.target.checked)}
-              className="mt-0.5 rounded-[3px] text-[#0088ff]"
-            />
+          <label className="flex items-start gap-2.5 cursor-pointer text-foreground">
+            <div className="mt-0.5">
+              <Checkbox
+                checked={shipping.syncCancelledStatus !== false}
+                onCheckedChange={(checked) => handleChange('syncCancelledStatus', checked)}
+              />
+            </div>
             <div>
-              <span className="font-medium">Tự động đồng bộ trạng thái "Hủy giao hàng" với đối tác vận chuyển tích hợp khi đơn ở trạng thái "Chờ lấy hàng"</span>
-              <p className="text-[12px] text-[#637381] dark:text-muted-foreground mt-0.5 leading-relaxed">
+              <span className="font-semibold">Tự động đồng bộ trạng thái "Hủy giao hàng" với đối tác vận chuyển tích hợp khi đơn ở trạng thái "Chờ lấy hàng"</span>
+              <p className="text-[11.5px] text-muted-foreground mt-0.5 leading-relaxed">
                 Khi bật tính năng này, với các đơn đang ở trạng thái "Chờ lấy hàng" nếu hãng vận chuyển huỷ đơn, hệ thống sẽ chuyển đơn về trạng thái "Huỷ giao hàng". Nếu không bật tính năng này, các đơn sẽ được treo ở trạng thái "Chờ xác nhận hoàn hàng" để cửa hàng xác nhận hoàn kho thủ công.
               </p>
             </div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/providers/ToastProvider';
 import storeSettingService from '@/services/storeSetting.service';
 import LogoUploadSection from './LogoUploadSection';
@@ -350,16 +351,16 @@ export default function GeneralSettingsTab({ initialData, onRefresh }) {
           </div>
         </div>
 
-        <label className="flex items-start gap-2.5 pt-2 cursor-pointer text-[#212b36] dark:text-foreground text-[13px]">
-          <input
-            type="checkbox"
-            checked={formData.standards?.hasDecimal || false}
-            onChange={(e) => handleStandardChange('hasDecimal', e.target.checked)}
-            className="mt-0.5 rounded-[3px] text-[#0088ff]"
-          />
+        <label className="flex items-start gap-2.5 pt-2 cursor-pointer text-foreground text-xs">
+          <div className="mt-0.5">
+            <Checkbox
+              checked={formData.standards?.hasDecimal || false}
+              onCheckedChange={(checked) => handleStandardChange('hasDecimal', checked)}
+            />
+          </div>
           <div>
-            <span className="font-medium">Định dạng số tiền có 2 số thập phân</span>
-            <p className="text-[12px] text-[#637381] dark:text-muted-foreground mt-0.5 leading-relaxed">
+            <span className="font-semibold">Định dạng số tiền có 2 số thập phân</span>
+            <p className="text-[11.5px] text-muted-foreground mt-0.5 leading-relaxed">
               Áp dụng cho nghiệp vụ quản lý: Giá vốn sản phẩm, Đặt hàng nhập, Nhập hàng, Trả hàng nhập, Sổ Quỹ, các Báo cáo
             </p>
           </div>

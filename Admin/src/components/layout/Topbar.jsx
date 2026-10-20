@@ -4,6 +4,7 @@ import useAuthStore from '@/store/authStore';
 import { authService } from '@/services/auth.service';
 import { toast } from '@/providers/ToastProvider';
 import { useNavigate } from 'react-router-dom';
+import NotificationDropdown from './NotificationDropdown';
 
 // ── Change Password Modal ──────────────────────────────────────────────────
 function ChangePasswordModal({ onClose }) {
@@ -240,9 +241,7 @@ export default function Topbar({ title, onToggleSidebar }) {
           <h1 className="topbar-title">{title}</h1>
         </div>
         <div className="topbar-actions">
-          <button className="icon-btn" aria-label="Thông báo">
-            <Bell size={18} />
-          </button>
+          <NotificationDropdown />
 
           {/* User Menu Trigger & Popover */}
           <div style={{ position: 'relative' }} ref={menuRef}>

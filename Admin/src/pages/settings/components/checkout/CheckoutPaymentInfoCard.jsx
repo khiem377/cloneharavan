@@ -1,5 +1,6 @@
 import React from 'react';
 import { AlertTriangle } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 
 export default function CheckoutPaymentInfoCard({ checkout, onChange, onFieldMatrixChange }) {
   const renderRadioGroup = (fieldKey, label) => {
@@ -63,20 +64,22 @@ export default function CheckoutPaymentInfoCard({ checkout, onChange, onFieldMat
       <div className="pt-4 border-t border-[#f4f6f8] dark:border-border space-y-3.5">
         {/* Checkbox 1: Sử dụng địa chỉ 2 cấp */}
         <div>
-          <label className="flex items-start gap-2.5 cursor-pointer text-[13px] text-[#212b36] dark:text-foreground">
-            <input
-              type="checkbox"
+          <div className="flex items-start gap-2.5 text-[13px] text-[#212b36] dark:text-foreground">
+            <Checkbox
+              id="two-level-address"
               checked={checkout.useTwoLevelAddress || false}
-              onChange={(e) => onChange('useTwoLevelAddress', e.target.checked)}
-              className="mt-0.5 rounded-[3px] text-[#0088ff]"
+              onCheckedChange={(checked) => onChange('useTwoLevelAddress', checked)}
+              className="mt-0.5"
             />
             <div>
-              <span className="font-medium">Sử dụng địa chỉ 2 cấp</span>
+              <label htmlFor="two-level-address" className="font-medium cursor-pointer select-none">
+                Sử dụng địa chỉ 2 cấp
+              </label>
               <p className="text-[12px] text-[#637381] dark:text-muted-foreground">
                 Khi bật, người mua cần sử dụng địa chỉ 2 cấp ở trang checkout
               </p>
             </div>
-          </label>
+          </div>
 
           {/* CẢNH BÁO VÀNG CHUẨN SAPO KHI BẬT ĐỊA CHỈ 2 CẤP */}
           {checkout.useTwoLevelAddress && (
@@ -90,31 +93,35 @@ export default function CheckoutPaymentInfoCard({ checkout, onChange, onFieldMat
         </div>
 
         {/* Checkbox 2: Cho phép khách hàng nhập thông tin nhận hàng khác */}
-        <label className="flex items-start gap-2.5 cursor-pointer text-[13px] text-[#212b36] dark:text-foreground">
-          <input
-            type="checkbox"
+        <div className="flex items-start gap-2.5 text-[13px] text-[#212b36] dark:text-foreground">
+          <Checkbox
+            id="different-shipping"
             checked={checkout.allowDifferentShippingAddress ?? true}
-            onChange={(e) => onChange('allowDifferentShippingAddress', e.target.checked)}
-            className="mt-0.5 rounded-[3px] text-[#0088ff]"
+            onCheckedChange={(checked) => onChange('allowDifferentShippingAddress', checked)}
+            className="mt-0.5"
           />
-          <span className="font-medium">Cho phép khách hàng nhập thông tin nhận hàng khác với thông tin mua hàng.</span>
-        </label>
+          <label htmlFor="different-shipping" className="font-medium cursor-pointer select-none">
+            Cho phép khách hàng nhập thông tin nhận hàng khác với thông tin mua hàng.
+          </label>
+        </div>
 
         {/* Checkbox 3: Cho phép gửi yêu cầu xuất hóa đơn */}
-        <label className="flex items-start gap-2.5 cursor-pointer text-[13px] text-[#212b36] dark:text-foreground">
-          <input
-            type="checkbox"
+        <div className="flex items-start gap-2.5 text-[13px] text-[#212b36] dark:text-foreground">
+          <Checkbox
+            id="company-invoice"
             checked={checkout.allowCompanyInvoice ?? true}
-            onChange={(e) => onChange('allowCompanyInvoice', e.target.checked)}
-            className="mt-0.5 rounded-[3px] text-[#0088ff]"
+            onCheckedChange={(checked) => onChange('allowCompanyInvoice', checked)}
+            className="mt-0.5"
           />
           <div>
-            <span className="font-medium">Cho phép gửi yêu cầu xuất hóa đơn</span>
+            <label htmlFor="company-invoice" className="font-medium cursor-pointer select-none">
+              Cho phép gửi yêu cầu xuất hóa đơn
+            </label>
             <p className="text-[12px] text-[#637381] dark:text-muted-foreground">
               Khi bật người mua sẽ có thể yêu cầu xuất hóa đơn ở trang thanh toán. Hiện tại chỉ nên bật khi bạn có tích hợp dịch vụ hóa đơn điện tử
             </p>
           </div>
-        </label>
+        </div>
       </div>
     </div>
   );

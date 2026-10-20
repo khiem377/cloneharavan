@@ -14,6 +14,7 @@ import VariantEditPage from '@/pages/products/VariantEditPage';
 import ImportExportPage from '@/pages/products/ImportExportPage';
 import ComboListPage from '@/pages/products/ComboListPage';
 import OrderListPage from '@/pages/orders/OrderListPage';
+import OrderDetailPage from '@/pages/orders/detail/OrderDetailPage';
 import ShipmentsOverviewPage from '@/pages/shipments/ShipmentsOverviewPage';
 import ShipmentsListPage from '@/pages/shipments/ShipmentsListPage';
 import CouponPage from '@/pages/promotions/CouponPage';
@@ -36,6 +37,7 @@ import CustomerListPage from '@/pages/customers/CustomerListPage';
 import StaffListPage from '@/pages/staffs/StaffListPage';
 import AdminProfilePage from '@/pages/profile/AdminProfilePage';
 import SettingsPage from '@/pages/settings/SettingsPage';
+import NotificationsPage from '@/pages/notifications/NotificationsPage';
 
 // Inventory / Kho & Cung ứng
 import SupplierListPage from '@/pages/inventory/SupplierListPage';
@@ -88,6 +90,7 @@ const router = createBrowserRouter([
                 children: [
                     { index: true, element: <RootRedirector /> },
                     { path: 'profile', element: <AdminProfilePage /> },
+                    { path: 'notifications', element: <NotificationsPage /> },
                     { path: 'dashboard', element: <PermissionGuard requiredPermission="dashboard.view"><DashboardPage /></PermissionGuard> },
                     { path: 'media', element: <PermissionGuard requiredPermission="media.manage"><MediaPage /></PermissionGuard> },
                     { path: 'banners', element: <PermissionGuard requiredPermission="media.manage"><BannerPage /></PermissionGuard> },
@@ -100,6 +103,7 @@ const router = createBrowserRouter([
                     { path: 'products/:id/variants', element: <PermissionGuard requiredPermission="product.view"><ProductVariantsPage /></PermissionGuard> },
                     { path: 'products/:id/variants/:variantId/edit', element: <PermissionGuard requiredPermission="product.edit"><VariantEditPage /></PermissionGuard> },
                     { path: 'orders', element: <OrderListPage /> },
+                    { path: 'orders/:id', element: <OrderDetailPage /> },
                     { path: 'shipments', element: <PermissionGuard requiredPermission="order.view"><ShipmentsListPage /></PermissionGuard> },
                     { path: 'shipments/overview', element: <PermissionGuard requiredPermission="order.view"><ShipmentsOverviewPage /></PermissionGuard> },
                     { path: 'products/combos', element: <PermissionGuard requiredPermission="product.view"><ComboListPage /></PermissionGuard> },

@@ -7,9 +7,12 @@ import ShippingProvidersTab from './components/ShippingProvidersTab';
 import ShippingRulesTab from './components/ShippingRulesTab';
 import PaymentMethodsTab from './components/PaymentMethodsTab';
 import ActivityLogTab from './components/ActivityLogTab';
+import NotificationSettingsTab from './components/NotificationSettingsTab';
+import SmtpSettingsTab from './components/SmtpSettingsTab';
 import storeSettingService from '@/services/storeSetting.service';
 import { toast } from '@/providers/ToastProvider';
 import { RefreshCw, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 const TAB_TITLES = {
   store: 'Cấu hình chung',
@@ -17,6 +20,8 @@ const TAB_TITLES = {
   checkout: 'Trang thanh toán',
   'shipping-providers': 'Đối tác vận chuyển',
   'shipping-rules': 'Cấu hình vận chuyển',
+  notifications: 'Cấu hình thông báo & Email',
+  smtp: 'Máy chủ gửi thư (SMTP)',
   activity: 'Nhật ký hoạt động',
 };
 
@@ -33,6 +38,13 @@ const TAB_ALIASES = {
   carriers: 'shipping-providers',
   'shipping-rules': 'shipping-rules',
   rules: 'shipping-rules',
+  notifications: 'notifications',
+  notification: 'notifications',
+  email: 'notifications',
+  smtp: 'smtp',
+  'email-server': 'smtp',
+  'mail-server': 'smtp',
+  mail: 'smtp',
   activity: 'activity',
   logs: 'activity',
 };
@@ -70,43 +82,47 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-16">
-      {/* HEADER PAGE SAPO 100% */}
-      <div className="flex items-center justify-between border-b border-[#dfe3e8] dark:border-border pb-4">
-        <h1 className="text-xl font-bold text-[#212b36] dark:text-foreground tracking-tight">
+      {/* HEADER PAGE */}
+      <div className="flex items-center justify-between border-b border-border pb-4">
+        <h1 className="text-xl font-bold text-foreground tracking-tight">
           {TAB_TITLES[activeTab] || 'Cài đặt hệ thống'}
         </h1>
 
         <div className="flex items-center gap-2">
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
             onClick={fetchSettings}
             disabled={loading}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium text-[#212b36] dark:text-foreground bg-white dark:bg-card border border-[#c4cdd5] dark:border-border rounded-[4px] hover:bg-[#f4f6f8] dark:hover:bg-accent active:scale-[0.98] transition-all"
+            className="h-8 px-2.5 text-xs font-medium rounded-[6px] border-border bg-card cursor-pointer"
             title="Tải lại dữ liệu"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-          </button>
+          </Button>
 
-          {/* Sapo Close X Button */}
-          <button
+          {/* Close X Button */}
+          <Button
             type="button"
+            variant="ghost"
+            size="sm"
             onClick={() => navigate('/dashboard')}
-            className="p-1.5 text-[#637381] dark:text-muted-foreground hover:text-[#212b36] dark:hover:text-foreground rounded-[4px] hover:bg-[#f4f6f8] dark:hover:bg-accent transition-colors"
+            className="size-8 p-0 rounded-[6px] text-muted-foreground hover:text-foreground cursor-pointer"
             title="Đóng trang cài đặt"
           >
-            <X className="w-5 h-5" />
-          </button>
+            <X className="w-4 h-4" />
+          </Button>
         </div>
       </div>
 
-      {/* MASTER-DETAIL LAYOUT: SIDEBAR + CONTENT (SAPO 100%) */}
+      {/* MASTER-DETAIL LAYOUT: SIDEBAR + CONTENT */}
       <div className="flex flex-col lg:flex-row gap-6 items-start">
         <SettingsSidebar activeTab={activeTab} onSelectTab={handleSelectTab} />
 
         <main className="flex-1 w-full min-w-0">
           {loading && !settings ? (
-            <div className="bg-white dark:bg-card border border-[#dfe3e8] dark:border-border rounded-[6px] p-16 text-center text-[13px] text-[#919eab] dark:text-muted-foreground space-y-2 shadow-xs">
-              <RefreshCw className="w-5 h-5 animate-spin mx-auto text-[#0088ff]" />
+            <div className="bg-card border border-border rounded-[6px] p-16 text-center text-xs text-muted-foreground space-y-2 shadow-xs">
+              <RefreshCw className="w-5 h-5 animate-spin mx-auto text-primary" />
               <p>Đang tải cấu hình...</p>
             </div>
           ) : (
@@ -122,6 +138,8 @@ export default function SettingsPage() {
               {activeTab === 'shipping-rules' && (
                 <ShippingRulesTab initialData={settings} onRefresh={fetchSettings} />
               )}
+              {activeTab === 'notifications' && <NotificationSettingsTab />}
+              {activeTab === 'smtp' && <SmtpSettingsTab />}
               {activeTab === 'activity' && <ActivityLogTab />}
             </>
           )}

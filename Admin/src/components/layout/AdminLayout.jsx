@@ -1,9 +1,9 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef, Suspense } from 'react';
-import { Bell, X, Eye, EyeOff, Loader2, ShieldCheck, KeyRound, User as UserIcon } from 'lucide-react';
 import AppSidebar from './Sidebar';
 import SessionStreamListener from '@/components/common/SessionStreamListener';
 import ThemeToggle from '@/components/ui/ThemeToggle';
+import NotificationDropdown from './NotificationDropdown';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -20,6 +20,7 @@ import { toast } from '@/providers/ToastProvider';
 import { cn } from '@/lib/utils';
 
 const PAGE_TITLES = {
+  '/notifications':    'Thông báo',
   '/media':            'Thư viện tệp & ảnh',
   '/banners':          'Banner',
   '/categories':       'Danh mục sản phẩm',
@@ -29,6 +30,7 @@ const PAGE_TITLES = {
   '/products/import':  'Nhập / Xuất dữ liệu',
   '/products/combos':  'Combo sản phẩm',
   '/orders':           'Quản lý đơn hàng',
+  '/orders/':          'Chi tiết đơn hàng',
   '/shipments':        'Danh sách vận đơn',
   '/shipments/overview': 'Tổng quan vận chuyển',
   '/customers':        'Quản lý khách hàng',
@@ -203,14 +205,8 @@ function Topbar({ title }) {
         {/* Studio-grade Smooth Theme Toggle Button */}
         <ThemeToggle />
 
-        {/* Notification Bell */}
-        <button
-          type="button"
-          className="size-8 flex items-center justify-center rounded-[6px] border border-border bg-card text-muted-foreground hover:text-foreground hover:bg-accent transition-colors active:scale-[0.98] cursor-pointer"
-          title="Thông báo"
-        >
-          <Bell size={15} />
-        </button>
+        {/* Notification Bell Dropdown */}
+        <NotificationDropdown />
       </div>
     </header>
   );

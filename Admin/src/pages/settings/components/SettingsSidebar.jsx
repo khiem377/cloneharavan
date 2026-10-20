@@ -5,10 +5,15 @@ import {
   Package,
   History,
   WalletCards,
+  Bell,
+  Server,
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 const SAPO_MENUS = [
   { id: 'store', label: 'Cấu hình chung', icon: Store },
+  { id: 'notifications', label: 'Mẫu email & Thông báo', icon: Bell },
+  { id: 'smtp', label: 'Máy chủ gửi thư (SMTP)', icon: Server },
   { id: 'payment-methods', label: 'Phương thức thanh toán', icon: WalletCards },
   { id: 'checkout', label: 'Trang thanh toán', icon: CreditCard },
   { id: 'shipping-providers', label: 'Đối tác vận chuyển', icon: Truck },
@@ -19,29 +24,31 @@ const SAPO_MENUS = [
 export default function SettingsSidebar({ activeTab, onSelectTab }) {
   return (
     <aside className="w-full lg:w-60 shrink-0 lg:sticky lg:top-2 self-start z-10">
-      <nav className="space-y-0.5 bg-white dark:bg-card border border-[#e1e4e8] dark:border-border rounded-[6px] p-2 shadow-xs">
+      <nav className="space-y-1 bg-card border border-border rounded-[6px] p-2 shadow-xs">
         {SAPO_MENUS.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
 
           return (
-            <button
+            <Button
               key={item.id}
               type="button"
+              variant={isActive ? 'secondary' : 'ghost'}
+              size="sm"
               onClick={() => onSelectTab(item.id)}
-              className={`w-full text-left flex items-center gap-2.5 px-3 py-2.5 rounded-[4px] text-[13px] transition-colors cursor-pointer ${
+              className={`w-full justify-start text-left gap-2.5 h-9 px-3 text-xs rounded-[6px] transition-colors cursor-pointer ${
                 isActive
-                  ? 'bg-[#e8f2fe] text-[#0088ff] font-semibold dark:bg-[#0088ff]/15 dark:text-[#38bdf8]'
-                  : 'text-[#212b36] hover:bg-[#f4f6f8] font-normal dark:text-foreground dark:hover:bg-accent'
+                  ? 'bg-primary/10 text-primary font-bold hover:bg-primary/15'
+                  : 'text-foreground hover:text-foreground hover:bg-muted font-medium'
               }`}
             >
               <Icon
-                className={`w-4 h-4 shrink-0 ${
-                  isActive ? 'text-[#0088ff] dark:text-[#38bdf8]' : 'text-[#637381] dark:text-muted-foreground'
+                className={`size-4 shrink-0 ${
+                  isActive ? 'text-primary' : 'text-muted-foreground'
                 }`}
               />
               <span className="truncate">{item.label}</span>
-            </button>
+            </Button>
           );
         })}
       </nav>

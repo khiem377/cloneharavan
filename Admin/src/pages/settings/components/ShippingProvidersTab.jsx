@@ -28,8 +28,8 @@ export default function ShippingProvidersTab() {
           serverMap[p.code] = p;
         });
 
-        setCarriers((prev) =>
-          prev.map((c) => ({
+        setCarriers(
+          SHIPPING_CARRIERS.map((c) => ({
             ...c,
             status: serverMap[c.code]?.status || c.status,
             isDefault: Boolean(serverMap[c.code]?.isDefault),

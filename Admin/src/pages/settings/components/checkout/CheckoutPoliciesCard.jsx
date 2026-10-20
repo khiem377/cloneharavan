@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { HelpCircle } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import RecaptchaBadge from './RecaptchaBadge';
 
 const SAMPLE_REFUND_POLICY = `1. Điều kiện đổi trả hàng:
@@ -137,14 +138,15 @@ export default function CheckoutPoliciesCard({
 
       {/* 5. CHECKBOX BẬT GOOGLE RECAPTCHA KÈM TOOLTIP POPOVER (SAPO 100%) */}
       <div className="pt-2">
-        <label className="flex items-center gap-2 cursor-pointer text-[13px] text-[#212b36] dark:text-foreground relative">
-          <input
-            type="checkbox"
+        <div className="flex items-center gap-2 text-[13px] text-[#212b36] dark:text-foreground relative">
+          <Checkbox
+            id="enable-recaptcha"
             checked={enableReCaptcha || false}
-            onChange={(e) => onChangeReCaptcha(e.target.checked)}
-            className="rounded-[3px] text-[#0088ff]"
+            onCheckedChange={(checked) => onChangeReCaptcha(checked)}
           />
-          <span>Bật Google reCaptcha ở trang thanh toán</span>
+          <label htmlFor="enable-recaptcha" className="cursor-pointer select-none">
+            Bật Google reCaptcha ở trang thanh toán
+          </label>
           <div
             className="relative inline-block ml-0.5"
             onMouseEnter={() => setShowRecaptchaTooltip(true)}
@@ -162,7 +164,7 @@ export default function CheckoutPoliciesCard({
               </div>
             )}
           </div>
-        </label>
+        </div>
       </div>
     </div>
   );
