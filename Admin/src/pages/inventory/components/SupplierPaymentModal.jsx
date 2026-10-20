@@ -3,6 +3,7 @@ import { X, MinusCircle, Plus, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import PriceInput from '@/components/ui/PriceInput';
 import { usePaySupplierDebt } from '@/hooks/useSupplierDebts';
 import { useWarehouses } from '@/hooks/useInventory';
@@ -289,45 +290,49 @@ export default function SupplierPaymentModal({ supplier, debt, open, onClose }) 
           <div className="pt-3 border-t border-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             {/* Checkboxes matching Pancake */}
             <div className="flex flex-wrap items-center gap-4 text-xs text-foreground">
-              <label className="flex items-center gap-1.5 cursor-pointer select-none">
-                <input
-                  type="checkbox"
+              <div className="flex items-center gap-1.5">
+                <Checkbox
+                  id="pay-financial"
                   checked={financialAccounting}
-                  onChange={(e) => setFinancialAccounting(e.target.checked)}
-                  className="size-3.5 rounded-[3px] accent-[#1877F2]"
+                  onCheckedChange={(checked) => setFinancialAccounting(checked)}
                 />
-                <span>Hạch toán tài chính</span>
-              </label>
+                <label htmlFor="pay-financial" className="cursor-pointer select-none">
+                  Hạch toán tài chính
+                </label>
+              </div>
 
-              <label className="flex items-center gap-1.5 cursor-pointer select-none text-muted-foreground">
-                <input
-                  type="checkbox"
+              <div className="flex items-center gap-1.5 text-muted-foreground">
+                <Checkbox
+                  id="pay-is-locked"
                   checked={isLocked}
-                  onChange={(e) => setIsLocked(e.target.checked)}
-                  className="size-3.5 rounded-[3px] accent-[#1877F2]"
+                  onCheckedChange={(checked) => setIsLocked(checked)}
                 />
-                <span>Khóa</span>
-              </label>
+                <label htmlFor="pay-is-locked" className="cursor-pointer select-none">
+                  Khóa
+                </label>
+              </div>
 
-              <label className="flex items-center gap-1.5 cursor-pointer select-none text-muted-foreground">
-                <input
-                  type="checkbox"
+              <div className="flex items-center gap-1.5 text-muted-foreground">
+                <Checkbox
+                  id="pay-create-debt"
                   checked={createDebt}
-                  onChange={(e) => setCreateDebt(e.target.checked)}
-                  className="size-3.5 rounded-[3px] accent-[#1877F2]"
+                  onCheckedChange={(checked) => setCreateDebt(checked)}
                 />
-                <span>Tạo công nợ</span>
-              </label>
+                <label htmlFor="pay-create-debt" className="cursor-pointer select-none">
+                  Tạo công nợ
+                </label>
+              </div>
 
-              <label className="flex items-center gap-1.5 cursor-pointer select-none font-medium">
-                <input
-                  type="checkbox"
+              <div className="flex items-center gap-1.5 font-medium">
+                <Checkbox
+                  id="pay-clear-debt"
                   checked={clearDebt}
-                  onChange={(e) => setClearDebt(e.target.checked)}
-                  className="size-3.5 rounded-[3px] accent-[#1877F2]"
+                  onCheckedChange={(checked) => setClearDebt(checked)}
                 />
-                <span>Thanh toán công nợ</span>
-              </label>
+                <label htmlFor="pay-clear-debt" className="cursor-pointer select-none">
+                  Thanh toán công nợ
+                </label>
+              </div>
             </div>
 
             {/* Blue Button "Tạo" matching Pancake */}

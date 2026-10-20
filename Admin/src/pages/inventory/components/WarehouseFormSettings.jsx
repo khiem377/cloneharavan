@@ -2,6 +2,7 @@ import { Building2, MapPin, Users, X } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import SearchableSelect from '@/components/ui/SearchableSelect';
 
 const ROLE_LABELS = {
@@ -86,27 +87,29 @@ export default function WarehouseFormSettings({
         </div>
 
         <div className="mt-3.5 flex items-center gap-6">
-          <label className="flex items-center gap-2 text-xs font-semibold text-foreground cursor-pointer">
-            <input
-              type="checkbox"
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="warehouse-is-default"
               checked={form.isDefault}
-              onChange={(e) => setForm({ ...form, isDefault: e.target.checked })}
-              className="rounded-[4px] border-border text-primary focus:ring-primary size-4"
+              onCheckedChange={(checked) => setForm({ ...form, isDefault: checked })}
             />
-            <span>Đặt làm kho mặc định của hệ thống</span>
-          </label>
+            <label htmlFor="warehouse-is-default" className="text-xs font-semibold text-foreground cursor-pointer select-none">
+              Đặt làm kho mặc định của hệ thống
+            </label>
+          </div>
 
-          <label className="flex items-center gap-2 text-xs font-semibold text-foreground cursor-pointer">
-            <input
-              type="checkbox"
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="warehouse-status"
               checked={form.status === 'active'}
-              onChange={(e) =>
-                setForm({ ...form, status: e.target.checked ? 'active' : 'inactive' })
+              onCheckedChange={(checked) =>
+                setForm({ ...form, status: checked ? 'active' : 'inactive' })
               }
-              className="rounded-[4px] border-border text-primary focus:ring-primary size-4"
             />
-            <span>Trạng thái hoạt động</span>
-          </label>
+            <label htmlFor="warehouse-status" className="text-xs font-semibold text-foreground cursor-pointer select-none">
+              Trạng thái hoạt động
+            </label>
+          </div>
         </div>
       </div>
 

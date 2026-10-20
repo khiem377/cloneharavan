@@ -185,6 +185,7 @@ export default function BannerPage() {
           <BannerTable
             banners={bannersWithMedia}
             selectedIds={selectedIds}
+            loading={res.isLoading}
             onToggleSelect={toggleSelect}
             onToggleAll={toggleAll}
             onEdit={(b) => setFormTarget(b)}

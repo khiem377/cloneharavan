@@ -11,6 +11,7 @@ import { toast } from '@/providers/ToastProvider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   Table,
@@ -315,12 +316,22 @@ export default function AuditLogListPage() {
             </TableHeader>
             <TableBody className="divide-y divide-border">
               {loading ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
-                    <Clock className="size-5 animate-spin mx-auto mb-2 text-primary" />
-                    Đang tải nhật ký thao tác...
-                  </TableCell>
-                </TableRow>
+                Array.from({ length: 5 }).map((_, i) => (
+                  <TableRow key={`audit-skel-${i}`}>
+                    <TableCell className="px-4 py-3"><Skeleton className="h-4 w-28" /></TableCell>
+                    <TableCell className="px-4 py-3">
+                      <div className="space-y-1">
+                        <Skeleton className="h-4 w-24" />
+                        <Skeleton className="h-3 w-32" />
+                      </div>
+                    </TableCell>
+                    <TableCell className="px-4 py-3"><Skeleton className="h-5 w-16" /></TableCell>
+                    <TableCell className="px-4 py-3"><Skeleton className="h-5 w-20" /></TableCell>
+                    <TableCell className="px-4 py-3"><Skeleton className="h-4 w-36" /></TableCell>
+                    <TableCell className="px-4 py-3"><Skeleton className="h-4 w-24" /></TableCell>
+                    <TableCell className="px-4 py-3 text-right"><Skeleton className="h-7 w-20 ml-auto" /></TableCell>
+                  </TableRow>
+                ))
               ) : logs.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="px-4 py-8 text-center text-muted-foreground text-xs font-mono">

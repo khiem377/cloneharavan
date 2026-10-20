@@ -1,6 +1,7 @@
 import React from 'react';
 import { ZoomIn, ZoomOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import CanvasElementNode from './CanvasElementNode';
 
 export default function WarehouseMapCanvas({
@@ -34,15 +35,16 @@ export default function WarehouseMapCanvas({
           </span>
 
           {mode === 'view' && (
-            <label className="flex items-center gap-2 cursor-pointer font-medium text-muted-foreground hover:text-foreground">
-              <input
-                type="checkbox"
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="filter-in-stock"
                 checked={filterInStockOnly}
-                onChange={(e) => setFilterInStockOnly(e.target.checked)}
-                className="rounded-[4px] accent-primary"
+                onCheckedChange={(checked) => setFilterInStockOnly(checked)}
               />
-              <span>Chỉ hiện vị trí còn tồn</span>
-            </label>
+              <label htmlFor="filter-in-stock" className="cursor-pointer font-medium text-muted-foreground hover:text-foreground select-none">
+                Chỉ hiện vị trí còn tồn
+              </label>
+            </div>
           )}
         </div>
 

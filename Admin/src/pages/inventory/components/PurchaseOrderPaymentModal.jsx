@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, CreditCard, Banknote, Building2, CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import PriceInput from '@/components/ui/PriceInput';
 import { useWarehouses } from '@/hooks/useInventory';
 import { useRecordPOPayment } from '@/hooks/useInventory';
@@ -201,15 +202,16 @@ export default function PurchaseOrderPaymentModal({ po, open, onClose, onSuccess
           </div>
 
           {/* Hạch toán tài chính */}
-          <label className="flex items-center gap-2 text-xs text-foreground cursor-pointer select-none pt-1">
-            <input
-              type="checkbox"
+          <div className="flex items-center gap-2 pt-1">
+            <Checkbox
+              id="po-accounting"
               checked={accountingRecorded}
-              onChange={(e) => setAccountingRecorded(e.target.checked)}
-              className="rounded-[4px] border-input text-primary focus:ring-primary size-4"
+              onCheckedChange={(checked) => setAccountingRecorded(checked)}
             />
-            <span>Tự động hạch toán vào sổ quỹ tiền mặt / ngân hàng</span>
-          </label>
+            <label htmlFor="po-accounting" className="text-xs text-foreground cursor-pointer select-none">
+              Tự động hạch toán vào sổ quỹ tiền mặt / ngân hàng
+            </label>
+          </div>
 
           {/* Actions */}
           <div className="flex items-center justify-end gap-2 border-t border-border pt-4">

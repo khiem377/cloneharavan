@@ -27,6 +27,7 @@ import { useBlogCategories } from '@/hooks/useBlog';
 import { flattenTree, buildTree } from '@/utils/treeUtils';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { toast } from '@/providers/ToastProvider';
+import { Checkbox } from '@/components/ui/checkbox';
 
 // ─── Utils ────────────────────────────────────────────────────────────────────
 const nanoid = () => Math.random().toString(36).slice(2, 10);
@@ -303,17 +304,16 @@ function ItemFormPanel({ item, onChange, categories, brands, blogCats, flatCateg
 
       {/* Open in new tab */}
       {item.linkType !== 'none' && (
-        <label className="flex items-center gap-2.5 cursor-pointer">
-          <input
-            type="checkbox"
-            className="size-4 rounded-[4px] border-input text-primary focus:ring-ring"
+        <div className="flex items-center gap-2.5">
+          <Checkbox
+            id="item-new-tab"
             checked={item.openInNewTab}
-            onChange={(e) => set('openInNewTab', e.target.checked)}
+            onCheckedChange={(checked) => set('openInNewTab', checked)}
           />
-          <span className="text-sm text-foreground flex items-center gap-1.5">
+          <label htmlFor="item-new-tab" className="text-sm text-foreground flex items-center gap-1.5 cursor-pointer select-none">
             Mở tab mới <ExternalLink size={12} className="text-muted-foreground" />
-          </span>
-        </label>
+          </label>
+        </div>
       )}
 
       <div className="border-t border-border" />
@@ -341,29 +341,29 @@ function ItemFormPanel({ item, onChange, categories, brands, blogCats, flatCateg
       </div>
 
       {/* Mega menu toggle (chỉ cấp 1 có ý nghĩa) */}
-      <label className="flex items-center gap-2.5 cursor-pointer">
-        <input
-          type="checkbox"
-          className="size-4 rounded-[4px] border-input text-primary focus:ring-ring"
+      <div className="flex items-center gap-2.5">
+        <Checkbox
+          id="item-mega-menu"
           checked={item.megaMenu}
-          onChange={(e) => set('megaMenu', e.target.checked)}
+          onCheckedChange={(checked) => set('megaMenu', checked)}
         />
-        <span className="text-sm text-foreground">Hiển thị Mega Menu</span>
-      </label>
+        <label htmlFor="item-mega-menu" className="text-sm text-foreground cursor-pointer select-none">
+          Hiển thị Mega Menu
+        </label>
+      </div>
 
       {/* Trạng thái hiển thị / Tạm ẩn */}
       <div className="flex flex-col gap-1.5 pt-3 border-t border-border">
-        <label className="flex items-center justify-between cursor-pointer">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <input
-              type="checkbox"
-              className="size-4 rounded-[4px] border-input text-primary focus:ring-ring"
+            <Checkbox
+              id="item-is-active"
               checked={item.isActive !== false}
-              onChange={(e) => set('isActive', e.target.checked)}
+              onCheckedChange={(checked) => set('isActive', checked)}
             />
-            <span className="text-sm font-semibold text-foreground">
+            <label htmlFor="item-is-active" className="text-sm font-semibold text-foreground cursor-pointer select-none">
               {item.isActive !== false ? 'Hiển thị trên website' : 'Đang tạm ẩn'}
-            </span>
+            </label>
           </div>
           <span
             className={`text-[10px] font-semibold px-2 py-0.5 rounded-[6px] border ${
@@ -374,7 +374,7 @@ function ItemFormPanel({ item, onChange, categories, brands, blogCats, flatCateg
           >
             {item.isActive !== false ? 'Hoạt động' : 'Tạm ẩn'}
           </span>
-        </label>
+        </div>
         <p className="text-xs text-muted-foreground">
           {item.isActive !== false
             ? 'Mục này sẽ xuất hiện trên menu khách hàng. Bỏ chọn để tạm ẩn mà không xóa dữ liệu.'
