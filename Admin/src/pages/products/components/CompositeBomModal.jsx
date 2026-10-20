@@ -14,6 +14,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import { toast } from '@/providers/ToastProvider';
 import { useSearchInventoryProducts, useUpdateCompositeBom } from '@/hooks/useProducts';
 
@@ -168,15 +169,11 @@ export default function CompositeBomModal({ isOpen, onClose, product, onSuccess 
                 Khi bán 1 sản phẩm này, hệ thống sẽ tự động trừ tồn kho của từng linh kiện thành phần bên dưới.
               </p>
             </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={isComposite}
-                onChange={(e) => setIsComposite(e.target.checked)}
-                className="sr-only peer"
-              />
-              <div className="w-9 h-5 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
-            </label>
+            <Switch
+              id="composite-mode-toggle"
+              checked={isComposite}
+              onCheckedChange={setIsComposite}
+            />
           </div>
 
           {isComposite && (

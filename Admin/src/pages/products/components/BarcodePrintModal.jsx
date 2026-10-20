@@ -15,6 +15,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/providers/ToastProvider';
 import { useSearchInventoryProducts } from '@/hooks/useProducts';
 
@@ -292,14 +293,12 @@ export default function BarcodePrintModal({ isOpen, onClose, initialProducts = [
 
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       id="opt-store"
                       checked={showStoreName}
-                      onChange={(e) => setShowStoreName(e.target.checked)}
-                      className="size-3.5 rounded-[3px] border-input text-primary"
+                      onCheckedChange={(checked) => setShowStoreName(checked)}
                     />
-                    <label htmlFor="opt-store" className="text-xs text-foreground cursor-pointer">
+                    <label htmlFor="opt-store" className="text-xs text-foreground cursor-pointer select-none">
                       Tên cửa hàng / Brand
                     </label>
                   </div>
@@ -314,40 +313,34 @@ export default function BarcodePrintModal({ isOpen, onClose, initialProducts = [
                   )}
 
                   <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       id="opt-pname"
                       checked={showProductName}
-                      onChange={(e) => setShowProductName(e.target.checked)}
-                      className="size-3.5 rounded-[3px] border-input text-primary"
+                      onCheckedChange={(checked) => setShowProductName(checked)}
                     />
-                    <label htmlFor="opt-pname" className="text-xs text-foreground cursor-pointer">
+                    <label htmlFor="opt-pname" className="text-xs text-foreground cursor-pointer select-none">
                       Tên sản phẩm (tự động ngắt dòng)
                     </label>
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       id="opt-price"
                       checked={showPrice}
-                      onChange={(e) => setShowPrice(e.target.checked)}
-                      className="size-3.5 rounded-[3px] border-input text-primary"
+                      onCheckedChange={(checked) => setShowPrice(checked)}
                     />
-                    <label htmlFor="opt-price" className="text-xs text-foreground cursor-pointer">
+                    <label htmlFor="opt-price" className="text-xs text-foreground cursor-pointer select-none">
                       Giá bán (in đậm, to, rõ)
                     </label>
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       id="opt-sku"
                       checked={showSkuText}
-                      onChange={(e) => setShowSkuText(e.target.checked)}
-                      className="size-3.5 rounded-[3px] border-input text-primary"
+                      onCheckedChange={(checked) => setShowSkuText(checked)}
                     />
-                    <label htmlFor="opt-sku" className="text-xs text-foreground cursor-pointer">
+                    <label htmlFor="opt-sku" className="text-xs text-foreground cursor-pointer select-none">
                       Mã SKU / Barcode text dưới vạch
                     </label>
                   </div>

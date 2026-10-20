@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { ChevronDown, Search, X } from '@/components/ui/Icons';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import { buildTree, buildRelationMaps, getAncestors, getDescendants } from '@/utils/treeUtils';
 
 function HighlightText({ text, query }) {
@@ -125,21 +126,21 @@ export default function CategoryTreeMultiPicker({ categories = [], value = [], o
           >
             <ChevronDown size={12} className={isExpanded ? '' : '-rotate-90'} />
           </button>
-          <label className="flex items-center gap-2 flex-1 cursor-pointer select-none min-w-0">
-            <input
-              type="checkbox"
-              className="size-3.5 rounded-[4px] border-input cursor-pointer accent-primary shrink-0"
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <Checkbox
+              id={`cat-picker-${node._id}`}
               checked={isChecked}
-              onChange={() => toggleCheck(node._id)}
+              onCheckedChange={() => toggleCheck(node._id)}
             />
-            <span
-              className={`text-xs truncate ${
+            <label
+              htmlFor={`cat-picker-${node._id}`}
+              className={`text-xs truncate cursor-pointer select-none ${
                 isChecked ? 'font-medium text-primary' : 'text-foreground'
               }`}
             >
               <HighlightText text={node.name} query={searchQ} />
-            </span>
-          </label>
+            </label>
+          </div>
         </div>
         {hasChildren && (isExpanded || (visibleIds && visibleIds.has(node._id))) && (
           <div>{node.children.map((child) => renderNode(child, depth + 1))}</div>

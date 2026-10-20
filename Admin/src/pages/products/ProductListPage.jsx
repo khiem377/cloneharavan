@@ -18,6 +18,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Skeleton } from '@/components/ui/skeleton';
 import BarcodePrintModal from './components/BarcodePrintModal';
 import WholesalePricingModal from './components/WholesalePricingModal';
 import CompositeBomModal from './components/CompositeBomModal';
@@ -398,16 +400,34 @@ export default function ProductListPage() {
       )}
 
       {isLoading ? (
-        <div className="flex justify-center items-center py-16 text-muted-foreground gap-2">
-          <Loader2 className="animate-spin" size={28} />
-        </div>
+        <Card className="rounded-[6px] border border-border shadow-xs overflow-hidden p-6 space-y-3">
+          {Array.from({ length: 5 }).map((_, idx) => (
+            <div key={idx} className="flex items-center gap-4 py-2 border-b border-border/40 last:border-0">
+              <Skeleton className="size-4 rounded-[4px]" />
+              <Skeleton className="size-9 rounded-[4px]" />
+              <div className="space-y-1.5 flex-1">
+                <Skeleton className="h-4 w-48" />
+                <Skeleton className="h-3 w-28" />
+              </div>
+              <Skeleton className="h-5 w-20 rounded-full" />
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-4 w-20" />
+            </div>
+          ))}
+        </Card>
       ) : viewMode === 'table' ? (
         <Card className="rounded-[6px] border border-border shadow-xs overflow-hidden">
           <Table>
             <TableHeader className="bg-muted/60">
               <TableRow className="border-b border-border text-[11px] font-bold text-foreground">
                 <TableHead className="px-3.5 py-3 w-10">
-                  <input type="checkbox" className="size-4 rounded-[4px] border-input text-primary focus:ring-ring" checked={selected.length === products.length && products.length > 0} onChange={toggleSelectAll} />
+                  <div className="flex items-center">
+                    <Checkbox
+                      checked={selected.length === products.length && products.length > 0}
+                      onCheckedChange={toggleSelectAll}
+                      aria-label="Chọn tất cả sản phẩm"
+                    />
+                  </div>
                 </TableHead>
                 {isColumnVisible('product') && <TableHead className="px-3.5 py-3.5 whitespace-nowrap">Sản phẩm</TableHead>}
                 {isColumnVisible('sku') && <TableHead className="px-3.5 py-3.5 whitespace-nowrap">SKU</TableHead>}
@@ -433,8 +453,12 @@ export default function ProductListPage() {
                   ref={(el) => { rowRefs.current[p._id] = el; }}
                   className={`transition-colors hover:bg-muted/40 align-middle ${selected.includes(p._id) || p._id === highlightId ? 'bg-primary/8 ring-1 ring-inset ring-primary/30' : ''}`}
                 >
-                  <TableCell className="px-3.5 py-3 align-middle">
-                    <input type="checkbox" className="size-4 rounded-[4px] border-input text-primary focus:ring-ring" checked={selected.includes(p._id)} onChange={() => toggleSelect(p._id)} />
+                  <TableCell className="px-3.5 py-3 align-middle" onClick={(e) => e.stopPropagation()}>
+                    <Checkbox
+                      checked={selected.includes(p._id)}
+                      onCheckedChange={() => toggleSelect(p._id)}
+                      aria-label={`Chọn sản phẩm ${p.name}`}
+                    />
                   </TableCell>
                   {isColumnVisible('product') && (
                     <TableCell className="px-3.5 py-3 align-middle whitespace-nowrap">
@@ -602,8 +626,12 @@ export default function ProductListPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {products.map((p) => (
             <div key={p._id} className={`rounded-[6px] border border-border bg-card text-card-foreground shadow-2xs overflow-hidden transition-all hover:border-primary/50 relative ${selected.includes(p._id) ? 'border-primary ring-2 ring-primary/30' : ''}`}>
-              <div className="absolute top-2 left-2 z-10">
-                <input type="checkbox" className="size-4 rounded-[4px] border-input text-primary focus:ring-ring" checked={selected.includes(p._id)} onChange={() => toggleSelect(p._id)} />
+              <div className="absolute top-2 left-2 z-10 bg-background/80 rounded-[4px] p-0.5">
+                <Checkbox
+                  checked={selected.includes(p._id)}
+                  onCheckedChange={() => toggleSelect(p._id)}
+                  aria-label={`Chọn sản phẩm ${p.name}`}
+                />
               </div>
               <img src={(typeof p.thumbnail === 'string' ? p.thumbnail : p.thumbnail?.url) || 'https://placehold.co/200x200/1e293b/fff?text=?'} alt={p.name} className="aspect-square w-full object-cover bg-muted" />
               <div className="p-3 flex flex-col gap-1.5">

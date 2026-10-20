@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { X, Image, Loader2 } from '@/components/ui/Icons';
 import MediaPickerModal from '@/components/ui/MediaPickerModal';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 
 export default function BrandFormModal({
   form,
@@ -101,24 +103,25 @@ export default function BrandFormModal({
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-semibold text-foreground">Thứ tự ưu tiên</label>
-                <input
+                <Input
                   type="number"
-                  className="h-9 w-full rounded-[6px] border border-border bg-background px-3 text-xs text-foreground font-mono outline-none focus:border-ring focus:ring-1 focus:ring-ring transition-colors"
+                  className="h-9 w-full rounded-[6px] text-xs font-mono tabular-nums"
                   value={form.order}
                   onChange={(e) => setForm((f) => ({ ...f, order: e.target.value }))}
                 />
               </div>
 
               <div className="flex items-center gap-2 pt-5">
-                <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-foreground">
-                  <input
-                    type="checkbox"
-                    className="size-4 rounded border-border"
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="brand-is-active"
                     checked={form.isActive}
-                    onChange={(e) => setForm((f) => ({ ...f, isActive: e.target.checked }))}
+                    onCheckedChange={(checked) => setForm((f) => ({ ...f, isActive: checked }))}
                   />
-                  <span>Kích hoạt hiển thị</span>
-                </label>
+                  <label htmlFor="brand-is-active" className="cursor-pointer text-xs font-medium text-foreground select-none">
+                    Kích hoạt hiển thị
+                  </label>
+                </div>
               </div>
             </div>
           </div>

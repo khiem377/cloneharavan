@@ -16,6 +16,8 @@ import {
   TableCell,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
 import CustomerProviderBadge from './CustomerProviderBadge';
 
@@ -55,15 +57,13 @@ export default function CustomerTable({
           <TableRow className="bg-secondary/40 hover:bg-secondary/40">
             {isColumnVisible('select') && (
               <TableHead className="w-10 text-center">
-                <button
-                  type="button"
-                  className={`flex size-4 items-center justify-center rounded-[3px] border border-input bg-background mx-auto transition-colors cursor-pointer ${
-                    isAllSelected ? 'bg-primary border-primary text-primary-foreground' : ''
-                  }`}
-                  onClick={onSelectAll}
-                >
-                  {isAllSelected && <Check className="size-3" />}
-                </button>
+                <div className="flex justify-center">
+                  <Checkbox
+                    checked={isAllSelected}
+                    onCheckedChange={onSelectAll}
+                    aria-label="Chọn tất cả khách hàng"
+                  />
+                </div>
               </TableHead>
             )}
             {isColumnVisible('customer') && <TableHead>Khách hàng</TableHead>}
@@ -100,16 +100,14 @@ export default function CustomerTable({
                 >
                   {/* Select */}
                   {isColumnVisible('select') && (
-                    <TableCell className="w-10 px-3 py-2 text-center">
-                      <button
-                        type="button"
-                        className={`flex size-4 items-center justify-center rounded-[3px] border border-input bg-background mx-auto transition-colors cursor-pointer ${
-                          isSelected ? 'bg-primary border-primary text-primary-foreground' : ''
-                        }`}
-                        onClick={() => onSelectOne(user._id)}
-                      >
-                        {isSelected && <Check className="size-3" />}
-                      </button>
+                    <TableCell className="w-10 px-3 py-2 text-center" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex justify-center">
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={() => onSelectOne(user._id)}
+                          aria-label={`Chọn khách hàng ${user.fullName}`}
+                        />
+                      </div>
                     </TableCell>
                   )}
 
@@ -117,17 +115,12 @@ export default function CustomerTable({
                   {isColumnVisible('customer') && (
                     <TableCell className="px-3 py-2">
                       <div className="flex items-center gap-2.5">
-                        {user.avatar?.url ? (
-                          <img
-                            src={user.avatar.url}
-                            alt={user.fullName}
-                            className="size-8 rounded-[4px] object-cover border border-border shrink-0"
-                          />
-                        ) : (
-                          <div className="size-8 rounded-[4px] bg-secondary border border-border flex items-center justify-center text-xs font-bold font-mono text-muted-foreground shrink-0">
+                        <Avatar className="size-8 rounded-[4px] shrink-0 border border-border">
+                          <AvatarImage src={user.avatar?.url} alt={user.fullName} />
+                          <AvatarFallback className="rounded-[4px] text-xs font-bold font-mono">
                             {initials}
-                          </div>
-                        )}
+                          </AvatarFallback>
+                        </Avatar>
                         <div className="flex flex-col min-w-0">
                           <span className="font-semibold text-xs text-foreground truncate">
                             {user.fullName || 'Khách hàng'}

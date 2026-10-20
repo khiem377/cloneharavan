@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Package, ShieldAlert, EyeOff, Printer, Scale, Gift } from 'lucide-react';
 
 /**
@@ -30,72 +31,72 @@ export default function ProductRetailOperationsCard({ form, setField }) {
           {/* Cho phép bán tồn kho âm */}
           <div className="flex items-start justify-between p-3 rounded-[6px] border border-border bg-muted/20 hover:bg-muted/30 transition-colors">
             <div className="space-y-0.5 pr-2">
-              <label className="text-xs font-semibold text-foreground cursor-pointer flex items-center gap-1.5">
+              <label htmlFor="allow-neg-stock" className="text-xs font-semibold text-foreground cursor-pointer flex items-center gap-1.5 select-none">
                 Cho phép bán tồn kho âm
               </label>
               <p className="text-[11px] text-muted-foreground">
                 Tiếp tục chốt đơn khi tồn kho khả dụng về 0
               </p>
             </div>
-            <input
-              type="checkbox"
+            <Checkbox
+              id="allow-neg-stock"
               checked={Boolean(form.allowNegativeStock)}
-              onChange={(e) => setField('allowNegativeStock', e.target.checked)}
-              className="size-4 rounded-[4px] border-input text-primary accent-primary cursor-pointer mt-0.5"
+              onCheckedChange={(checked) => setField('allowNegativeStock', checked)}
+              className="mt-0.5"
             />
           </div>
 
           {/* Che tên khi in */}
           <div className="flex items-start justify-between p-3 rounded-[6px] border border-border bg-muted/20 hover:bg-muted/30 transition-colors">
             <div className="space-y-0.5 pr-2">
-              <label className="text-xs font-semibold text-foreground cursor-pointer flex items-center gap-1.5">
+              <label htmlFor="hide-name-print" className="text-xs font-semibold text-foreground cursor-pointer flex items-center gap-1.5 select-none">
                 <EyeOff className="size-3.5 text-muted-foreground" /> Che tên khi in vận đơn
               </label>
               <p className="text-[11px] text-muted-foreground">
                 Ẩn tên hàng trên nhãn bưu điện cho hàng nhạy cảm
               </p>
             </div>
-            <input
-              type="checkbox"
+            <Checkbox
+              id="hide-name-print"
               checked={Boolean(form.hideNameOnPrint)}
-              onChange={(e) => setField('hideNameOnPrint', e.target.checked)}
-              className="size-4 rounded-[4px] border-input text-primary accent-primary cursor-pointer mt-0.5"
+              onCheckedChange={(checked) => setField('hideNameOnPrint', checked)}
+              className="mt-0.5"
             />
           </div>
 
           {/* Ẩn khi in đơn */}
           <div className="flex items-start justify-between p-3 rounded-[6px] border border-border bg-muted/20 hover:bg-muted/30 transition-colors">
             <div className="space-y-0.5 pr-2">
-              <label className="text-xs font-semibold text-foreground cursor-pointer flex items-center gap-1.5">
+              <label htmlFor="hide-invoice" className="text-xs font-semibold text-foreground cursor-pointer flex items-center gap-1.5 select-none">
                 <Printer className="size-3.5 text-muted-foreground" /> Ẩn khi in phiếu bán lẻ
               </label>
               <p className="text-[11px] text-muted-foreground">
                 Dành cho bao bì, vật phẩm phụ trợ hoặc quà tặng
               </p>
             </div>
-            <input
-              type="checkbox"
+            <Checkbox
+              id="hide-invoice"
               checked={Boolean(form.hideOnInvoice)}
-              onChange={(e) => setField('hideOnInvoice', e.target.checked)}
-              className="size-4 rounded-[4px] border-input text-primary accent-primary cursor-pointer mt-0.5"
+              onCheckedChange={(checked) => setField('hideOnInvoice', checked)}
+              className="mt-0.5"
             />
           </div>
 
           {/* Tính tiền theo cân nặng */}
           <div className="flex items-start justify-between p-3 rounded-[6px] border border-border bg-muted/20 hover:bg-muted/30 transition-colors">
             <div className="space-y-0.5 pr-2">
-              <label className="text-xs font-semibold text-foreground cursor-pointer flex items-center gap-1.5">
+              <label htmlFor="weight-pricing" className="text-xs font-semibold text-foreground cursor-pointer flex items-center gap-1.5 select-none">
                 <Scale className="size-3.5 text-muted-foreground" /> Tính tiền theo cân nặng
               </label>
               <p className="text-[11px] text-muted-foreground">
                 Áp dụng cho nông sản, thực phẩm bán theo kg
               </p>
             </div>
-            <input
-              type="checkbox"
+            <Checkbox
+              id="weight-pricing"
               checked={Boolean(form.weightBasedPricing)}
-              onChange={(e) => setField('weightBasedPricing', e.target.checked)}
-              className="size-4 rounded-[4px] border-input text-primary accent-primary cursor-pointer mt-0.5"
+              onCheckedChange={(checked) => setField('weightBasedPricing', checked)}
+              className="mt-0.5"
             />
           </div>
         </div>

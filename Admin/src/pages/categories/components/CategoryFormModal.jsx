@@ -3,6 +3,8 @@ import { X, Image, Loader2 } from '@/components/ui/Icons';
 import SearchableSelect from '@/components/ui/SearchableSelect';
 import MediaPickerModal from '@/components/ui/MediaPickerModal';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 
 export default function CategoryFormModal({
   form,
@@ -171,33 +173,35 @@ export default function CategoryFormModal({
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-semibold text-foreground">Thứ tự ưu tiên</label>
-                <input
+                <Input
                   type="number"
-                  className="h-9 w-full rounded-[6px] border border-border bg-background px-3 text-xs text-foreground font-mono outline-none focus:border-ring focus:ring-1 focus:ring-ring transition-colors"
+                  className="h-9 w-full rounded-[6px] text-xs font-mono tabular-nums"
                   value={form.order}
                   onChange={(e) => setForm((f) => ({ ...f, order: e.target.value }))}
                 />
               </div>
 
               <div className="flex items-center gap-4 pt-5">
-                <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-foreground">
-                  <input
-                    type="checkbox"
-                    className="size-4 rounded border-border"
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="cat-show-menu"
                     checked={form.showOnMenu}
-                    onChange={(e) => setForm((f) => ({ ...f, showOnMenu: e.target.checked }))}
+                    onCheckedChange={(checked) => setForm((f) => ({ ...f, showOnMenu: checked }))}
                   />
-                  <span>Hiện menu</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-foreground">
-                  <input
-                    type="checkbox"
-                    className="size-4 rounded border-border"
+                  <label htmlFor="cat-show-menu" className="cursor-pointer text-xs font-medium text-foreground select-none">
+                    Hiện menu
+                  </label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="cat-is-active"
                     checked={form.isActive}
-                    onChange={(e) => setForm((f) => ({ ...f, isActive: e.target.checked }))}
+                    onCheckedChange={(checked) => setForm((f) => ({ ...f, isActive: checked }))}
                   />
-                  <span>Kích hoạt</span>
-                </label>
+                  <label htmlFor="cat-is-active" className="cursor-pointer text-xs font-medium text-foreground select-none">
+                    Kích hoạt
+                  </label>
+                </div>
               </div>
             </div>
           </div>

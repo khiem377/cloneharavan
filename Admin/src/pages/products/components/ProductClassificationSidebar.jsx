@@ -1,5 +1,6 @@
 import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import SearchableSelect from '@/components/ui/SearchableSelect';
 import CategoryTreeMultiPicker from './CategoryTreeMultiPicker';
 
@@ -110,35 +111,38 @@ export default function ProductClassificationSidebar({
 
         {/* Visibility Flags */}
         <div className="flex flex-col gap-2.5 pt-3 border-t border-border">
-          <label className="flex items-center gap-2 text-xs font-medium text-foreground cursor-pointer">
-            <input
-              type="checkbox"
-              className="size-3.5 rounded-[4px] border-input text-primary focus:ring-ring cursor-pointer"
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="prod-is-active"
               checked={form.isActive}
-              onChange={(e) => setField('isActive', e.target.checked)}
+              onCheckedChange={(checked) => setField('isActive', checked)}
             />
-            <span>Kích hoạt hiển thị sản phẩm</span>
-          </label>
+            <label htmlFor="prod-is-active" className="text-xs font-medium text-foreground cursor-pointer select-none">
+              Kích hoạt hiển thị sản phẩm
+            </label>
+          </div>
 
-          <label className="flex items-center gap-2 text-xs font-medium text-foreground cursor-pointer">
-            <input
-              type="checkbox"
-              className="size-3.5 rounded-[4px] border-input text-primary focus:ring-ring cursor-pointer"
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="prod-is-featured"
               checked={form.isFeatured}
-              onChange={(e) => setField('isFeatured', e.target.checked)}
+              onCheckedChange={(checked) => setField('isFeatured', checked)}
             />
-            <span>Sản phẩm nổi bật</span>
-          </label>
+            <label htmlFor="prod-is-featured" className="text-xs font-medium text-foreground cursor-pointer select-none">
+              Sản phẩm nổi bật
+            </label>
+          </div>
 
-          <label className="flex items-center gap-2 text-xs font-medium text-foreground cursor-pointer">
-            <input
-              type="checkbox"
-              className="size-3.5 rounded-[4px] border-input text-primary focus:ring-ring cursor-pointer"
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="prod-is-hot"
               checked={form.isHot}
-              onChange={(e) => setField('isHot', e.target.checked)}
+              onCheckedChange={(checked) => setField('isHot', checked)}
             />
-            <span>Sản phẩm HOT</span>
-          </label>
+            <label htmlFor="prod-is-hot" className="text-xs font-medium text-foreground cursor-pointer select-none">
+              Sản phẩm HOT
+            </label>
+          </div>
         </div>
       </CardContent>
     </Card>

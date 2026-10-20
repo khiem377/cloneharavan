@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 
 export default function RoleListPage() {
   const { data: roles = [], isLoading: loading, refetch: refetchRoles } = useRoles();
@@ -554,12 +555,12 @@ export default function RoleListPage() {
                                       : 'border-border hover:bg-muted/30 text-muted-foreground'
                                   }`}
                                 >
-                                  <input
-                                    type="checkbox"
-                                    checked={isChecked}
-                                    onChange={() => {}}
-                                    className="mt-0.5 rounded-[3px] text-primary focus:ring-primary size-3.5 cursor-pointer"
-                                  />
+                                  <div className="mt-0.5">
+                                    <Checkbox
+                                      checked={isChecked}
+                                      onCheckedChange={() => togglePermission(p._id)}
+                                    />
+                                  </div>
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center justify-between gap-1.5">
                                       <span className="font-medium text-xs text-foreground line-clamp-1">

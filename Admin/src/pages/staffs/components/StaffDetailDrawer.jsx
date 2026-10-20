@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/Icons';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 
 /**
  * Slide-over Drawer to inspect staff details, permissions matrix and manage custom permissions
@@ -291,11 +292,9 @@ export default function StaffDetailDrawer({
                                 : 'hover:bg-muted/40 border-border text-muted-foreground'
                             }`}
                           >
-                            <input
-                              type="checkbox"
+                            <Checkbox
                               checked={isChecked}
-                              onChange={() => onToggleCustomPerm(p._id)}
-                              className="size-3.5 rounded-[3px] border-border text-primary cursor-pointer"
+                              onCheckedChange={() => onToggleCustomPerm(p._id)}
                             />
                             <span className="truncate" title={p.description || p.name}>
                               {p.name}

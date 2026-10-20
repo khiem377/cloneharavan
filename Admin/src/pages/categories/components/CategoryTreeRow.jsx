@@ -11,6 +11,8 @@ import {
 } from '@/components/ui/Icons';
 import { TableRow, TableCell } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
 
 const CLIENT_STORE_URL =
   import.meta.env.VITE_STORE_FRONTEND_URL ||
@@ -54,16 +56,14 @@ export default function CategoryTreeRow({
         }`}
       >
         {/* Checkbox */}
-        <TableCell className="w-10 px-3 py-2 text-center">
-          <button
-            type="button"
-            className={`flex size-4 items-center justify-center rounded-[3px] border border-input bg-background transition-colors cursor-pointer mx-auto ${
-              isSelected ? 'bg-primary border-primary text-primary-foreground' : ''
-            }`}
-            onClick={() => onSelect(cat._id)}
-          >
-            {isSelected && <Check className="size-3" />}
-          </button>
+        <TableCell className="w-10 px-3 py-2 text-center" onClick={(e) => e.stopPropagation()}>
+          <div className="flex justify-center">
+            <Checkbox
+              checked={isSelected}
+              onCheckedChange={() => onSelect(cat._id)}
+              aria-label={`Chọn danh mục ${cat.name}`}
+            />
+          </div>
         </TableCell>
 
         {/* Name & Tree Structure */}
@@ -128,15 +128,16 @@ export default function CategoryTreeRow({
 
         {/* Show On Menu */}
         <TableCell className="px-3 py-2">
-          <span
-            className={`inline-flex items-center rounded-[4px] px-2 py-0.5 text-[11px] font-medium border ${
+          <Badge
+            variant="secondary"
+            className={`text-[11px] font-medium py-0.5 px-2 rounded-[4px] border ${
               cat.showOnMenu
                 ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
                 : 'bg-muted text-muted-foreground border-border'
             }`}
           >
             {cat.showOnMenu ? 'Menu' : 'Ẩn'}
-          </span>
+          </Badge>
         </TableCell>
 
         {/* Status */}
@@ -146,7 +147,8 @@ export default function CategoryTreeRow({
             onClick={() => onToggle(cat)}
             className="cursor-pointer inline-flex items-center gap-1"
           >
-            <span
+            <Badge
+              variant="secondary"
               className={`inline-flex items-center gap-1.5 rounded-[4px] px-2 py-0.5 text-[11px] font-medium border ${
                 cat.isActive
                   ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
@@ -155,7 +157,7 @@ export default function CategoryTreeRow({
             >
               <span className={`size-1.5 rounded-full ${cat.isActive ? 'bg-emerald-500' : 'bg-muted-foreground'}`} />
               {cat.isActive ? 'Hoạt động' : 'Đang ẩn'}
-            </span>
+            </Badge>
           </button>
         </TableCell>
 

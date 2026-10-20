@@ -3,6 +3,7 @@ import { Plus, Trash2, Layers, X } from '@/components/ui/Icons';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Table,
   TableHeader,
@@ -42,21 +43,21 @@ export default function ProductVariantsGeneratorCard({
           <CardTitle className="text-sm font-semibold text-foreground">Biến thể & Phiên bản</CardTitle>
           <p className="text-[11px] text-muted-foreground">Tùy chọn tạo nhiều kích thước, màu sắc cùng lúc</p>
         </div>
-        <label className="flex items-center gap-2 text-xs font-medium text-foreground cursor-pointer bg-muted/50 px-2.5 py-1 rounded-[6px] border border-border hover:bg-muted transition-colors">
-          <input
-            type="checkbox"
-            className="size-3.5 rounded-[4px] border-input text-primary focus:ring-ring cursor-pointer"
+        <div className="flex items-center gap-2 bg-muted/50 px-2.5 py-1 rounded-[6px] border border-border">
+          <Checkbox
+            id="has-variants-check"
             checked={hasVariants}
-            onChange={(e) => {
-              const enabled = e.target.checked;
-              setHasVariants(enabled);
-              if (enabled && options.length === 0) {
+            onCheckedChange={(checked) => {
+              setHasVariants(checked);
+              if (checked && options.length === 0) {
                 setOptions([{ name: 'Kích thước', values: [] }]);
               }
             }}
           />
-          <span>Có nhiều phiên bản</span>
-        </label>
+          <label htmlFor="has-variants-check" className="text-xs font-medium text-foreground cursor-pointer select-none">
+            Có nhiều phiên bản
+          </label>
+        </div>
       </CardHeader>
 
       {hasVariants && (
