@@ -283,6 +283,46 @@ const storeSettingSchema = new mongoose.Schema(
       },
     },
 
+    // 6. CẤU HÌNH THÔNG BÁO & MẪU EMAIL TỰ ĐỘNG (CHUẨN SAPO / HARAVAN)
+    notificationSettings: {
+      emailBranding: {
+        logoUrl: { type: String, default: '' },
+        logoWidth: { type: Number, default: 180 },
+        primaryColor: { type: String, default: '#0088ff' },
+      },
+      // Cấu hình máy chủ gửi thư SMTP riêng của cửa hàng
+      smtpConfig: {
+        host: { type: String, default: 'smtp.gmail.com' },
+        port: { type: Number, default: 587 },
+        secure: { type: Boolean, default: false },
+        user: { type: String, default: '' },
+        pass: { type: String, default: '' },
+        fromName: { type: String, default: '' },
+        fromEmail: { type: String, default: '' },
+        isEnabled: { type: Boolean, default: false },
+      },
+      // Tùy chỉnh trực quan nội dung 12 mẫu email (Visual Template Customization)
+      customTemplates: {
+        type: mongoose.Schema.Types.Mixed,
+        default: {},
+      },
+      // Bật/tắt các sự kiện gửi email
+      emailTriggers: {
+        abandoned_checkout: { type: Boolean, default: true },
+        order_confirmation: { type: Boolean, default: true },
+        payment_success: { type: Boolean, default: true },
+        order_edited: { type: Boolean, default: false },
+        order_cancelled: { type: Boolean, default: true },
+        order_refunded: { type: Boolean, default: true },
+        shipping_confirmation: { type: Boolean, default: true },
+        shipping_delivered: { type: Boolean, default: true },
+        reset_password: { type: Boolean, default: true },
+        verify_email: { type: Boolean, default: true },
+        admin_login_otp: { type: Boolean, default: true },
+        purchase_order: { type: Boolean, default: true },
+      },
+    },
+
     updatedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',

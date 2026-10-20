@@ -9,6 +9,15 @@ const {
   disconnectShippingProvider,
   testShippingProvider,
   setDefaultShippingProvider,
+  getNotificationTemplates,
+  getTemplateDetail,
+  saveCustomTemplate,
+  resetCustomTemplate,
+  previewNotificationTemplate,
+  sendTestNotificationEmail,
+  updateNotificationSettings,
+  updateSmtpConfig,
+  testSmtpConfig,
 } = require('../controllers/storeSetting.controller');
 const { protect } = require('../middleware/auth.middleware');
 const { requirePermission } = require('../middleware/permission.middleware');
@@ -18,6 +27,18 @@ router.get('/public', getPublicStoreSettings);
 
 // Private routes cho Admin quản trị
 router.use(protect);
+
+// Quản lý Mẫu thông báo & Email Branding & Template Editor & SMTP
+router.get('/notifications/templates', requirePermission(['setting.manage', 'setting.view']), getNotificationTemplates);
+router.get('/notifications/templates/:templateId', requirePermission(['setting.manage', 'setting.view']), getTemplateDetail);
+router.put('/notifications/templates/:templateId', requirePermission('setting.manage'), saveCustomTemplate);
+router.post('/notifications/templates/:templateId/reset', requirePermission('setting.manage'), resetCustomTemplate);
+router.get('/notifications/preview/:templateId', requirePermission(['setting.manage', 'setting.view']), previewNotificationTemplate);
+router.post('/notifications/preview/:templateId', requirePermission(['setting.manage', 'setting.view']), previewNotificationTemplate);
+router.post('/notifications/send-test', requirePermission('setting.manage'), sendTestNotificationEmail);
+router.put('/notifications/update', requirePermission('setting.manage'), updateNotificationSettings);
+router.put('/notifications/smtp', requirePermission('setting.manage'), updateSmtpConfig);
+router.post('/notifications/smtp/test', requirePermission('setting.manage'), testSmtpConfig);
 
 router.get('/', requirePermission(['setting.manage', 'setting.view']), getStoreSettings);
 router.put('/:section', requirePermission('setting.manage'), updateStoreSettings);

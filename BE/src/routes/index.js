@@ -94,5 +94,6 @@ router.use('/settings', storeSettingRoutes);
 
 router.use('/payments', paymentRoutes);
 router.use('/payment-providers', paymentProviderRoutes);
+router.use('/notifications', require('./notification.routes'));
 
 module.exports = router;

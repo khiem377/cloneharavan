@@ -987,6 +987,37 @@ const createOrderCOD = async (userId, orderData) => {
     },
   });
 
+  // 1. Lưu thông báo vào DB (TTL 30 ngày) và phát Socket.io Realtime tới Admin Topbar
+  try {
+    const notificationService = require('./notification.service');
+    notificationService.createNotification({
+      recipient: 'admin',
+      type: 'ORDER_NEW',
+      title: `Đơn hàng mới #${createdOrder.orderCode}`,
+      message: `Khách hàng ${finalShippingAddress.fullName} vừa đặt đơn hàng trị giá ${finalTotalAmount.toLocaleString('vi-VN')}đ`,
+      link: `/orders?code=${createdOrder.orderCode}`,
+      metadata: {
+        orderId: createdOrder._id,
+        orderCode: createdOrder.orderCode,
+        totalAmount: finalTotalAmount,
+        customerName: finalShippingAddress.fullName,
+        customerPhone: finalShippingAddress.phone,
+      },
+    }).catch((err) => console.warn('[Order Service] Lỗi tạo notification đơn mới:', err.message));
+  } catch (notifErr) {
+    console.warn('[Order Service] Không thể tạo notification:', notifErr.message);
+  }
+
+  // 2. Gửi email xác nhận đơn hàng cho khách hàng
+  try {
+    const emailService = require('./email.service');
+    emailService.sendOrderConfirmationEmail(createdOrder).catch((err) =>
+      console.warn('[Order Service] Lỗi gửi email xác nhận:', err.message)
+    );
+  } catch (emailErr) {
+    console.warn('[Order Service] Không thể gửi email xác nhận:', emailErr.message);
+  }
+
   return createdOrder;
 };
 
@@ -1072,6 +1103,23 @@ const cancelOrder = async (orderId, userId, reason = '', userRole = 'user') => {
       orderCode: existingOrder.orderCode,
     });
   }
+
+  // Bắn thông báo Socket Realtime & Lưu DB có TTL 30 ngày cho Admin
+  try {
+    const notificationService = require('./notification.service');
+    notificationService.createNotification({
+      recipient: 'admin',
+      type: 'ORDER_CANCELLED',
+      title: `Đơn hàng #${existingOrder.orderCode} đã bị hủy`,
+      message: `Đơn hàng #${existingOrder.orderCode} vừa được hủy. Lý do: ${reason || 'Khách/Shop yêu cầu hủy đơn'}. Tồn kho giữ chỗ đã được hoàn trả.`,
+      link: `/orders?code=${existingOrder.orderCode}`,
+      metadata: {
+        orderId: existingOrder._id,
+        orderCode: existingOrder.orderCode,
+        reason,
+      },
+    }).catch(() => {});
+  } catch (_) {}
 
   return cancelledOrder;
 };

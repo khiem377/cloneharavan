@@ -26,46 +26,16 @@ const DEFAULT_CARRIERS = [
     logo: 'https://cdn.haitrieu.com/wp-content/uploads/2022/01/Logo-Viettel-Post-Red.png',
   },
   {
-    code: 'vnpost',
-    name: 'Vietnam Post (VNPost)',
-    shortDesc: 'Cung cấp bưu chuyển phát nhanh EMS và chuyển phát bưu kiện trên toàn quốc',
-    logo: 'https://cdn.haitrieu.com/wp-content/uploads/2022/01/Logo-VNPost.png',
-  },
-  {
-    code: 'spx',
-    name: 'SPX Express (Shopee Express)',
-    shortDesc: 'Giải pháp vận chuyển thông minh, nhanh chóng, an toàn, tiết kiệm',
-    logo: 'https://cdn.haitrieu.com/wp-content/uploads/2023/08/Logo-SPX-Shopee-Express.png',
-  },
-  {
-    code: 'best_express',
-    name: 'BEST Express',
-    shortDesc: 'Mạng lưới chuyển phát nhanh toàn diện với công nghệ tự động hóa cao',
-    logo: 'https://cdn.haitrieu.com/wp-content/uploads/2022/05/Logo-BEST-Express.png',
-  },
-  {
-    code: 'green_sm',
-    name: 'Green SM (Xanh SM Express)',
-    shortDesc: 'Dịch vụ giao nhận siêu tốc thuần điện đầu tiên tại Việt Nam',
-    logo: 'https://cdn.haitrieu.com/wp-content/uploads/2023/04/Logo-Xanh-SM.png',
-  },
-  {
-    code: 'grab_express',
-    name: 'Grab Express',
-    shortDesc: 'Dịch vụ nhận gửi, vận chuyển và phát nhanh bằng đường bộ',
-    logo: 'https://cdn.haitrieu.com/wp-content/uploads/2022/01/Logo-Grab-Express.png',
-  },
-  {
     code: 'ahamove',
     name: 'Ahamove',
     shortDesc: 'Dịch vụ giao hàng tức thì nội thành xe máy & xe tải siêu tốc',
     logo: 'https://cdn.haitrieu.com/wp-content/uploads/2022/05/Logo-Ahamove.png',
   },
   {
-    code: 'jt_express',
-    name: 'J&T Express',
-    shortDesc: 'Mạng lưới chuyển phát nhanh tiêu chuẩn quốc tế năng động',
-    logo: 'https://cdn.haitrieu.com/wp-content/uploads/2022/05/Logo-JT-Express.png',
+    code: 'vnpost',
+    name: 'Vietnam Post (VNPost)',
+    shortDesc: 'Cung cấp bưu chuyển phát nhanh EMS và chuyển phát bưu kiện trên toàn quốc',
+    logo: 'https://cdn.haitrieu.com/wp-content/uploads/2022/01/Logo-VNPost.png',
   },
 ];
 
@@ -199,11 +169,16 @@ class StoreSettingService {
    * Lấy danh sách đối tác vận chuyển (tự động khởi tạo nếu chưa có)
    */
   static async getShippingProviders() {
-    let providers = await ShippingProvider.find().sort({ createdAt: 1 }).populate('warehouseId', 'name address');
+    const ALLOWED_CODES = ['ghn', 'ghtk', 'viettelpost', 'ahamove', 'vnpost'];
 
-    // Nếu DB chưa có bản ghi nào, khởi tạo danh sách mặc định
-    if (!providers || providers.length === 0) {
-      for (const carrier of DEFAULT_CARRIERS) {
+    // Xóa triệt để các hãng không dùng khỏi database
+    await ShippingProvider.deleteMany({ code: { $nin: ALLOWED_CODES } });
+
+    let providers = await ShippingProvider.find({ code: { $in: ALLOWED_CODES } }).sort({ createdAt: 1 }).populate('warehouseId', 'name address');
+
+    // Nếu DB thiếu bản ghi nào trong 5 hãng mặc định, khởi tạo bổ sung
+    for (const carrier of DEFAULT_CARRIERS) {
+      if (ALLOWED_CODES.includes(carrier.code)) {
         await ShippingProvider.findOneAndUpdate(
           { code: carrier.code },
           {
@@ -216,8 +191,8 @@ class StoreSettingService {
           { upsert: true, new: true }
         );
       }
-      providers = await ShippingProvider.find().sort({ createdAt: 1 }).populate('warehouseId', 'name address');
     }
+    providers = await ShippingProvider.find({ code: { $in: ALLOWED_CODES } }).sort({ createdAt: 1 }).populate('warehouseId', 'name address');
 
     // Đảm bảo không có hãng nào bị hiển thị 'connected' nếu chưa có thông tin xác thực thực tế
     for (const p of providers) {
