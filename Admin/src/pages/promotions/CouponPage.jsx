@@ -16,6 +16,8 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table, TableHeader, TableBody, TableHead, TableRow, TableCell,
 } from '@/components/ui/table';
@@ -299,10 +301,23 @@ export default function CouponPage() {
       {/* Data Table */}
       <Card className="rounded-[6px] border border-border shadow-none overflow-hidden">
         {isLoading ? (
-          <div className="flex h-64 items-center justify-center text-muted-foreground gap-2">
-            <Loader2 className="size-5 animate-spin text-primary" />
-            <span className="text-xs">Đang tải danh sách mã...</span>
-          </div>
+          <Table>
+            <TableBody>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <TableRow key={`coupon-skel-${i}`}>
+                  <TableCell className="w-10 text-center"><Skeleton className="size-4 mx-auto" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+                  <TableCell className="text-center"><Skeleton className="h-5 w-20 mx-auto" /></TableCell>
+                  <TableCell className="text-right"><Skeleton className="h-7 w-16 ml-auto" /></TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         ) : coupons.length === 0 ? (
           <div className="flex h-64 flex-col items-center justify-center text-muted-foreground gap-2">
             <TicketPercent className="size-8 text-muted-foreground/40" />
@@ -314,15 +329,19 @@ export default function CouponPage() {
               <TableHeader className="bg-muted/40">
                 <TableRow>
                   <TableHead className="px-3 py-2 w-10 text-center">
-                    <input
-                      type="checkbox"
-                      className="size-3.5 rounded-[3px] border-input cursor-pointer"
-                      checked={coupons.length > 0 && selectedIds.length === coupons.length}
-                      ref={(el) => {
-                        if (el) el.indeterminate = selectedIds.length > 0 && selectedIds.length < coupons.length;
-                      }}
-                      onChange={toggleSelectAll}
-                    />
+                    <div className="flex items-center justify-center">
+                      <Checkbox
+                        checked={
+                          coupons.length > 0 && selectedIds.length === coupons.length
+                            ? true
+                            : selectedIds.length > 0
+                            ? 'indeterminate'
+                            : false
+                        }
+                        onCheckedChange={toggleSelectAll}
+                        aria-label="Chọn tất cả mã giảm giá"
+                      />
+                    </div>
                   </TableHead>
                   <TableHead className="text-xs font-semibold py-2">Tên Voucher</TableHead>
                   <TableHead className="text-xs font-semibold py-2">Mã Code</TableHead>
@@ -346,12 +365,13 @@ export default function CouponPage() {
                       className={`hover:bg-muted/30 transition-colors ${selectedIds.includes(item._id) ? 'bg-muted/50' : ''}`}
                     >
                       <TableCell className="px-3 py-2 text-center">
-                        <input
-                          type="checkbox"
-                          className="size-3.5 rounded-[3px] border-input cursor-pointer"
-                          checked={selectedIds.includes(item._id)}
-                          onChange={() => toggleSelect(item._id)}
-                        />
+                        <div className="flex items-center justify-center">
+                          <Checkbox
+                            checked={selectedIds.includes(item._id)}
+                            onCheckedChange={() => toggleSelect(item._id)}
+                            aria-label={`Chọn voucher ${item.name}`}
+                          />
+                        </div>
                       </TableCell>
                       <TableCell className="py-2">
                         <div className="flex flex-col gap-0.5">
@@ -800,15 +820,16 @@ export default function CouponPage() {
                   </div>
                 </div>
 
-                <label className="flex items-center gap-2 pt-1 cursor-pointer text-xs">
-                  <input
-                    type="checkbox"
-                    className="size-3.5 rounded-[3px] border-input text-primary focus:ring-ring"
+                <div className="flex items-center gap-2 pt-1">
+                  <Checkbox
+                    id="coupon-is-active"
                     checked={form.isActive}
-                    onChange={(e) => setForm((f) => ({ ...f, isActive: e.target.checked }))}
+                    onCheckedChange={(checked) => setForm((f) => ({ ...f, isActive: checked }))}
                   />
-                  <span>Kích hoạt mã ngay sau khi tạo</span>
-                </label>
+                  <label htmlFor="coupon-is-active" className="text-xs text-foreground cursor-pointer select-none">
+                    Kích hoạt mã ngay sau khi tạo
+                  </label>
+                </div>
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-2 border-t border-border">

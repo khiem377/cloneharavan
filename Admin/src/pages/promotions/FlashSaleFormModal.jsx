@@ -10,6 +10,7 @@ import DateTimePicker from '@/components/ui/DateTimePicker';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -403,12 +404,10 @@ export default function FlashSaleFormModal({ flashSale, onClose, onSuccess }) {
               </div>
 
               <div className="flex items-center gap-2 md:col-span-2 pt-1">
-                <input
-                  type="checkbox"
+                <Checkbox
                   id="isActiveToggle"
                   checked={isActive}
-                  onChange={(e) => setIsActive(e.target.checked)}
-                  className="size-4 rounded-[4px] border-input text-primary focus:ring-primary cursor-pointer"
+                  onCheckedChange={(checked) => setIsActive(checked)}
                 />
                 <label htmlFor="isActiveToggle" className="text-xs font-medium text-foreground cursor-pointer select-none">
                   Kích hoạt chương trình Flash Sale này

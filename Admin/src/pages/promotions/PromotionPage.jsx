@@ -19,6 +19,8 @@ import PriceInput from '@/components/ui/PriceInput';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   Table,
@@ -402,9 +404,23 @@ export default function PromotionPage() {
 
       <Card className="rounded-[6px] border border-border shadow-none overflow-hidden">
         {isLoading ? (
-          <div className="flex h-64 items-center justify-center text-muted-foreground gap-2">
-            <Loader2 className="size-5 animate-spin text-primary" /> Đang tải dữ liệu...
-          </div>
+          <Table>
+            <TableBody>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <TableRow key={`promo-skel-${i}`}>
+                  <TableCell className="w-10 px-3"><Skeleton className="size-4 mx-auto" /></TableCell>
+                  <TableCell className="px-4"><Skeleton className="h-4 w-40" /></TableCell>
+                  <TableCell className="px-4"><Skeleton className="h-4 w-20" /></TableCell>
+                  <TableCell className="px-4"><Skeleton className="h-4 w-24" /></TableCell>
+                  <TableCell className="px-4"><Skeleton className="h-4 w-20" /></TableCell>
+                  <TableCell className="px-4"><Skeleton className="h-4 w-16" /></TableCell>
+                  <TableCell className="px-4"><Skeleton className="h-4 w-28" /></TableCell>
+                  <TableCell className="px-4"><Skeleton className="h-5 w-20" /></TableCell>
+                  <TableCell className="px-4 text-right"><Skeleton className="h-7 w-16 ml-auto" /></TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         ) : promotions.length === 0 ? (
           <div className="flex h-64 flex-col items-center justify-center text-muted-foreground gap-2">
             <Tag className="size-10 text-muted-foreground/40" />
@@ -416,13 +432,19 @@ export default function PromotionPage() {
               <TableHeader className="bg-muted/50">
                 <TableRow className="border-b border-border">
                   <TableHead className="w-10 px-3">
-                    <input
-                      type="checkbox"
-                      className="size-4 rounded-[4px] border-input cursor-pointer"
-                      checked={promotions.length > 0 && selectedIds.length === promotions.length}
-                      ref={(el) => { if (el) el.indeterminate = selectedIds.length > 0 && selectedIds.length < promotions.length; }}
-                      onChange={toggleSelectAll}
-                    />
+                    <div className="flex items-center justify-center">
+                      <Checkbox
+                        checked={
+                          promotions.length > 0 && selectedIds.length === promotions.length
+                            ? true
+                            : selectedIds.length > 0
+                            ? 'indeterminate'
+                            : false
+                        }
+                        onCheckedChange={toggleSelectAll}
+                        aria-label="Chọn tất cả khuyến mãi"
+                      />
+                    </div>
                   </TableHead>
                   <TableHead className="px-4">Tên chương trình</TableHead>
                   <TableHead className="px-4">Loại</TableHead>
@@ -442,12 +464,13 @@ export default function PromotionPage() {
                   return (
                     <TableRow key={item._id} className={selectedIds.includes(item._id) ? 'bg-muted/60' : ''}>
                       <TableCell className="px-3 py-3 align-middle">
-                        <input
-                          type="checkbox"
-                          className="size-4 rounded-[4px] border-input cursor-pointer"
-                          checked={selectedIds.includes(item._id)}
-                          onChange={() => toggleSelect(item._id)}
-                        />
+                        <div className="flex items-center justify-center">
+                          <Checkbox
+                            checked={selectedIds.includes(item._id)}
+                            onCheckedChange={() => toggleSelect(item._id)}
+                            aria-label={`Chọn khuyến mãi ${item.name}`}
+                          />
+                        </div>
                       </TableCell>
                       <TableCell className="px-4 py-3 align-middle">
                         <div className="flex flex-col">
@@ -766,12 +789,10 @@ export default function PromotionPage() {
                 </div>
               </div>
               <div className="flex items-center gap-2 pt-1">
-                <input
-                  type="checkbox"
+                <Checkbox
                   id="promotionIsActive"
-                  className="size-4 rounded-[4px] border-input cursor-pointer"
                   checked={form.isActive}
-                  onChange={(e) => setForm((f) => ({ ...f, isActive: e.target.checked }))}
+                  onCheckedChange={(checked) => setForm((f) => ({ ...f, isActive: checked }))}
                 />
                 <label htmlFor="promotionIsActive" className="text-xs font-medium text-foreground cursor-pointer select-none">
                   Kích hoạt ngay sau khi tạo

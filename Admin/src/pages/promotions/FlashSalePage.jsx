@@ -12,6 +12,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table, TableHeader, TableBody, TableHead, TableRow, TableCell,
 } from '@/components/ui/table';
@@ -180,7 +181,27 @@ export default function FlashSalePage() {
 
       <Card className="rounded-[6px] border border-border shadow-none overflow-hidden">
         {loading ? (
-          <div className="flex justify-center items-center py-20 text-xs text-muted-foreground">Đang tải...</div>
+          <Table>
+            <TableBody>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <TableRow key={`flash-skel-${i}`}>
+                  <TableCell className="py-2">
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="h-10 w-16 rounded-[4px]" />
+                      <div className="space-y-1.5 flex-1">
+                        <Skeleton className="h-4 w-44" />
+                        <Skeleton className="h-3 w-24" />
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                  <TableCell className="text-center"><Skeleton className="h-4 w-8 mx-auto" /></TableCell>
+                  <TableCell><Skeleton className="h-5 w-20" /></TableCell>
+                  <TableCell className="text-right"><Skeleton className="h-7 w-16 ml-auto" /></TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         ) : flashSales.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-2 py-20 text-center text-xs text-muted-foreground">
             <Clock size={36} className="text-muted-foreground/50" />
