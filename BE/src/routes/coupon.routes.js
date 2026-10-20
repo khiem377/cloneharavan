@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const ctrl = require('../controllers/coupon.controller');
-const { protect } = require('../middleware/auth.middleware');
+const { protect, optionalAuth } = require('../middleware/auth.middleware');
 const { requirePermission } = require('../middleware/permission.middleware');
 
-// Public — validate mã ở checkout storefront
-router.post('/validate', ctrl.validate);
+// Public — validate mã ở checkout storefront (nhận diện user nếu đã đăng nhập)
+router.post('/validate', optionalAuth, ctrl.validate);
 
 // Public / Admin view
 router.get('/', ctrl.getAll);

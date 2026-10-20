@@ -206,6 +206,14 @@ export default function OrderDetailModal({
                     </span>
                   </div>
                 )}
+                {order.idempotencyKey && (
+                  <div className="flex items-center justify-between pt-1 border-t border-dashed border-border text-[11px]">
+                    <span className="text-muted-foreground">Idempotency Key:</span>
+                    <span className="font-mono text-muted-foreground truncate max-w-[200px]" title={order.idempotencyKey}>
+                      {order.idempotencyKey}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           </div>

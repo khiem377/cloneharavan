@@ -10,10 +10,14 @@ export const orderService = {
   },
 
   /**
-   * Đặt hàng thanh toán khi nhận hàng (COD)
+   * Đặt hàng (hỗ trợ Idempotency-Key header)
    */
-  createOrder: async (payload = {}) => {
-    const res = await api.post('/orders', payload);
+  createOrder: async (payload = {}, customHeaders = {}) => {
+    const headers = { ...customHeaders };
+    if (payload.idempotencyKey && !headers['Idempotency-Key']) {
+      headers['Idempotency-Key'] = payload.idempotencyKey;
+    }
+    const res = await api.post('/orders', payload, { headers });
     return res.data;
   },
 

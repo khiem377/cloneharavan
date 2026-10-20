@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { toast } from '@/components/ui/toast';
 import useAuthStore from '@/store/authStore';
 import { useCartStore } from '@/store/cartStore';
@@ -89,6 +89,19 @@ export function useCheckout() {
   const [orderNote, setOrderNote] = useState('');
   const [submittingOrder, setSubmittingOrder] = useState(false);
   const [placedOrder, setPlacedOrder] = useState(null);
+
+  // Idempotency Key bảo vệ submit trùng lặp
+  const idempotencyKeyRef = useRef(null);
+  const getIdempotencyKey = () => {
+    if (!idempotencyKeyRef.current) {
+      if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+        idempotencyKeyRef.current = crypto.randomUUID();
+      } else {
+        idempotencyKeyRef.current = 'idemp_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+      }
+    }
+    return idempotencyKeyRef.current;
+  };
 
   const formatPrice = (val) =>
     new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val || 0);
@@ -452,18 +465,21 @@ export function useCheckout() {
       }
 
       const activeItemIds = getSelectedCheckoutIds();
+      const idempotencyKey = getIdempotencyKey();
       const orderPayload = {
         addressId: !isCustomAddress && selectedAddressId ? selectedAddressId : undefined,
         shippingAddress: isCustomAddress ? currentActiveAddress : undefined,
         couponCode: couponInput || previewData?.pricing?.couponCode || undefined,
         shippingCouponCode: shippingCouponInput || previewData?.pricing?.shippingCouponCode || undefined,
         note: orderNote,
-        paymentMethod: 'COD',
+        paymentMethod: selectedPaymentMethod || 'COD',
         itemIds: activeItemIds.length > 0 ? activeItemIds : undefined,
+        idempotencyKey,
       };
 
-      const res = await orderService.createOrder(orderPayload);
+      const res = await orderService.createOrder(orderPayload, { 'Idempotency-Key': idempotencyKey });
       if (res.success && res.data) {
+        idempotencyKeyRef.current = null; // Hoàn thành đơn -> giải phóng key cho đơn tiếp theo
         setPlacedOrder(res.data);
         if (typeof window !== 'undefined') {
           sessionStorage.removeItem('checkoutItemIds');

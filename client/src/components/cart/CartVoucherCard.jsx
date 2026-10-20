@@ -54,7 +54,7 @@ export default function CartVoucherCard({
           )}
         </div>
         <div className="text-xs font-medium text-slate-600">
-          {coupon.name} (Đơn tối thiểu {formatPrice(coupon.minOrderValue)})
+          {coupon.name} (Đơn tối thiểu {formatPrice(coupon.minOrderValue)}{coupon.usageLimitPerUser ? ` • Tối đa ${coupon.usageLimitPerUser} lần/khách` : ''})
         </div>
       </div>
     );
@@ -105,8 +105,11 @@ export default function CartVoucherCard({
           </div>
         )}
 
-        <div className="text-[10.5px] text-slate-400">
-          HSD: {formatDate(coupon.endDate)}
+        <div className="flex items-center gap-2 text-[10.5px] text-slate-400">
+          <span>HSD: {formatDate(coupon.endDate)}</span>
+          {coupon.usageLimitPerUser && (
+            <span>• Tối đa {coupon.usageLimitPerUser} lần/tài khoản</span>
+          )}
         </div>
       </div>
 

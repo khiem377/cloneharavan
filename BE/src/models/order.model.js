@@ -209,6 +209,12 @@ const orderSchema = new mongoose.Schema(
       ref: 'User',
       default: null,
     },
+    idempotencyKey: {
+      type: String,
+      default: null,
+      trim: true,
+      index: true,
+    },
     statusHistory: [
       {
         status: { type: String, required: true },
@@ -224,6 +230,7 @@ const orderSchema = new mongoose.Schema(
 // Indexes phục vụ tìm kiếm & tra cứu danh sách đơn hàng
 orderSchema.index({ createdAt: -1 });
 orderSchema.index({ userId: 1, createdAt: -1 });
+orderSchema.index({ userId: 1, idempotencyKey: 1 }, { sparse: true });
 orderSchema.index({ orderStatus: 1, paymentStatus: 1 });
 orderSchema.index({ orderStatus: 1, createdAt: -1 });
 orderSchema.index({ 'shippingAddress.phone': 1 });

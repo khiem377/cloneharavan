@@ -70,6 +70,12 @@ const couponSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    // Số lần tối đa một người dùng được dùng mã này (null = không giới hạn, mặc định = 1)
+    usageLimitPerUser: {
+      type: Number,
+      default: 1,
+      min: [1, 'Số lượt dùng tối thiểu của mỗi user là 1'],
+    },
   },
   { timestamps: true }
 );

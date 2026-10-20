@@ -495,7 +495,27 @@ const createOrderCOD = async (userId, orderData) => {
     throw new AppError('Vui lòng đăng nhập tài khoản để tiến hành đặt hàng', 401);
   }
 
-  const { addressId, shippingAddress: customAddress, couponCode, shippingCouponCode, note = '', buyNowItem, items: directItems, itemIds } = orderData;
+  const {
+    addressId,
+    shippingAddress: customAddress,
+    couponCode,
+    shippingCouponCode,
+    note = '',
+    buyNowItem,
+    items: directItems,
+    itemIds,
+    paymentMethod = 'COD',
+    idempotencyKey = null,
+  } = orderData;
+
+  // 0. Idempotency Guard (Bảo vệ chống trùng lặp theo Idempotency-Key từ Client)
+  if (idempotencyKey && userId) {
+    const existingOrder = await Order.findOne({ userId, idempotencyKey });
+    if (existingOrder) {
+      console.log(`[Order Service] Trùng khớp Idempotency-Key (${idempotencyKey}) - trả về đơn đã tạo: ${existingOrder.orderCode}`);
+      return existingOrder;
+    }
+  }
 
   // 1. Xác định người dùng & Địa chỉ giao hàng
   const user = await User.findById(userId);
@@ -737,7 +757,7 @@ const createOrderCOD = async (userId, orderData) => {
   }
   const codeToValidate = couponCode !== undefined ? couponCode : (userCart?.couponCode || null);
   if (codeToValidate && typeof codeToValidate === 'string' && codeToValidate.trim()) {
-    const couponRes = await couponService.validateCoupon(codeToValidate.trim(), totalSubtotal);
+    const couponRes = await couponService.validateCoupon(codeToValidate.trim(), totalSubtotal, { userId });
     totalCouponDiscount = couponRes.discountAmount || 0;
     appliedCouponCode = couponRes.coupon.code;
     couponDoc = couponRes.coupon;
@@ -832,7 +852,7 @@ const createOrderCOD = async (userId, orderData) => {
       const shipCouponRes = await couponService.validateCoupon(
         shippingCodeToValidate.trim(),
         totalSubtotal,
-        shippingFee
+        { shippingFee, userId }
       );
       totalShippingDiscount = shipCouponRes.discountAmount || 0;
       appliedShippingCouponCode = shipCouponRes.coupon.code;
@@ -845,20 +865,20 @@ const createOrderCOD = async (userId, orderData) => {
   const finalShippingFee = Math.max(0, shippingFee - totalShippingDiscount);
   const finalTotalAmount = Math.max(0, totalSubtotal - totalCouponDiscount + finalShippingFee);
 
-  // 6b. Chống tạo đơn trùng lặp (Idempotency Guard trong vòng 10 giây)
-  const tenSecondsAgo = new Date(Date.now() - 10000);
-  const recentDuplicate = await Order.findOne({
-    userId,
-    orderStatus: 'PENDING',
-    paymentMethod: 'COD',
-    paymentStatus: 'UNPAID',
-    'pricing.subtotal': totalSubtotal,
-    createdAt: { $gte: tenSecondsAgo },
-  });
+  // 6b. Chống tạo đơn trùng lặp (Fallback Idempotency Guard trong vòng 10 giây nếu không gửi Idempotency-Key)
+  if (!idempotencyKey) {
+    const tenSecondsAgo = new Date(Date.now() - 10000);
+    const recentDuplicate = await Order.findOne({
+      userId,
+      orderStatus: 'PENDING',
+      'pricing.subtotal': totalSubtotal,
+      createdAt: { $gte: tenSecondsAgo },
+    });
 
-  if (recentDuplicate) {
-    console.log(`[Order Service] Phát hiện đơn hàng trùng lặp gần đây (${recentDuplicate.orderCode}), trả về đơn đã tạo.`);
-    return recentDuplicate;
+    if (recentDuplicate) {
+      console.log(`[Order Service] Phát hiện đơn hàng trùng lặp gần đây (${recentDuplicate.orderCode}), trả về đơn đã tạo.`);
+      return recentDuplicate;
+    }
   }
 
   const orderCode = generateOrderCode();
@@ -911,9 +931,10 @@ const createOrderCOD = async (userId, orderData) => {
           userId,
           items: orderItemsData,
           shippingAddress: finalShippingAddress,
-          paymentMethod: 'COD',
-          paymentStatus: 'UNPAID',
+          paymentMethod: paymentMethod || 'COD',
+          paymentStatus: orderData.paymentStatus || 'UNPAID',
           orderStatus: 'PENDING',
+          idempotencyKey: idempotencyKey || null,
           pricing: {
             subtotal: totalSubtotal,
             shippingFee,

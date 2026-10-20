@@ -60,6 +60,7 @@ const DEFAULT_FORM = {
   endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16),
   isActive: true,
   usageLimit: '',
+  usageLimitPerUser: 1,
 };
 
 export default function CouponPage() {
@@ -125,6 +126,7 @@ export default function CouponPage() {
       endDate: coupon.endDate ? new Date(coupon.endDate).toISOString().slice(0, 16) : '',
       isActive: coupon.isActive,
       usageLimit: coupon.usageLimit || '',
+      usageLimitPerUser: coupon.usageLimitPerUser ?? 1,
     });
     setShowForm(true);
   };
@@ -171,6 +173,7 @@ export default function CouponPage() {
       maxDiscount: form.maxDiscount ? Number(form.maxDiscount) : undefined,
       minOrderValue: Number(form.minOrderValue || 0),
       usageLimit: form.usageLimit ? Number(form.usageLimit) : undefined,
+      usageLimitPerUser: form.usageLimitPerUser ? Math.max(1, Number(form.usageLimitPerUser)) : 1,
     };
 
     if (editTarget) {
@@ -462,6 +465,9 @@ export default function CouponPage() {
                               />
                             </div>
                           )}
+                          <div className="text-[10px] text-muted-foreground">
+                            Tối đa: <span className="font-mono font-medium text-foreground">{item.usageLimitPerUser || 1}</span> lần/khách
+                          </div>
                         </div>
                       </TableCell>
 
@@ -726,7 +732,7 @@ export default function CouponPage() {
               <div className="flex flex-col gap-3 rounded-[6px] border border-border p-3.5 bg-muted/20">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Điều kiện & Giới hạn</h3>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs font-medium text-foreground">Đơn tối thiểu (VNĐ)</label>
                     <Input
@@ -741,7 +747,7 @@ export default function CouponPage() {
 
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs font-medium text-foreground">
-                      Tổng số lượt sử dụng <span className="text-muted-foreground font-normal">(Trống = vô hạn)</span>
+                      Tổng số lượt dùng <span className="text-muted-foreground font-normal">(Trống = vô hạn)</span>
                     </label>
                     <Input
                       type="number"
@@ -750,6 +756,20 @@ export default function CouponPage() {
                       placeholder="Không giới hạn"
                       value={form.usageLimit}
                       onChange={(e) => setForm((f) => ({ ...f, usageLimit: e.target.value }))}
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-medium text-foreground">
+                      Số lượt / khách <span className="text-muted-foreground font-normal">(Mặc định 1)</span>
+                    </label>
+                    <Input
+                      type="number"
+                      min={1}
+                      className="h-8 rounded-[6px] text-xs font-mono tabular-nums"
+                      placeholder="1"
+                      value={form.usageLimitPerUser}
+                      onChange={(e) => setForm((f) => ({ ...f, usageLimitPerUser: e.target.value }))}
                     />
                   </div>
                 </div>

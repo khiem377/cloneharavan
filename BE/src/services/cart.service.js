@@ -862,14 +862,11 @@ const applyCoupon = async (cartOwner, couponCode, category = null) => {
     throw new AppError('Giỏ hàng đang trống, không thể áp dụng mã giảm giá', 400);
   }
 
-  // Tra cứu mã coupon trong database
-  const coupon = await Coupon.findOne({ code: cleanCode });
-  if (!coupon) {
-    throw new AppError('Mã giảm giá không tồn tại', 404);
-  }
-  if (!coupon.isActive) {
-    throw new AppError('Mã giảm giá không còn hiệu lực', 400);
-  }
+  // Tra cứu và kiểm tra hiệu lực & giới hạn lượt dùng theo user
+  const couponService = require('./coupon.service');
+  const userId = cartOwner?.userId || cart.userId || null;
+  const validatedRes = await couponService.validateCoupon(cleanCode, 1, { userId });
+  const coupon = validatedRes.coupon;
 
   const targetCategory = category || coupon.category || 'order';
 

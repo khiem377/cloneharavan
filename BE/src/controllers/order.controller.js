@@ -24,7 +24,11 @@ const previewOrder = async (req, res, next) => {
  */
 const createOrder = async (req, res, next) => {
   try {
-    const order = await orderService.createOrderCOD(req.user._id, req.body);
+    const idempotencyKey = req.headers['idempotency-key'] || req.body.idempotencyKey || null;
+    const order = await orderService.createOrderCOD(req.user._id, {
+      ...req.body,
+      idempotencyKey,
+    });
     res.status(201).json({
       success: true,
       message: 'Đặt hàng thành công! Đơn hàng đang được chuẩn bị',

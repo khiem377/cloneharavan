@@ -50,10 +50,14 @@ const toggleStatus = async (req, res, next) => {
 // POST /coupons/validate — dùng ở checkout FE (storefront)
 const validate = async (req, res, next) => {
   try {
-    const { code, orderTotal, userId } = req.body;
+    const { code, orderTotal, shippingFee } = req.body;
+    const userId = req.user?._id || req.body.userId || null;
     if (!code) return next(new (require('../utils/AppError').AppError)('Vui lòng nhập mã giảm giá', 400));
     if (!orderTotal || orderTotal <= 0) return next(new (require('../utils/AppError').AppError)('Tổng đơn hàng không hợp lệ', 400));
-    const result = await couponService.validateCoupon(code, Number(orderTotal), userId);
+    const result = await couponService.validateCoupon(code, Number(orderTotal), {
+      shippingFee: Number(shippingFee) || 0,
+      userId,
+    });
     res.json({ status: 'success', data: result });
   } catch (err) { next(err); }
 };

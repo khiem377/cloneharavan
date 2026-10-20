@@ -122,7 +122,19 @@ const toggleCouponStatus = async (id, isActive) => {
   return coupon;
 };
 
-const validateCoupon = async (code, orderTotal = 0, shippingFee = 0) => {
+const validateCoupon = async (code, orderTotal = 0, options = {}) => {
+  let shippingFee = 0;
+  let userId = null;
+
+  if (typeof options === 'number') {
+    shippingFee = options;
+  } else if (typeof options === 'string') {
+    userId = options;
+  } else if (options && typeof options === 'object') {
+    shippingFee = Number(options.shippingFee) || 0;
+    userId = options.userId || null;
+  }
+
   const coupon = await Coupon.findOne({ code: code.toUpperCase() });
 
   if (!coupon) throw new AppError('Mã giảm giá không tồn tại', 404);
@@ -134,6 +146,26 @@ const validateCoupon = async (code, orderTotal = 0, shippingFee = 0) => {
 
   if (coupon.usageLimit !== null && coupon.usedCount >= coupon.usageLimit) {
     throw new AppError('Mã giảm giá đã hết lượt sử dụng', 400);
+  }
+
+  // Kiểm tra giới hạn số lần sử dụng của riêng từng người dùng
+  if (userId && coupon.usageLimitPerUser !== null && coupon.usageLimitPerUser !== undefined) {
+    const Order = require('../models/order.model');
+    const userUsedCount = await Order.countDocuments({
+      userId,
+      $or: [
+        { 'pricing.couponCode': coupon.code },
+        { 'pricing.shippingCouponCode': coupon.code },
+      ],
+      orderStatus: { $ne: 'CANCELLED' },
+    });
+
+    if (userUsedCount >= coupon.usageLimitPerUser) {
+      throw new AppError(
+        `Bạn đã sử dụng hết số lượt cho phép (${coupon.usageLimitPerUser} lần) của mã giảm giá này`,
+        400
+      );
+    }
   }
 
   if (orderTotal < coupon.minOrderValue) {
@@ -155,6 +187,7 @@ const validateCoupon = async (code, orderTotal = 0, shippingFee = 0) => {
       value: coupon.value,
       maxDiscount: coupon.maxDiscount,
       minOrderValue: coupon.minOrderValue || 0,
+      usageLimitPerUser: coupon.usageLimitPerUser,
     },
     category: coupon.category || 'order',
     discountAmount,
