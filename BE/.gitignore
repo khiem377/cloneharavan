@@ -6,12 +6,11 @@ build/
 .DS_Store
 
 # Seed / migration scripts
-scripts/*
+scripts/
 !scripts/seed-full-permissions.js
 !scripts/assign_staff_warehouses.js
+src/scripts/
 seed*
-!scripts/seed-full-permissions.js
-!scripts/assign_staff_warehouses.js
 
 # Route analysis & inspection tools
 *analyze*

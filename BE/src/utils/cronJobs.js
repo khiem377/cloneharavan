@@ -196,44 +196,40 @@ const startCronJobs = () => {
   const cron = getNodeCron();
   if (!cron) return;
 
-  // Python ALS: every 4 hours (mỗi 4 tiếng)
+  // Python ALS: every 4 hours
   cron.schedule('0 */4 * * *', () => {
-    runAlsBatch().catch(() => { });
+    runAlsBatch().catch(() => {});
   });
-  console.log('[CronJobs] Python ALS scheduled: every 4 hours');
 
-  // Item-CF: every 6 hours (mỗi 6 tiếng)
+  // Item-CF: every 6 hours
   cron.schedule('0 */6 * * *', () => {
-    runItemCFBatch().catch(() => { });
+    runItemCFBatch().catch(() => {});
   });
-  console.log('[CronJobs] Item-CF scheduled: every 6 hours');
 
   // Reset SearchLog count7d: every Sunday midnight
   cron.schedule('0 0 * * 0', () => {
-    resetSearchLog7d().catch(() => { });
+    resetSearchLog7d().catch(() => {});
   });
-  console.log('[CronJobs] SearchLog count7d reset scheduled: every Sunday');
 
-  // Banner expiry: every 30 minutes — tu dong an banner het lich
+  // Banner expiry: every 30 minutes
   cron.schedule('*/30 * * * *', () => {
-    autoHideExpiredBanners().catch(() => { });
+    autoHideExpiredBanners().catch(() => {});
   });
-  console.log('[CronJobs] Banner auto-hide scheduled: every 30 minutes');
 
   // Upsell Engine: every 8 hours
   cron.schedule('0 */8 * * *', () => {
-    runUpsellBatch().catch(() => { });
+    runUpsellBatch().catch(() => {});
   });
-  console.log('[CronJobs] Upsell Engine scheduled: every 8 hours');
 
-  // Flash Sale Realtime Menu Sync: every 1 minute — tự động mở/đóng menu đúng từng phút theo lịch
+  // Flash Sale Realtime Menu Sync: every 1 minute
   cron.schedule('*/1 * * * *', () => {
     try {
       const { syncFlashSalesToMenu } = require('../services/flashSale.service');
       syncFlashSalesToMenu().catch(() => {});
     } catch (e) {}
   });
-  console.log('[CronJobs] Flash Sale menu sync scheduled: every 1 minute');
+
+  console.log('[CronJobs] 6 background jobs scheduled (ALS, Item-CF, SearchLog, Banner, Upsell, FlashSale)');
 
   // Run in background 10 seconds after startup to avoid blocking server boot
   setTimeout(() => {

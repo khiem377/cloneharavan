@@ -15,14 +15,23 @@ process.on('uncaughtException', (err) => {
 connectDB()
   .then(() => {
     const server = app.listen(PORT, () => {
-      console.log(`Server running on http://localhost:${PORT}`);
-      console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`Real-time Interaction Pipeline Active`);
+      console.log(`Server running on http://localhost:${PORT} (${process.env.NODE_ENV || 'development'})`);
 
-      // Pre-warm corpus tim kiem de request dau tien khong phai cho build (~1.6s)
+      // Pre-warm corpus tìm kiếm ở chế độ nền
       require('./src/utils/dynamicSearchCorpus')
         .getStoreCorpus()
-        .catch((err) => console.warn('[SearchCorpus] Pre-warm failed:', err.message));
+        .catch(() => {});
+
+      // Tự động seed nhóm khách hàng trong im lặng nếu database chưa có nhóm nào
+      const CustomerGroup = require('./src/models/customerGroup.model');
+      CustomerGroup.countDocuments()
+        .then((count) => {
+          if (count === 0) {
+            const seedCustomerGroups = require('./scripts/seed-customer-groups-and-sync');
+            seedCustomerGroups(false).catch(() => {});
+          }
+        })
+        .catch(() => {});
     });
 
     const { initSocket } = require('./src/config/socket');
