@@ -16,10 +16,12 @@ import { toast } from '@/providers/ToastProvider';
 import shipmentService from '@/services/shipment.service';
 import CreateShipmentModal from './components/CreateShipmentModal';
 import ShipmentDetailModal from './components/ShipmentDetailModal';
+import CodReconciliationTab from './components/CodReconciliationTab';
 import { Truck, Plus, Search, RefreshCw, Eye } from 'lucide-react';
 
 const TABS = [
   { id: 'all', label: 'Tất cả' },
+  { id: 'cod_reconciliation', label: 'Đối soát COD' },
   { id: 'ready_to_pick', label: 'Chờ lấy hàng' },
   { id: 'delivering_group', label: 'Đang giao hàng' },
   { id: 'delivery_fail', label: 'Chờ giao lại' },
@@ -121,8 +123,14 @@ export default function ShipmentsListPage() {
           ))}
         </div>
 
-        {/* Search Bar */}
-        <form onSubmit={handleSearchSubmit} className="p-3 border-b border-border flex gap-2">
+        {activeTab === 'cod_reconciliation' ? (
+          <div className="p-4">
+            <CodReconciliationTab />
+          </div>
+        ) : (
+          <>
+            {/* Search Bar */}
+            <form onSubmit={handleSearchSubmit} className="p-3 border-b border-border flex gap-2">
           <div className="relative flex-1">
             <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-2.5" />
             <Input
@@ -261,6 +269,8 @@ export default function ShipmentsListPage() {
             </Button>
           </div>
         </div>
+        </>
+        )}
       </div>
 
       {/* Modals */}

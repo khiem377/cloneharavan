@@ -65,6 +65,30 @@ export const shipmentService = {
     const res = await api.post(`/shipments/${id}/sync`);
     return res.data;
   },
+
+  /**
+   * Thống kê đối soát tiền COD
+   */
+  getCODStats: async () => {
+    const res = await api.get('/shipments/cod/stats');
+    return res.data;
+  },
+
+  /**
+   * Đối soát COD 1 vận đơn
+   */
+  reconcileCOD: async (id, payload) => {
+    const res = await api.post(`/shipments/${id}/reconcile-cod`, payload);
+    return res.data;
+  },
+
+  /**
+   * Đối soát COD hàng loạt
+   */
+  bulkReconcileCOD: async (payload) => {
+    const res = await api.post('/shipments/cod/bulk-reconcile', payload);
+    return res.data;
+  },
 };
 
 export default shipmentService;

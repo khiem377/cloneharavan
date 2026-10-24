@@ -108,6 +108,10 @@ class ShipmentService {
       query.carrierCode = carrierCode;
     }
 
+    if (filters.codStatus && filters.codStatus !== 'all') {
+      query.codStatus = filters.codStatus;
+    }
+
     if (search && search.trim()) {
       const term = search.trim();
       query.$or = [
@@ -147,6 +151,131 @@ class ShipmentService {
       throw new AppError('Không tìm thấy phiếu giao hàng', 404);
     }
     return shipment;
+  }
+
+  /**
+   * Thống kê đối soát tiền COD theo trạng thái
+   */
+  static async getCODReconciliationStats() {
+    const stats = await Shipment.aggregate([
+      {
+        $group: {
+          _id: null,
+          totalCod: { $sum: { $ifNull: ['$codAmount', 0] } },
+          pendingCod: {
+            $sum: {
+              $cond: [{ $eq: ['$codStatus', 'pending'] }, { $ifNull: ['$codAmount', 0] }, 0],
+            },
+          },
+          reconciledCod: {
+            $sum: {
+              $cond: [
+                { $eq: ['$codStatus', 'reconciled'] },
+                { $ifNull: ['$codReceivedAmount', '$codAmount'] },
+                0,
+              ],
+            },
+          },
+          discrepancyCount: {
+            $sum: {
+              $cond: [{ $eq: ['$codStatus', 'discrepancy'] }, 1, 0],
+            },
+          },
+          reconciledCount: {
+            $sum: {
+              $cond: [{ $eq: ['$codStatus', 'reconciled'] }, 1, 0],
+            },
+          },
+          pendingCount: {
+            $sum: {
+              $cond: [{ $eq: ['$codStatus', 'pending'] }, 1, 0],
+            },
+          },
+        },
+      },
+    ]);
+
+    return (
+      stats[0] || {
+        totalCod: 0,
+        pendingCod: 0,
+        reconciledCod: 0,
+        discrepancyCount: 0,
+        reconciledCount: 0,
+        pendingCount: 0,
+      }
+    );
+  }
+
+  /**
+   * Xác nhận đối soát COD cho 1 vận đơn
+   */
+  static async reconcileShipmentCOD(id, { codReceivedAmount, reconciliationCode, codNote, user }) {
+    const shipment = await Shipment.findById(id);
+    if (!shipment) {
+      throw new AppError('Không tìm thấy phiếu giao hàng', 404);
+    }
+
+    const received = Number(codReceivedAmount);
+    const expected = Number(shipment.codAmount || 0);
+    const diff = received - expected;
+
+    shipment.codReceivedAmount = received;
+    shipment.codDiscrepancyAmount = diff;
+    shipment.reconciliationCode = (reconciliationCode || '').trim();
+    shipment.codNote = (codNote || '').trim();
+    shipment.codReconciledAt = new Date();
+    shipment.codReconciledBy = user?._id || null;
+    shipment.codStatus = diff === 0 ? 'reconciled' : 'discrepancy';
+
+    shipment.historyLogs.push({
+      status: shipment.status,
+      description: `Đối soát COD: Thực nhận ${received.toLocaleString('vi-VN')}đ (Lệch ${diff.toLocaleString('vi-VN')}đ). Mã phiên: ${reconciliationCode || 'N/A'}`,
+      updatedAt: new Date(),
+      updatedBy: user?._id || null,
+    });
+
+    await shipment.save();
+    return shipment.toObject();
+  }
+
+  /**
+   * Xác nhận đối soát COD hàng loạt (Bulk Reconcile)
+   */
+  static async bulkReconcileCOD({ shipmentIds, reconciliationCode, codNote, user }) {
+    if (!Array.isArray(shipmentIds) || shipmentIds.length === 0) {
+      throw new AppError('Danh sách mã vận đơn không hợp lệ', 400);
+    }
+
+    const shipments = await Shipment.find({ _id: { $in: shipmentIds } });
+    let successCount = 0;
+
+    for (const shipment of shipments) {
+      const expected = Number(shipment.codAmount || 0);
+      shipment.codReceivedAmount = expected;
+      shipment.codDiscrepancyAmount = 0;
+      shipment.reconciliationCode = (reconciliationCode || '').trim();
+      shipment.codNote = (codNote || '').trim();
+      shipment.codReconciledAt = new Date();
+      shipment.codReconciledBy = user?._id || null;
+      shipment.codStatus = 'reconciled';
+
+      shipment.historyLogs.push({
+        status: shipment.status,
+        description: `Đối soát COD hàng loạt khớp 100%. Mã phiên đối soát: ${reconciliationCode || 'N/A'}`,
+        updatedAt: new Date(),
+        updatedBy: user?._id || null,
+      });
+
+      await shipment.save();
+      successCount++;
+    }
+
+    return {
+      successCount,
+      totalCount: shipmentIds.length,
+      message: `Đã đối soát thành công ${successCount}/${shipmentIds.length} vận đơn`,
+    };
   }
 
   /**

@@ -108,6 +108,41 @@ const getShipmentsByOrderCodes = catchAsync(async (req, res) => {
   });
 });
 
+// 12. Thống kê đối soát tiền COD
+const getCODStats = catchAsync(async (req, res) => {
+  const stats = await ShipmentService.getCODReconciliationStats();
+  res.status(200).json({
+    success: true,
+    data: stats,
+  });
+});
+
+// 13. Xác nhận đối soát COD cho 1 vận đơn
+const reconcileShipmentCOD = catchAsync(async (req, res) => {
+  const result = await ShipmentService.reconcileShipmentCOD(req.params.id, {
+    ...req.body,
+    user: req.user,
+  });
+  res.status(200).json({
+    success: true,
+    message: 'Đối soát tiền COD thành công!',
+    data: result,
+  });
+});
+
+// 14. Xác nhận đối soát COD hàng loạt
+const bulkReconcileCOD = catchAsync(async (req, res) => {
+  const result = await ShipmentService.bulkReconcileCOD({
+    ...req.body,
+    user: req.user,
+  });
+  res.status(200).json({
+    success: true,
+    message: result.message,
+    data: result,
+  });
+});
+
 module.exports = {
   getOverview,
   getShipmentsList,
@@ -120,5 +155,8 @@ module.exports = {
   updateShipmentStatus,
   syncShipmentStatus,
   handleCarrierWebhook,
+  getCODStats,
+  reconcileShipmentCOD,
+  bulkReconcileCOD,
 };
 

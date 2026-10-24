@@ -107,6 +107,41 @@ const shipmentSchema = new mongoose.Schema(
       default: 0,
       min: 0,
     },
+    codStatus: {
+      type: String,
+      enum: ['not_applicable', 'pending', 'reconciled', 'discrepancy'],
+      default: 'pending',
+      index: true,
+    },
+    codReceivedAmount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    codDiscrepancyAmount: {
+      type: Number,
+      default: 0,
+    },
+    reconciliationCode: {
+      type: String,
+      default: '',
+      trim: true,
+      index: true,
+    },
+    codReconciledAt: {
+      type: Date,
+      default: null,
+    },
+    codReconciledBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
+    codNote: {
+      type: String,
+      default: '',
+      trim: true,
+    },
     shippingFee: {
       type: Number,
       default: 0,

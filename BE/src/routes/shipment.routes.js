@@ -12,6 +12,9 @@ const {
   updateShipmentStatus,
   syncShipmentStatus,
   handleCarrierWebhook,
+  getCODStats,
+  reconcileShipmentCOD,
+  bulkReconcileCOD,
 } = require('../controllers/shipment.controller');
 const { protect } = require('../middleware/auth.middleware');
 const { requirePermission } = require('../middleware/permission.middleware');
@@ -58,8 +61,17 @@ router.get('/by-orders', getShipmentsByOrderCodes);
 // 4.1 Tra cứu vận đơn theo mã đơn hàng (Khách hàng & hệ thống)
 router.get('/by-order/:orderCode', getShipmentByOrderCode);
 
+// 4.2 Thống kê đối soát tiền COD
+router.get('/cod/stats', requirePermission(['order.view', 'order.manage', 'setting.view']), getCODStats);
+
+// 4.3 Xác nhận đối soát COD hàng loạt
+router.post('/cod/bulk-reconcile', requirePermission(['order.manage', 'setting.manage']), bulkReconcileCOD);
+
 // 4. Chi tiết 1 vận đơn
 router.get('/:id', requirePermission(['order.view', 'order.manage', 'setting.view']), getShipmentById);
+
+// 4.4 Xác nhận đối soát COD cho 1 vận đơn
+router.post('/:id/reconcile-cod', requirePermission(['order.manage', 'setting.manage']), reconcileShipmentCOD);
 
 // 5. Tạo mới vận đơn
 router.post('/', requirePermission(['order.manage', 'setting.manage']), createShipment);
