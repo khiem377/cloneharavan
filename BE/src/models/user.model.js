@@ -197,6 +197,13 @@ const userSchema = new mongoose.Schema(
       default: null,
     },
 
+    customerGroupId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'CustomerGroup',
+      default: null,
+      index: true,
+    },
+
     isActive: {
       type: Boolean,
       default: true,

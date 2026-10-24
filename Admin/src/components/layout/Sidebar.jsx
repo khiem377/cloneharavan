@@ -40,6 +40,9 @@ import {
   KeyIcon,
   Users,
   ShieldCheck,
+  CustomerNavIcon,
+  CustomerListNavIcon,
+  CustomerGroupNavIcon,
 } from '@/components/ui/Icons';
 import { Truck } from 'lucide-react';
 import useAuthStore from '@/store/authStore';
@@ -164,7 +167,15 @@ const NAV_GROUPS = [
           { to: '/blog/tags', icon: BlogTagNavIcon, label: 'Thẻ tag phân loại', permission: 'blog.edit' },
         ],
       },
-      { to: '/customers', icon: Users, label: 'Khách hàng', permission: 'user.view' },
+      {
+        icon: CustomerNavIcon,
+        label: 'Khách hàng',
+        permission: 'user.view',
+        children: [
+          { to: '/customers', icon: CustomerListNavIcon, label: 'Danh sách khách hàng', permission: 'user.view' },
+          { to: '/customers/groups', icon: CustomerGroupNavIcon, label: 'Nhóm khách hàng', permission: 'user.view' },
+        ],
+      },
     ],
   },
   {

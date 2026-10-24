@@ -416,6 +416,10 @@ const getAllUsers = async (query = {}) => {
     filter.isPhoneVerified = isPhoneVerified === 'true' || isPhoneVerified === true;
   }
 
+  if (query.customerGroupId && query.customerGroupId !== 'all') {
+    filter.customerGroupId = query.customerGroupId;
+  }
+
   const pageNum = Math.max(1, Number(page));
   const limitNum = Math.max(1, Number(limit));
   const skip = (pageNum - 1) * limitNum;
@@ -430,6 +434,7 @@ const getAllUsers = async (query = {}) => {
       })
       .populate('customPermissions', 'name code module description')
       .populate('assignedWarehouseId', 'name code isDefault')
+      .populate('customerGroupId', 'name code color type')
       .sort(sort)
       .skip(skip)
       .limit(limitNum),

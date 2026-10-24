@@ -34,6 +34,7 @@ import MenuEditorPage from '@/pages/menus/MenuEditorPage';
 import AuditLogListPage from '@/pages/audit/AuditLogListPage';
 import UnusedMediaPage from '@/pages/media/UnusedMediaPage';
 import CustomerListPage from '@/pages/customers/CustomerListPage';
+import CustomerGroupPage from '@/pages/customers/CustomerGroupPage';
 import StaffListPage from '@/pages/staffs/StaffListPage';
 import AdminProfilePage from '@/pages/profile/AdminProfilePage';
 import SettingsPage from '@/pages/settings/SettingsPage';
@@ -119,6 +120,7 @@ const router = createBrowserRouter([
                     { path: 'menus', element: <PermissionGuard requiredPermission="menu.manage"><MenuListPage /></PermissionGuard> },
                     { path: 'menus/:id/edit', element: <PermissionGuard requiredPermission="menu.manage"><MenuEditorPage /></PermissionGuard> },
                     { path: 'customers', element: <PermissionGuard requiredPermission="user.view"><CustomerListPage /></PermissionGuard> },
+                    { path: 'customers/groups', element: <PermissionGuard requiredPermission="user.view"><CustomerGroupPage /></PermissionGuard> },
                     { path: 'staffs', element: <PermissionGuard requiredPermission="role.assign"><StaffListPage /></PermissionGuard> },
                     { path: 'roles', element: <PermissionGuard requiredPermission="role.manage"><RoleListPage /></PermissionGuard> },
                     { path: 'audit-logs', element: <PermissionGuard requiredPermission="audit_log.view"><AuditLogListPage /></PermissionGuard> },

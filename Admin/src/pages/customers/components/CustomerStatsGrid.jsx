@@ -1,4 +1,4 @@
-import { Users, CheckCircle2, XCircle } from '@/components/ui/Icons';
+import { CustomerNavIcon, CheckCircle2, XCircle } from '@/components/ui/Icons';
 
 export default function CustomerStatsGrid({ stats = {} }) {
   const ITEMS = [
@@ -6,7 +6,7 @@ export default function CustomerStatsGrid({ stats = {} }) {
       label: 'Tổng khách hàng',
       value: stats.total || 0,
       sub: `${stats.newThisMonth || 0} mới tháng này`,
-      icon: Users,
+      icon: CustomerNavIcon,
       color: 'text-primary',
     },
     {

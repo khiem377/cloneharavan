@@ -1854,6 +1854,157 @@ export const RotateCcwIcon = (p) => (
 /** ArrowDownRightIcon — alias */
 export const ArrowDownRightIcon = ArrowDownRight;
 
+// ═══════════════════════════════════════════════════════════════
+//  CUSTOMERS & CUSTOMER SEGMENTS (NHÓM KHÁCH HÀNG)
+// ═══════════════════════════════════════════════════════════════
+
+/** CustomerNavIcon — Main customer icon: primary user with backdrop companion and trust badge */
+export const CustomerNavIcon = (p) => (
+  <Ic {...p}>
+    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    <path d="M21 21v-2a4 4 0 0 0-3-3.85" />
+    <path
+      d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"
+      fill="currentColor"
+      opacity="0.16"
+      strokeWidth="0"
+    />
+    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+    <circle cx="9" cy="7" r="4" fill="currentColor" opacity="0.22" strokeWidth="0" />
+    <circle cx="9" cy="7" r="4" />
+    <circle cx="19" cy="11" r="2.2" fill="currentColor" strokeWidth="0" />
+  </Ic>
+);
+
+/** CustomerListNavIcon — Customer directory: user profile card with status lines */
+export const CustomerListNavIcon = (p) => (
+  <Ic {...p}>
+    <rect x="3" y="3" width="18" height="18" rx="3" fill="currentColor" opacity="0.12" strokeWidth="0" />
+    <rect x="3" y="3" width="18" height="18" rx="3" />
+    <circle cx="8" cy="8.5" r="2.5" fill="currentColor" strokeWidth="0" />
+    <path d="M5.5 14a2.5 2.5 0 0 1 5 0" strokeWidth="1.5" />
+    <path d="M13.5 7.5h4.5M13.5 10.5h3M7 17.5h11" strokeWidth="1.6" strokeLinecap="round" />
+  </Ic>
+);
+
+/** CustomerGroupNavIcon — Segment network: interconnected users forming a cohort */
+export const CustomerGroupNavIcon = (p) => (
+  <Ic {...p}>
+    <rect x="2.5" y="3.5" width="19" height="17" rx="3" fill="currentColor" opacity="0.08" strokeWidth="0" />
+    <circle cx="12" cy="7" r="2.8" fill="currentColor" opacity="0.25" strokeWidth="0" />
+    <circle cx="12" cy="7" r="2.8" />
+    <circle cx="6.5" cy="14.5" r="2.3" />
+    <circle cx="17.5" cy="14.5" r="2.3" />
+    <path d="M9.8 8.8L7.8 12.5M14.2 8.8l2 3.7M9.2 15h5.6" strokeWidth="1.5" strokeLinecap="round" strokeDasharray="1 1.5" />
+    <path d="M4 19.5h16" strokeWidth="1.8" strokeLinecap="round" />
+  </Ic>
+);
+
+/** CustomerAutoIcon — Intelligent rule automation: magic prism sparkle */
+export const CustomerAutoIcon = (p) => (
+  <Ic {...p}>
+    <path
+      d="M12 2.5L13.8 8.2a2 2 0 0 0 1.3 1.3L20.8 11.3a0.7 0.7 0 0 1 0 1.4l-5.7 1.8a2 2 0 0 0-1.3 1.3L12 21.5l-1.8-5.7a2 2 0 0 0-1.3-1.3L3.2 12.7a0.7 0.7 0 0 1 0-1.4l5.7-1.8a2 2 0 0 0 1.3-1.3z"
+      fill="currentColor"
+      opacity="0.18"
+      strokeWidth="0"
+    />
+    <path
+      d="M12 2.5L13.8 8.2a2 2 0 0 0 1.3 1.3L20.8 11.3a0.7 0.7 0 0 1 0 1.4l-5.7 1.8a2 2 0 0 0-1.3 1.3L12 21.5l-1.8-5.7a2 2 0 0 0-1.3-1.3L3.2 12.7a0.7 0.7 0 0 1 0-1.4l5.7-1.8a2 2 0 0 0 1.3-1.3z"
+      strokeWidth="1.6"
+    />
+    <path d="M19 3v4M17 5h4" strokeWidth="1.4" strokeLinecap="round" />
+    <circle cx="5" cy="19" r="1.2" fill="currentColor" strokeWidth="0" />
+  </Ic>
+);
+
+/** CustomerManualIcon — Manual assignment: ID badge with selection indicator */
+export const CustomerManualIcon = (p) => (
+  <Ic {...p}>
+    <rect x="4" y="3" width="16" height="18" rx="2.5" fill="currentColor" opacity="0.12" strokeWidth="0" />
+    <rect x="4" y="3" width="16" height="18" rx="2.5" />
+    <circle cx="12" cy="9" r="2.8" />
+    <path d="M8 15a4 4 0 0 1 8 0" strokeLinecap="round" />
+    <path d="M15.5 14.5l3.5 3.5-1.5 0.5-0.8 2z" fill="currentColor" />
+  </Ic>
+);
+
+/** CustomerVipIcon — Royal crown for VIP */
+export const CustomerVipIcon = (p) => (
+  <Ic {...p}>
+    <path
+      d="M2.5 18h19l-2-11-5 5.5-2.5-8-2.5 8L4.5 7z"
+      fill="currentColor"
+      opacity="0.22"
+      strokeWidth="0"
+    />
+    <path
+      d="M2.5 18h19l-2-11-5 5.5-2.5-8-2.5 8L4.5 7z"
+      strokeWidth="1.65"
+      strokeLinejoin="round"
+      strokeLinecap="round"
+    />
+    <path d="M3.5 21h17" strokeWidth="1.8" strokeLinecap="round" />
+    <circle cx="12" cy="4.5" r="1.2" fill="currentColor" strokeWidth="0" />
+    <circle cx="4.5" cy="7" r="1" fill="currentColor" strokeWidth="0" />
+    <circle cx="19.5" cy="7" r="1" fill="currentColor" strokeWidth="0" />
+  </Ic>
+);
+
+/** CustomerLoyalIcon — Medal of honor for Loyal customers */
+export const CustomerLoyalIcon = (p) => (
+  <Ic {...p}>
+    <path d="M7 3l5 3 5-3v5.5l-5 3-5-3z" fill="currentColor" opacity="0.18" strokeWidth="0" />
+    <path d="M7 3l5 3 5-3v5.5l-5 3-5-3z" strokeLinejoin="round" />
+    <circle cx="12" cy="15.5" r="5.5" fill="currentColor" opacity="0.12" strokeWidth="0" />
+    <circle cx="12" cy="15.5" r="5.5" strokeWidth="1.6" />
+    <path
+      d="M12 17.5l-2-2a1.4 1.4 0 0 1 2-2 1.4 1.4 0 0 1 2 2z"
+      fill="currentColor"
+      strokeWidth="0"
+    />
+  </Ic>
+);
+
+/** CustomerWholesaleIcon — B2B pallet / enterprise crate */
+export const CustomerWholesaleIcon = (p) => (
+  <Ic {...p}>
+    <rect x="3.5" y="4" width="17" height="13" rx="2" fill="currentColor" opacity="0.15" strokeWidth="0" />
+    <rect x="3.5" y="4" width="17" height="13" rx="2" />
+    <path d="M3.5 10.5h17M12 4v13" strokeWidth="1.5" strokeLinecap="round" />
+    <path d="M2 20h20M5 17v3M12 17v3M19 17v3" strokeWidth="1.8" strokeLinecap="round" />
+  </Ic>
+);
+
+/** SyncRefreshCustomIcon — Orbital dual dynamic arrows */
+export const SyncRefreshCustomIcon = (p) => (
+  <Ic {...p}>
+    <path d="M21 12a9 9 0 0 0-15.3-6.36L3 8" strokeWidth="1.8" strokeLinecap="round" />
+    <polyline points="3 3 3 8 8 8" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M3 12a9 9 0 0 0 15.3 6.36L21 16" strokeWidth="1.8" strokeLinecap="round" />
+    <polyline points="21 21 21 16 16 16" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    <circle cx="12" cy="12" r="2.2" fill="currentColor" opacity="0.3" strokeWidth="0" />
+  </Ic>
+);
+
+/** FolderGroupIcon — Cohort folder with tab and member badge */
+export const FolderGroupIcon = (p) => (
+  <Ic {...p}>
+    <path
+      d="M3 7v13a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-6.5l-2-2.5H5a2 2 0 0 0-2 2.5z"
+      fill="currentColor"
+      opacity="0.14"
+      strokeWidth="0"
+    />
+    <path
+      d="M3 7v13a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-6.5l-2-2.5H5a2 2 0 0 0-2 2.5z"
+      strokeWidth="1.6"
+    />
+    <circle cx="12" cy="13" r="1.8" fill="currentColor" strokeWidth="0" />
+    <path d="M8.5 18a3.5 3.5 0 0 1 7 0" strokeWidth="1.4" strokeLinecap="round" />
+  </Ic>
+);
+
 // Re-export all standard Lucide icons for compatibility across pages
 export * from 'lucide-react';
 

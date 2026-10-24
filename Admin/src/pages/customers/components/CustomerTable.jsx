@@ -6,6 +6,9 @@ import {
   MapPin,
   Mail,
   Phone,
+  CustomerVipIcon,
+  CustomerLoyalIcon,
+  CustomerWholesaleIcon,
 } from '@/components/ui/Icons';
 import {
   Table,
@@ -125,9 +128,19 @@ export default function CustomerTable({
                           <span className="font-semibold text-xs text-foreground truncate">
                             {user.fullName || 'Khách hàng'}
                           </span>
-                          <span className="text-[11px] text-muted-foreground font-mono truncate">
-                            ID: {user._id.slice(-6)}
-                          </span>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <span className="text-[11px] text-muted-foreground font-mono truncate">
+                              ID: {user._id.slice(-6)}
+                            </span>
+                            {user.customerGroupId && (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-semibold font-mono text-primary bg-primary/10 border border-primary/20 px-1.5 py-0.5 rounded-[4px]">
+                                {user.customerGroupId.code === 'VIP' && <CustomerVipIcon size={11} className="text-purple-600 shrink-0" />}
+                                {user.customerGroupId.code === 'THAN_THIET' && <CustomerLoyalIcon size={11} className="text-emerald-600 shrink-0" />}
+                                {user.customerGroupId.code === 'KHACH_SI' && <CustomerWholesaleIcon size={11} className="text-amber-600 shrink-0" />}
+                                {user.customerGroupId.name || user.customerGroupId.code}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </TableCell>

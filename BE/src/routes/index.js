@@ -43,12 +43,14 @@ const upsellRoutes = require('./upsell.routes');
 const commentRoutes = require('./comment.routes');
 const shippingRoutes = require('./shipping.routes');
 const shipmentRoutes = require('./shipment.routes');
+const customerGroupRoutes = require('./customerGroup.routes');
 const storeSettingRoutes = require('./storeSetting.routes');
 const paymentRoutes = require('./payment.routes');
 const paymentProviderRoutes = require('./paymentProvider.routes');
 
 router.use('/auth', authRoutes);
 router.use('/users', userRoutes);
+router.use('/customer-groups', customerGroupRoutes);
 router.use('/shipping', shippingRoutes);
 router.use('/shipments', shipmentRoutes);
 router.use('/banners', bannerRoutes);

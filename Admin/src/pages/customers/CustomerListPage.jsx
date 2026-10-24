@@ -8,7 +8,9 @@ import {
 import DataTablePagination from '@/components/ui/DataTablePagination';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import useColumnVisibility from '@/hooks/useColumnVisibility';
+import { Button } from '@/components/ui/button';
 import { toast } from '@/providers/ToastProvider';
+import { Sparkles, Users } from 'lucide-react';
 
 import CustomerStatsGrid from './components/CustomerStatsGrid';
 import CustomerToolbar from './components/CustomerToolbar';
@@ -149,8 +151,8 @@ export default function CustomerListPage() {
       {/* 1. Quick Stats Grid */}
       <CustomerStatsGrid stats={stats} />
 
-      {/* 2. Toolbar */}
-      <CustomerToolbar
+          {/* 2. Toolbar */}
+          <CustomerToolbar
         keyword={keyword}
         setKeyword={(k) => {
           setKeyword(k);
