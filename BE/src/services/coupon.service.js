@@ -82,7 +82,11 @@ const getAllCoupons = async (query = {}) => {
   const skip = (page - 1) * limit;
 
   const [data, total] = await Promise.all([
-    Coupon.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
+    Coupon.find(filter)
+      .populate('applicableCustomerGroups', 'name code color')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit),
     Coupon.countDocuments(filter),
   ]);
 
@@ -93,7 +97,7 @@ const getAllCoupons = async (query = {}) => {
 };
 
 const getCouponById = async (id) => {
-  const coupon = await Coupon.findById(id);
+  const coupon = await Coupon.findById(id).populate('applicableCustomerGroups', 'name code color');
   if (!coupon) throw new AppError('Không tìm thấy mã giảm giá', 404);
   return coupon;
 };
@@ -163,6 +167,28 @@ const validateCoupon = async (code, orderTotal = 0, options = {}) => {
     if (userUsedCount >= coupon.usageLimitPerUser) {
       throw new AppError(
         `Bạn đã sử dụng hết số lượt cho phép (${coupon.usageLimitPerUser} lần) của mã giảm giá này`,
+        400
+      );
+    }
+  }
+
+  // Kiểm tra ràng buộc nhóm khách hàng
+  if (coupon.customerGroupRestriction === 'specific') {
+    if (!userId) {
+      throw new AppError(
+        'Mã giảm giá này chỉ dành riêng cho khách hàng thuộc nhóm ưu đãi. Vui lòng đăng nhập tài khoản.',
+        400
+      );
+    }
+    const User = require('../models/user.model');
+    const user = await User.findById(userId).select('customerGroupId');
+    const applicableGroupIds = (coupon.applicableCustomerGroups || []).map((g) =>
+      g._id ? g._id.toString() : g.toString()
+    );
+
+    if (!user || !user.customerGroupId || !applicableGroupIds.includes(user.customerGroupId.toString())) {
+      throw new AppError(
+        'Tài khoản của bạn không thuộc nhóm khách hàng được áp dụng mã giảm giá này',
         400
       );
     }

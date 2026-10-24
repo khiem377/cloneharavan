@@ -76,6 +76,18 @@ const couponSchema = new mongoose.Schema(
       default: 1,
       min: [1, 'Số lượt dùng tối thiểu của mỗi user là 1'],
     },
+    // Áp dụng cho nhóm khách hàng: 'all' = tất cả, 'specific' = chỉ nhóm chọn
+    customerGroupRestriction: {
+      type: String,
+      enum: ['all', 'specific'],
+      default: 'all',
+    },
+    applicableCustomerGroups: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'CustomerGroup',
+      },
+    ],
   },
   { timestamps: true }
 );
