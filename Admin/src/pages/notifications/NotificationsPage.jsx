@@ -163,12 +163,14 @@ export default function NotificationsPage() {
     if (!item.isRead) {
       handleMarkReadItem(item._id);
     }
-    if (item.link) {
+    const targetOrderId = item.metadata?.orderId || item.metadata?.orderCode;
+    if (targetOrderId) {
+      navigate(`/orders/${targetOrderId}`);
+    } else if (item.link && item.link.includes('code=')) {
+      const code = item.link.split('code=')[1];
+      navigate(`/orders/${code}`);
+    } else if (item.link) {
       navigate(item.link);
-    } else if (item.metadata?.orderId) {
-      navigate(`/orders/${item.metadata.orderId}`);
-    } else if (item.metadata?.orderCode) {
-      navigate(`/orders/${item.metadata.orderCode}`);
     } else {
       navigate('/orders');
     }

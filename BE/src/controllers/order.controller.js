@@ -17,11 +17,7 @@ const previewOrder = async (req, res, next) => {
   }
 };
 
-/**
- * 1. Đặt hàng thanh toán khi nhận hàng (COD) hoặc Mua Ngay
- * POST /api/v1/orders
- * POST /api/v1/orders/checkout-cod (alias)
- */
+
 const createOrder = async (req, res, next) => {
   try {
     const idempotencyKey = req.headers['idempotency-key'] || req.body.idempotencyKey || null;
@@ -29,21 +25,36 @@ const createOrder = async (req, res, next) => {
       ...req.body,
       idempotencyKey,
     });
+
+    let paymentUrl = null;
+    const methodUpper = String(order.paymentMethod || '').toUpperCase();
+    const paymentService = require('../services/payment.service');
+    const clientIp = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip || '127.0.0.1';
+
+    if (methodUpper === 'ONEPAY') {
+      paymentUrl = await paymentService.buildOnepayPaymentUrl(order, clientIp);
+    } else if (methodUpper === 'VNPAY') {
+      paymentUrl = await paymentService.buildVnpayPaymentUrl(order, clientIp);
+    }
+
+    const orderData = typeof order.toObject === 'function' ? order.toObject() : order;
+
     res.status(201).json({
       success: true,
-      message: 'Đặt hàng thành công! Đơn hàng đang được chuẩn bị',
-      data: order,
+      message: paymentUrl
+        ? `Đơn hàng được khởi tạo thành công. Đang chuyển hướng sang cổng thanh toán ${methodUpper === 'VNPAY' ? 'VNPAY' : 'OnePay'}...`
+        : 'Đặt hàng thành công! Đơn hàng đang được chuẩn bị',
+      data: {
+        ...orderData,
+        paymentUrl,
+      },
     });
   } catch (error) {
     next(error);
   }
 };
 
-/**
- * 2. Khách / Shop hủy đơn hàng
- * POST /api/v1/orders/:id/cancel
- * PATCH /api/v1/orders/:id/cancel (alias)
- */
+
 const cancelOrder = async (req, res, next) => {
   try {
     const userId = req.user._id;
@@ -66,8 +77,8 @@ const cancelOrder = async (req, res, next) => {
  */
 const getOrderById = async (req, res, next) => {
   try {
-    const userId = req.user._id;
-    const userRole = req.user?.role || 'user';
+    const userId = req.user?._id || null;
+    const userRole = req.user?.role || 'guest';
     const order = await orderService.getOrderById(req.params.id, userId, userRole);
     res.json({
       success: true,
@@ -124,6 +135,7 @@ const getAllOrders = async (req, res, next) => {
       success: true,
       data: result.orders,
       pagination: result.pagination,
+      stats: result.stats,
     });
   } catch (error) {
     next(error);

@@ -124,6 +124,7 @@ const orderSchema = new mongoose.Schema(
     shippingAddress: {
       fullName: { type: String, required: [true, 'Họ tên người nhận là bắt buộc'], trim: true },
       phone: { type: String, required: [true, 'Số điện thoại là bắt buộc'], trim: true },
+      email: { type: String, trim: true, default: '' },
       province: { type: String, required: [true, 'Tỉnh/Thành phố là bắt buộc'], trim: true },
       district: { type: String, required: [true, 'Quận/Huyện là bắt buộc'], trim: true },
       ward: { type: String, required: [true, 'Phường/Xã là bắt buộc'], trim: true },
@@ -131,8 +132,21 @@ const orderSchema = new mongoose.Schema(
     },
     paymentMethod: {
       type: String,
-      enum: ['COD'],
+      enum: ['COD', 'ONEPAY', 'VNPAY', 'MOMO', 'ZALOPAY'],
       default: 'COD',
+      uppercase: true,
+      trim: true,
+    },
+    paymentDetails: {
+      provider: { type: String, default: null },
+      transactionNo: { type: String, default: null },
+      merchTxnRef: { type: String, default: null },
+      amount: { type: Number, default: 0 },
+      bankCode: { type: String, default: null },
+      cardType: { type: String, default: null },
+      responseCode: { type: String, default: null },
+      paidAt: { type: Date, default: null },
+      rawResponse: { type: mongoose.Schema.Types.Mixed, default: null },
     },
     paymentStatus: {
       type: String,

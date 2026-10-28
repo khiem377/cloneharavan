@@ -14,8 +14,9 @@ import SearchableSelect from './SearchableSelect';
 export default function DataTablePagination({
   page = 1,
   pageSize = 10,
-  total = 0,
-  totalPages = 1,
+  total,
+  totalItems,
+  totalPages,
   onPageChange,
   onPageSizeChange,
   pageSizeOptions = [10, 20, 50, 100],
@@ -23,9 +24,11 @@ export default function DataTablePagination({
   showJumpToPage = true,
   className = '',
 }) {
+  const rawTotal = totalItems !== undefined ? totalItems : (total !== undefined ? total : 0);
   const numPage = typeof page === 'number' && !isNaN(page) ? page : (parseInt(page, 10) || 1);
   const numPageSize = typeof pageSize === 'number' && !isNaN(pageSize) ? pageSize : (parseInt(pageSize, 10) || 10);
-  const numTotal = typeof total === 'number' && !isNaN(total) ? total : (parseInt(total, 10) || 0);
+  const numTotal = typeof rawTotal === 'number' && !isNaN(rawTotal) ? rawTotal : (parseInt(rawTotal, 10) || 0);
+  const effectiveTotalPages = Math.max(1, totalPages || Math.ceil(numTotal / numPageSize) || 1);
 
   const [jumpInput, setJumpInput] = useState(String(numPage));
 
@@ -41,10 +44,10 @@ export default function DataTablePagination({
   const handleJumpSubmit = (e) => {
     e.preventDefault();
     const parsed = parseInt(jumpInput, 10);
-    if (!isNaN(parsed) && parsed >= 1 && parsed <= totalPages) {
+    if (!isNaN(parsed) && parsed >= 1 && parsed <= effectiveTotalPages) {
       onPageChange(parsed);
     } else {
-      setJumpInput(String(page));
+      setJumpInput(String(numPage));
     }
   };
 
@@ -81,35 +84,35 @@ export default function DataTablePagination({
         )}
 
         {/* Jump To Page */}
-        {showJumpToPage && totalPages > 1 && (
+        {showJumpToPage && effectiveTotalPages > 1 && (
           <form onSubmit={handleJumpSubmit} className="flex items-center gap-1.5 border-l border-border pl-3">
             <span>Đến trang:</span>
             <input
               type="number"
               min={1}
-              max={totalPages}
+              max={effectiveTotalPages}
               className="h-8 w-12 rounded-md border border-input bg-background px-1.5 text-center text-xs font-semibold text-foreground outline-none focus:border-ring"
               value={jumpInput}
               onChange={(e) => setJumpInput(e.target.value)}
               onBlur={handleJumpSubmit}
             />
-            <span>/ {totalPages}</span>
+            <span>/ {effectiveTotalPages}</span>
           </form>
         )}
 
         {/* Pagination buttons */}
-        {totalPages > 1 && (
+        {effectiveTotalPages > 1 && (
           <Pagination className="mx-0 w-auto border-l border-border pl-3">
             <PaginationContent>
               <PaginationItem>
                 <PaginationPrevious
-                  disabled={page <= 1}
-                  onClick={() => page > 1 && onPageChange(page - 1)}
+                  disabled={numPage <= 1}
+                  onClick={() => numPage > 1 && onPageChange(numPage - 1)}
                 />
               </PaginationItem>
 
-              {Array.from({ length: totalPages }, (_, i) => i + 1)
-                .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+              {Array.from({ length: effectiveTotalPages }, (_, i) => i + 1)
+                .filter((p) => p === 1 || p === effectiveTotalPages || Math.abs(p - numPage) <= 1)
                 .map((p, idx, arr) => (
                   <React.Fragment key={p}>
                     {idx > 0 && p - arr[idx - 1] > 1 && (
@@ -119,8 +122,8 @@ export default function DataTablePagination({
                     )}
                     <PaginationItem key={p}>
                       <PaginationLink
-                        isActive={p === page}
-                        onClick={() => p !== page && onPageChange(p)}
+                        isActive={p === numPage}
+                        onClick={() => p !== numPage && onPageChange(p)}
                       >
                         {p}
                       </PaginationLink>
@@ -130,8 +133,8 @@ export default function DataTablePagination({
 
               <PaginationItem>
                 <PaginationNext
-                  disabled={page >= totalPages}
-                  onClick={() => page < totalPages && onPageChange(page + 1)}
+                  disabled={numPage >= effectiveTotalPages}
+                  onClick={() => numPage < effectiveTotalPages && onPageChange(numPage + 1)}
                 />
               </PaginationItem>
             </PaginationContent>

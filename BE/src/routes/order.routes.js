@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const orderCtrl = require('../controllers/order.controller');
-const { protect, authorize } = require('../middleware/auth.middleware');
+const { protect, authorize, optionalAuth } = require('../middleware/auth.middleware');
 
 // 0. Kiểm tra đơn hàng trước khi đặt (Preview Order)
 router.post('/preview', protect, orderCtrl.previewOrder);
@@ -28,7 +28,7 @@ router.get('/:id/status', protect, orderCtrl.getOrderStatus);
 router.post('/:id/cancel', protect, orderCtrl.cancelOrder);
 router.patch('/:id/cancel', protect, orderCtrl.cancelOrder);
 
-// 7. Lấy chi tiết một đơn hàng (Snapshot bất biến)
+// 7. Lấy chi tiết một đơn hàng (Bảo mật: bắt buộc đăng nhập & đúng chủ sở hữu)
 router.get('/:id', protect, orderCtrl.getOrderById);
 
 module.exports = router;

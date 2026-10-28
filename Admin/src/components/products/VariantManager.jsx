@@ -11,6 +11,7 @@ import {
   useDeleteVariant,
   useDeleteAllVariants,
 } from '@/hooks/useProductVariants';
+import { resolveDisplayColor } from '@/utils/colorResolver';
 
 /* ─── utils ─── */
 function cartesian(arrays) {
@@ -31,7 +32,7 @@ function parsePrice(str) {
 }
 
 /* ─── Tag-style value input ─── */
-function TagInput({ values = [], onChange, placeholder = 'Nhập giá trị, Enter để thêm...' }) {
+function TagInput({ values = [], onChange, placeholder = 'Nhập giá trị, Enter để thêm...', isColor = false }) {
   const [input, setInput] = useState('');
   const inputRef = useRef(null);
 
@@ -39,7 +40,8 @@ function TagInput({ values = [], onChange, placeholder = 'Nhập giá trị, Ent
     const val = raw.trim();
     if (!val) return;
     if (values.find((v) => v.value.toLowerCase() === val.toLowerCase())) return;
-    onChange([...values, { value: val, colorCode: '' }]);
+    const colorCode = isColor ? resolveDisplayColor('', val) : '';
+    onChange([...values, { value: val, colorCode }]);
     setInput('');
   };
 
@@ -56,9 +58,15 @@ function TagInput({ values = [], onChange, placeholder = 'Nhập giá trị, Ent
       onClick={() => inputRef.current?.focus()}
     >
       {values.map((v, i) => (
-        <span key={i} className="inline-flex items-center gap-1 rounded-md bg-primary/10 border border-primary/20 text-primary text-xs px-2 py-0.5 font-medium">
+        <span key={i} className="inline-flex items-center gap-1.5 rounded-md bg-primary/10 border border-primary/20 text-primary text-xs px-2 py-0.5 font-medium">
+          {isColor && (
+            <span
+              className="w-3 h-3 rounded-full border border-black/15 shrink-0 shadow-2xs"
+              style={{ backgroundColor: resolveDisplayColor(v.colorCode, v.value) }}
+            />
+          )}
           {v.value}
-          <button type="button" className="hover:text-destructive cursor-pointer leading-none" onClick={(e) => { e.stopPropagation(); removeTag(i); }}>×</button>
+          <button type="button" className="hover:text-destructive cursor-pointer leading-none ml-0.5" onClick={(e) => { e.stopPropagation(); removeTag(i); }}>×</button>
         </span>
       ))}
       <input
@@ -78,7 +86,10 @@ function TagInput({ values = [], onChange, placeholder = 'Nhập giá trị, Ent
 function OptionBuilder({ options, onChange, parentSku, onGenerate, hasVariants, isGenerating }) {
   const addOption = () => onChange([...options, { name: '', type: 'text', values: [] }]);
   const removeOption = (i) => onChange(options.filter((_, idx) => idx !== i));
-  const updateName = (i, name) => onChange(options.map((o, idx) => idx === i ? { ...o, name } : o));
+  const updateName = (i, name) => {
+    const isColor = name.toLowerCase().includes('màu') || name.toLowerCase().includes('color');
+    onChange(options.map((o, idx) => idx === i ? { ...o, name, type: isColor ? 'color' : 'text' } : o));
+  };
   const updateValues = (i, values) => onChange(options.map((o, idx) => idx === i ? { ...o, values } : o));
 
   const validOptions = options.filter((o) => o.name.trim() && o.values.some((v) => v.value.trim()));
@@ -92,33 +103,37 @@ function OptionBuilder({ options, onChange, parentSku, onGenerate, hasVariants, 
           Chưa có thuộc tính nào. Thêm thuộc tính để tạo biến thể (VD: Màu sắc, RAM, Dung lượng, Size, Chất liệu...)
         </p>
       ) : (
-        options.map((opt, i) => (
-          <div key={i} className="rounded-lg border border-border bg-muted/20 p-3 flex flex-col gap-2">
-            <div className="flex items-center gap-2">
-              <input
-                className="h-8 flex-1 rounded-md border border-input bg-background px-3 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 text-foreground placeholder:text-muted-foreground"
-                placeholder="Tên thuộc tính (VD: Màu sắc / RAM / Size / Dung lượng / Chất liệu...)"
-                value={opt.name}
-                onChange={(e) => updateName(i, e.target.value)}
+        options.map((opt, i) => {
+          const isColor = opt.name.toLowerCase().includes('màu') || opt.name.toLowerCase().includes('color') || opt.type === 'color';
+          return (
+            <div key={i} className="rounded-lg border border-border bg-muted/20 p-3 flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                <input
+                  className="h-8 flex-1 rounded-md border border-input bg-background px-3 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 text-foreground placeholder:text-muted-foreground"
+                  placeholder="Tên thuộc tính (VD: Màu sắc / RAM / Size / Dung lượng / Chất liệu...)"
+                  value={opt.name}
+                  onChange={(e) => updateName(i, e.target.value)}
+                />
+                <button
+                  type="button"
+                  className="size-8 flex items-center justify-center rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer shrink-0"
+                  onClick={() => removeOption(i)}
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+              <TagInput
+                values={opt.values}
+                isColor={isColor}
+                onChange={(vals) => updateValues(i, vals)}
+                placeholder={isColor ? 'Nhập tên màu (VD: Titan Sa Mạc, Xanh Rêu, Đen...) Enter để thêm' : 'Nhập giá trị rồi Enter để thêm (VD: 8GB RAM, Size M, 256GB SSD...)'}
               />
-              <button
-                type="button"
-                className="size-8 flex items-center justify-center rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer shrink-0"
-                onClick={() => removeOption(i)}
-              >
-                <Trash2 size={14} />
-              </button>
+              {opt.values.length > 0 && (
+                <p className="text-[10px] text-muted-foreground">{opt.values.length} giá trị · Nhấn Enter để thêm, Backspace để xóa cuối</p>
+              )}
             </div>
-            <TagInput
-              values={opt.values}
-              onChange={(vals) => updateValues(i, vals)}
-              placeholder="Nhập giá trị rồi Enter để thêm (VD: Đỏ, 8GB RAM, Size M, 256GB SSD...)"
-            />
-            {opt.values.length > 0 && (
-              <p className="text-[10px] text-muted-foreground">{opt.values.length} giá trị · Nhấn Enter để thêm, Backspace để xóa cuối</p>
-            )}
-          </div>
-        ))
+          );
+        })
       )}
 
       <div className="flex items-center justify-between gap-3 pt-1 flex-wrap">
@@ -501,7 +516,19 @@ export default function VariantManager({ productId, product, options = [], onOpt
         const skuSuffix = combo.map((val) => val.value.replace(/\s+/g, '').slice(0, 5).toUpperCase()).join('-');
         const sku = parentSku ? `${parentSku}-${skuSuffix}` : `VAR-${skuSuffix || idx + 1}`;
         return {
-          attributes: combo.map((val, i) => ({ name: validOptions[i].name, value: val.value, colorCode: val.colorCode || '' })),
+          attributes: combo.map((val, i) => {
+            const isColor =
+              validOptions[i].name.toLowerCase().includes('màu') ||
+              validOptions[i].name.toLowerCase().includes('color') ||
+              validOptions[i].type === 'color';
+            return {
+              name: validOptions[i].name,
+              value: val.value,
+              colorCode:
+                val.colorCode ||
+                (isColor ? resolveDisplayColor('', val.value) : ''),
+            };
+          }),
           sku,
           stock: 0,
           price: null,

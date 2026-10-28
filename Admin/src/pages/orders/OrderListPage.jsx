@@ -12,6 +12,7 @@ import OrderTable from './components/OrderTable';
 import OrderDetailModal from './components/OrderDetailModal';
 import OrderStatusModal from './components/OrderStatusModal';
 import OrderCancelModal from './components/OrderCancelModal';
+import CreateShipmentModal from '@/pages/shipments/components/CreateShipmentModal';
 
 const ORDER_COLUMNS = [
   { id: 'orderCode', label: 'Mã đơn hàng', defaultVisible: true, alwaysVisible: true },
@@ -42,15 +43,9 @@ export default function OrderListPage() {
 
   // Modals state
   const [viewOrder, setViewOrder] = useState(null);
-  const [statusModalState, setStatusModalState] = useState({
-    isOpen: false,
-    order: null,
-    nextStatus: null,
-  });
-  const [cancelModalState, setCancelModalState] = useState({
-    isOpen: false,
-    order: null,
-  });
+  const [statusModalState, setStatusModalState] = useState({ isOpen: false, order: null, nextStatus: null });
+  const [cancelModalState, setCancelModalState] = useState({ isOpen: false, order: null });
+  const [createShipmentOrder, setCreateShipmentOrder] = useState(null);
 
   const columnVisibility = useColumnVisibility('admin_orders_columns_v1', ORDER_COLUMNS);
   const { isColumnVisible } = columnVisibility;
@@ -79,6 +74,7 @@ export default function OrderListPage() {
   const { data: res, isLoading, isFetching, refetch } = useOrders(queryParams);
   const orders = res?.data || [];
   const pagination = res?.pagination || { page: 1, limit: 10, total: 0, totalPages: 1 };
+  const stats = res?.stats;
 
   // Tải thông tin vận đơn đối tác cho các đơn hàng hiển thị
   useEffect(() => {
@@ -96,28 +92,10 @@ export default function OrderListPage() {
   }, [orders]);
 
   // Handlers for modals
-  const handleOpenStatusModal = (order, nextStatus) => {
-    setStatusModalState({
-      isOpen: true,
-      order,
-      nextStatus,
-    });
-  };
-
-  const handleCloseStatusModal = () => {
-    setStatusModalState({ isOpen: false, order: null, nextStatus: null });
-  };
-
-  const handleOpenCancelModal = (order) => {
-    setCancelModalState({
-      isOpen: true,
-      order,
-    });
-  };
-
-  const handleCloseCancelModal = () => {
-    setCancelModalState({ isOpen: false, order: null });
-  };
+  const handleOpenStatusModal = (order, nextStatus) => setStatusModalState({ isOpen: true, order, nextStatus });
+  const handleCloseStatusModal = () => setStatusModalState({ isOpen: false, order: null, nextStatus: null });
+  const handleOpenCancelModal = (order) => setCancelModalState({ isOpen: true, order });
+  const handleCloseCancelModal = () => setCancelModalState({ isOpen: false, order: null });
 
   // Export CSV
   const handleExportCsv = () => {
@@ -168,7 +146,7 @@ export default function OrderListPage() {
   return (
     <div className="space-y-4 p-4 sm:p-6 max-w-[1600px] mx-auto animate-in fade-in duration-200">
       {/* Top Statistics */}
-      <OrderStatsGrid orders={orders} />
+      <OrderStatsGrid orders={orders} stats={stats} totalCount={pagination.total} />
 
       {/* Toolbar / Filters */}
       <OrderToolbar
@@ -201,6 +179,7 @@ export default function OrderListPage() {
         onViewOrder={(order) => navigate(`/orders/${order._id}`)}
         onOpenStatusModal={handleOpenStatusModal}
         onOpenCancelModal={handleOpenCancelModal}
+        onCreateShipment={(order) => setCreateShipmentOrder(order)}
         isColumnVisible={isColumnVisible}
       />
 
@@ -208,6 +187,7 @@ export default function OrderListPage() {
       <DataTablePagination
         page={page}
         pageSize={pageSize}
+        total={pagination.total || 0}
         totalItems={pagination.total || 0}
         totalPages={pagination.totalPages || 1}
         onPageChange={setPage}
@@ -242,6 +222,19 @@ export default function OrderListPage() {
           order={cancelModalState.order}
           isOpen={cancelModalState.isOpen}
           onClose={handleCloseCancelModal}
+        />
+      )}
+
+      {createShipmentOrder && (
+        <CreateShipmentModal
+          isOpen={!!createShipmentOrder}
+          initialOrderId={createShipmentOrder._id}
+          onClose={() => setCreateShipmentOrder(null)}
+          onSuccess={() => {
+            setCreateShipmentOrder(null);
+            refetch();
+            toast.success('Tạo vận đơn thành công!');
+          }}
         />
       )}
     </div>

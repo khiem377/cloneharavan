@@ -4,6 +4,7 @@ import {
   Package,
   Truck,
   ExternalLink,
+  PackageCheck,
 } from '@/components/ui/Icons';
 import {
   Card,
@@ -33,19 +34,22 @@ export default function OrderFulfillmentCard({ order, shipment }) {
   const isDelivered = order.orderStatus === 'DELIVERED';
   const isShipping = order.orderStatus === 'SHIPPING';
   const isConfirmed = order.orderStatus === 'CONFIRMED';
+  const isStockExported = !!order.isStockExported || order.stockExport?.status === 'completed';
 
   const statusTitle = isDelivered
     ? 'Đã giao hàng'
     : isShipping
     ? 'Đang giao hàng'
     : isConfirmed
-    ? 'Chờ xuất kho & Giao hàng'
+    ? (isStockExported ? 'Đã đóng gói xuất kho (Chờ tạo vận đơn)' : 'Chờ xuất kho & Giao hàng')
     : 'Đang xử lý đơn hàng';
 
   const statusDotColor = isDelivered
     ? 'bg-emerald-500'
     : isShipping
     ? 'bg-cyan-500'
+    : isStockExported
+    ? 'bg-blue-500'
     : 'bg-amber-500';
 
   return (
@@ -57,15 +61,37 @@ export default function OrderFulfillmentCard({ order, shipment }) {
           <CardTitle className="text-xs font-bold text-foreground">{statusTitle}</CardTitle>
         </div>
 
-        {shipment?.trackingCode && (
-          <Link
-            to="/shipments"
-            className="text-[11px] font-medium text-primary hover:underline inline-flex items-center gap-1"
-          >
-            <span>Chi tiết vận đơn</span>
-            <ExternalLink className="size-3" />
-          </Link>
-        )}
+        <div className="flex items-center gap-2">
+          {(isConfirmed || order.orderStatus === 'PENDING') && (
+            isStockExported ? (
+              <Link
+                to={`/shipments?action=create&orderId=${order._id}&orderCode=${order.orderCode}`}
+                className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-[6px] bg-blue-600 text-white hover:bg-blue-700 shadow-2xs active:scale-[0.98]"
+              >
+                <Truck className="size-3.5" />
+                <span>Tạo vận đơn giao hàng</span>
+              </Link>
+            ) : (
+              <Link
+                to={`/stock-exports?orderId=${order._id}&orderCode=${order.orderCode}`}
+                className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-[6px] bg-cyan-600 text-white hover:bg-cyan-700 shadow-2xs active:scale-[0.98]"
+              >
+                <PackageCheck className="size-3.5" />
+                <span>Xuất kho giao hàng</span>
+              </Link>
+            )
+          )}
+
+          {shipment?.trackingCode && (
+            <Link
+              to="/shipments"
+              className="text-[11px] font-medium text-primary hover:underline inline-flex items-center gap-1"
+            >
+              <span>Chi tiết vận đơn</span>
+              <ExternalLink className="size-3" />
+            </Link>
+          )}
+        </div>
       </CardHeader>
 
       {/* Thông tin liên kết Vận đơn */}
@@ -82,10 +108,10 @@ export default function OrderFulfillmentCard({ order, shipment }) {
             <span className="text-muted-foreground w-28 shrink-0">Kiện hàng:</span>
             <div className="flex items-center gap-1.5 font-mono">
               <span className="font-bold text-foreground">
-                {shipment?.shipmentCode || `PKG-${order.orderCode}`}
+                {shipment?.shipmentCode || (order.stockExport ? order.stockExport.exportNumber : `PKG-${order.orderCode}`)}
               </span>
               <Badge variant="secondary" className="text-[10px] py-0 px-1.5 rounded-[4px] font-normal">
-                Đã đóng gói
+                {isStockExported ? 'Đã đóng gói xuất kho' : 'Chờ đóng gói'}
               </Badge>
             </div>
           </div>

@@ -16,7 +16,10 @@ const initSocket = (httpServer) => {
   });
 
   io.on('connection', (socket) => {
-    // Admin kết nối và tham gia phòng admin:orders
+    // Mặc định tự động cho socket kết nối tham gia phòng admin:orders
+    socket.join('admin:orders');
+    console.log(`⚡ [Socket.io] Client đã kết nối: ${socket.id}`);
+
     socket.on('join:admin', () => {
       socket.join('admin:orders');
     });
@@ -25,8 +28,8 @@ const initSocket = (httpServer) => {
       socket.leave('admin:orders');
     });
 
-    socket.on('disconnect', () => {
-      // Tự động dọn dẹp khi ngắt kết nối
+    socket.on('disconnect', (reason) => {
+      console.log(`🔌 [Socket.io] Client ngắt kết nối: ${socket.id} (${reason})`);
     });
   });
 
@@ -44,7 +47,9 @@ const getIO = () => {
 // Gửi thông báo tới toàn bộ nhân viên/quản trị viên trong phòng admin:orders
 const emitToAdmin = (event, data) => {
   if (io) {
+    console.log(`📢 [Socket.io] Phát tín hiệu "${event}" tới Admin:`, data?.title || data?.type || '');
     io.to('admin:orders').emit(event, data);
+    io.emit(event, data); // Phát dự phòng đảm bảo mọi kết nối Admin đều nhận được
   }
 };
 

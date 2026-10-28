@@ -109,6 +109,7 @@ export default function OrderTable({
   onViewOrder,
   onOpenStatusModal,
   onOpenCancelModal,
+  onCreateShipment,
   isColumnVisible,
 }) {
   const navigate = useNavigate();
@@ -304,8 +305,10 @@ export default function OrderTable({
                           <statusCfg.icon className="size-3 shrink-0" />
                           <span>{statusCfg.label}</span>
                         </Badge>
-                        <span className="text-[10px] text-muted-foreground">
-                          {statusCfg.inventoryNote}
+                        <span className={`text-[10px] ${order.isStockExported ? 'text-blue-600 dark:text-blue-400 font-medium' : 'text-muted-foreground'}`}>
+                          {order.orderStatus === 'CONFIRMED'
+                            ? (order.isStockExported ? 'Đã đóng gói xuất kho' : 'Chờ đóng gói xuất kho')
+                            : statusCfg.inventoryNote}
                         </span>
                       </div>
                     </TableCell>
@@ -363,13 +366,32 @@ export default function OrderTable({
                         )}
 
                         {order.orderStatus === 'CONFIRMED' && (
-                          <Button
-                            size="sm"
-                            className="h-7 px-2 text-[11px] rounded-[4px] bg-cyan-600 hover:bg-cyan-700 text-white font-medium cursor-pointer"
-                            onClick={() => onOpenStatusModal(order, 'SHIPPING')}
-                          >
-                            Xuất kho
-                          </Button>
+                          order.isStockExported ? (
+                            <Button
+                              size="sm"
+                              className="h-7 px-2 text-[11px] rounded-[4px] bg-blue-600 hover:bg-blue-700 text-white font-medium cursor-pointer flex items-center gap-1"
+                              title="Tạo phiếu vận đơn giao hàng cho đơn đã xuất kho"
+                              onClick={() => {
+                                if (typeof onCreateShipment === 'function') {
+                                  onCreateShipment(order);
+                                } else {
+                                  navigate(`/shipments?action=create&orderId=${order._id}&orderCode=${order.orderCode}`);
+                                }
+                              }}
+                            >
+                              <Truck className="size-3" />
+                              <span>Tạo vận đơn</span>
+                            </Button>
+                          ) : (
+                            <Button
+                              size="sm"
+                              className="h-7 px-2 text-[11px] rounded-[4px] bg-cyan-600 hover:bg-cyan-700 text-white font-medium cursor-pointer"
+                              title="Tạo lệnh xuất kho cho đơn hàng"
+                              onClick={() => navigate(`/stock-exports?orderId=${order._id}&orderCode=${order.orderCode}`)}
+                            >
+                              Xuất kho
+                            </Button>
+                          )
                         )}
 
                         {order.orderStatus === 'SHIPPING' && (

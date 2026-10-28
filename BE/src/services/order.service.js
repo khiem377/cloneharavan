@@ -11,12 +11,15 @@ const flashSaleService = require('./flashSale.service');
 const giftProgramService = require('./gift-program.service');
 const ghnService = require('./ghn.service');
 
+const crypto = require('crypto');
+const { escapeRegex } = require('../middleware/sanitize.middleware');
+
 /**
  * Helper sinh mã đơn hàng độc nhất: ORD-YYYYMMDD-XXXX
  */
 const generateOrderCode = () => {
   const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-  const rand = Math.random().toString(36).substring(2, 7).toUpperCase();
+  const rand = crypto.randomBytes(3).toString('hex').toUpperCase();
   return `ORD-${dateStr}-${rand}`;
 };
 
@@ -353,7 +356,7 @@ const previewOrder = async (userId, previewData = {}) => {
   const codeToValidate = couponCode !== undefined ? couponCode : (userCart?.couponCode || null);
   if (codeToValidate && typeof codeToValidate === 'string' && codeToValidate.trim()) {
     try {
-      const couponRes = await couponService.validateCoupon(codeToValidate.trim(), totalSubtotal);
+      const couponRes = await couponService.validateCoupon(codeToValidate.trim(), totalSubtotal, { userId });
       totalCouponDiscount = couponRes.discountAmount || 0;
       appliedCouponCode = couponRes.coupon.code;
     } catch (couponErr) {
@@ -441,7 +444,7 @@ const previewOrder = async (userId, previewData = {}) => {
       const shipCouponRes = await couponService.validateCoupon(
         shippingCodeToValidate.trim(),
         totalSubtotal,
-        shippingFee
+        { shippingFee, userId }
       );
       totalShippingDiscount = shipCouponRes.discountAmount || 0;
       appliedShippingCouponCode = shipCouponRes.coupon.code;
@@ -528,6 +531,7 @@ const createOrderCOD = async (userId, orderData) => {
     if (!matchedAddr) throw new AppError('Địa chỉ giao hàng đã chọn không tồn tại', 404);
     finalShippingAddress = {
       fullName: matchedAddr.fullName,
+      email: (customAddress?.email || user.email || '').trim(),
       phone: matchedAddr.phone,
       province: matchedAddr.province,
       district: matchedAddr.district,
@@ -539,6 +543,7 @@ const createOrderCOD = async (userId, orderData) => {
   } else if (customAddress && customAddress.fullName && customAddress.phone && customAddress.detailAddress) {
     finalShippingAddress = {
       fullName: customAddress.fullName,
+      email: (customAddress?.email || user.email || '').trim(),
       phone: customAddress.phone,
       province: customAddress.province,
       district: customAddress.district,
@@ -560,6 +565,7 @@ const createOrderCOD = async (userId, orderData) => {
     }
     finalShippingAddress = {
       fullName: defaultAddr.fullName,
+      email: (customAddress?.email || user.email || '').trim(),
       phone: defaultAddr.phone,
       province: defaultAddr.province,
       district: defaultAddr.district,
@@ -995,7 +1001,7 @@ const createOrderCOD = async (userId, orderData) => {
       type: 'ORDER_NEW',
       title: `Đơn hàng mới #${createdOrder.orderCode}`,
       message: `Khách hàng ${finalShippingAddress.fullName} vừa đặt đơn hàng trị giá ${finalTotalAmount.toLocaleString('vi-VN')}đ`,
-      link: `/orders?code=${createdOrder.orderCode}`,
+      link: `/orders/${createdOrder._id}`,
       metadata: {
         orderId: createdOrder._id,
         orderCode: createdOrder.orderCode,
@@ -1112,7 +1118,7 @@ const cancelOrder = async (orderId, userId, reason = '', userRole = 'user') => {
       type: 'ORDER_CANCELLED',
       title: `Đơn hàng #${existingOrder.orderCode} đã bị hủy`,
       message: `Đơn hàng #${existingOrder.orderCode} vừa được hủy. Lý do: ${reason || 'Khách/Shop yêu cầu hủy đơn'}. Tồn kho giữ chỗ đã được hoàn trả.`,
-      link: `/orders?code=${existingOrder.orderCode}`,
+      link: `/orders/${existingOrder._id}`,
       metadata: {
         orderId: existingOrder._id,
         orderCode: existingOrder.orderCode,
@@ -1120,6 +1126,53 @@ const cancelOrder = async (orderId, userId, reason = '', userRole = 'user') => {
       },
     }).catch(() => {});
   } catch (_) {}
+
+  // Tự động hủy các vận đơn (Shipment) và lệnh xuất kho (StockExport) đang chờ xử lý của đơn hàng này
+  try {
+    const Shipment = require('../models/shipment.model');
+    await Shipment.updateMany(
+      { orderId: cancelledOrder._id, status: { $in: ['ready_to_pick', 'picking'] } },
+      {
+        $set: { status: 'cancelled', statusText: 'Đã hủy giao do đơn hàng bị hủy' },
+        $push: {
+          historyLogs: {
+            status: 'cancelled',
+            description: `Hủy vận đơn tự động do đơn hàng #${cancelledOrder.orderCode} bị hủy (${reason || 'N/A'})`,
+            updatedAt: new Date(),
+            updatedBy: userId || null,
+          },
+        },
+      }
+    );
+
+    const StockExport = require('../models/stockExport.model');
+    await StockExport.updateMany(
+      { orderId: cancelledOrder._id, status: { $in: ['pending_pick', 'picking', 'packed'] } },
+      {
+        $set: { status: 'cancelled' },
+        $push: {
+          activityLogs: {
+            status: 'cancelled',
+            note: `Hủy lệnh xuất kho tự động do đơn hàng #${cancelledOrder.orderCode} bị hủy`,
+            performedBy: userId || null,
+            createdAt: new Date(),
+          },
+        },
+      }
+    );
+  } catch (cancelCascadeErr) {
+    console.warn('[Order Service] Lỗi đồng bộ hủy vận đơn/lệnh xuất kho:', cancelCascadeErr.message);
+  }
+
+  // Gửi email thông báo hủy đơn hàng cho khách (order_cancelled)
+  try {
+    const emailService = require('./email.service');
+    emailService.sendOrderCancelledEmail(cancelledOrder, reason).catch((err) =>
+      console.warn('[Order Service] Lỗi gửi email hủy đơn:', err.message)
+    );
+  } catch (cancelMailErr) {
+    console.warn('[Order Service] Không thể kích hoạt gửi mail hủy đơn:', cancelMailErr.message);
+  }
 
   return cancelledOrder;
 };
@@ -1247,23 +1300,192 @@ const updateOrderStatus = async (orderId, { newStatus, note = '', adminUser = nu
     });
   }
 
+  // Tự động kích hoạt mẫu email tương ứng theo trạng thái đơn hàng (Email Triggers)
+  try {
+    const emailService = require('./email.service');
+    if (newStatus === 'SHIPPING') {
+      emailService.sendShippingConfirmationEmail(updatedOrder).catch((e) =>
+        console.warn('[Order Service] Lỗi gửi email xác nhận giao vận:', e.message)
+      );
+    } else if (newStatus === 'DELIVERED') {
+      emailService.sendShippingDeliveredEmail(updatedOrder).catch((e) =>
+        console.warn('[Order Service] Lỗi gửi email giao hàng thành công:', e.message)
+      );
+    } else if (newStatus === 'CANCELLED') {
+      emailService.sendOrderCancelledEmail(updatedOrder, updatedOrder.cancelReason).catch((e) =>
+        console.warn('[Order Service] Lỗi gửi email hủy đơn hàng:', e.message)
+      );
+    } else if (newStatus === 'RETURNED') {
+      emailService.sendOrderRefundedEmail(updatedOrder).catch((e) =>
+        console.warn('[Order Service] Lỗi gửi email hoàn trả/hoàn tiền:', e.message)
+      );
+    }
+  } catch (mailTriggerErr) {
+    console.warn('[Order Service] Không thể kích hoạt email theo trạng thái:', mailTriggerErr.message);
+  }
+
+  // Tự động đồng bộ liên kết 2 chiều với Vận chuyển (Shipment) và Lệnh xuất kho (StockExport)
+  try {
+    const Shipment = require('../models/shipment.model');
+    const StockExport = require('../models/stockExport.model');
+
+    if (newStatus === 'SHIPPING') {
+      await Shipment.updateMany(
+        { orderId: updatedOrder._id, status: 'ready_to_pick' },
+        {
+          $set: { status: 'delivering', statusText: 'Đang giao hàng' },
+          $push: {
+            historyLogs: {
+              status: 'delivering',
+              description: 'Admin chuyển trạng thái đơn hàng sang Đang giao hàng',
+              updatedAt: new Date(),
+              updatedBy: adminUser?._id || null,
+            },
+          },
+        }
+      );
+      await StockExport.updateMany(
+        { orderId: updatedOrder._id, status: { $in: ['pending_pick', 'picking', 'packed'] } },
+        {
+          $set: { status: 'completed' },
+          $push: {
+            activityLogs: {
+              status: 'completed',
+              note: 'Hoàn tất lệnh xuất kho khi đơn hàng chuyển sang Đang giao hàng',
+              performedBy: adminUser?._id || null,
+              createdAt: new Date(),
+            },
+          },
+        }
+      );
+    } else if (newStatus === 'DELIVERED') {
+      await Shipment.updateMany(
+        { orderId: updatedOrder._id, status: { $in: ['ready_to_pick', 'picking', 'delivering'] } },
+        {
+          $set: { status: 'delivered', statusText: 'Đã giao hàng' },
+          $push: {
+            historyLogs: {
+              status: 'delivered',
+              description: 'Admin xác nhận giao hàng thành công',
+              updatedAt: new Date(),
+              updatedBy: adminUser?._id || null,
+            },
+          },
+        }
+      );
+    } else if (newStatus === 'CANCELLED') {
+      await Shipment.updateMany(
+        { orderId: updatedOrder._id, status: { $in: ['ready_to_pick', 'picking'] } },
+        {
+          $set: { status: 'cancelled', statusText: 'Đã hủy giao' },
+          $push: {
+            historyLogs: {
+              status: 'cancelled',
+              description: 'Hủy vận đơn do Admin hủy đơn hàng',
+              updatedAt: new Date(),
+              updatedBy: adminUser?._id || null,
+            },
+          },
+        }
+      );
+      await StockExport.updateMany(
+        { orderId: updatedOrder._id, status: { $in: ['pending_pick', 'picking', 'packed'] } },
+        {
+          $set: { status: 'cancelled' },
+          $push: {
+            activityLogs: {
+              status: 'cancelled',
+              note: 'Hủy lệnh xuất kho do Admin hủy đơn hàng',
+              performedBy: adminUser?._id || null,
+              createdAt: new Date(),
+            },
+          },
+        }
+      );
+    } else if (newStatus === 'RETURNED') {
+      await Shipment.updateMany(
+        { orderId: updatedOrder._id, status: { $in: ['ready_to_pick', 'picking', 'delivering'] } },
+        {
+          $set: { status: 'returned', statusText: 'Đã hoàn hàng' },
+          $push: {
+            historyLogs: {
+              status: 'returned',
+              description: 'Admin xác nhận hàng đã hoàn về kho',
+              updatedAt: new Date(),
+              updatedBy: adminUser?._id || null,
+            },
+          },
+        }
+      );
+    }
+  } catch (crossSyncErr) {
+    console.warn('[Order Service] Lỗi đồng bộ trạng thái sang Shipment/StockExport:', crossSyncErr.message);
+  }
+
   return updatedOrder;
 };
 
 /**
  * 4. LẤY CHI TIẾT ĐƠN HÀNG (TRẢ VỀ SNAPSHOT ĐÓNG BĂNG, KHÔNG RE-QUERY GIÁ HIỆN TẠI)
  */
-const getOrderById = async (orderId, userId = null, userRole = 'user') => {
-  const order = await Order.findById(orderId);
+const getOrderById = async (orderIdOrCode, userId = null, userRole = 'user') => {
+  let order = null;
+  if (mongoose.Types.ObjectId.isValid(orderIdOrCode)) {
+    order = await Order.findById(orderIdOrCode);
+  }
+  if (!order) {
+    order = await Order.findOne({ orderCode: String(orderIdOrCode || '').trim().toUpperCase() });
+  }
   if (!order) throw new AppError('Không tìm thấy đơn hàng', 404);
 
-  // Nếu user thường tra cứu thì phải đúng đơn của mình, Admin/Nhân viên được xem tất cả
-  const isStaffOrAdmin = userRole !== 'user';
-  if (!isStaffOrAdmin && userId && order.userId && order.userId.toString() !== userId.toString()) {
-    throw new AppError('Bạn không có quyền xem đơn hàng này', 403);
+  // BẢO VỆ THÔNG TIN CÁ NHÂN & AN TOÀN DỮ LIỆU:
+  // Người xem bắt buộc phải đăng nhập và là chính chủ đơn hàng (hoặc Admin/Nhân viên)
+  const isStaffOrAdmin = ['admin', 'staff', 'manager'].includes(userRole);
+  if (!isStaffOrAdmin) {
+    if (!userId) {
+      throw new AppError('Vui lòng đăng nhập để xem thông tin đơn hàng này', 401);
+    }
+    if (order.userId && order.userId.toString() !== userId.toString()) {
+      throw new AppError('Bạn không có quyền xem thông tin đơn hàng của khách hàng khác', 403);
+    }
   }
 
-  return order;
+  const StockExport = require('../models/stockExport.model');
+  const se = await StockExport.findOne({
+    orderId: order._id,
+    status: { $ne: 'cancelled' },
+  })
+    .sort({ createdAt: -1 })
+    .lean();
+
+  const Shipment = require('../models/shipment.model');
+  const shipment = await Shipment.findOne({
+    orderId: order._id,
+    status: { $ne: 'cancelled' },
+  })
+    .sort({ createdAt: -1 })
+    .lean();
+
+  // Tự động đồng bộ nếu đơn hàng đã có vận đơn nhưng orderStatus vẫn là CONFIRMED
+  if (shipment && order.orderStatus === 'CONFIRMED') {
+    order.orderStatus = 'SHIPPING';
+    order.save().catch((e) => console.warn('Lỗi auto-sync order status:', e.message));
+  }
+
+  const orderObj = order.toObject ? order.toObject() : { ...order };
+  orderObj.orderStatus = order.orderStatus;
+  orderObj.shipment = shipment || null;
+  orderObj.stockExport = se
+    ? {
+        _id: se._id,
+        exportNumber: se.exportNumber,
+        status: se.status,
+        warehouseId: se.warehouseId,
+      }
+    : null;
+  orderObj.isStockExported = se ? se.status === 'completed' : false;
+
+  return orderObj;
 };
 
 /**
@@ -1275,7 +1497,7 @@ const getMyOrders = async (userId, query = {}) => {
     filter.orderStatus = query.status.toUpperCase();
   }
   if (query.search && query.search.trim()) {
-    const s = query.search.trim();
+    const s = escapeRegex(query.search.trim());
     filter.$or = [
       { orderCode: { $regex: s, $options: 'i' } },
       { 'items.productName': { $regex: s, $options: 'i' } },
@@ -1291,8 +1513,27 @@ const getMyOrders = async (userId, query = {}) => {
     Order.countDocuments(filter),
   ]);
 
+  // Đính kèm shipment cho từng đơn hàng
+  const orderIds = orders.map((o) => o._id);
+  const Shipment = require('../models/shipment.model');
+  const shipments = await Shipment.find({
+    orderId: { $in: orderIds },
+    status: { $ne: 'cancelled' },
+  }).lean();
+  const shipmentMap = new Map();
+  shipments.forEach((s) => shipmentMap.set(s.orderId.toString(), s));
+
+  const enrichedOrders = orders.map((o) => {
+    const s = shipmentMap.get(o._id.toString()) || null;
+    return {
+      ...o,
+      shipment: s,
+      orderStatus: s && o.orderStatus === 'CONFIRMED' ? 'SHIPPING' : o.orderStatus,
+    };
+  });
+
   return {
-    orders,
+    orders: enrichedOrders,
     pagination: {
       page,
       limit,
@@ -1309,16 +1550,22 @@ const getAllOrders = async (query = {}) => {
   const filter = {};
 
   if (query.status) {
-    filter.orderStatus = query.status.toUpperCase();
+    if (query.status.includes(',')) {
+      const statuses = query.status.split(',').map((s) => s.trim().toUpperCase());
+      filter.orderStatus = { $in: statuses };
+    } else {
+      filter.orderStatus = query.status.toUpperCase();
+    }
   }
   if (query.paymentStatus) {
     filter.paymentStatus = query.paymentStatus.toUpperCase();
   }
   if (query.search) {
+    const safeSearch = escapeRegex(query.search.trim());
     filter.$or = [
-      { orderCode: { $regex: query.search.trim(), $options: 'i' } },
-      { 'shippingAddress.phone': { $regex: query.search.trim(), $options: 'i' } },
-      { 'shippingAddress.fullName': { $regex: query.search.trim(), $options: 'i' } },
+      { orderCode: { $regex: safeSearch, $options: 'i' } },
+      { 'shippingAddress.phone': { $regex: safeSearch, $options: 'i' } },
+      { 'shippingAddress.fullName': { $regex: safeSearch, $options: 'i' } },
     ];
   }
 
@@ -1326,19 +1573,93 @@ const getAllOrders = async (query = {}) => {
   const limit = Math.max(1, parseInt(query.limit) || 10);
   const skip = (page - 1) * limit;
 
-  const [orders, total] = await Promise.all([
+  const [orders, total, statusCounts] = await Promise.all([
     Order.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
     Order.countDocuments(filter),
+    Order.aggregate([
+      {
+        $group: {
+          _id: '$orderStatus',
+          count: { $sum: 1 },
+          totalRevenue: {
+            $sum: {
+              $cond: [{ $eq: ['$orderStatus', 'DELIVERED'] }, '$pricing.totalAmount', 0],
+            },
+          },
+        },
+      },
+    ]),
   ]);
 
+  const stats = {
+    total: 0,
+    pending: 0,
+    confirmed: 0,
+    shipping: 0,
+    delivered: 0,
+    cancelled: 0,
+    totalRevenue: 0,
+  };
+
+  statusCounts.forEach((item) => {
+    const st = (item._id || '').toUpperCase();
+    stats.total += item.count;
+    if (st === 'PENDING') stats.pending = item.count;
+    else if (st === 'CONFIRMED') stats.confirmed = item.count;
+    else if (st === 'SHIPPING') stats.shipping = item.count;
+    else if (st === 'DELIVERED') {
+      stats.delivered = item.count;
+      stats.totalRevenue = item.totalRevenue || 0;
+    } else if (st === 'CANCELLED' || st === 'RETURNED') {
+      stats.cancelled += item.count;
+    }
+  });
+
+  const StockExport = require('../models/stockExport.model');
+  const orderIds = orders.map((o) => o._id);
+  const stockExports = orderIds.length > 0
+    ? await StockExport.find({
+        orderId: { $in: orderIds },
+        status: { $ne: 'cancelled' },
+      })
+        .sort({ createdAt: -1 })
+        .lean()
+    : [];
+
+  const stockExportMap = {};
+  stockExports.forEach((se) => {
+    const k = se.orderId ? se.orderId.toString() : '';
+    if (k && !stockExportMap[k]) {
+      stockExportMap[k] = se;
+    }
+  });
+
+  const enrichedOrders = orders.map((ord) => {
+    const se = stockExportMap[ord._id.toString()];
+    const isStockExported = se ? se.status === 'completed' : false;
+    return {
+      ...ord,
+      stockExport: se
+        ? {
+            _id: se._id,
+            exportNumber: se.exportNumber,
+            status: se.status,
+            warehouseId: se.warehouseId,
+          }
+        : null,
+      isStockExported,
+    };
+  });
+
   return {
-    orders,
+    orders: enrichedOrders,
     pagination: {
       page,
       limit,
       total,
       totalPages: Math.ceil(total / limit) || 1,
     },
+    stats,
   };
 };
 

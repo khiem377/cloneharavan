@@ -18,13 +18,24 @@ export const getSocket = () => {
     });
 
     socket.on('connect', () => {
-      // Khi kết nối thành công, báo cho BE đưa socket này vào phòng admin:orders
+      console.log('⚡ [Admin Socket] Đã kết nối tới máy chủ:', socket.id);
       socket.emit('join:admin');
     });
 
-    socket.on('reconnect', () => {
-      socket.emit('join:admin');
+    socket.on('connect_error', (err) => {
+      console.warn('⚠️ [Admin Socket] Lỗi kết nối socket:', err.message);
     });
+
+    if (socket.io) {
+      socket.io.on('reconnect', () => {
+        console.log('⚡ [Admin Socket] Đã kết nối lại thành công');
+        socket.emit('join:admin');
+      });
+    }
+  }
+
+  if (socket && socket.connected) {
+    socket.emit('join:admin');
   }
 
   return socket;

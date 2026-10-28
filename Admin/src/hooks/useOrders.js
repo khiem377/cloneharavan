@@ -103,8 +103,8 @@ export const usePendingOrdersCount = () => {
         const amount = payload.order.totalAmount
           ? ` (${Number(payload.order.totalAmount).toLocaleString('vi-VN')}₫)`
           : '';
-        toast.info(`🔔 Đơn hàng mới #${payload.order.orderCode || ''}${amount} đang chờ bạn duyệt!`, {
-          duration: 6000,
+        toast.info(`Đơn hàng mới #${payload.order.orderCode || ''}${amount} đang chờ bạn duyệt!`, {
+          duration: 5000,
         });
       }
     };

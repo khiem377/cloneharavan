@@ -38,7 +38,7 @@ export default function OrderHistoryTimeline({ order, shipment }) {
   if (order.paymentStatus === 'PAID') {
     events.push({
       time: order.updatedAt || order.createdAt,
-      actor: 'Hệ thống Sapo',
+      actor: 'Hệ thống',
       action: `Khoản thanh toán được xác nhận thông qua ${order.paymentMethod || 'Cổng thanh toán'}`,
     });
   }

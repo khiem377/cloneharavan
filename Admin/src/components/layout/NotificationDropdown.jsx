@@ -89,12 +89,16 @@ export default function NotificationDropdown() {
     if (!socket) return;
 
     const handleNewNotification = (newNotif) => {
+      console.log('⚡ [NotificationDropdown] Nhận thông báo realtime:', newNotif);
+
       // Phát âm thanh Ting
       playNotificationSound();
 
       // Hiện toast thông báo nhỏ ở góc
-      toast.info(newNotif.title, {
-        description: newNotif.message,
+      toast.info(newNotif.message || newNotif.title, {
+        title: newNotif.title || 'Thông báo mới',
+        description: newNotif.message ? undefined : undefined,
+        duration: 6000,
       });
 
       // Cập nhật state realtime
@@ -133,12 +137,15 @@ export default function NotificationDropdown() {
 
     setOpen(false);
 
-    if (notif.link) {
+    // Ưu tiên điều hướng thẳng vào trang chi tiết đơn hàng
+    const targetOrderId = notif.metadata?.orderId || notif.metadata?.orderCode;
+    if (targetOrderId) {
+      navigate(`/orders/${targetOrderId}`);
+    } else if (notif.link && notif.link.includes('code=')) {
+      const code = notif.link.split('code=')[1];
+      navigate(`/orders/${code}`);
+    } else if (notif.link) {
       navigate(notif.link);
-    } else if (notif.metadata?.orderId) {
-      navigate(`/orders/${notif.metadata.orderId}`);
-    } else if (notif.metadata?.orderCode) {
-      navigate(`/orders/${notif.metadata.orderCode}`);
     } else {
       navigate('/orders');
     }

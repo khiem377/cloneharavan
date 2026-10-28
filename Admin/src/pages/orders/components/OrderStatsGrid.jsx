@@ -2,8 +2,20 @@ import React from 'react';
 import { Package, Clock, CheckCircle2, Truck, Check, XCircle } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 
-export default function OrderStatsGrid({ orders = [] }) {
+export default function OrderStatsGrid({ orders = [], stats: apiStats, totalCount }) {
   const stats = React.useMemo(() => {
+    if (apiStats && typeof apiStats === 'object' && apiStats.total !== undefined) {
+      return {
+        total: apiStats.total ?? totalCount ?? orders.length,
+        pending: apiStats.pending ?? 0,
+        confirmed: apiStats.confirmed ?? 0,
+        shipping: apiStats.shipping ?? 0,
+        delivered: apiStats.delivered ?? 0,
+        cancelled: apiStats.cancelled ?? 0,
+        totalRevenue: apiStats.totalRevenue ?? 0,
+      };
+    }
+
     let pending = 0;
     let confirmed = 0;
     let shipping = 0;
@@ -23,7 +35,7 @@ export default function OrderStatsGrid({ orders = [] }) {
     });
 
     return {
-      total: orders.length,
+      total: totalCount !== undefined ? totalCount : orders.length,
       pending,
       confirmed,
       shipping,
@@ -31,7 +43,7 @@ export default function OrderStatsGrid({ orders = [] }) {
       cancelled,
       totalRevenue,
     };
-  }, [orders]);
+  }, [orders, apiStats, totalCount]);
 
   const ITEMS = [
     {
