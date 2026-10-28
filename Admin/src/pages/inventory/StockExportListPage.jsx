@@ -1,21 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams, Link } from 'react-router-dom';
 import {
-  FileText, Plus, SearchIcon as Search, Download, Eye, Trash2, X,
-  FileSpreadsheet, CheckCircle2, Clock, PackageCheck, Truck, ArrowRight,
+  FileText, Plus, SearchIcon as Search, Eye, X,
+  FileSpreadsheet, CheckCircle2, Clock, PackageCheck, ArrowRight,
+  ExternalLink,
 } from '@/components/ui/Icons';
-import { useStockExports, useCreateStockExport } from '@/hooks/useInventory';
-import { useSearchInventoryProducts } from '@/hooks/useProducts';
+import { useStockExports } from '@/hooks/useInventory';
 import { inventoryService } from '@/services/inventory.service';
 import { warehouseService } from '@/services/warehouse.service';
 import DataTablePagination from '@/components/ui/DataTablePagination';
 import { toast } from '@/providers/ToastProvider';
 import ExcelPreviewModal from '@/components/common/ExcelPreviewModal';
-import SearchableSelect from '@/components/ui/SearchableSelect';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
+import StockExportCreateModal from './components/StockExportCreateModal';
 
 export default function StockExportListPage() {
+  const [searchParams] = useSearchParams();
   const [keyword, setKeyword] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -27,25 +29,14 @@ export default function StockExportListPage() {
 
   // Modals state
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [initialOrderId, setInitialOrderId] = useState(null);
+  const [initialOrderCode, setInitialOrderCode] = useState(null);
   const [excelPreviewOpen, setExcelPreviewOpen] = useState(false);
   const [previewDownloadUrl, setPreviewDownloadUrl] = useState('');
   const [previewTitle, setPreviewTitle] = useState('');
 
   // Warehouse State
   const [warehouses, setWarehouses] = useState([]);
-
-  // Form State
-  const [formData, setFormData] = useState({
-    type: 'sale',
-    warehouseId: '',
-    recipientName: '',
-    recipientPhone: '',
-    recipientAddress: '',
-    note: '',
-    items: [],
-  });
-
-  const [productSearch, setProductSearch] = useState('');
 
   const { data: res = {}, isLoading, refetch } = useStockExports({
     page,
@@ -56,19 +47,12 @@ export default function StockExportListPage() {
   const exportsList = res.data || res.exports || [];
   const pagination = res.pagination || { page: 1, limit: 10, total: 0, totalPages: 1 };
 
-  const createMutation = useCreateStockExport();
-  const searchProducts = useSearchInventoryProducts(productSearch).data || [];
-
-  React.useEffect(() => {
+  useEffect(() => {
     const loadWarehouses = async () => {
       try {
         const whRes = await warehouseService.getWarehouses();
         const list = whRes.data?.data?.data || [];
         setWarehouses(list);
-        const def = list.find((w) => w.isDefault) || list[0];
-        if (def) {
-          setFormData((p) => ({ ...p, warehouseId: def._id }));
-        }
       } catch (err) {
         console.warn('Lỗi tải kho:', err);
       }
@@ -121,79 +105,20 @@ export default function StockExportListPage() {
     }
   };
 
+  useEffect(() => {
+    const orderIdParam = searchParams.get('orderId');
+    const orderCodeParam = searchParams.get('orderCode');
+    if (orderIdParam || orderCodeParam) {
+      setInitialOrderId(orderIdParam);
+      setInitialOrderCode(orderCodeParam);
+      setCreateModalOpen(true);
+    }
+  }, [searchParams]);
+
   const handleOpenCreate = () => {
-    setFormData({
-      type: 'sale',
-      recipientName: '',
-      recipientPhone: '',
-      recipientAddress: '',
-      note: '',
-      items: [],
-    });
-    setProductSearch('');
+    setInitialOrderId(null);
+    setInitialOrderCode(null);
     setCreateModalOpen(true);
-  };
-
-  const handleAddProduct = (prod) => {
-    const existingIndex = formData.items.findIndex((i) => i.productId === prod._id && i.variantId === prod.variantId);
-    if (existingIndex > -1) {
-      const updated = [...formData.items];
-      updated[existingIndex].quantity += 1;
-      updated[existingIndex].subtotal = updated[existingIndex].quantity * updated[existingIndex].exportPrice;
-      setFormData({ ...formData, items: updated });
-    } else {
-      setFormData({
-        ...formData,
-        items: [
-          ...formData.items,
-          {
-            productId: prod._id,
-            variantId: prod.variantId || null,
-            sku: prod.sku || '',
-            productName: prod.name,
-            unit: 'Cái',
-            quantity: 1,
-            exportPrice: prod.price || 0,
-            subtotal: prod.price || 0,
-          },
-        ],
-      });
-    }
-    setProductSearch('');
-  };
-
-  const handleUpdateItem = (index, field, val) => {
-    const updated = [...formData.items];
-    const item = { ...updated[index], [field]: val };
-    if (field === 'quantity' || field === 'exportPrice') {
-      item.subtotal = Number(item.quantity || 0) * Number(item.exportPrice || 0);
-    }
-    updated[index] = item;
-    setFormData({ ...formData, items: updated });
-  };
-
-  const handleRemoveItem = (index) => {
-    setFormData({
-      ...formData,
-      items: formData.items.filter((_, i) => i !== index),
-    });
-  };
-
-  const handleSubmitCreate = async (e) => {
-    e.preventDefault();
-    if (formData.items.length === 0) {
-      toast.error('Vui lòng chọn ít nhất 1 sản phẩm xuất kho!');
-      return;
-    }
-
-    try {
-      await createMutation.mutateAsync(formData);
-      toast.success('Khởi tạo Lệnh xuất kho thành công!');
-      setCreateModalOpen(false);
-      refetch();
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Có lỗi xảy ra khi tạo phiếu xuất');
-    }
   };
 
   const renderStatusBadge = (status) => {
@@ -304,7 +229,17 @@ export default function StockExportListPage() {
               ) : (
                 exportsList.map((item) => (
                   <tr key={item._id} className="hover:bg-muted/30 transition-colors align-middle">
-                    <td className="px-4 py-3 font-semibold text-primary font-mono whitespace-nowrap text-xs">{item.exportNumber}</td>
+                    <td className="px-4 py-3 font-semibold text-primary font-mono whitespace-nowrap text-xs">
+                      <div>{item.exportNumber}</div>
+                      {item.orderId && (
+                        <Link
+                          to={`/orders/${item.orderId._id || item.orderId}`}
+                          className="inline-flex items-center gap-1 text-[11px] text-blue-600 hover:underline mt-0.5"
+                        >
+                          Đơn: #{item.orderId.orderCode || item.orderId}
+                        </Link>
+                      )}
+                    </td>
                     <td className="px-4 py-3 font-medium text-foreground whitespace-nowrap text-xs">
                       {item.warehouseId?.name || 'Kho Tổng'}
                     </td>
@@ -384,8 +319,18 @@ export default function StockExportListPage() {
                     <p className="font-bold text-primary">{selectedExport.warehouseId?.name || 'Kho Tổng Bình Tân'}</p>
                   </div>
                   <div>
-                    <span className="text-muted-foreground">Người nhận:</span>
-                    <p className="font-bold text-foreground">{selectedExport.recipientName || 'Khách lẻ'}</p>
+                    <span className="text-muted-foreground">Đơn hàng liên kết:</span>
+                    {selectedExport.orderId ? (
+                      <Link
+                        to={`/orders/${selectedExport.orderId._id || selectedExport.orderId}`}
+                        className="font-bold text-blue-600 hover:underline flex items-center gap-1 mt-0.5"
+                      >
+                        #{selectedExport.orderId.orderCode || selectedExport.orderId}
+                        <ExternalLink className="size-3" />
+                      </Link>
+                    ) : (
+                      <p className="font-semibold text-muted-foreground">Xuất thủ công / Không gắn đơn</p>
+                    )}
                   </div>
                   <div>
                     <span className="text-muted-foreground">Địa chỉ:</span>
@@ -484,171 +429,14 @@ export default function StockExportListPage() {
       )}
 
       {/* Modal CREATE Stock Export */}
-      {createModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 overflow-y-auto">
-          <div className="w-full max-w-3xl rounded-[6px] border border-border bg-card p-6 shadow-xs space-y-4 my-8">
-            <div className="flex items-center justify-between border-b border-border pb-3">
-              <h2 className="text-base font-bold text-foreground flex items-center gap-2">
-                <FileText className="size-4 text-primary" /> Tạo Lệnh Xuất Kho Mới
-              </h2>
-              <button onClick={() => setCreateModalOpen(false)} className="rounded-[4px] p-1 text-muted-foreground hover:bg-muted cursor-pointer">
-                <X className="size-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmitCreate} className="space-y-4">
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
-                <div>
-                  <label className="block text-xs font-semibold text-muted-foreground mb-1">Kho Xuất Hàng *</label>
-                  <select
-                    value={formData.warehouseId}
-                    onChange={(e) => setFormData({ ...formData, warehouseId: e.target.value })}
-                    className="w-full h-8 px-2.5 text-xs bg-background rounded-[6px] border border-input focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
-                  >
-                    {warehouses.map((w) => (
-                      <option key={w._id} value={w._id}>
-                        {w.name} {w.isDefault ? '(Kho mặc định)' : ''}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-muted-foreground mb-1">Loại Xuất Kho</label>
-                  <SearchableSelect
-                    options={[
-                      { label: 'Xuất bán hàng', value: 'sale' },
-                      { label: 'Xuất chuyển kho nội bộ', value: 'transfer' },
-                      { label: 'Xuất tiêu dùng nội bộ', value: 'internal_use' },
-                      { label: 'Xuất hủy / Hao hụt / Hết hạn', value: 'damage_expired' },
-                      { label: 'Xuất hàng mẫu / Quà tặng sự kiện', value: 'sample_gift' },
-                      { label: 'Xuất trả nhà cung cấp', value: 'return_supplier' },
-                      { label: 'Xuất khác', value: 'other' },
-                    ]}
-                    value={formData.type}
-                    onChange={(val) => setFormData({ ...formData, type: val })}
-                    creatable={false}
-                    placeholder="Chọn loại xuất..."
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-muted-foreground mb-1">Người Nhận</label>
-                  <input
-                    type="text"
-                    value={formData.recipientName}
-                    onChange={(e) => setFormData({ ...formData, recipientName: e.target.value })}
-                    className="w-full h-8 rounded-[6px] border border-input bg-background px-3 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-muted-foreground mb-1">Số Điện Thoại</label>
-                  <input
-                    type="text"
-                    value={formData.recipientPhone}
-                    onChange={(e) => setFormData({ ...formData, recipientPhone: e.target.value })}
-                    className="w-full h-8 rounded-[6px] border border-input bg-background px-3 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1">Ghi Chú</label>
-                <input
-                  type="text"
-                  value={formData.note}
-                  onChange={(e) => setFormData({ ...formData, note: e.target.value })}
-                  className="w-full rounded-[6px] border border-input bg-background px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
-                />
-              </div>
-
-              {/* Product Autocomplete */}
-              <div className="relative pt-1">
-                <label className="block text-xs font-semibold text-muted-foreground mb-1">Tìm sản phẩm / biến thể</label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-                  <input
-                    type="text"
-                    placeholder="Gõ tên hoặc mã SKU sản phẩm..."
-                    value={productSearch}
-                    onChange={(e) => setProductSearch(e.target.value)}
-                    className="w-full rounded-[6px] border border-input bg-background pl-9 pr-4 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
-                  />
-                </div>
-
-                {productSearch.trim() && (
-                  <div className="absolute z-20 mt-1 max-h-48 w-full overflow-y-auto rounded-[6px] border border-border bg-card shadow-md divide-y divide-border/60">
-                    {searchProducts.map((prod, idx) => (
-                      <div
-                        key={idx}
-                        onClick={() => handleAddProduct(prod)}
-                        className="flex items-center justify-between p-2.5 hover:bg-muted cursor-pointer transition-colors"
-                      >
-                        <div>
-                          <div className="font-semibold text-xs text-foreground">{prod.name}</div>
-                          <div className="text-[11px] text-muted-foreground font-mono tabular-nums">SKU: {prod.sku || '-'} | Tồn: <span className="font-bold text-emerald-600">{prod.stock || 0}</span></div>
-                        </div>
-                        <span className="text-xs font-semibold text-primary font-mono">Thêm</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Table */}
-              <div className="overflow-x-auto rounded-[6px] border border-border shadow-2xs">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-muted/50 font-semibold text-muted-foreground">
-                    <tr>
-                      <th className="p-2.5">Sản Phẩm</th>
-                      <th className="p-2.5 w-24">Số Lượng</th>
-                      <th className="p-2.5 w-32">Đơn Giá</th>
-                      <th className="p-2.5 w-32">Thành Tiền</th>
-                      <th className="p-2.5 w-10"></th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border/60">
-                    {formData.items.map((item, idx) => (
-                      <tr key={idx}>
-                        <td className="p-2.5 font-medium text-foreground">{item.productName}</td>
-                        <td className="p-2.5">
-                          <input
-                            type="number"
-                            min="1"
-                            value={item.quantity}
-                            onChange={(e) => handleUpdateItem(idx, 'quantity', Number(e.target.value))}
-                            className="w-full rounded-[4px] border border-input bg-background px-2 py-1 text-xs font-mono tabular-nums"
-                          />
-                        </td>
-                        <td className="p-2.5">
-                          <input
-                            type="number"
-                            min="0"
-                            value={item.exportPrice}
-                            onChange={(e) => handleUpdateItem(idx, 'exportPrice', Number(e.target.value))}
-                            className="w-full rounded-[4px] border border-input bg-background px-2 py-1 text-xs font-mono tabular-nums"
-                          />
-                        </td>
-                        <td className="p-2.5 font-semibold text-emerald-600 font-mono tabular-nums">{item.subtotal.toLocaleString('vi-VN')} đ</td>
-                        <td className="p-2.5 text-right">
-                          <button type="button" onClick={() => handleRemoveItem(idx)} className="rounded-[4px] p-1 text-destructive hover:bg-destructive/10 cursor-pointer">
-                            <Trash2 className="size-3.5" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-border">
-                <button type="button" onClick={() => setCreateModalOpen(false)} className="rounded-[6px] border border-input px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:bg-muted active:scale-[0.98] cursor-pointer">Hủy</button>
-                <button type="submit" disabled={createMutation.isPending} className="rounded-[6px] bg-primary px-3.5 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90 active:scale-[0.98] cursor-pointer">
-                  {createMutation.isPending ? 'Đang tạo...' : 'Tạo Lệnh Xuất Kho'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <StockExportCreateModal
+        isOpen={createModalOpen}
+        onClose={() => setCreateModalOpen(false)}
+        warehouses={warehouses}
+        initialOrderId={initialOrderId}
+        initialOrderCode={initialOrderCode}
+        onSuccess={refetch}
+      />
 
       <ExcelPreviewModal isOpen={excelPreviewOpen} onClose={() => setExcelPreviewOpen(false)} title={previewTitle} downloadUrl={previewDownloadUrl} />
     </div>

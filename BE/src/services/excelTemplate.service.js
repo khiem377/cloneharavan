@@ -46,27 +46,5 @@ class ExcelTemplateService {
   }
 }
 
-// Chạy tự động log khi nodemon restart
-(async () => {
-  try {
-    const files = ['phieu nhap kho.xlsx', 'Phieu xuat kho.xlsx', 'phieu kiem tra hang hoa.xlsx'];
-    console.log('\n======================================================');
-    console.log('📊 ĐANG KIỂM TRA VÀ BÓC TÁCH CÁC FILE EXCEL TEMPLATE');
-    console.log('======================================================');
-    for (const f of files) {
-      const res = await ExcelTemplateService.inspectTemplate(f);
-      if (res) {
-        console.log(`\n📌 Template: "${f}" (${res.sheetName})`);
-        res.structure.forEach(r => {
-          const line = r.cells.map(c => `[${c.addr}]: "${c.val}"`).join(' | ');
-          console.log(`   Dòng ${r.row.toString().padStart(2, ' ')} -> ${line}`);
-        });
-      }
-    }
-    console.log('======================================================\n');
-  } catch (err) {
-    console.error('Lỗi inspect excel template:', err.message);
-  }
-})();
-
 module.exports = ExcelTemplateService;
+

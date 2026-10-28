@@ -1,5 +1,4 @@
 import React from 'react';
-import { Truck } from 'lucide-react';
 
 export default function ShipmentSidebarInfo({ shipment }) {
   if (!shipment) return null;
@@ -8,8 +7,8 @@ export default function ShipmentSidebarInfo({ shipment }) {
     <div className="space-y-4">
       {/* Box Đối tác giao hàng */}
       <div className="p-4 bg-white dark:bg-card border border-[#dfe3e8] dark:border-border rounded-[6px] space-y-3">
-        <h4 className="font-semibold text-[#212b36] dark:text-foreground pb-2 border-b border-[#dfe3e8] dark:border-border flex items-center gap-1.5">
-          <Truck className="w-4 h-4 text-[#0088ff]" /> Đối tác giao hàng
+        <h4 className="font-semibold text-[#212b36] dark:text-foreground pb-2 border-b border-[#dfe3e8] dark:border-border">
+          Đối tác giao hàng
         </h4>
         <div className="space-y-2 text-[12.5px]">
           <div className="flex justify-between">

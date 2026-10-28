@@ -17,7 +17,8 @@ import shipmentService from '@/services/shipment.service';
 import CreateShipmentModal from './components/CreateShipmentModal';
 import ShipmentDetailModal from './components/ShipmentDetailModal';
 import CodReconciliationTab from './components/CodReconciliationTab';
-import { Truck, Plus, Search, RefreshCw, Eye } from 'lucide-react';
+import ExcelPreviewModal from '@/components/common/ExcelPreviewModal';
+import { Truck, Plus, Search, RefreshCw, Eye, FileSpreadsheet } from 'lucide-react';
 
 const TABS = [
   { id: 'all', label: 'Tất cả' },
@@ -34,6 +35,8 @@ export default function ShipmentsListPage() {
   const navigate = useNavigate();
   const initialStatus = searchParams.get('status') || 'all';
   const initialSearch = searchParams.get('search') || '';
+  const initialOrderId = searchParams.get('orderId') || '';
+  const isCreateAction = searchParams.get('action') === 'create';
 
   const [activeTab, setActiveTab] = useState(initialStatus);
   const [search, setSearch] = useState(initialSearch);
@@ -41,9 +44,18 @@ export default function ShipmentsListPage() {
   const [shipments, setShipments] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0 });
 
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isCreateOpen, setIsCreateOpen] = useState(isCreateAction);
   const [selectedShipment, setSelectedShipment] = useState(null);
   const [syncingId, setSyncingId] = useState(null);
+  const [excelPreviewOpen, setExcelPreviewOpen] = useState(false);
+  const [previewDownloadUrl, setPreviewDownloadUrl] = useState('');
+  const [previewTitle, setPreviewTitle] = useState('');
+
+  useEffect(() => {
+    if (isCreateAction) {
+      setIsCreateOpen(true);
+    }
+  }, [isCreateAction]);
 
   const handleQuickSync = async (id) => {
     try {
@@ -56,6 +68,12 @@ export default function ShipmentsListPage() {
     } finally {
       setSyncingId(null);
     }
+  };
+
+  const handlePreviewExcel = (s) => {
+    setPreviewDownloadUrl(shipmentService.getExcelSlipUrl(s._id));
+    setPreviewTitle(`Phiếu Vận Đơn: ${s.trackingCode || s.shipmentCode}`);
+    setExcelPreviewOpen(true);
   };
 
   const fetchShipments = async (page = 1, searchQuery = search) => {
@@ -228,6 +246,15 @@ export default function ShipmentsListPage() {
                         <Button
                           variant="ghost"
                           size="icon"
+                          onClick={() => handlePreviewExcel(s)}
+                          className="size-7 rounded-[4px] text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10"
+                          title="Xem trước mẫu phiếu Excel chuẩn"
+                        >
+                          <FileSpreadsheet className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => setSelectedShipment(s)}
                           className="size-7 rounded-[4px] text-primary hover:bg-primary/10"
                           title="Xem chi tiết phiếu"
@@ -276,14 +303,33 @@ export default function ShipmentsListPage() {
       {/* Modals */}
       <CreateShipmentModal
         isOpen={isCreateOpen}
-        onClose={() => setIsCreateOpen(false)}
-        onSuccess={() => fetchShipments(1)}
+        initialOrderId={initialOrderId}
+        onClose={() => {
+          setIsCreateOpen(false);
+          // Xóa query param create nếu có
+          if (isCreateAction) {
+            navigate('/shipments', { replace: true });
+          }
+        }}
+        onSuccess={() => {
+          setIsCreateOpen(false);
+          if (isCreateAction) {
+            navigate('/shipments', { replace: true });
+          }
+          fetchShipments(1);
+        }}
       />
       <ShipmentDetailModal
         shipment={selectedShipment}
         isOpen={!!selectedShipment}
         onClose={() => setSelectedShipment(null)}
         onRefresh={() => fetchShipments(pagination.page)}
+      />
+      <ExcelPreviewModal
+        isOpen={excelPreviewOpen}
+        onClose={() => setExcelPreviewOpen(false)}
+        title={previewTitle}
+        downloadUrl={previewDownloadUrl}
       />
     </div>
   );

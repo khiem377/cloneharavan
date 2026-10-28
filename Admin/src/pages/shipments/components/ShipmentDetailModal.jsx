@@ -2,14 +2,17 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/providers/ToastProvider';
 import shipmentService from '@/services/shipment.service';
-import { X, Printer, Ban, Package, MapPin, Truck, Clock, RotateCw } from 'lucide-react';
+import { X, RotateCw, FileSpreadsheet } from 'lucide-react';
 import ShipmentSidebarInfo from './ShipmentSidebarInfo';
+import ShipmentHistoryTimeline from './ShipmentHistoryTimeline';
+import ExcelPreviewModal from '@/components/common/ExcelPreviewModal';
 
 export default function ShipmentDetailModal({ shipment, isOpen, onClose, onRefresh }) {
   const [cancelling, setCancelling] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [currentStatus, setCurrentStatus] = useState(shipment?.status || 'ready_to_pick');
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [excelPreviewOpen, setExcelPreviewOpen] = useState(false);
 
   React.useEffect(() => {
     if (shipment?.status) setCurrentStatus(shipment.status);
@@ -17,9 +20,6 @@ export default function ShipmentDetailModal({ shipment, isOpen, onClose, onRefre
 
   if (!isOpen || !shipment) return null;
 
-  const handlePrint = () => {
-    window.print();
-  };
 
   const handleUpdateStatus = async (newStatus) => {
     if (!newStatus || newStatus === currentStatus) return;
@@ -99,56 +99,79 @@ export default function ShipmentDetailModal({ shipment, isOpen, onClose, onRefre
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Nhóm công cụ phụ: Đồng bộ & Xuất phiếu Excel */}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={syncing}
+              onClick={handleSyncShipment}
+              className="h-8 px-2.5 text-[12px] rounded-[6px] border-[#dfe3e8] dark:border-border hover:bg-slate-50 dark:hover:bg-muted text-slate-700 dark:text-slate-300"
+              title="Đồng bộ trạng thái vận đơn từ đối tác vận chuyển"
+            >
+              <RotateCw className={`w-3.5 h-3.5 mr-1.5 ${syncing ? 'animate-spin' : ''}`} />
+              Đồng bộ
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setExcelPreviewOpen(true)}
+              className="h-8 px-2.5 text-[12px] rounded-[6px] border-emerald-200 dark:border-emerald-900/40 text-emerald-700 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-950/20 hover:bg-emerald-100/60"
+              title="Xem trước, in và tải mẫu phiếu giao hàng Excel chuẩn"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 mr-1.5 text-emerald-600" />
+              Phiếu Excel
+            </Button>
+
+            {/* Nút hủy giao hàng nếu vận đơn còn trong giai đoạn chuẩn bị */}
+            {isCancellable && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handleCancelShipment}
+                disabled={cancelling}
+                className="h-8 px-2.5 text-[12px] rounded-[6px] text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/20"
+              >
+                Hủy phiếu
+              </Button>
+            )}
+
+            {/* Nút hành động chính (Duy nhất 1 nút chính) */}
             {currentStatus === 'ready_to_pick' && (
               <Button
                 type="button"
-                variant="outline"
+                size="sm"
                 disabled={updatingStatus}
                 onClick={() => handleUpdateStatus('delivering')}
-                className="h-8 px-2.5 text-[12.5px] border-blue-200 text-blue-600 hover:bg-blue-50 cursor-pointer"
+                className="h-8 px-3 text-[12px] rounded-[6px] bg-[#0088ff] hover:bg-[#0077ee] text-white font-medium shadow-none active:scale-[0.98] transition-transform"
               >
-                <Truck className="w-3.5 h-3.5 mr-1" /> Bắt đầu giao
+                Bắt đầu giao
               </Button>
             )}
             {currentStatus === 'delivering' && (
               <Button
                 type="button"
+                size="sm"
                 disabled={updatingStatus}
                 onClick={() => handleUpdateStatus('delivered')}
-                className="h-8 px-2.5 text-[12.5px] bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer"
+                className="h-8 px-3 text-[12px] rounded-[6px] bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-none active:scale-[0.98] transition-transform"
               >
                 Xác nhận đã giao
               </Button>
             )}
-            <Button
+
+            {/* Phân cách với nút đóng */}
+            <div className="w-px h-5 bg-[#dfe3e8] dark:bg-border mx-0.5" />
+
+            <button
               type="button"
-              variant="outline"
-              disabled={syncing}
-              onClick={handleSyncShipment}
-              className="h-8 px-2.5 text-[12.5px] border-[#dfe3e8] dark:border-border hover:bg-slate-50 dark:hover:bg-muted text-emerald-600 dark:text-emerald-400 cursor-pointer"
+              onClick={onClose}
+              className="p-1.5 rounded-[6px] text-[#637381] hover:text-[#212b36] hover:bg-slate-100 dark:hover:bg-muted cursor-pointer transition-colors"
+              title="Đóng (Esc)"
             >
-              <RotateCw className={`w-3.5 h-3.5 mr-1 ${syncing ? 'animate-spin' : ''}`} /> Đồng bộ từ hãng
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handlePrint}
-              className="h-8 px-2.5 text-[12.5px] border-[#dfe3e8] dark:border-border cursor-pointer"
-            >
-              <Printer className="w-3.5 h-3.5 mr-1" /> In phiếu
-            </Button>
-            {isCancellable && (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleCancelShipment}
-                disabled={cancelling}
-                className="h-8 px-2.5 text-[12.5px] text-[#e01a22] border-rose-200 hover:bg-rose-50 cursor-pointer"
-              >
-                <Ban className="w-3.5 h-3.5 mr-1" /> Hủy phiếu
-              </Button>
-            )}
-            <button type="button" onClick={onClose} className="p-1 text-[#637381] hover:text-[#212b36] cursor-pointer">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -184,8 +207,8 @@ export default function ShipmentDetailModal({ shipment, isOpen, onClose, onRefre
 
             {/* Box 2: Thông tin sản phẩm đóng gói */}
             <div className="p-4 bg-white dark:bg-card border border-[#dfe3e8] dark:border-border rounded-[6px] space-y-2">
-              <h4 className="font-semibold text-[#212b36] dark:text-foreground mb-2 flex items-center gap-1.5">
-                <Package className="w-4 h-4 text-[#0088ff]" /> Sản phẩm trong gói hàng
+              <h4 className="font-semibold text-[#212b36] dark:text-foreground mb-2">
+                Sản phẩm trong gói hàng
               </h4>
               <div className="divide-y divide-[#dfe3e8] dark:divide-border">
                 {(shipment.items || []).map((it, idx) => (
@@ -206,28 +229,20 @@ export default function ShipmentDetailModal({ shipment, isOpen, onClose, onRefre
             </div>
 
             {/* Box 3: Chi tiết trạng thái đơn giao hàng (Timeline) */}
-            <div className="p-4 bg-white dark:bg-card border border-[#dfe3e8] dark:border-border rounded-[6px] space-y-3">
-              <h4 className="font-semibold text-[#212b36] dark:text-foreground flex items-center gap-1.5">
-                <Clock className="w-4 h-4 text-[#0088ff]" /> Lịch sử hành trình vận đơn
-              </h4>
-              <div className="space-y-3 pl-2 border-l-2 border-[#0088ff]">
-                {(shipment.historyLogs || []).map((log, i) => (
-                  <div key={i} className="relative pl-3 text-[12.5px]">
-                    <div className="absolute -left-[19px] top-1.5 w-2 h-2 rounded-full bg-[#0088ff]" />
-                    <p className="font-medium text-[#212b36] dark:text-foreground">{log.description}</p>
-                    <span className="text-[11px] text-[#8a99a8] font-mono">
-                      {new Date(log.updatedAt).toLocaleString('vi-VN')} {log.location && `| ${log.location}`}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <ShipmentHistoryTimeline historyLogs={shipment.historyLogs} />
           </div>
 
           {/* Cột phải (1/3) */}
           <ShipmentSidebarInfo shipment={shipment} />
         </div>
       </div>
+
+      <ExcelPreviewModal
+        isOpen={excelPreviewOpen}
+        onClose={() => setExcelPreviewOpen(false)}
+        title={`Phiếu Giao Hàng: ${shipment.trackingCode || shipment.shipmentCode}`}
+        downloadUrl={shipmentService.getExcelSlipUrl(shipment._id)}
+      />
     </div>
   );
 }

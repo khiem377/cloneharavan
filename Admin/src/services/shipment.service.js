@@ -89,6 +89,11 @@ export const shipmentService = {
     const res = await api.post('/shipments/cod/bulk-reconcile', payload);
     return res.data;
   },
+
+  /**
+   * Đường dẫn API tải/xem trước file Excel phiếu giao hàng
+   */
+  getExcelSlipUrl: (id) => `/shipments/${id}/download-excel`,
 };
 
 export default shipmentService;

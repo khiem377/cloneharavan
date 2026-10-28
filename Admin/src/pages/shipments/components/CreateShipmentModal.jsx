@@ -8,7 +8,7 @@ import AddCustomCarrierModal from './AddCustomCarrierModal';
 import ShipmentPackageForm from './ShipmentPackageForm';
 import { X, CheckCircle2 } from 'lucide-react';
 
-export default function CreateShipmentModal({ isOpen, onClose, onSuccess }) {
+export default function CreateShipmentModal({ isOpen, onClose, onSuccess, initialOrderId = null }) {
   const [submitting, setSubmitting] = useState(false);
   const [deliveryType, setDeliveryType] = useState('carrier'); // 'carrier' | 'self_delivery'
   const [orders, setOrders] = useState([]);
@@ -20,7 +20,7 @@ export default function CreateShipmentModal({ isOpen, onClose, onSuccess }) {
   ]);
   const [isAddCustomOpen, setIsAddCustomOpen] = useState(false);
 
-  const [selectedOrderId, setSelectedOrderId] = useState('');
+  const [selectedOrderId, setSelectedOrderId] = useState(initialOrderId || '');
   const [selectedWarehouseId, setSelectedWarehouseId] = useState('');
   const [selectedCarrierCode, setSelectedCarrierCode] = useState('');
   const [shippingFee, setShippingFee] = useState(0);
@@ -53,8 +53,9 @@ export default function CreateShipmentModal({ isOpen, onClose, onSuccess }) {
         const eligible = ordersRes.data?.data || ordersRes.data || [];
         setOrders(Array.isArray(eligible) ? eligible : []);
         if (eligible.length > 0) {
-          setSelectedOrderId(eligible[0]._id);
-          applyOrderToForm(eligible[0]);
+          const target = (initialOrderId && eligible.find((o) => o._id === initialOrderId || o.orderCode === initialOrderId)) || eligible[0];
+          setSelectedOrderId(target._id);
+          applyOrderToForm(target);
         }
 
         const carriersList = carriersRes.data?.data || carriersRes.data || [];

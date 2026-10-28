@@ -143,6 +143,29 @@ const bulkReconcileCOD = catchAsync(async (req, res) => {
   });
 });
 
+// 15. Tải / Xem trước file Excel phiếu giao hàng / vận đơn
+const downloadExcelSlip = async (req, res, next) => {
+  try {
+    const { workbook, shipmentCode, trackingCode } = await ShipmentService.generateExcelSlip(req.params.id);
+
+    const filename = `Phieu_Giao_Hang_${shipmentCode || trackingCode || 'Van_Don'}.xlsx`;
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename=${encodeURIComponent(filename)}`
+    );
+
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (err) {
+    console.error('[Shipment] Lỗi xuất file Excel:', err);
+    res.status(500).json({ success: false, message: err.message, stack: err.stack });
+  }
+};
+
 module.exports = {
   getOverview,
   getShipmentsList,
@@ -158,5 +181,7 @@ module.exports = {
   getCODStats,
   reconcileShipmentCOD,
   bulkReconcileCOD,
+  downloadExcelSlip,
 };
+
 

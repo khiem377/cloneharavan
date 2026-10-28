@@ -8,12 +8,17 @@ const Product = require('../models/product.model');
 const ProductWarehouseStock = require('../models/productWarehouseStock.model');
 const StockExport = require('../models/stockExport.model');
 const AppError = require('../utils/AppError');
+const { escapeRegex } = require('../middleware/sanitize.middleware');
 const { recordAuditLog } = require('./auditLog.service');
 const { decryptObject } = require('../utils/crypto.util');
 const ViettelPostService = require('./viettelpost.service');
 const GhnService = require('./ghn.service');
 const GhtkService = require('./ghtk.service');
 const AhamoveService = require('./ahamove.service');
+const ExcelJS = require('exceljs');
+const path = require('path');
+const fs = require('fs');
+const { numberToWordsVN } = require('../utils/vnNumberToWords');
 
 class ShipmentService {
   /**
@@ -113,7 +118,7 @@ class ShipmentService {
     }
 
     if (search && search.trim()) {
-      const term = search.trim();
+      const term = escapeRegex(search.trim());
       query.$or = [
         { shipmentCode: { $regex: term, $options: 'i' } },
         { trackingCode: { $regex: term, $options: 'i' } },
@@ -649,14 +654,23 @@ class ShipmentService {
       createdBy: user?._id || null,
     });
 
-    // 7. Cập nhật Order lịch sử tạo vận đơn (kiện hàng đóng gói xong, chờ bưu tá lấy)
+    // 7. Cập nhật Order lịch sử tạo vận đơn (kho đóng gói hoàn tất, chuyển sang bước vận chuyển)
+    order.orderStatus = 'SHIPPING';
     order.statusHistory.push({
-      status: order.orderStatus || 'CONFIRMED',
-      note: `Tạo phiếu vận đơn ${shipmentCode} qua ${carrierName} (Mã vận đơn: ${trackingCode}). Đang chờ bưu tá đến lấy hàng.`,
+      status: 'SHIPPING',
+      note: `Tạo phiếu vận đơn ${shipmentCode} qua ${carrierName} (Mã vận đơn: ${trackingCode}). Đã đóng gói xong, đang chờ bưu tá đến lấy hàng.`,
       changedAt: new Date(),
       changedBy: user?._id || null,
     });
     await order.save();
+
+    // Gửi email xác nhận giao vận cho khách hàng
+    try {
+      const emailService = require('./email.service');
+      emailService.sendShippingConfirmationEmail(order, shipment).catch((e) =>
+        console.warn('[ShipmentService] Lỗi gửi email xác nhận giao vận:', e.message)
+      );
+    } catch (_) {}
 
     // 8. Xuất kho & Trừ tồn thực tế (stock -= qty, allocated -= qty)
     try {
@@ -926,25 +940,28 @@ class ShipmentService {
     // Đồng bộ sang Đơn hàng
     const order = await Order.findById(shipment.orderId);
     if (order) {
-      if (['picking', 'delivering'].includes(newStatus) && order.orderStatus !== 'SHIPPING') {
+      if (['ready_to_pick', 'picking', 'delivering'].includes(newStatus) && order.orderStatus !== 'SHIPPING') {
         order.orderStatus = 'SHIPPING';
         order.statusHistory.push({
           status: 'SHIPPING',
-          note: `Đơn vị vận chuyển ${shipment.carrierName} bắt đầu giao hàng (Mã vận đơn: ${shipment.trackingCode})`,
+          note: `Đơn vị vận chuyển ${shipment.carrierName} cập nhật vận đơn: ${shipment.trackingCode} (${newStatus})`,
           changedAt: new Date(),
           changedBy: user?._id || null,
         });
         await order.save();
-      } else if (newStatus === 'ready_to_pick' && order.orderStatus === 'SHIPPING') {
-        order.orderStatus = 'CONFIRMED';
-        order.statusHistory.push({
-          status: 'CONFIRMED',
-          note: `Chuyển lại về trạng thái chờ bưu tá lấy hàng`,
-          changedAt: new Date(),
-          changedBy: user?._id || null,
-        });
-        await order.save();
-      } else if (newStatus === 'delivered' && order.orderStatus !== 'DELIVERED') {
+      }
+
+      if (['picking', 'delivering'].includes(newStatus)) {
+        try {
+          const emailService = require('./email.service');
+          emailService.sendShippingConfirmationEmail(order, shipment).catch((e) =>
+            console.warn('[ShipmentService] Lỗi gửi email giao vận:', e.message)
+          );
+        } catch (_) {}
+      }
+
+      if (newStatus === 'delivered' && order.orderStatus !== 'DELIVERED') {
+        const wasDelivered = order.orderStatus === 'DELIVERED';
         order.orderStatus = 'DELIVERED';
         if (order.paymentMethod === 'COD') {
           order.paymentStatus = 'PAID';
@@ -955,16 +972,63 @@ class ShipmentService {
           changedAt: new Date(),
           changedBy: user?._id || null,
         });
+
+        // Ghi nhận số lượng đã bán thực tế
+        if (!wasDelivered) {
+          for (const it of (order.items || [])) {
+            if (it.variantId) {
+              await ProductVariant.updateOne(
+                { _id: it.variantId },
+                { $inc: { sold: it.quantity } }
+              );
+            }
+          }
+        }
+
         await order.save();
+
+        try {
+          const emailService = require('./email.service');
+          emailService.sendShippingDeliveredEmail(order, shipment).catch((e) =>
+            console.warn('[ShipmentService] Lỗi gửi email giao hàng thành công:', e.message)
+          );
+        } catch (_) {}
       } else if (newStatus === 'returned' && order.orderStatus !== 'RETURNED') {
+        const wasDelivered = order.orderStatus === 'DELIVERED';
         order.orderStatus = 'RETURNED';
         order.statusHistory.push({
           status: 'RETURNED',
-          note: `Hàng đã hoàn về kho từ ${shipment.carrierName}`,
+          note: `Hàng đã hoàn về kho từ ${shipment.carrierName}. Tồn kho đã được hoàn lại kệ.`,
           changedAt: new Date(),
           changedBy: user?._id || null,
         });
+
+        // Hàng hoàn về kho: khôi phục tồn kho vật lý
+        for (const it of (shipment.items || [])) {
+          if (it.variantId) {
+            const updateFields = { $inc: { stock: it.quantity } };
+            if (wasDelivered) {
+              updateFields.$inc.sold = -it.quantity;
+            }
+            await ProductVariant.updateOne({ _id: it.variantId }, updateFields);
+
+            if (shipment.warehouseId) {
+              await ProductWarehouseStock.updateOne(
+                { variantId: it.variantId, warehouseId: shipment.warehouseId },
+                { $inc: { stock: it.quantity } }
+              );
+            }
+          }
+        }
+
         await order.save();
+
+        try {
+          const emailService = require('./email.service');
+          emailService.sendOrderRefundedEmail(order).catch((e) =>
+            console.warn('[ShipmentService] Lỗi gửi email hoàn trả:', e.message)
+          );
+        } catch (_) {}
       }
     }
 
@@ -1089,7 +1153,299 @@ class ShipmentService {
 
     return { status: 200, message: 'Unhandled carrier webhook' };
   }
+
+  /**
+   * Tạo file Excel phiếu giao hàng / vận đơn từ template chuẩn phieu-giao-hang.xlsx
+   */
+  static async generateExcelSlip(id) {
+    const shipment = await Shipment.findById(id).lean();
+    if (!shipment) {
+      throw new AppError('Không tìm thấy phiếu giao hàng / vận đơn', 404);
+    }
+
+    let order = null;
+    if (shipment.orderId) {
+      order = await Order.findById(shipment.orderId).lean();
+    }
+
+    const templatePath = path.join(__dirname, '../template/phieu-giao-hang.xlsx');
+    if (!fs.existsSync(templatePath)) {
+      throw new AppError('Không tìm thấy file mẫu phiếu giao hàng: phieu-giao-hang.xlsx', 500);
+    }
+
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.readFile(templatePath);
+    const sheet = workbook.worksheets[0];
+
+    // Xóa sạch tất cả các ô merge cũ từ dòng 8 trở xuống từ sheet.model.merges
+    // Lưu ý: ExcelJS dùng tên phương thức là unMergeCells (chữ M viết hoa)
+    const allMerges = [...(sheet.model.merges || [])];
+    for (const range of allMerges) {
+      const m = range.match(/\d+/);
+      if (m && parseInt(m[0], 10) >= 8) {
+        try {
+          sheet.unMergeCells(range);
+        } catch (e) {}
+      }
+    }
+
+    const safeMerge = (range) => {
+      try {
+        sheet.mergeCells(range);
+      } catch (err) {
+        try {
+          sheet.unMergeCells(range);
+          sheet.mergeCells(range);
+        } catch (_) {}
+      }
+    };
+
+    // Làm sạch nội dung các dòng từ 9 trở xuống và tách độc lập style của từng ô
+    const maxRowToClear = Math.max(sheet.rowCount || 20, 35);
+    for (let r = 9; r <= maxRowToClear; r++) {
+      const row = sheet.getRow(r);
+      for (let c = 1; c <= 8; c++) {
+        const cell = row.getCell(c);
+        cell.value = null;
+        cell.style = {}; // Hủy bỏ tham chiếu style dùng chung từ template gốc
+      }
+      row.commit();
+    }
+
+    // Đặt độ rộng các cột tối ưu:
+    // Cột B (Tên hàng hóa) kéo rộng 48 để hiển thị thoáng, không bị che
+    sheet.getColumn(1).width = 7;   // A: STT
+    sheet.getColumn(2).width = 48;  // B: Tên hàng hóa/dịch vụ (Rộng rãi + wrapText tự xuống dòng)
+    sheet.getColumn(3).width = 12;  // C: Đơn vị tính
+    sheet.getColumn(4).width = 11;  // D: Số lượng
+    sheet.getColumn(5).width = 16;  // E: Đơn giá (VNĐ)
+    sheet.getColumn(6).width = 14;  // F: Thành tiền (cùng G)
+    sheet.getColumn(7).width = 14;  // G: Thành tiền (cùng F)
+    sheet.getColumn(8).width = 10;  // H: Lề phải
+
+    // Header thông tin phiếu
+    const receiverName = shipment.receiverInfo?.fullName || order?.shippingAddress?.fullName || 'Khách hàng';
+    const receiverPhone = shipment.receiverInfo?.phone || order?.shippingAddress?.phone || '';
+    const trackingCode = shipment.trackingCode || '—';
+    const orderCode = shipment.orderCode || order?.orderCode || '—';
+    const carrierName = shipment.carrierName || 'Tự giao hàng';
+
+    sheet.getCell('A4').value = 'PHIẾU GIAO HÀNG / VẬN ĐƠN';
+    sheet.getCell('A5').value = `Kính gửi: ${receiverName} - SĐT: ${receiverPhone}`;
+    sheet.getCell('A6').value = `Mã vận đơn: ${trackingCode}   |   Mã đơn hàng: #${orderCode}   |   Đối tác: ${carrierName}`;
+    sheet.getCell('A7').value = 'Nội dung đặt hàng như sau:';
+
+    // Đảm bảo header bảng (Dòng 8) có F8:G8 được merge đúng
+    sheet.getCell('F8').style = {};
+    sheet.getCell('G8').style = {};
+    safeMerge('F8:G8');
+    sheet.getCell('F8').value = 'Thành tiền (VNĐ)';
+    sheet.getCell('F8').font = { name: 'Times New Roman', size: 12, bold: true };
+    sheet.getCell('F8').alignment = { horizontal: 'center', vertical: 'middle' };
+
+    const CELL_BORDER = {
+      top: { style: 'thin' },
+      bottom: { style: 'thin' },
+      left: { style: 'thin' },
+      right: { style: 'thin' },
+    };
+
+    const items = (shipment.items && shipment.items.length > 0)
+      ? shipment.items
+      : (order?.items || []);
+
+    const DATA_START_ROW = 9;
+    let totalAmount = 0;
+    let totalQuantity = 0;
+
+    // Điền chi tiết từng sản phẩm
+    items.forEach((item, index) => {
+      const rowNum = DATA_START_ROW + index;
+      const row = sheet.getRow(rowNum);
+      const qty = Number(item.quantity) || 1;
+      const price = Number(item.price ?? item.unitPrice ?? 0);
+      const lineTotal = qty * price;
+      totalQuantity += qty;
+      totalAmount += lineTotal;
+
+      const productName = item.productName || 'Sản phẩm';
+      const skuText = item.sku ? ` (${item.sku})` : '';
+      const fullItemName = `${productName}${skuText}`;
+
+      // Reset style riêng biệt cho từng ô trong hàng để không bị chia sẻ tham chiếu style
+      for (let c = 1; c <= 8; c++) {
+        row.getCell(c).style = {};
+      }
+
+      row.getCell(1).value = index + 1; // STT
+      row.getCell(2).value = fullItemName; // Tên hàng hóa
+      row.getCell(3).value = item.unit || 'Cái'; // ĐVT
+      row.getCell(4).value = qty; // Số lượng
+      row.getCell(5).value = price; // Đơn giá
+      row.getCell(6).value = lineTotal; // Thành tiền
+      row.getCell(7).value = null;
+
+      // Merge F & G cho cột Thành tiền
+      safeMerge(`F${rowNum}:G${rowNum}`);
+
+      // Font và căn lề từng ô chuẩn mực
+      for (let c = 1; c <= 7; c++) {
+        row.getCell(c).font = { name: 'Times New Roman', size: 11 };
+        row.getCell(c).border = CELL_BORDER;
+      }
+
+      row.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
+      row.getCell(2).alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
+      row.getCell(3).alignment = { horizontal: 'center', vertical: 'middle' };
+      row.getCell(4).alignment = { horizontal: 'center', vertical: 'middle' };
+      row.getCell(5).alignment = { horizontal: 'right', vertical: 'middle' };
+      row.getCell(6).alignment = { horizontal: 'right', vertical: 'middle' };
+
+      row.getCell(4).numFmt = '#,##0';
+      row.getCell(5).numFmt = '#,##0';
+      row.getCell(6).numFmt = '#,##0';
+
+      // Tính chiều cao dòng: nếu tên dài thì tự động tăng để hiển thị trọn vẹn, không bị che chữ
+      const len = fullItemName.length;
+      row.height = len > 80 ? 48 : len > 42 ? 36 : 26;
+      row.commit();
+    });
+
+    // Điền phần chân phiếu (Footer) liền ngay sau danh sách sản phẩm
+    let curRow = DATA_START_ROW + items.length;
+
+    // 1. Dòng Tổng cộng
+    for (let c = 1; c <= 8; c++) sheet.getRow(curRow).getCell(c).style = {};
+    safeMerge(`A${curRow}:H${curRow}`);
+    const totalCell = sheet.getCell(`A${curRow}`);
+    const wordText = numberToWordsVN(totalAmount);
+    totalCell.value = `Tổng cộng: ${totalAmount.toLocaleString('vi-VN')} VNĐ (Bằng chữ): ${wordText}`;
+    totalCell.font = { name: 'Times New Roman', size: 11, bold: true };
+    totalCell.alignment = { horizontal: 'left', vertical: 'middle' };
+    sheet.getRow(curRow).height = 28;
+    sheet.getRow(curRow).commit();
+    curRow++;
+
+    // 2. Dòng Thời gian giao hàng
+    const d = new Date(shipment.createdAt || Date.now());
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mi = String(d.getMinutes()).padStart(2, '0');
+    const formattedDate = `${dd}/${mm}/${yyyy} ${hh}:${mi}`;
+    const whName = shipment.warehouseName || 'Kho Tổng Bình Tân';
+
+    for (let c = 1; c <= 8; c++) sheet.getRow(curRow).getCell(c).style = {};
+    safeMerge(`A${curRow}:H${curRow}`);
+    const timeCell = sheet.getCell(`A${curRow}`);
+    timeCell.value = `Thời gian giao hàng: ${formattedDate}   |   Kho xuất: ${whName}`;
+    timeCell.font = { name: 'Times New Roman', size: 11 };
+    timeCell.alignment = { horizontal: 'left', vertical: 'middle' };
+    sheet.getRow(curRow).height = 24;
+    sheet.getRow(curRow).commit();
+    curRow++;
+
+    // 3. Dòng Địa điểm giao hàng
+    const receiver = shipment.receiverInfo || {};
+    const fullAddress = receiver.fullAddress || [
+      receiver.detailAddress || order?.shippingAddress?.detailAddress,
+      receiver.ward || order?.shippingAddress?.ward,
+      receiver.district || order?.shippingAddress?.district,
+      receiver.province || order?.shippingAddress?.province,
+    ].filter(Boolean).join(', ') || 'Chưa cập nhật địa chỉ';
+
+    for (let c = 1; c <= 8; c++) sheet.getRow(curRow).getCell(c).style = {};
+    safeMerge(`A${curRow}:H${curRow}`);
+    const addrCell = sheet.getCell(`A${curRow}`);
+    addrCell.value = `Địa điểm giao hàng: ${fullAddress}`;
+    addrCell.font = { name: 'Times New Roman', size: 11 };
+    addrCell.alignment = { horizontal: 'left', vertical: 'middle' };
+    sheet.getRow(curRow).height = 24;
+    sheet.getRow(curRow).commit();
+    curRow++;
+
+    // 4. Dòng Hình thức thanh toán
+    const codVal = Number(shipment.codAmount) || 0;
+    const codText = codVal > 0 ? `${codVal.toLocaleString('vi-VN')} VNĐ` : '0 VNĐ (Không thu COD)';
+    const payerText = shipment.payer === 'receiver' ? 'Người nhận trả cước' : 'Shop trả cước';
+    const payMethod = order?.paymentMethod || (codVal > 0 ? 'COD' : 'Online / Chuyển khoản');
+
+    for (let c = 1; c <= 8; c++) sheet.getRow(curRow).getCell(c).style = {};
+    safeMerge(`A${curRow}:H${curRow}`);
+    const payCell = sheet.getCell(`A${curRow}`);
+    payCell.value = `Hình thức thanh toán: ${payMethod}   |   Tiền thu hộ COD: ${codText}   |   Cước vận chuyển: ${payerText}`;
+    payCell.font = { name: 'Times New Roman', size: 11, bold: true };
+    payCell.alignment = { horizontal: 'left', vertical: 'middle' };
+    sheet.getRow(curRow).height = 24;
+    sheet.getRow(curRow).commit();
+    curRow++;
+
+    // 5. Dòng Ghi chú thêm
+    const reqNoteMap = {
+      CHOTHOXEM: 'Cho xem hàng',
+      CHOXEMKHONGTHU: 'Cho xem hàng không cho thử',
+      CHOXEMHANGKHONGTHU: 'Cho xem hàng không cho thử',
+      CHOTHUHANG: 'Cho thử hàng',
+      KHONGCHOXEM: 'Không cho xem hàng',
+      KHONGCHOXEMHANG: 'Không cho xem hàng',
+    };
+    const pkg = shipment.packageInfo || {};
+    const reqNote = reqNoteMap[pkg.requiredNote] || pkg.requiredNote || 'Cho xem hàng không cho thử';
+    const pkgWeight = pkg.weight ? `Khối lượng: ${pkg.weight}g` : '';
+    const pkgDim = (pkg.length && pkg.width && pkg.height) ? `KT: ${pkg.length}x${pkg.width}x${pkg.height}cm` : '';
+    const noteItems = [
+      `Chỉ dẫn: ${reqNote}`,
+      pkgWeight,
+      pkgDim,
+      pkg.note ? `Ghi chú: ${pkg.note}` : null,
+      order?.customerNote ? `Ghi chú đơn: ${order.customerNote}` : null,
+    ].filter(Boolean);
+
+    for (let c = 1; c <= 8; c++) sheet.getRow(curRow).getCell(c).style = {};
+    safeMerge(`A${curRow}:H${curRow}`);
+    const noteCell = sheet.getCell(`A${curRow}`);
+    noteCell.value = `Ghi chú thêm: ${noteItems.join('   |   ') || 'Hàng dễ vỡ, vui lòng nhẹ tay'}`;
+    noteCell.font = { name: 'Times New Roman', size: 11, italic: true };
+    noteCell.alignment = { horizontal: 'left', vertical: 'middle' };
+    sheet.getRow(curRow).height = 24;
+    sheet.getRow(curRow).commit();
+    curRow++;
+
+    // 6. Khoảng cách nhỏ trước khung chữ ký
+    sheet.getRow(curRow).height = 10;
+    curRow++;
+
+    // 7. Chữ ký 3 bên
+    for (let c = 1; c <= 8; c++) sheet.getRow(curRow).getCell(c).style = {};
+    safeMerge(`A${curRow}:C${curRow}`);
+    safeMerge(`D${curRow}:F${curRow}`);
+    safeMerge(`G${curRow}:H${curRow}`);
+
+    const sig1 = sheet.getCell(`A${curRow}`);
+    sig1.value = 'Người lập phiếu\n(Ký, ghi rõ họ tên)';
+    sig1.font = { name: 'Times New Roman', size: 11, bold: true };
+    sig1.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+
+    const sig2 = sheet.getCell(`D${curRow}`);
+    sig2.value = 'Đơn vị vận chuyển\n(Ký nhận bàn giao)';
+    sig2.font = { name: 'Times New Roman', size: 11, bold: true };
+    sig2.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+
+    const sig3 = sheet.getCell(`G${curRow}`);
+    sig3.value = 'Bên nhận đơn hàng\n(Ký xác nhận)';
+    sig3.font = { name: 'Times New Roman', size: 11, bold: true };
+    sig3.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+
+    sheet.getRow(curRow).height = 55;
+    sheet.getRow(curRow).commit();
+
+    return {
+      workbook,
+      shipmentCode: shipment.shipmentCode,
+      trackingCode: shipment.trackingCode,
+    };
+  }
 }
 
 module.exports = ShipmentService;
-

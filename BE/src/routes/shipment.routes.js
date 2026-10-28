@@ -15,6 +15,7 @@ const {
   getCODStats,
   reconcileShipmentCOD,
   bulkReconcileCOD,
+  downloadExcelSlip,
 } = require('../controllers/shipment.controller');
 const { protect } = require('../middleware/auth.middleware');
 const { requirePermission } = require('../middleware/permission.middleware');
@@ -66,6 +67,9 @@ router.get('/cod/stats', requirePermission(['order.view', 'order.manage', 'setti
 
 // 4.3 Xác nhận đối soát COD hàng loạt
 router.post('/cod/bulk-reconcile', requirePermission(['order.manage', 'setting.manage']), bulkReconcileCOD);
+
+// 4.5 Tải / Xem trước phiếu giao hàng Excel theo mẫu chuẩn
+router.get('/:id/download-excel', requirePermission(['order.view', 'order.manage', 'setting.view']), downloadExcelSlip);
 
 // 4. Chi tiết 1 vận đơn
 router.get('/:id', requirePermission(['order.view', 'order.manage', 'setting.view']), getShipmentById);
