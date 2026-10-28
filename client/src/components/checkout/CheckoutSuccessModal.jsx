@@ -64,7 +64,9 @@ export default function CheckoutSuccessModal({ placedOrder, formatPrice }) {
           <div className="flex justify-between">
             <span className="text-slate-500">Thanh toán:</span>
             <Badge variant="outline" className="text-[10px] border-slate-200 bg-white text-slate-700">
-              COD (Thanh toán khi nhận hàng)
+              {placedOrder.paymentMethod === 'ONEPAY'
+                ? 'OnePay Sandbox'
+                : 'COD (Thanh toán khi nhận hàng)'}
             </Badge>
           </div>
           <div className="flex justify-between items-baseline pt-1 border-t border-slate-200">

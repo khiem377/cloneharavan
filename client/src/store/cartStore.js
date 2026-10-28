@@ -73,7 +73,18 @@ export const useCartStore = create((set, get) => ({
       // Ưu tiên lựa chọn chỉ định (ví dụ Mua Ngay hoặc vừa thêm Combo)
       updatedSelected = overrideSelectedIds.filter((id) => validIds.has(id));
     } else {
-      const currentSelected = get().selectedItemIds || [];
+      let currentSelected = get().selectedItemIds || [];
+      if (currentSelected.length === 0 && typeof window !== 'undefined') {
+        try {
+          const raw = localStorage.getItem('checkoutItemIds') || sessionStorage.getItem('checkoutItemIds');
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              currentSelected = parsed;
+            }
+          }
+        } catch (_) {}
+      }
       if (currentSelected.length > 0) {
         // Giữ lại các lựa chọn người dùng đang chọn trong phiên hiện tại
         updatedSelected = currentSelected.filter((id) => validIds.has(id));
@@ -143,7 +154,8 @@ export const useCartStore = create((set, get) => ({
    */
   toggleSelectItem: (itemId) => {
     const { selectedItemIds, items } = get();
-    const target = items.find((i) => i._id === itemId);
+    const strItemId = String(itemId);
+    const target = items.find((i) => String(i._id) === strItemId);
     if (!target) return;
     // Không cho chọn sản phẩm hết hàng
     const isOutOfStock =
@@ -166,12 +178,12 @@ export const useCartStore = create((set, get) => ({
         return;
       }
 
-      const comboItemIds = comboItems.map((i) => i._id);
-      const isCurrentlySelected = selectedItemIds.includes(itemId);
+      const comboItemIds = comboItems.map((i) => String(i._id));
+      const isCurrentlySelected = selectedItemIds.some((id) => String(id) === strItemId);
 
       if (isCurrentlySelected) {
         // Bỏ chọn tất cả sản phẩm thuộc combo này
-        const newSelected = selectedItemIds.filter((id) => !comboItemIds.includes(id));
+        const newSelected = selectedItemIds.filter((id) => !comboItemIds.includes(String(id)));
         set({ selectedItemIds: newSelected });
         if (typeof window !== 'undefined') {
           try {
@@ -181,7 +193,7 @@ export const useCartStore = create((set, get) => ({
         }
       } else {
         // Chọn tất cả sản phẩm thuộc combo này
-        const newSelected = Array.from(new Set([...selectedItemIds, ...comboItemIds]));
+        const newSelected = Array.from(new Set([...selectedItemIds, ...comboItems.map((i) => i._id)]));
         set({ selectedItemIds: newSelected });
         if (typeof window !== 'undefined') {
           try {
@@ -194,10 +206,11 @@ export const useCartStore = create((set, get) => ({
     }
 
     let newSelected = [];
-    if (selectedItemIds.includes(itemId)) {
-      newSelected = selectedItemIds.filter((id) => id !== itemId);
+    const isCurrentlySelected = selectedItemIds.some((id) => String(id) === strItemId);
+    if (isCurrentlySelected) {
+      newSelected = selectedItemIds.filter((id) => String(id) !== strItemId);
     } else {
-      newSelected = [...selectedItemIds, itemId];
+      newSelected = [...selectedItemIds, target._id];
     }
     set({ selectedItemIds: newSelected });
     if (typeof window !== 'undefined') {
@@ -346,7 +359,7 @@ export const useCartStore = create((set, get) => ({
    */
   getSelectedItems: () => {
     const { items, selectedItemIds } = get();
-    return items.filter((i) => selectedItemIds.includes(i._id));
+    return items.filter((i) => selectedItemIds.some((id) => String(id) === String(i._id)));
   },
 
   /**
@@ -400,7 +413,20 @@ export const useCartStore = create((set, get) => ({
         ) || items[items.length - 1];
 
         if (isBuyNow && addedItem) {
-          get()._setCartData(res.data, [addedItem._id]);
+          let prevSelected = get().selectedItemIds || [];
+          if ((!prevSelected || prevSelected.length === 0) && typeof window !== 'undefined') {
+            try {
+              const raw = localStorage.getItem('checkoutItemIds') || sessionStorage.getItem('checkoutItemIds');
+              if (raw) {
+                const parsed = JSON.parse(raw);
+                if (Array.isArray(parsed) && parsed.length > 0) prevSelected = parsed;
+              }
+            } catch (_) {}
+          }
+          const validSet = new Set(items.map((it) => String(it._id)));
+          const validPrev = (prevSelected || []).filter((id) => validSet.has(String(id)));
+          const accumulatedSelected = Array.from(new Set([...validPrev, addedItem._id]));
+          get()._setCartData(res.data, accumulatedSelected);
         } else {
           get()._setCartData(res.data);
         }

@@ -30,10 +30,15 @@ export const orderService = {
   },
 
   /**
-   * Lấy chi tiết đơn hàng
+   * Lấy chi tiết đơn hàng theo ID hoặc Mã đơn hàng (orderCode)
    */
   getOrderById: async (orderId) => {
     const res = await api.get(`/orders/${orderId}`);
+    return res.data;
+  },
+
+  getOrderByCode: async (orderCode) => {
+    const res = await api.get(`/orders/${orderCode}`);
     return res.data;
   },
 

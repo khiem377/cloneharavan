@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import {
   X,
@@ -20,6 +20,7 @@ import useQuickViewStore from '@/store/quickViewStore';
 import useCompareStore from '@/store/compareStore';
 import useCartStore from '@/store/cartStore';
 import { toast } from '@/components/ui/toast';
+import { resolveDisplayColor } from '@/utils/colorResolver';
 
 export const QuickViewModal = () => {
   const router = useRouter();
@@ -129,7 +130,7 @@ export const QuickViewModal = () => {
               }
             }
           })
-          .catch(() => {});
+          .catch(() => { });
       }
 
       // Trigger scale-in animation after mounting
@@ -194,14 +195,14 @@ export const QuickViewModal = () => {
   const activeSalePrice = isFlashSale
     ? product.flashSalePrice
     : selectedVariant?.salePrice !== undefined && selectedVariant?.salePrice !== null && selectedVariant.salePrice > 0
-    ? selectedVariant.salePrice
-    : product.salePrice || product.cachedSalePrice || 0;
+      ? selectedVariant.salePrice
+      : product.salePrice || product.cachedSalePrice || 0;
 
   const activeRegularPrice = isFlashSale && product.flashSaleOriginalPrice
     ? product.flashSaleOriginalPrice
     : selectedVariant?.price !== undefined && selectedVariant?.price !== null && selectedVariant.price > 0
-    ? selectedVariant.price
-    : product.price || product.cachedPrice || 0;
+      ? selectedVariant.price
+      : product.price || product.cachedPrice || 0;
 
   const hasDiscount = activeSalePrice > 0 && activeRegularPrice > activeSalePrice;
   const displayPrice = activeSalePrice > 0 ? activeSalePrice : activeRegularPrice;
@@ -213,6 +214,98 @@ export const QuickViewModal = () => {
   const brandName = product.brand?.name || 'Chính hãng';
   const brandSlug = product.brand?.slug || (product.brand?.name ? product.brand.name.toLowerCase() : '');
   const sku = selectedVariant?.sku || product.sku || product.productCode || product._id?.slice(-8)?.toUpperCase();
+
+  // Phân tích các nhóm thuộc tính độc lập (Màu sắc, Dung lượng, Kích thước...)
+  const attributeGroups = useMemo(() => {
+    const validVariants = (variantsList || []).filter(
+      (v) => !v.isDefault || (Array.isArray(v.attributes) && v.attributes.length > 0)
+    );
+
+    if (validVariants.length <= 1 && (!product.options || product.options.length === 0)) {
+      return [];
+    }
+
+    const groupMap = new Map();
+
+    // 1. Nạp từ product.options cấu hình sẵn nếu có
+    if (Array.isArray(product.options) && product.options.length > 0) {
+      product.options.forEach((opt) => {
+        if (opt.name && Array.isArray(opt.values) && opt.values.length > 0) {
+          const valMap = new Map();
+          opt.values.forEach((v) => {
+            if (v && v.value && !isDefaultVariantName(v.value)) {
+              valMap.set(v.value, {
+                value: v.value,
+                colorCode: v.colorCode || '',
+              });
+            }
+          });
+          if (valMap.size > 0) {
+            groupMap.set(opt.name, {
+              name: opt.name,
+              type: opt.type || (opt.name.toLowerCase().includes('màu') ? 'color' : 'text'),
+              values: valMap,
+            });
+          }
+        }
+      });
+    }
+
+    // 2. Tự động đồng bộ từ variant.attributes thực tế của sản phẩm
+    validVariants.forEach((v) => {
+      if (Array.isArray(v.attributes)) {
+        v.attributes.forEach((attr) => {
+          if (!attr.name || !attr.value || isDefaultVariantName(attr.value)) return;
+
+          let group = groupMap.get(attr.name);
+          if (!group) {
+            group = {
+              name: attr.name,
+              type: attr.colorCode || attr.name.toLowerCase().includes('màu') ? 'color' : 'text',
+              values: new Map(),
+            };
+            groupMap.set(attr.name, group);
+          }
+
+          if (!group.values.has(attr.value)) {
+            group.values.set(attr.value, {
+              value: attr.value,
+              colorCode: attr.colorCode || '',
+            });
+          } else if (attr.colorCode && !group.values.get(attr.value).colorCode) {
+            group.values.get(attr.value).colorCode = attr.colorCode;
+          }
+        });
+      }
+    });
+
+    const groups = [];
+    groupMap.forEach((group) => {
+      const valuesArray = Array.from(group.values.values());
+      if (valuesArray.length > 0) {
+        groups.push({
+          name: group.name,
+          type: group.type,
+          values: valuesArray,
+        });
+      }
+    });
+
+    return groups;
+  }, [variantsList, product.options]);
+
+  // Bộ thuộc tính hiện tại đang chọn
+  const selectedAttributes = useMemo(() => {
+    const map = {};
+    if (selectedVariant && Array.isArray(selectedVariant.attributes)) {
+      selectedVariant.attributes.forEach((attr) => {
+        if (attr.name && attr.value) {
+          map[attr.name] = attr.value;
+        }
+      });
+    }
+    return map;
+  }, [selectedVariant]);
 
   // Determine variant group title and items to render
   const realVariants = variantsList.filter((v) => {
@@ -227,7 +320,9 @@ export const QuickViewModal = () => {
     'Màu sắc / Phiên bản';
 
   const hasMultipleVariants =
-    displayVariants.length > 1 || (product.options?.[0]?.values?.length > 1);
+    attributeGroups.length > 0 ||
+    displayVariants.length > 1 ||
+    Boolean(product.options?.[0]?.values?.length > 1);
 
   // Xử lý khi chọn một biến thể
   const handleSelectVariant = (v) => {
@@ -243,10 +338,91 @@ export const QuickViewModal = () => {
         setActiveImageIdx(imgIdx);
       }
     } else {
-      // Khi biến thể không có hình ảnh -> lấy ảnh mặc định của sản phẩm chủ thể
       setVariantSelectedImage(null);
       setActiveImageIdx(0);
     }
+  };
+
+  // Tìm và kích hoạt biến thể khớp với lựa chọn thuộc tính mới trong Quick View
+  const handleSelectAttributeValue = (attrName, attrValue) => {
+    const nextAttrs = { ...selectedAttributes, [attrName]: attrValue };
+    const validVariants = (variantsList || []).filter(
+      (v) => !v.isDefault || (Array.isArray(v.attributes) && v.attributes.length > 0)
+    );
+
+    // Ưu tiên 1: Khớp hoàn toàn tất cả các thuộc tính
+    let exactMatch = validVariants.find((v) => {
+      if (!Array.isArray(v.attributes) || v.attributes.length === 0) return false;
+      return Object.entries(nextAttrs).every(([name, val]) => {
+        const found = v.attributes.find((a) => a.name === name);
+        return found && found.value === val;
+      });
+    });
+
+    if (exactMatch) {
+      handleSelectVariant(exactMatch);
+      return;
+    }
+
+    // Ưu tiên 2: Khớp thuộc tính vừa click và khớp nhiều thuộc tính khác nhất
+    let bestMatch = null;
+    let maxScore = -1;
+
+    validVariants.forEach((v) => {
+      if (!Array.isArray(v.attributes)) return;
+      const hasClicked = v.attributes.some((a) => a.name === attrName && a.value === attrValue);
+      if (!hasClicked) return;
+
+      let score = 0;
+      v.attributes.forEach((a) => {
+        if (nextAttrs[a.name] === a.value) score += 1;
+      });
+
+      if (score > maxScore) {
+        maxScore = score;
+        bestMatch = v;
+      }
+    });
+
+    if (bestMatch) {
+      handleSelectVariant(bestMatch);
+    }
+  };
+
+  // Helper kiểm tra trạng thái tồn kho của từng giá trị thuộc tính khi kết hợp với các thuộc tính đang chọn
+  const checkValueStatus = (attrName, attrValue) => {
+    const validVariants = (variantsList || []).filter(
+      (v) => !v.isDefault || (Array.isArray(v.attributes) && v.attributes.length > 0)
+    );
+
+    const matched = validVariants.filter((v) => {
+      if (!Array.isArray(v.attributes)) return false;
+      const hasThis = v.attributes.some((a) => a.name === attrName && a.value === attrValue);
+      if (!hasThis) return false;
+
+      const otherAttrs = Object.entries(selectedAttributes).filter(([k]) => k !== attrName);
+      if (otherAttrs.length === 0) return true;
+
+      return otherAttrs.every(([k, vVal]) => {
+        const matchOther = v.attributes.find((a) => a.name === k);
+        return matchOther && matchOther.value === vVal;
+      });
+    });
+
+    if (matched.length === 0) {
+      return { exists: false, inStock: false, variant: null };
+    }
+
+    const availStock = matched.reduce((sum, v) => {
+      const s = Math.max(0, (Number(v.stock) || 0) - (Number(v.allocated) || 0));
+      return sum + s;
+    }, 0);
+
+    return {
+      exists: true,
+      inStock: availStock > 0,
+      variant: matched[0],
+    };
   };
 
   // Thêm vào giỏ hàng
@@ -295,7 +471,7 @@ export const QuickViewModal = () => {
     };
     await addToCart(payload, { isBuyNow: true });
     closeQuickView();
-    router.push('/cart');
+    router.push('/checkout');
   };
 
   const handleCompareClick = () => {
@@ -306,9 +482,8 @@ export const QuickViewModal = () => {
 
   return (
     <div
-      className={`fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6 bg-black/60 transition-opacity duration-300 ease-out ${
-        isVisible ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
-      }`}
+      className={`fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6 bg-black/60 transition-opacity duration-300 ease-out ${isVisible ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        }`}
     >
       {/* Backdrop click to close */}
       <div className="absolute inset-0 cursor-pointer" onClick={handleClose} />
@@ -328,9 +503,8 @@ export const QuickViewModal = () => {
 
         {/* Modal Card with EGA scale-in animation */}
         <div
-          className={`relative bg-white rounded-[6px] shadow-lg border border-slate-200 w-full max-h-[88vh] overflow-y-auto no-scrollbar ${
-            isVisible ? 'animate-ega-scale-in' : 'animate-ega-scale-out'
-          }`}
+          className={`relative bg-white rounded-[6px] shadow-lg border border-slate-200 w-full max-h-[88vh] overflow-y-auto no-scrollbar ${isVisible ? 'animate-ega-scale-in' : 'animate-ega-scale-out'
+            }`}
         >
           <div className="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
             {/* ============ LEFT: GALLERY ============ */}
@@ -371,11 +545,10 @@ export const QuickViewModal = () => {
                         setActiveImageIdx(idx);
                         setVariantSelectedImage(null);
                       }}
-                      className={`w-14 h-14 rounded-[6px] border p-1 bg-white shrink-0 transition cursor-pointer overflow-hidden ${
-                        activeImageIdx === idx && !variantSelectedImage
+                      className={`w-14 h-14 rounded-[6px] border p-1 bg-white shrink-0 transition cursor-pointer overflow-hidden ${activeImageIdx === idx && !variantSelectedImage
                           ? 'border-[#e30019] ring-2 ring-[#e30019]/20'
                           : 'border-slate-200 hover:border-slate-400'
-                      }`}
+                        }`}
                     >
                       <img src={img} alt="" className="w-full h-full object-contain" />
                     </button>
@@ -429,9 +602,8 @@ export const QuickViewModal = () => {
                   <button
                     type="button"
                     onClick={handleCompareClick}
-                    className={`flex items-center gap-1 text-xs font-semibold cursor-pointer transition ${
-                      compared ? 'text-emerald-600' : 'text-blue-600 hover:text-blue-700'
-                    }`}
+                    className={`flex items-center gap-1 text-xs font-semibold cursor-pointer transition ${compared ? 'text-emerald-600' : 'text-blue-600 hover:text-blue-700'
+                      }`}
                   >
                     <ArrowLeftRight size={13} />
                     <span>{compared ? 'Đã thêm so sánh' : 'So sánh'}</span>
@@ -469,8 +641,75 @@ export const QuickViewModal = () => {
                 </div>
               )}
 
-              {/* Variant Selectors matching EGA */}
-              {displayVariants.length > 1 ? (
+              {/* Variant Selectors (Phân nhóm đa thuộc tính: Màu sắc, Dung lượng, Kích thước...) */}
+              {attributeGroups.length > 0 ? (
+                <div className={`space-y-3 pt-1 p-2 rounded-[6px] transition-all ${variantError ? 'bg-red-50/40 border border-red-200 ring-1 ring-red-200' : ''}`}>
+                  {attributeGroups.map((group) => {
+                    const isColorGroup = group.type === 'color' || group.name.toLowerCase().includes('màu');
+                    const selectedVal = selectedAttributes[group.name] || '';
+
+                    return (
+                      <div key={group.name} className="space-y-1.5">
+                        <div className="flex items-center justify-between text-xs font-semibold text-slate-800">
+                          <span>{group.name}:</span>
+                          {selectedVal ? (
+                            <span className="text-slate-500 font-normal">
+                              Đã chọn: <strong className="text-red-600">{selectedVal}</strong>
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 font-normal text-[11px]">Chưa chọn</span>
+                          )}
+                        </div>
+
+                        <div className="flex flex-wrap gap-2">
+                          {group.values.map((item) => {
+                            const isSelected = selectedVal === item.value;
+                            const status = checkValueStatus(group.name, item.value);
+                            const isUnavailable = !status.exists;
+                            const isOutOfStockItem = status.exists && !status.inStock;
+
+                            return (
+                              <button
+                                key={item.value}
+                                type="button"
+                                disabled={isUnavailable}
+                                onClick={() => handleSelectAttributeValue(group.name, item.value)}
+                                className={`min-w-16 px-3 py-1.5 rounded-[6px] text-xs font-medium border transition-all select-none active:scale-[0.98] flex items-center gap-1.5 ${isSelected
+                                    ? 'border-2 border-red-600 text-red-600 bg-red-50/30 font-bold shadow-2xs ring-1 ring-red-600/30'
+                                    : isUnavailable
+                                      ? 'border border-dashed border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed opacity-60'
+                                      : isOutOfStockItem
+                                        ? 'border border-slate-200 bg-slate-50 text-slate-400 line-through cursor-pointer'
+                                        : 'border border-slate-200 text-slate-700 bg-white hover:border-slate-300 hover:text-slate-900 cursor-pointer shadow-2xs'
+                                  }`}
+                              >
+                                {isColorGroup && (
+                                  <span
+                                    className={`w-3.5 h-3.5 rounded-full border shrink-0 ${isSelected ? 'border-red-600 scale-110 shadow-2xs' : 'border-slate-300'
+                                      }`}
+                                    style={{
+                                      backgroundColor: resolveDisplayColor(
+                                        item.colorCode,
+                                        item.value
+                                      ),
+                                    }}
+                                  />
+                                )}
+                                <span>{item.value}</span>
+                                {isOutOfStockItem && !isSelected && (
+                                  <span className="text-[9px] text-red-500 font-normal no-underline ml-0.5">
+                                    (Hết)
+                                  </span>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : displayVariants.length > 1 ? (
                 <div className={`space-y-1.5 pt-1 p-2 rounded-[6px] transition-all ${variantError ? 'bg-red-50/40 border border-red-200 ring-1 ring-red-200' : ''}`}>
                   <label className="flex items-center justify-between text-xs font-semibold text-slate-800">
                     <span>{groupTitle}:</span>
@@ -485,72 +724,19 @@ export const QuickViewModal = () => {
                       const isSelected =
                         Boolean(selectedVariant) &&
                         ((selectedVariant?._id && selectedVariant._id === v._id) ||
-                         (selectedVariant?.sku && selectedVariant.sku === v.sku));
+                          (selectedVariant?.sku && selectedVariant.sku === v.sku));
                       const label = getVariantLabel(v);
                       return (
                         <button
                           key={v._id || v.sku || i}
                           type="button"
                           onClick={() => handleSelectVariant(v)}
-                          className={`min-w-16 px-3 py-1.5 rounded-[6px] text-xs font-medium border transition-all cursor-pointer active:scale-[0.98] ${
-                            isSelected
+                          className={`min-w-16 px-3 py-1.5 rounded-[6px] text-xs font-medium border transition-all cursor-pointer active:scale-[0.98] ${isSelected
                               ? 'border-2 border-red-600 text-red-600 bg-red-50/20 font-bold shadow-2xs ring-1 ring-red-600/30'
                               : 'border border-slate-200 text-slate-700 bg-white hover:border-slate-300 hover:text-slate-900'
-                          }`}
+                            }`}
                         >
                           {label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : product.options?.[0]?.values?.length > 1 ? (
-                <div className={`space-y-1.5 pt-1 p-2 rounded-[6px] transition-all ${variantError ? 'bg-red-50/40 border border-red-200 ring-1 ring-red-200' : ''}`}>
-                  <label className="flex items-center justify-between text-xs font-semibold text-slate-800">
-                    <span>{product.options[0].name || 'Kích thước / Màu sắc'}:</span>
-                    {selectedOptionVal && (
-                      <span className="text-slate-500 font-normal">
-                        Đã chọn: <strong className="text-slate-900">{selectedOptionVal}</strong>
-                      </span>
-                    )}
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {product.options[0].values.map((val, i) => {
-                      const valStr = typeof val === 'object' && val !== null ? (val.value || '') : String(val || '');
-                      const colorCode = typeof val === 'object' && val !== null ? val.colorCode : '';
-                      const isSelected = Boolean(selectedOptionVal) && selectedOptionVal === valStr;
-                      return (
-                        <button
-                          key={val?._id || i}
-                          type="button"
-                          onClick={() => {
-                            setSelectedOptionVal(valStr);
-                            setVariantError(false);
-                            // Thử tìm variant tương ứng
-                            const matched = variantsList.find((v) => {
-                              return (
-                                v.attributes?.some((a) => a.value === valStr) ||
-                                v.displayName?.includes(valStr) ||
-                                v.title?.includes(valStr)
-                              );
-                            });
-                            if (matched) {
-                              handleSelectVariant(matched);
-                            }
-                          }}
-                          className={`min-w-16 px-3 py-1.5 rounded-[6px] text-xs font-medium border transition-all cursor-pointer active:scale-[0.98] flex items-center gap-1.5 ${
-                            isSelected
-                              ? 'border-2 border-red-600 text-red-600 bg-red-50/20 font-bold shadow-2xs ring-1 ring-red-600/30'
-                              : 'border border-slate-200 text-slate-700 bg-white hover:border-slate-300 hover:text-slate-900'
-                          }`}
-                        >
-                          {colorCode && (
-                            <span
-                              className="w-3.5 h-3.5 rounded-full border border-slate-300 shrink-0"
-                              style={{ backgroundColor: colorCode }}
-                            />
-                          )}
-                          <span>{valStr}</span>
                         </button>
                       );
                     })}
@@ -633,7 +819,7 @@ export const QuickViewModal = () => {
                 </span>
               </div>
 
-              
+
             </div>
           </div>
         </div>

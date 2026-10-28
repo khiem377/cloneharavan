@@ -15,14 +15,37 @@ const DEFAULT_METHODS = [
     badge: 'An tâm',
     icon: Banknote,
   },
+  {
+    id: 'ONEPAY',
+    code: 'onepay',
+    title: 'Cổng thanh toán OnePay',
+    description: 'Thanh toán trực tuyến bằng thẻ ATM nội địa Napas, thẻ quốc tế Visa/Mastercard hoặc QR',
+    badge: '',
+    logoImg: '/images/payments/onepay.png',
+  },
+  {
+    id: 'VNPAY',
+    code: 'vnpay',
+    title: 'Cổng thanh toán VNPAY',
+    description: 'Thanh toán quét mã VNPAY-QR, thẻ ATM nội địa Napas hoặc thẻ quốc tế Visa/Mastercard',
+    badge: '',
+    logoImg: '/images/payments/vnpay.png',
+  },
 ];
 
 const PROVIDER_METADATA = {
+  onepay: {
+    id: 'ONEPAY',
+    title: 'Cổng thanh toán OnePay',
+    description: 'Thanh toán trực tuyến bằng thẻ ATM nội địa Napas, thẻ quốc tế Visa/Mastercard hoặc QR',
+    badge: '',
+    logoImg: '/images/payments/onepay.png',
+  },
   vnpay: {
     id: 'VNPAY',
-    title: 'Thanh toán VNPAY-QR',
-    description: 'Quét mã QR qua hơn 40 ứng dụng ngân hàng và Ví điện tử VNPAY',
-    badge: 'Đang phát triển',
+    title: 'Cổng thanh toán VNPAY',
+    description: 'Thanh toán quét mã VNPAY-QR, thẻ ATM nội địa Napas hoặc thẻ quốc tế Visa/Mastercard',
+    badge: '',
     logoImg: '/images/payments/vnpay.png',
   },
   momo: {
@@ -98,8 +121,6 @@ export default function CheckoutPaymentSection({
     };
   }, [activeProviders, selectedPaymentMethod, onSelectPaymentMethod]);
 
-  const selectedMethodObj = methods.find((m) => m.id === selectedPaymentMethod);
-
   return (
     <div className="bg-white border border-slate-200 rounded-[6px] p-4 sm:p-5 space-y-4">
       <div className="flex items-center justify-between pb-3 border-b border-slate-200">
@@ -121,7 +142,7 @@ export default function CheckoutPaymentSection({
         {methods.map((method) => {
           const isSelected = selectedPaymentMethod === method.id;
           const Icon = method.icon;
-          const isOnline = method.id !== 'COD';
+          const isSupported = ['COD', 'ONEPAY', 'VNPAY'].includes(method.id);
 
           return (
             <div key={method.id} className="space-y-2">
@@ -162,11 +183,7 @@ export default function CheckoutPaymentSection({
                       {method.badge && (
                         <Badge
                           variant="secondary"
-                          className={`text-[10px] py-0 px-1.5 font-bold ${
-                            isOnline
-                              ? 'bg-amber-100 text-amber-800'
-                              : 'bg-slate-100 text-slate-700'
-                          }`}
+                          className="text-[10px] py-0 px-1.5 font-bold bg-amber-100 text-amber-800"
                         >
                           {method.badge}
                         </Badge>
@@ -179,12 +196,12 @@ export default function CheckoutPaymentSection({
                 </div>
               </label>
 
-              {/* Thông báo phương thức trực tuyến đang phát triển */}
-              {isSelected && isOnline && (
+              {/* Thông báo cho các cổng chưa phát triển (MoMo, ZaloPay) */}
+              {isSelected && !isSupported && (
                 <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-[6px] text-xs text-amber-900 leading-relaxed flex items-center gap-2">
                   <div className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
                   <span>
-                    Tính năng đặt hàng bằng {method.title} đang phát triển. Quý khách vui lòng chọn <strong>Thanh toán khi nhận hàng (COD)</strong>.
+                    Tính năng đặt hàng bằng {method.title} đang phát triển. Quý khách vui lòng chọn <strong>Thanh toán khi nhận hàng (COD)</strong>, <strong>OnePay</strong> hoặc <strong>VNPAY</strong>.
                   </span>
                 </div>
               )}

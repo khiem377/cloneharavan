@@ -7,6 +7,7 @@ import { Loader2, CheckCircle2, AlertTriangle, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import useCartStore from '@/store/cartStore';
+import { resolveDisplayColor } from '@/utils/colorResolver';
 
 // Inline trust strip — compact, ngang, ngay trước CTA
 function TrustStrip() {
@@ -233,6 +234,210 @@ export default function ProductInfo({
     });
   }, [variants]);
 
+  // Phân tích các nhóm thuộc tính độc lập (Màu sắc, Dung lượng, Kích thước...)
+  const attributeGroups = useMemo(() => {
+    const validVariants = (variants || []).filter(
+      (v) => !v.isDefault || (Array.isArray(v.attributes) && v.attributes.length > 0)
+    );
+
+    if (validVariants.length <= 1 && (!product.options || product.options.length === 0)) {
+      return [];
+    }
+
+    const groupMap = new Map();
+
+    // 1. Nạp từ product.options cấu hình sẵn nếu có
+    if (Array.isArray(product.options) && product.options.length > 0) {
+      product.options.forEach((opt) => {
+        if (opt.name && Array.isArray(opt.values) && opt.values.length > 0) {
+          const valMap = new Map();
+          opt.values.forEach((v) => {
+            if (v && v.value && !isDefaultVariantName(v.value)) {
+              valMap.set(v.value, {
+                value: v.value,
+                colorCode: v.colorCode || '',
+              });
+            }
+          });
+          if (valMap.size > 0) {
+            groupMap.set(opt.name, {
+              name: opt.name,
+              type: opt.type || (opt.name.toLowerCase().includes('màu') ? 'color' : 'text'),
+              values: valMap,
+            });
+          }
+        }
+      });
+    }
+
+    // 2. Tự động đồng bộ từ variant.attributes thực tế của sản phẩm
+    validVariants.forEach((v) => {
+      if (Array.isArray(v.attributes)) {
+        v.attributes.forEach((attr) => {
+          if (!attr.name || !attr.value || isDefaultVariantName(attr.value)) return;
+
+          let group = groupMap.get(attr.name);
+          if (!group) {
+            group = {
+              name: attr.name,
+              type: attr.colorCode || attr.name.toLowerCase().includes('màu') ? 'color' : 'text',
+              values: new Map(),
+            };
+            groupMap.set(attr.name, group);
+          }
+
+          if (!group.values.has(attr.value)) {
+            group.values.set(attr.value, {
+              value: attr.value,
+              colorCode: attr.colorCode || '',
+            });
+          } else if (attr.colorCode && !group.values.get(attr.value).colorCode) {
+            group.values.get(attr.value).colorCode = attr.colorCode;
+          }
+        });
+      }
+    });
+
+    const groups = [];
+    groupMap.forEach((group) => {
+      const valuesArray = Array.from(group.values.values());
+      if (valuesArray.length > 0) {
+        groups.push({
+          name: group.name,
+          type: group.type,
+          values: valuesArray,
+        });
+      }
+    });
+
+    return groups;
+  }, [variants, product.options]);
+
+  // Bộ thuộc tính hiện tại đang chọn
+  const selectedAttributes = useMemo(() => {
+    const map = {};
+    if (selectedVariant && Array.isArray(selectedVariant.attributes)) {
+      selectedVariant.attributes.forEach((attr) => {
+        if (attr.name && attr.value) {
+          map[attr.name] = attr.value;
+        }
+      });
+    }
+    return map;
+  }, [selectedVariant]);
+
+  // Tìm và kích hoạt biến thể khớp với lựa chọn thuộc tính mới
+  const handleSelectAttributeValue = (attrName, attrValue) => {
+    const nextAttrs = { ...selectedAttributes, [attrName]: attrValue };
+    const validVariants = (variants || []).filter(
+      (v) => !v.isDefault || (Array.isArray(v.attributes) && v.attributes.length > 0)
+    );
+
+    // Ưu tiên 1: Khớp hoàn toàn tất cả các thuộc tính
+    let exactMatch = validVariants.find((v) => {
+      if (!Array.isArray(v.attributes) || v.attributes.length === 0) return false;
+      return Object.entries(nextAttrs).every(([name, val]) => {
+        const found = v.attributes.find((a) => a.name === name);
+        return found && found.value === val;
+      });
+    });
+
+    if (exactMatch) {
+      onSelectVariant?.(exactMatch);
+      return;
+    }
+
+    // Ưu tiên 2: Khớp thuộc tính vừa click và khớp nhiều thuộc tính khác nhất
+    let bestMatch = null;
+    let maxScore = -1;
+
+    validVariants.forEach((v) => {
+      if (!Array.isArray(v.attributes)) return;
+      const hasClicked = v.attributes.some((a) => a.name === attrName && a.value === attrValue);
+      if (!hasClicked) return;
+
+      let score = 0;
+      v.attributes.forEach((a) => {
+        if (nextAttrs[a.name] === a.value) score += 1;
+      });
+
+      if (score > maxScore) {
+        maxScore = score;
+        bestMatch = v;
+      }
+    });
+
+    if (bestMatch) {
+      onSelectVariant?.(bestMatch);
+    }
+  };
+
+  // Helper kiểm tra trạng thái tồn kho của từng giá trị thuộc tính khi kết hợp với các thuộc tính đang chọn
+  const checkValueStatus = (attrName, attrValue) => {
+    const validVariants = (variants || []).filter(
+      (v) => !v.isDefault || (Array.isArray(v.attributes) && v.attributes.length > 0)
+    );
+
+    const matched = validVariants.filter((v) => {
+      if (!Array.isArray(v.attributes)) return false;
+      const hasThis = v.attributes.some((a) => a.name === attrName && a.value === attrValue);
+      if (!hasThis) return false;
+
+      const otherAttrs = Object.entries(selectedAttributes).filter(([k]) => k !== attrName);
+      if (otherAttrs.length === 0) return true;
+
+      return otherAttrs.every(([k, vVal]) => {
+        const matchOther = v.attributes.find((a) => a.name === k);
+        return matchOther && matchOther.value === vVal;
+      });
+    });
+
+    if (matched.length === 0) {
+      return { exists: false, inStock: false, variant: null };
+    }
+
+    const availStock = matched.reduce((sum, v) => {
+      const s = Math.max(0, (Number(v.stock) || 0) - (Number(v.allocated) || 0));
+      return sum + s;
+    }, 0);
+
+    return {
+      exists: true,
+      inStock: availStock > 0,
+      variant: matched[0],
+    };
+  };
+
+  // Hàm format chênh lệch giá biến thể: chỉ hiện khi có chênh lệch thực sự, không hiển thị 0Tr hoặc khi bằng giá
+  const formatVariantPriceDiff = (diff) => {
+    if (!diff || Math.abs(diff) < 1000) return '';
+    const isPos = diff > 0;
+    const abs = Math.abs(diff);
+    const sign = isPos ? '+' : '-';
+
+    if (abs >= 1000000) {
+      const tr = (abs / 1000000).toFixed(1);
+      const cleanTr = tr.endsWith('.0') ? parseInt(tr, 10) : tr;
+      if (cleanTr === 0 || cleanTr === '0') return '';
+      return `(${sign}${cleanTr}Tr)`;
+    }
+
+    const k = Math.round(abs / 1000);
+    if (k <= 0) return '';
+    return `(${sign}${k}k)`;
+  };
+
+  // Tính chênh lệch giá tiền so với biến thể hiện tại
+  const getPriceDifferenceLabel = (attrName, attrValue) => {
+    const status = checkValueStatus(attrName, attrValue);
+    if (!status.exists || !status.variant) return '';
+    const targetVar = status.variant;
+    const targetPrice = targetVar.salePrice > 0 ? targetVar.salePrice : targetVar.price;
+    const currentPrice = currentBasePrice || 0;
+    const diff = targetPrice - currentPrice;
+    return formatVariantPriceDiff(diff);
+  };
+
   // Chỉ hiển thị khối chọn biến thể khi có >= 2 biến thể thực
   const displayVariants = realVariants.length > 1 ? realVariants : [];
 
@@ -281,10 +486,20 @@ export default function ProductInfo({
   const savingsAmount = hasDiscount ? activeRegularPrice - activeSalePrice : 0;
 
   const brand = product.brand;
-  const currentSku =
-    selectedVariant?.sku || product.sku || product.productCode || product._id?.slice(-8)?.toUpperCase();
+  const activeVariant =
+    selectedVariant ||
+    (Array.isArray(variants) && variants.length > 0
+      ? variants.find((v) => v.isDefault) || variants[0]
+      : null);
 
-  const currentStock = selectedVariant?.stock !== undefined ? selectedVariant.stock : (product.stock ?? 10);
+  const currentSku =
+    activeVariant?.sku || product.sku || product.productCode || product._id?.slice(-8)?.toUpperCase();
+
+  const getAvail = (stock, allocated) => Math.max(0, (Number(stock) || 0) - (Number(allocated) || 0));
+  const currentStock = activeVariant
+    ? getAvail(activeVariant.stock, activeVariant.allocated)
+    : getAvail(product.stock, product.allocated);
+
   const isOutOfStock = currentStock <= 0;
   const isLowStock = !isOutOfStock && currentStock <= 5;
 
@@ -318,8 +533,8 @@ export default function ProductInfo({
 
     const payload = {
       productId: product._id || product.id,
-      variantId: selectedVariant?._id || selectedVariant?.id,
-      sku: selectedVariant?.sku,
+      variantId: activeVariant?._id || activeVariant?.id,
+      sku: activeVariant?.sku,
       quantity,
     };
 
@@ -328,7 +543,7 @@ export default function ProductInfo({
 
     if (res?.success) {
       if (isBuyNow) {
-        router.push('/cart');
+        router.push('/checkout');
       }
     } else {
       setActionNotice({
@@ -473,8 +688,116 @@ export default function ProductInfo({
         )}
       </div>
 
-      {/* 5. CHỌN BIẾN THỂ */}
-      {displayVariants.length > 0 && (
+      {/* 5. CHỌN BIẾN THỂ (PHÂN NHÓM ĐA THUỘC TÍNH: MÀU SẮC, DUNG LƯỢNG, KÍCH THƯỚC...) */}
+      {attributeGroups.length > 0 ? (
+        <div className="flex flex-col gap-3.5 pt-1">
+          {attributeGroups.map((group) => {
+            const isColorGroup =
+              group.type === 'color' || group.name.toLowerCase().includes('màu');
+            const selectedVal = selectedAttributes[group.name] || '';
+
+            return (
+              <div key={group.name} className="flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-800 uppercase tracking-wide flex items-center gap-1.5">
+                    <span>{group.name}:</span>
+                    <span className="text-red-600 font-bold normal-case text-xs">
+                      {selectedVal || 'Chưa chọn'}
+                    </span>
+                  </label>
+                  <span className="text-[11px] text-slate-500 font-normal">
+                    {isColorGroup
+                      ? 'Chọn màu sắc'
+                      : `Chọn ${group.name.toLowerCase()}`}
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  {group.values.map((item) => {
+                    const isSelected = selectedVal === item.value;
+                    const status = checkValueStatus(group.name, item.value);
+                    const diffLabel = getPriceDifferenceLabel(group.name, item.value);
+
+                    // Trạng thái khả dụng
+                    const isUnavailable = !status.exists;
+                    const isOutOfStockItem = status.exists && !status.inStock;
+
+                    return (
+                      <button
+                        key={item.value}
+                        type="button"
+                        disabled={isUnavailable}
+                        onClick={() => handleSelectAttributeValue(group.name, item.value)}
+                        className={`relative flex items-center gap-1.5 px-3 py-2 rounded-[6px] text-xs font-medium transition-all select-none active:scale-[0.98] ${
+                          isSelected
+                            ? 'border-2 border-red-600 bg-red-50/40 text-red-700 font-bold shadow-2xs'
+                            : isUnavailable
+                            ? 'border border-dashed border-slate-200 bg-slate-100/70 text-slate-400 cursor-not-allowed opacity-60'
+                            : isOutOfStockItem
+                            ? 'border border-slate-200 bg-slate-50 text-slate-500 line-through cursor-pointer hover:border-slate-300'
+                            : 'border border-slate-200 bg-white text-slate-700 hover:border-slate-400 cursor-pointer shadow-2xs'
+                        }`}
+                      >
+                        {/* Swatch màu thông minh (Semantic Resolver + AI Color) */}
+                        {isColorGroup && (
+                          <span
+                            className={`w-3.5 h-3.5 rounded-full border shrink-0 transition-transform ${
+                              isSelected
+                                ? 'border-red-600 scale-110 shadow-2xs'
+                                : 'border-slate-300'
+                            }`}
+                            style={{
+                              backgroundColor: resolveDisplayColor(
+                                item.colorCode,
+                                item.value
+                              ),
+                            }}
+                          />
+                        )}
+
+                        <span>{item.value}</span>
+
+                        {/* Chênh lệch giá nếu có */}
+                        {!isSelected && diffLabel && !isUnavailable && (
+                          <span className="text-[11px] text-slate-500 font-normal ml-0.5">
+                            {diffLabel}
+                          </span>
+                        )}
+
+                        {/* Dấu checkmark khi được chọn */}
+                        {isSelected && (
+                          <svg
+                            width="11"
+                            height="11"
+                            viewBox="0 0 12 12"
+                            fill="none"
+                            className="ml-0.5 shrink-0 text-red-600"
+                          >
+                            <path
+                              d="M2 6.5L4.5 9L10 3"
+                              stroke="currentColor"
+                              strokeWidth="1.75"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        )}
+
+                        {/* Badge hết hàng nếu có */}
+                        {isOutOfStockItem && !isSelected && (
+                          <span className="text-[9px] text-red-500 font-normal no-underline ml-1">
+                            (Hết hàng)
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : displayVariants.length > 0 ? (
         <div className="flex flex-col gap-2 pt-1">
           <div className="flex items-center justify-between">
             <label className="text-xs font-bold text-slate-800 uppercase tracking-wide">
@@ -490,31 +813,29 @@ export default function ProductInfo({
 
           <div className="flex flex-wrap gap-2">
             {displayVariants.map((variant) => {
-              const isSelected = (selectedVariant?._id || selectedVariant?.id) === (variant._id || variant.id);
+              const isSelected =
+                (selectedVariant?._id || selectedVariant?.id) ===
+                (variant._id || variant.id);
               const label = getVariantLabel(variant) || 'Tùy chọn';
-              const varPrice = variant.salePrice > 0 ? variant.salePrice : variant.price;
-              const hasColor = variant.attributes?.find((a) => a.colorCode)?.colorCode;
+              const varPrice =
+                variant.salePrice > 0 ? variant.salePrice : variant.price;
+              const hasColor = variant.attributes?.find(
+                (a) => a.colorCode
+              )?.colorCode;
 
-              // Tính chênh lệch giá so với biến thể đang chọn (Inline Upsell)
               const priceDiff = varPrice - currentBasePrice;
-              let diffLabel = '';
-              if (!isSelected && priceDiff > 0) {
-                const diffTr = (priceDiff / 1000000).toFixed(1);
-                diffLabel = `(+${diffTr.endsWith('.0') ? parseInt(diffTr, 10) : diffTr}Tr)`;
-              } else if (!isSelected && priceDiff < 0) {
-                const diffTr = (Math.abs(priceDiff) / 1000000).toFixed(1);
-                diffLabel = `(-${diffTr.endsWith('.0') ? parseInt(diffTr, 10) : diffTr}Tr)`;
-              }
+              const diffLabel = !isSelected ? formatVariantPriceDiff(priceDiff) : '';
 
               return (
                 <button
                   key={variant._id || variant.id}
                   type="button"
                   onClick={() => onSelectVariant?.(variant)}
-                  className={`relative flex items-center gap-1.5 px-3 py-2 rounded-[6px] text-xs font-medium transition-all cursor-pointer select-none active:scale-[0.98] ${isSelected
-                    ? 'border-2 border-red-600 bg-red-50/40 text-red-700 font-bold'
-                    : 'border border-slate-200 bg-white text-slate-700 hover:border-slate-400'
-                    }`}
+                  className={`relative flex items-center gap-1.5 px-3 py-2 rounded-[6px] text-xs font-medium transition-all cursor-pointer select-none active:scale-[0.98] ${
+                    isSelected
+                      ? 'border-2 border-red-600 bg-red-50/40 text-red-700 font-bold'
+                      : 'border border-slate-200 bg-white text-slate-700 hover:border-slate-400'
+                  }`}
                 >
                   {hasColor && (
                     <span
@@ -530,8 +851,20 @@ export default function ProductInfo({
                       <span className="text-[11px] text-red-700 font-bold ml-1">
                         • {varPrice.toLocaleString('vi-VN')}₫
                       </span>
-                      <svg width="10" height="10" viewBox="0 0 12 12" fill="none" className="ml-0.5 shrink-0">
-                        <path d="M2 6.5L4.5 9L10 3" stroke="#dc2626" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                      <svg
+                        width="10"
+                        height="10"
+                        viewBox="0 0 12 12"
+                        fill="none"
+                        className="ml-0.5 shrink-0"
+                      >
+                        <path
+                          d="M2 6.5L4.5 9L10 3"
+                          stroke="#dc2626"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
                       </svg>
                     </>
                   ) : (
@@ -546,7 +879,7 @@ export default function ProductInfo({
             })}
           </div>
         </div>
-      )}
+      ) : null}
 
       {/* 6. SỐ LƯỢNG */}
       <div className="flex flex-col gap-2 pt-1">

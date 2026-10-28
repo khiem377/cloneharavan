@@ -87,7 +87,9 @@ export default function CheckoutEditItemsModal({
           ) : (
             <>
               {comboGroups.map((group, gIdx) => {
-                const isGroupSelected = group.items.some((it) => selectedItemIds.includes(it._id));
+                const isGroupSelected = group.items.some((it) =>
+                  selectedItemIds.some((id) => String(id) === String(it._id))
+                );
                 const firstItem = group.items[0];
                 return (
                   <div key={`modal-combo-${gIdx}`} className="pt-3 first:pt-0 space-y-2">
@@ -126,7 +128,7 @@ export default function CheckoutEditItemsModal({
 
               {singleItems.map((item) => (
                 <div key={item._id} className="pt-3 first:pt-0 flex items-center gap-3 text-xs">
-                  <Checkbox checked={selectedItemIds.includes(item._id)} onChange={() => handleToggle(item._id)} className="h-4 w-4 rounded-[4px] cursor-pointer shrink-0" />
+                  <Checkbox checked={selectedItemIds.some((id) => String(id) === String(item._id))} onChange={() => handleToggle(item._id)} className="h-4 w-4 rounded-[4px] cursor-pointer shrink-0" />
                   <div className="w-11 h-11 rounded-[4px] border border-slate-200 bg-white overflow-hidden shrink-0">
                     <img src={item.thumbnail || '/logo-shop.jpg'} alt={item.name} className="w-full h-full object-cover" />
                   </div>

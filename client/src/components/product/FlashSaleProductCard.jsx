@@ -240,7 +240,7 @@ export default function FlashSaleProductCard({ item, onAddToCartMock, onBuyNowMo
       },
       { isBuyNow: true }
     );
-    router.push('/cart');
+    router.push('/checkout');
   };
 
   return (

@@ -14,6 +14,8 @@ export default function CheckoutThreeStepReview({
 }) {
   const getPaymentName = (method) => {
     switch (method) {
+      case 'ONEPAY':
+        return 'Cổng thanh toán OnePay';
       case 'VNPAY':
         return 'Thanh toán trực tuyến VNPAY-QR';
       case 'MOMO':

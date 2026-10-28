@@ -384,7 +384,13 @@ export function useCheckout() {
     const trimmed = (code || '').trim().toUpperCase();
     if (!trimmed) return { success: false, message: 'Vui lòng nhập mã giảm giá' };
 
-    await applyCoupon(trimmed, category);
+    const applyRes = await applyCoupon(trimmed, category);
+    if (!applyRes?.success) {
+      return {
+        success: false,
+        message: applyRes?.message || 'Mã giảm giá không hợp lệ',
+      };
+    }
 
     let res;
     if (category === 'shipping') {
@@ -438,14 +444,13 @@ export function useCheckout() {
       return;
     }
 
-    if (selectedPaymentMethod && selectedPaymentMethod !== 'COD') {
+    if (selectedPaymentMethod && selectedPaymentMethod !== 'COD' && selectedPaymentMethod !== 'ONEPAY' && selectedPaymentMethod !== 'VNPAY') {
       const methodLabels = {
         MOMO: 'Ví MoMo',
         ZALOPAY: 'Cổng ZaloPay',
-        VNPAY: 'VNPAY-QR',
       };
       const label = methodLabels[selectedPaymentMethod] || selectedPaymentMethod;
-      toast(`Tính năng đặt hàng bằng ${label} đang phát triển. Quý khách vui lòng chọn Thanh toán khi nhận hàng (COD).`, {
+      toast(`Tính năng đặt hàng bằng ${label} đang phát triển. Quý khách vui lòng chọn COD, OnePay hoặc VNPAY.`, {
         type: 'warning',
       });
       return;
@@ -480,11 +485,22 @@ export function useCheckout() {
       const res = await orderService.createOrder(orderPayload, { 'Idempotency-Key': idempotencyKey });
       if (res.success && res.data) {
         idempotencyKeyRef.current = null; // Hoàn thành đơn -> giải phóng key cho đơn tiếp theo
-        setPlacedOrder(res.data);
         if (typeof window !== 'undefined') {
           sessionStorage.removeItem('checkoutItemIds');
           localStorage.removeItem('checkoutItemIds');
         }
+
+        // Nếu thanh toán qua OnePay hoặc VNPAY và nhận được link thanh toán
+        const selectedMethodUpper = String(selectedPaymentMethod || '').toUpperCase();
+        if (['ONEPAY', 'VNPAY'].includes(selectedMethodUpper) && res.data.paymentUrl) {
+          const name = selectedMethodUpper === 'VNPAY' ? 'VNPAY' : 'OnePay';
+          toast(`Khởi tạo đơn hàng thành công. Đang chuyển sang cổng thanh toán ${name}...`, { type: 'success' });
+          if (fetchCart) fetchCart();
+          window.location.href = res.data.paymentUrl;
+          return;
+        }
+
+        setPlacedOrder(res.data);
         toast('Đặt hàng thành công. Đơn hàng của bạn đang được xử lý.', { type: 'success' });
         if (fetchCart) fetchCart();
       }

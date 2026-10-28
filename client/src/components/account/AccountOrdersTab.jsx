@@ -384,10 +384,30 @@ export default function AccountOrdersTab({
           {!loading && orders.length > 0 && (
             <div className="space-y-4">
               {orders.map((order) => {
-                const statusMeta = ORDER_STATUS_MAP[order.orderStatus] || {
+                let statusMeta = ORDER_STATUS_MAP[order.orderStatus] || {
                   label: order.orderStatus,
                   badgeClass: 'bg-slate-100 text-slate-700 border-slate-200',
                 };
+
+                // Ưu tiên trạng thái thực tế của vận đơn nếu đơn đã tạo vận chuyển
+                if (order.shipment) {
+                  if (order.shipment.status === 'ready_to_pick') {
+                    statusMeta = {
+                      label: order.shipment.statusText || 'Chờ lấy hàng',
+                      badgeClass: 'bg-amber-50 text-amber-700 border-amber-200',
+                    };
+                  } else if (order.shipment.status === 'delivering' || order.shipment.status === 'picking') {
+                    statusMeta = {
+                      label: order.shipment.statusText || 'Đang giao hàng',
+                      badgeClass: 'bg-purple-50 text-purple-700 border-purple-200',
+                    };
+                  } else if (order.shipment.status === 'delivered') {
+                    statusMeta = {
+                      label: order.shipment.statusText || 'Đã giao hàng',
+                      badgeClass: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                    };
+                  }
+                }
                 const paymentMeta = PAYMENT_STATUS_MAP[order.paymentStatus] || {
                   label: order.paymentStatus,
                   badgeClass: 'bg-slate-100 text-slate-700 border-slate-200',
@@ -565,14 +585,18 @@ export default function AccountOrdersTab({
                           </Button>
 
                           <Button
-                            type="button"
+                            asChild
                             variant="outline"
                             size="sm"
-                            onClick={() => setSelectedOrder(order)}
-                            className="h-8 px-3 text-xs rounded-[6px] text-slate-700 hover:bg-slate-100 cursor-pointer"
+                            className="h-8 px-3 text-xs rounded-[6px] border-slate-200 text-slate-700 hover:bg-slate-100 hover:text-slate-900 cursor-pointer shadow-2xs"
                           >
-                            <Eye size={12} className="mr-1.5" />
-                            Xem chi tiết
+                            <Link
+                              href={`/tai-khoan/don-hang/${order.orderCode || order._id}`}
+                              className="inline-flex items-center gap-1.5"
+                            >
+                              <Eye size={13} />
+                              <span>Xem chi tiết</span>
+                            </Link>
                           </Button>
 
                           {canCancel && (

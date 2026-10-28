@@ -29,14 +29,19 @@ export default function CheckoutOrderSummary({
   recaptchaVerified = false,
   onVerifyRecaptcha,
 }) {
-  const isOnlineMethod = Boolean(selectedPaymentMethod && selectedPaymentMethod !== 'COD');
+  const selectedMethodUpper = String(selectedPaymentMethod || '').toUpperCase();
+  const isOnePay = selectedMethodUpper === 'ONEPAY';
+  const isVnpay = selectedMethodUpper === 'VNPAY';
+  const isOtherOnlineMethod = Boolean(selectedPaymentMethod && selectedPaymentMethod !== 'COD' && !isOnePay && !isVnpay);
 
   const getButtonText = () => {
-    switch (String(selectedPaymentMethod || '').toUpperCase()) {
+    switch (selectedMethodUpper) {
+      case 'ONEPAY':
+        return 'THANH TOÁN QUA ONEPAY';
+      case 'VNPAY':
+        return 'THANH TOÁN QUA VNPAY';
       case 'MOMO':
         return 'THANH TOÁN QUA VÍ MOMO (ĐANG PHÁT TRIỂN)';
-      case 'VNPAY':
-        return 'THANH TOÁN QUA VNPAY-QR (ĐANG PHÁT TRIỂN)';
       case 'ZALOPAY':
         return 'THANH TOÁN QUA VÍ ZALOPAY (ĐANG PHÁT TRIỂN)';
       default:
@@ -201,9 +206,9 @@ export default function CheckoutOrderSummary({
           />
         )}
 
-        {isOnlineMethod && (
+        {isOtherOnlineMethod && (
           <div className="mb-2.5 p-2 rounded-[6px] bg-amber-50 border border-amber-200 text-xs text-amber-900 text-center font-medium">
-            Cổng thanh toán này đang phát triển. Quý khách vui lòng chọn COD để đặt hàng.
+            Cổng thanh toán này đang phát triển. Quý khách vui lòng chọn OnePay hoặc COD để đặt hàng.
           </div>
         )}
 
@@ -212,15 +217,19 @@ export default function CheckoutOrderSummary({
           onClick={onPlaceOrder}
           disabled={submittingOrder || !canCheckout}
           className={`w-full h-11 text-sm font-bold text-white rounded-[6px] shadow-xs active:scale-[0.99] transition cursor-pointer ${
-            isOnlineMethod
-              ? 'bg-amber-600 hover:bg-amber-700'
-              : 'bg-[#e30019] hover:bg-[#c40015]'
+            isOnePay
+              ? 'bg-[#0088ff] hover:bg-[#0070d2]'
+              : isVnpay
+                ? 'bg-[#005baa] hover:bg-[#004888]'
+                : isOtherOnlineMethod
+                  ? 'bg-amber-600 hover:bg-amber-700'
+                  : 'bg-[#e30019] hover:bg-[#c40015]'
           }`}
         >
           {submittingOrder ? (
             <span className="flex items-center gap-2">
               <Loader2 size={16} className="animate-spin" />
-              Đang tạo đơn hàng...
+              {isOnePay ? 'Đang chuyển sang OnePay...' : isVnpay ? 'Đang chuyển sang VNPAY...' : 'Đang tạo đơn hàng...'}
             </span>
           ) : (
             <span>{getButtonText()}</span>

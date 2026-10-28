@@ -50,7 +50,7 @@ export default function StickyPurchaseBar({
 
     if (res?.success) {
       if (isBuyNow) {
-        router.push('/cart');
+        router.push('/checkout');
       }
     }
   };
