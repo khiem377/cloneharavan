@@ -9,6 +9,7 @@ const ExcelJS = require('exceljs');
 const path = require('path');
 const fs = require('fs');
 const AppError = require('../utils/AppError');
+const { escapeRegex } = require('../middleware/sanitize.middleware');
 const { numberToWordsVN } = require('../utils/vnNumberToWords');
 
 class StockExportService {
@@ -17,11 +18,12 @@ class StockExportService {
     if (type) query.type = type;
     if (warehouseId) query.warehouseId = warehouseId;
     if (keyword) {
+      const safeKw = escapeRegex(keyword);
       query.$or = [
-        { exportNumber: { $regex: keyword, $options: 'i' } },
-        { recipientName: { $regex: keyword, $options: 'i' } },
-        { recipientPhone: { $regex: keyword, $options: 'i' } },
-        { note: { $regex: keyword, $options: 'i' } },
+        { exportNumber: { $regex: safeKw, $options: 'i' } },
+        { recipientName: { $regex: safeKw, $options: 'i' } },
+        { recipientPhone: { $regex: safeKw, $options: 'i' } },
+        { note: { $regex: safeKw, $options: 'i' } },
       ];
     }
 
@@ -30,6 +32,7 @@ class StockExportService {
       StockExport.find(query)
         .populate('warehouseId', 'name code phone')
         .populate('createdById', 'name email')
+        .populate('orderId', 'orderCode orderStatus pricing')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(Number(limit)),
@@ -50,13 +53,14 @@ class StockExportService {
   static async getStockExportById(id) {
     const stockExport = await StockExport.findById(id)
       .populate('warehouseId', 'name code phone address')
-      .populate('createdById', 'name email');
+      .populate('createdById', 'name email')
+      .populate('orderId', 'orderCode orderStatus pricing shippingAddress items');
     if (!stockExport) throw new AppError('Phiếu xuất kho không tồn tại', 404);
     return stockExport;
   }
 
   static async createStockExport(payload, userId) {
-    const { type = 'sale', recipientName, recipientPhone, recipientAddress, note, items, warehouseId } = payload;
+    const { type = 'sale', recipientName, recipientPhone, recipientAddress, note, items, warehouseId, orderId } = payload;
     if (!items || items.length === 0) {
       throw new AppError('Danh sách sản phẩm xuất kho không được để trống', 400);
     }
@@ -96,6 +100,7 @@ class StockExportService {
 
     const stockExport = await StockExport.create({
       exportNumber,
+      orderId: orderId || null,
       type,
       warehouseId: targetWarehouseId,
       status: 'pending_pick',
@@ -116,6 +121,28 @@ class StockExportService {
         },
       ],
     });
+
+    // Đồng bộ sang Đơn hàng nếu Lệnh xuất kho gắn liền với đơn hàng bán
+    if (orderId) {
+      try {
+        const Order = require('../models/order.model');
+        const ord = await Order.findById(orderId);
+        if (ord) {
+          if (ord.orderStatus === 'PENDING') {
+            ord.orderStatus = 'CONFIRMED';
+          }
+          ord.statusHistory.push({
+            status: ord.orderStatus,
+            note: `Đã khởi tạo Lệnh xuất kho ${exportNumber}. Kho đang chuẩn bị & chờ soạn hàng.`,
+            changedAt: new Date(),
+            changedBy: userId || null,
+          });
+          await ord.save();
+        }
+      } catch (ordErr) {
+        console.warn('[StockExport] Không thể cập nhật trạng thái đơn hàng khi tạo lệnh xuất:', ordErr.message);
+      }
+    }
 
     try {
       const { workbook } = await this.generateExcelSlip(stockExport._id);
@@ -259,6 +286,75 @@ class StockExportService {
         productBulkOps.length > 0 ? Product.bulkWrite(productBulkOps)         : Promise.resolve(),
         movementDocs.length > 0   ? StockMovement.insertMany(movementDocs, { ordered: false }) : Promise.resolve(),
       ]);
+    }
+
+    // ĐỒNG BỘ TIẾN TRÌNH KHO VÀO ĐƠN HÀNG
+    if (se.orderId) {
+      try {
+        const Order = require('../models/order.model');
+        const ord = await Order.findById(se.orderId);
+        if (ord) {
+          if (newStatus === 'picking') {
+            if (ord.orderStatus === 'PENDING') {
+              ord.orderStatus = 'CONFIRMED';
+            }
+            ord.statusHistory.push({
+              status: ord.orderStatus,
+              note: `Kho bắt đầu soạn hàng (Lệnh xuất kho: ${se.exportNumber})`,
+              changedAt: new Date(),
+              changedBy: userId || null,
+            });
+            await ord.save();
+          } else if (newStatus === 'packed') {
+            ord.statusHistory.push({
+              status: ord.orderStatus,
+              note: `Kho đã đóng gói xong kiện hàng (Lệnh xuất kho: ${se.exportNumber})`,
+              changedAt: new Date(),
+              changedBy: userId || null,
+            });
+            await ord.save();
+          } else if (newStatus === 'completed') {
+            // Kho vừa xuất kho xong -> Đơn hàng giữ ở CONFIRMED (Đã đóng gói xuất kho), KHÔNG tự ý chuyển sang SHIPPING
+            if (ord.orderStatus === 'PENDING') {
+              ord.orderStatus = 'CONFIRMED';
+            }
+            ord.statusHistory.push({
+              status: ord.orderStatus,
+              note: `Kho đã hoàn tất xuất kho (Lệnh xuất: ${se.exportNumber}). Đã trừ tồn kho vật lý và đóng gói xong, chờ tạo vận đơn giao hàng.`,
+              changedAt: new Date(),
+              changedBy: userId || null,
+            });
+
+            // Giải phóng allocated vì tồn kho vật lý đã chính thức trừ khỏi kho
+            for (const it of se.items) {
+              if (it.variantId) {
+                await ProductVariant.updateOne(
+                  { _id: it.variantId },
+                  { $inc: { allocated: -it.quantity } }
+                );
+              }
+            }
+
+            await ord.save();
+
+            // Phát socket realtime cập nhật đơn hàng
+            try {
+              const { getIO } = require('../config/socket');
+              const io = getIO();
+              if (io) {
+                io.emit('order:updated', {
+                  orderId: ord._id,
+                  orderCode: ord.orderCode,
+                  orderStatus: ord.orderStatus,
+                  note: `Kho đã đóng gói & trừ tồn kho vật lý (${se.exportNumber})`,
+                });
+              }
+            } catch (_) {}
+          }
+        }
+      } catch (syncErr) {
+        console.warn('[StockExport] Lỗi đồng bộ trạng thái đơn hàng khi cập nhật lệnh xuất:', syncErr.message);
+      }
     }
 
     await se.save();

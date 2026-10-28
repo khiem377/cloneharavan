@@ -3,6 +3,7 @@ const Product = require('../models/product.model');
 const Media = require('../models/media.model');
 const { AppError } = require('../utils/AppError');
 const { generateVariantSku, syncCachedPrice } = require('./product.service');
+const aiColorService = require('./aiColor.service');
 
 const resolveMedia = async (mediaId) => {
   if (!mediaId) return null;
@@ -70,6 +71,19 @@ const createVariant = async (productId, data) => {
     ? await resolveMediaBulk(data.imageMediaIds)
     : [];
 
+  // Tự động nhận diện và gán colorCode thông minh bằng Gemini / AI Color
+  if (Array.isArray(data.attributes)) {
+    for (const attr of data.attributes) {
+      const isColorAttr =
+        attr.name &&
+        (attr.name.toLowerCase().includes('màu') ||
+          attr.name.toLowerCase().includes('color'));
+      if (isColorAttr && (!attr.colorCode || !attr.colorCode.trim())) {
+        attr.colorCode = await aiColorService.resolveColorHex(attr.value, product.name);
+      }
+    }
+  }
+
   const variant = await ProductVariant.create({
     productId,
     isDefault: data.isDefault ?? false,
@@ -99,7 +113,7 @@ const bulkCreateVariants = async (productId, variants) => {
 
   const productCode = product.productCode;
 
-  // Tự sinh SKU cho từng variant nếu thiếu
+  // Tự sinh SKU cho từng variant nếu thiếu & tự động gán mã màu bằng AI
   const docs = [];
   for (let idx = 0; idx < variants.length; idx++) {
     const v = variants[idx];
@@ -110,6 +124,19 @@ const bulkCreateVariants = async (productId, variants) => {
       if (!productCode) throw new AppError('Sản phẩm chưa có productCode', 500);
       sku = await generateVariantSku(productCode, v.attributes || []);
     }
+
+    if (Array.isArray(v.attributes)) {
+      for (const attr of v.attributes) {
+        const isColorAttr =
+          attr.name &&
+          (attr.name.toLowerCase().includes('màu') ||
+            attr.name.toLowerCase().includes('color'));
+        if (isColorAttr && (!attr.colorCode || !attr.colorCode.trim())) {
+          attr.colorCode = await aiColorService.resolveColorHex(attr.value, product.name);
+        }
+      }
+    }
+
     docs.push({
       productId,
       isDefault: false,
@@ -158,6 +185,19 @@ const updateVariant = async (id, data) => {
     variant.images = data.imageMediaIds.length > 0
       ? await resolveMediaBulk(data.imageMediaIds)
       : [];
+  }
+
+  if (Array.isArray(data.attributes)) {
+    const parentProd = await Product.findById(variant.productId).select('name');
+    for (const attr of data.attributes) {
+      const isColorAttr =
+        attr.name &&
+        (attr.name.toLowerCase().includes('màu') ||
+          attr.name.toLowerCase().includes('color'));
+      if (isColorAttr && (!attr.colorCode || !attr.colorCode.trim())) {
+        attr.colorCode = await aiColorService.resolveColorHex(attr.value, parentProd?.name || '');
+      }
+    }
   }
 
   const { thumbnailMediaId, imageMediaIds, ...rest } = data;

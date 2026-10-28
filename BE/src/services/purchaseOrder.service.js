@@ -9,6 +9,7 @@ const ExcelJS = require('exceljs');
 const path = require('path');
 const fs = require('fs');
 const AppError = require('../utils/AppError');
+const { escapeRegex } = require('../middleware/sanitize.middleware');
 const { numberToWordsVN } = require('../utils/vnNumberToWords');
 const SupplierDebtService = require('./supplierDebt.service');
 
@@ -20,9 +21,10 @@ class PurchaseOrderService {
         if (supplierId) query.supplierId = supplierId;
         if (warehouseId) query.warehouseId = warehouseId;
         if (keyword) {
+            const safeKw = escapeRegex(keyword);
             query.$or = [
-                { poNumber: { $regex: keyword, $options: 'i' } },
-                { note: { $regex: keyword, $options: 'i' } },
+                { poNumber: { $regex: safeKw, $options: 'i' } },
+                { note: { $regex: safeKw, $options: 'i' } },
             ];
         }
 
@@ -415,12 +417,9 @@ class PurchaseOrderService {
                 throw new AppError('Địa chỉ email nhà cung cấp không hợp lệ', 400);
             }
 
-            const sendEmail = require('../utils/sendEmail');
-            const { generatePOEmailHTML } = require('../utils/poEmailTemplate');
-            const html = generatePOEmailHTML({ po, supplier: po.supplierId, customNote });
-
+            const emailService = require('./email.service');
             const emailSubject = subject || `[SHOP] - Đơn Đặt Mua Hàng Mới #${po.poNumber}`;
-            await sendEmail({ to: recipientEmail, subject: emailSubject, html });
+            await emailService.sendPurchaseOrderEmail(po, recipientEmail, emailSubject, customNote);
 
             // Update PO status to 'sent'
             po.status = 'sent';

@@ -1,6 +1,7 @@
 const { slugify } = require('../utils/slugify');
 const Tag = require('../models/tag.model');
 const { AppError } = require('../utils/AppError');
+const { escapeRegex } = require('../middleware/sanitize.middleware');
 
 const ensureUniqueSlug = async (base, excludeId = null) => {
   let slug = slugify(base);
@@ -17,7 +18,7 @@ const ensureUniqueSlug = async (base, excludeId = null) => {
 
 const getAllTags = async (query = {}) => {
   const filter = {};
-  if (query.keyword) filter.name = { $regex: query.keyword, $options: 'i' };
+  if (query.keyword) filter.name = { $regex: escapeRegex(query.keyword), $options: 'i' };
   if (query.isActive !== undefined) filter.isActive = query.isActive === 'true';
 
   const page  = Math.max(1, parseInt(query.page)  || 1);

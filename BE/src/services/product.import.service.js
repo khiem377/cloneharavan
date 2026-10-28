@@ -8,6 +8,7 @@ const Folder = require('../models/folder.model');
 const { AppError } = require('../utils/AppError');
 const { slugify } = require('../utils/slugify');
 const { uploadToCloudinary } = require('../config/cloudinary');
+const { assertSafePublicUrl } = require('./media.service');
 
 const COLS = [
   { key: 'name', header: 'Tên sản phẩm *', width: 35 },
@@ -301,7 +302,9 @@ const syncProductImages = async () => {
 
     const trySync = async (url) => {
       try {
-        const resp = await axios.get(url, { responseType: 'arraybuffer', timeout: 15000 });
+        if (!url || typeof url !== 'string') return null;
+        assertSafePublicUrl(url);
+        const resp = await axios.get(url, { responseType: 'arraybuffer', timeout: 15000, maxRedirects: 0 });
         const buffer = Buffer.from(resp.data);
         const result = await uploadToCloudinary(buffer, cloudPath);
         const filename = url.split('/').pop().split('?')[0] || 'image.jpg';

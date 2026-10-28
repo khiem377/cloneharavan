@@ -8,6 +8,7 @@ const ProductVariant = require('../models/productVariant.model');
 const StockMovement = require('../models/stockMovement.model');
 const { uploadRawToCloudinary } = require('../config/cloudinary');
 const AppError = require('../utils/AppError');
+const { escapeRegex } = require('../middleware/sanitize.middleware');
 const { numberToWordsVN } = require('../utils/vnNumberToWords');
 const SupplierDebtService = require('./supplierDebt.service');
 
@@ -15,10 +16,11 @@ class PurchaseReturnService {
   static async getPurchaseReturns({ page = 1, limit = 10, search = '', status = '', supplierId = '' }) {
     const query = {};
     if (search) {
+      const safeSearch = escapeRegex(search);
       query.$or = [
-        { returnNumber: { $regex: search, $options: 'i' } },
-        { supplierName: { $regex: search, $options: 'i' } },
-        { note: { $regex: search, $options: 'i' } },
+        { returnNumber: { $regex: safeSearch, $options: 'i' } },
+        { supplierName: { $regex: safeSearch, $options: 'i' } },
+        { note: { $regex: safeSearch, $options: 'i' } },
       ];
     }
     if (status) query.status = status;

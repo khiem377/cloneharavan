@@ -457,7 +457,7 @@ userSchema.methods.createEmailVerificationToken = function () {
 // CREATE EMAIL OTP (kích hoạt tài khoản, 5 phút)
 // =========================
 userSchema.methods.createEmailOtp = function () {
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  const otp = crypto.randomInt(100000, 1000000).toString();
   this.emailOtp = crypto.createHash('sha256').update(otp).digest('hex');
   this.emailOtpExpires = new Date(Date.now() + 5 * 60 * 1000);
   return otp;
@@ -467,7 +467,7 @@ userSchema.methods.createEmailOtp = function () {
 // CREATE PHONE OTP
 // =========================
 userSchema.methods.createPhoneOtp = function () {
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  const otp = crypto.randomInt(100000, 1000000).toString();
   this.phoneOtp = crypto.createHash('sha256').update(otp).digest('hex');
   this.phoneOtpExpires = Date.now() + 5 * 60 * 1000;
   return otp;
@@ -477,7 +477,7 @@ userSchema.methods.createPhoneOtp = function () {
 // CREATE ADMIN LOGIN OTP (5 phút)
 // =========================
 userSchema.methods.createAdminLoginOtp = function () {
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  const otp = crypto.randomInt(100000, 1000000).toString();
   this.adminLoginOtp = crypto.createHash('sha256').update(otp).digest('hex');
   this.adminLoginOtpExpires = new Date(Date.now() + 5 * 60 * 1000);
   return otp;

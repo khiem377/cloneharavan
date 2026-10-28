@@ -24,15 +24,30 @@ function getStoredAuth() {
  * 3. Nếu cần chờ đồng bộ: render AdminShellSkeleton thay vì trả về null gây trắng trang.
  */
 export default function ProtectedRoute() {
-  const { token, user } = getStoredAuth();
+  const storeUser = useAuthStore((s) => s.user);
+  const storeToken = useAuthStore((s) => s.accessToken);
+  const { token: localToken, user: localUser } = getStoredAuth();
+
+  const token = storeToken || localToken;
+  const user = storeUser || localUser;
   const navigate = useNavigate();
   const hasSynced = useRef(false);
 
-  // Nếu đã có token và user hợp lệ trong storage -> render ngay (không chặn màn hình)
-  const isOptimisticReady = Boolean(token && user);
+  // Nhận diện nếu user hiện tại là khách hàng thường (bị nhiễm token từ client)
+  const isCustomer = Boolean(user && user.role === 'user');
+
+  // Nếu đã có token và user hợp lệ quản trị trong storage -> render ngay (không chặn màn hình)
+  const isOptimisticReady = Boolean(token && user && !isCustomer);
   const [syncing, setSyncing] = useState(!isOptimisticReady);
 
   useEffect(() => {
+    // Tài khoản khách hàng thường tuyệt đối không được phép ở lại Admin
+    if (isCustomer) {
+      useAuthStore.getState().clearAuth();
+      navigate('/login?reason=no_admin_access', { replace: true });
+      return;
+    }
+
     if (!token || hasSynced.current) {
       setSyncing(false);
       return;
@@ -43,6 +58,11 @@ export default function ProtectedRoute() {
       .then(({ data }) => {
         const freshUser = data?.data?.user;
         if (freshUser) {
+          if (freshUser.role === 'user') {
+            useAuthStore.getState().clearAuth();
+            navigate('/login?reason=no_admin_access', { replace: true });
+            return;
+          }
           useAuthStore.getState().setAuth({
             user: freshUser,
             accessToken: useAuthStore.getState().accessToken || token,
@@ -52,7 +72,7 @@ export default function ProtectedRoute() {
       })
       .catch((err) => {
         const status = err?.response?.status;
-        if (status === 401) {
+        if (status === 401 || status === 403) {
           useAuthStore.getState().clearAuth();
           navigate('/login?reason=session_expired', { replace: true });
         }
@@ -60,13 +80,12 @@ export default function ProtectedRoute() {
       .finally(() => {
         setSyncing(false);
       });
-  }, [navigate, token]);
+  }, [navigate, token, isCustomer]);
 
-  // Chưa có token → về login ngay
+  // Chưa có token hoặc là khách hàng thường → về login ngay
   if (!token) return <Navigate to="/login" replace />;
-
-  // Tài khoản khách hàng thường không được vào admin
-  if (user && user.role === 'user') {
+  if (isCustomer) {
+    useAuthStore.getState().clearAuth();
     return <Navigate to="/login?reason=no_admin_access" replace />;
   }
 

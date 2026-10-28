@@ -80,7 +80,7 @@ const login = async (req, res, next) => {
   try {
     const { email, password, sessionId, rememberMe } = req.body;
     const user = await loginUser(email, password, req);
-    const { accessToken, refreshToken } = await buildTokenResponse(user, res, !!rememberMe);
+    const { accessToken, refreshToken } = await buildTokenResponse(user, res, !!rememberMe, req);
 
     // Merge guest session interactions vào userId (fire-and-forget)
     if (sessionId) mergeSessionInteractions(sessionId, user._id);
@@ -109,7 +109,7 @@ const googleLogin = async (req, res, next) => {
   try {
     const { credential, sessionId, isAdminRequest } = req.body;
     const user = await loginWithGoogle(credential, !!isAdminRequest);
-    const { accessToken, refreshToken } = await buildTokenResponse(user, res, true);
+    const { accessToken, refreshToken } = await buildTokenResponse(user, res, true, req);
 
     // Merge guest session interactions vào userId (fire-and-forget)
     if (sessionId) mergeSessionInteractions(sessionId, user._id);
@@ -152,7 +152,7 @@ const tiktokLogin = async (req, res, next) => {
   try {
     const { code, redirectUri, codeVerifier, sessionId, isAdminRequest } = req.body;
     const user = await loginWithTikTok(code, redirectUri, codeVerifier, !!isAdminRequest);
-    const { accessToken, refreshToken } = await buildTokenResponse(user, res, true);
+    const { accessToken, refreshToken } = await buildTokenResponse(user, res, true, req);
 
     // Merge guest session interactions vào userId (fire-and-forget)
     if (sessionId) mergeSessionInteractions(sessionId, user._id);
@@ -195,7 +195,7 @@ const zaloLogin = async (req, res, next) => {
   try {
     const { code, redirectUri, codeVerifier, sessionId, isAdminRequest } = req.body;
     const user = await loginWithZalo(code, redirectUri, codeVerifier, !!isAdminRequest);
-    const { accessToken, refreshToken } = await buildTokenResponse(user, res, true);
+    const { accessToken, refreshToken } = await buildTokenResponse(user, res, true, req);
 
     // Merge guest session interactions vào userId (fire-and-forget)
     if (sessionId) mergeSessionInteractions(sessionId, user._id);
@@ -222,11 +222,29 @@ const zaloLogin = async (req, res, next) => {
 
 const refreshToken = async (req, res, next) => {
   try {
-    const token = req.cookies?.refreshToken || req.body?.refreshToken;
+    const isFromAdmin =
+      req.body?.isAdminPortal === true ||
+      req.headers['x-admin-portal'] === 'true' ||
+      req.headers.origin?.includes('5173') ||
+      req.headers.referer?.includes('5173');
+
+    // 1. Ưu tiên cao nhất là refreshToken gửi tường minh trong req.body (do Frontend store quản lý độc lập)
+    // 2. Nếu không có body, lấy đúng cookie theo portal (adminRefreshToken cho Admin, refreshToken cho Client)
+    const token =
+      req.body?.refreshToken ||
+      (isFromAdmin ? req.cookies?.adminRefreshToken : req.cookies?.refreshToken);
+
     if (!token) throw new AppError('Không tìm thấy refresh token', 401);
 
     const user = await rotateRefreshToken(token);
-    const { accessToken, refreshToken: newRefreshToken } = await buildTokenResponse(user, res);
+
+    // BẢO VỆ PHÂN QUYỀN ADMIN:
+    // Tuyệt đối không cho phép tài khoản khách hàng thông thường (role: user) làm mới phiên đăng nhập vào Admin!
+    if (isFromAdmin && user.role === 'user') {
+      throw new AppError('Tài khoản khách hàng không có quyền truy cập trang quản trị', 403);
+    }
+
+    const { accessToken, refreshToken: newRefreshToken } = await buildTokenResponse(user, res, false, req);
 
     res.json({
       status: 'success',
@@ -235,6 +253,12 @@ const refreshToken = async (req, res, next) => {
       data: {
         accessToken,
         refreshToken: newRefreshToken,
+        user: {
+          _id: user._id,
+          fullName: user.fullName,
+          email: user.email,
+          role: user.role,
+        },
       },
     });
   } catch (error) {
@@ -364,6 +388,7 @@ const logout = async (req, res, next) => {
   try {
     await logoutUser(req.user._id);
     res.clearCookie('refreshToken', COOKIE_OPTIONS);
+    res.clearCookie('adminRefreshToken', COOKIE_OPTIONS);
 
     res.json({
       status: 'success',
@@ -510,7 +535,15 @@ const sessionStream = async (req, res, next) => {
       token = req.cookies.accessToken;
     }
 
-    const refreshToken = req.query.refreshToken || req.cookies?.refreshToken;
+    const isFromAdmin =
+      req.headers['x-admin-portal'] === 'true' ||
+      req.headers.origin?.includes('5173') ||
+      req.headers.referer?.includes('5173');
+
+    const refreshToken =
+      req.query.refreshToken ||
+      (isFromAdmin ? req.cookies?.adminRefreshToken : null) ||
+      req.cookies?.refreshToken;
 
     let userId = null;
     if (token) {
@@ -648,7 +681,7 @@ const getLinkedAccounts = async (req, res, next) => {
  */
 
 const populateAdminAndBuildResponse = async (user, req, res, rememberMe, sessionId) => {
-  const { accessToken, refreshToken } = await buildTokenResponse(user, res, !!rememberMe);
+  const { accessToken, refreshToken } = await buildTokenResponse(user, res, !!rememberMe, req);
 
   if (sessionId) mergeSessionInteractions(sessionId, user._id);
 

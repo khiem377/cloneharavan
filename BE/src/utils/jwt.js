@@ -21,17 +21,19 @@ const generateRefreshToken = (id) => {
 };
 
 /**
- * Verify Access Token
+ * Verify Access Token (Khóa cứng thuật toán HS256 chống Algorithm Confusion Attack)
  */
 const verifyAccessToken = (token) => {
-  return jwt.verify(token, process.env.JWT_SECRET);
+  if (!process.env.JWT_SECRET) throw new Error('JWT_SECRET is missing');
+  return jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
 };
 
 /**
- * Verify Refresh Token
+ * Verify Refresh Token (Khóa cứng thuật toán HS256 chống Algorithm Confusion Attack)
  */
 const verifyRefreshToken = (token) => {
-  return jwt.verify(token, process.env.REFRESH_TOKEN_SECRET);
+  if (!process.env.REFRESH_TOKEN_SECRET) throw new Error('REFRESH_TOKEN_SECRET is missing');
+  return jwt.verify(token, process.env.REFRESH_TOKEN_SECRET, { algorithms: ['HS256'] });
 };
 
 module.exports = {

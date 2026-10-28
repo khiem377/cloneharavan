@@ -10,13 +10,16 @@ const app = express();
 
 // Ẩn thông tin framework máy chủ (chống bot scanner)
 app.disable('x-powered-by');
+app.set('trust proxy', 1);
 
-// Native HTTP Security Headers (An toàn tuyệt đối cho In ấn & Thiết bị Barcode)
+// Native HTTP Security Headers (HSTS, Anti-Clickjacking, Anti-Sniffing)
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('X-XSS-Protection', '0');
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+  res.setHeader('X-Permitted-Cross-Domain-Policies', 'none');
   next();
 });
 

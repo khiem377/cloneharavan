@@ -4,15 +4,17 @@ const ProductWarehouseStock = require('../models/productWarehouseStock.model');
 const ProductVariant = require('../models/productVariant.model');
 const StockMovement = require('../models/stockMovement.model');
 const AppError = require('../utils/AppError');
+const { escapeRegex } = require('../middleware/sanitize.middleware');
 
 class StockTransferService {
   static async getStockTransfers({ page = 1, limit = 20, status = '', keyword = '' }) {
     const filter = {};
     if (status) filter.status = status;
     if (keyword) {
+      const safeKw = escapeRegex(keyword);
       filter.$or = [
-        { transferNumber: { $regex: keyword, $options: 'i' } },
-        { note: { $regex: keyword, $options: 'i' } },
+        { transferNumber: { $regex: safeKw, $options: 'i' } },
+        { note: { $regex: safeKw, $options: 'i' } },
       ];
     }
 

@@ -1,5 +1,6 @@
 const Coupon = require('../models/coupon.model');
 const { AppError } = require('../utils/AppError');
+const { escapeRegex } = require('../middleware/sanitize.middleware');
 
 const calcDiscount = (coupon, orderTotal = 0, shippingFee = 0) => {
   if (coupon.category === 'shipping') {
@@ -37,9 +38,10 @@ const getAllCoupons = async (query = {}) => {
 
   // Tìm kiếm theo tên hoặc mã code
   if (query.keyword) {
+    const safeKw = escapeRegex(query.keyword);
     filter.$or = [
-      { name: { $regex: query.keyword, $options: 'i' } },
-      { code: { $regex: query.keyword, $options: 'i' } },
+      { name: { $regex: safeKw, $options: 'i' } },
+      { code: { $regex: safeKw, $options: 'i' } },
     ];
   }
 

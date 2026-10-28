@@ -1,6 +1,6 @@
 const crypto = require('crypto');
 const mongoose = require('mongoose');
-const Media  = require('../models/media.model');
+const Media = require('../models/media.model');
 const Folder = require('../models/folder.model');
 const { AppError } = require('../utils/AppError');
 const { uploadToCloudinary, deleteFromCloudinary } = require('../config/cloudinary');
@@ -8,22 +8,15 @@ const { getOrCreateDateSubFolder, findOrCreateFolder } = require('./folder.servi
 const { slugify } = require('../utils/slugify');
 const mediaRegistry = require('../config/mediaRegistry');
 
-// ---------------------------------------------------------------------------
-// SHA-256 hash — Node.js built-in, zero deps, đủ tốt cho duplicate detection
-// (BLAKE3 nhanh hơn nhưng @noble/hashes dùng ESM không compatible với CJS)
-// ---------------------------------------------------------------------------
+
 const computeHash = (buffer) =>
   crypto.createHash('sha256').update(buffer).digest('hex');
 
-// ---------------------------------------------------------------------------
-// Helper: tự sinh altText từ filename
-// ---------------------------------------------------------------------------
+
 const generateAltText = (filename = '') =>
   filename.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim();
 
-// ---------------------------------------------------------------------------
-// Helper: lấy tất cả subfolder IDs ($graphLookup — 1 query)
-// ---------------------------------------------------------------------------
+
 const getAllSubFolderIds = async (rootId) => {
   const result = await Folder.aggregate([
     { $match: { _id: rootId } },
@@ -68,13 +61,33 @@ const resolveUploadFolder = async (folderId) => {
   return { uploadFolder: targetFolder, cloudinaryFolder: targetFolder.slug };
 };
 
+const validateImageMagicBytes = (buffer) => {
+  if (!buffer || buffer.length < 4) return false;
+  // JPEG: FF D8 FF
+  if (buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF) return true;
+  // PNG: 89 50 4E 47
+  if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47) return true;
+  // WEBP: RIFF....WEBP
+  if (buffer.length >= 12 &&
+    buffer.toString('ascii', 0, 4) === 'RIFF' &&
+    buffer.toString('ascii', 8, 12) === 'WEBP') {
+    return true;
+  }
+  return false;
+};
+
 // ---------------------------------------------------------------------------
-// Upload file — có BLAKE3 duplicate detection
+// Upload file — có kiểm tra Magic Bytes & Duplicate detection
 // ---------------------------------------------------------------------------
 const uploadMedia = async (file, folderId, uploadedBy = null) => {
-  if (!file) throw new AppError('Vui lòng chọn file', 400);
+  if (!file || !file.buffer) throw new AppError('Vui lòng chọn file hợp lệ', 400);
 
-  // 1. Tính hash trước khi upload
+  // 1. Kiểm tra chữ ký nhị phân thực tế (Magic Bytes)
+  if (!validateImageMagicBytes(file.buffer)) {
+    throw new AppError('Nội dung file không đúng định dạng hình ảnh hợp lệ (Magic Bytes Mismatch)', 400);
+  }
+
+  // 2. Tính hash trước khi upload
   const fileHash = computeHash(file.buffer);
 
   // 2. Kiểm tra duplicate
@@ -92,18 +105,18 @@ const uploadMedia = async (file, folderId, uploadedBy = null) => {
   const result = await uploadToCloudinary(file.buffer, cloudinaryFolder);
 
   const saved = await Media.create({
-    filename:   file.originalname,
-    url:        result.secure_url,
-    publicId:   result.public_id,
-    folderId:   uploadFolder._id,
-    mimeType:   file.mimetype,
-    size:       result.bytes,
-    width:      result.width,
-    height:     result.height,
-    altText:    generateAltText(file.originalname),
-    caption:    '',
+    filename: file.originalname,
+    url: result.secure_url,
+    publicId: result.public_id,
+    folderId: uploadFolder._id,
+    mimeType: file.mimetype,
+    size: result.bytes,
+    width: result.width,
+    height: result.height,
+    altText: generateAltText(file.originalname),
+    caption: '',
     uploadedBy,
-    hash:       fileHash,
+    hash: fileHash,
   });
 
   await saved.populate({ path: 'folderId', populate: { path: 'parentId', select: 'name slug _id' } });
@@ -126,11 +139,6 @@ const assertSafePublicUrl = (rawUrl) => {
   }
 
   const hostname = parsed.hostname.toLowerCase();
-
-  // Cho phép test localhost thoải mái trong môi trường development (local test)
-  if (process.env.NODE_ENV === 'development') {
-    return;
-  }
 
   const blockedHosts = [
     'localhost',
@@ -169,20 +177,21 @@ const uploadMediaFromUrl = async (url, folderId, uploadedBy = null) => {
   try {
     resp = await fetch(url, {
       signal: AbortSignal.timeout(15000),
+      redirect: 'error', // ⚠️ Chống HTTP 301/302 SSRF redirect bypass
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-        'Referer':    'https://ega-dien-may.myharavan.com/',
+        'Referer': 'https://ega-dien-may.myharavan.com/',
       },
     });
   } catch (netErr) {
-    throw new AppError(`Không thể kết nối đến đường dẫn này (${netErr.message || 'Tên miền không tồn tại hoặc lỗi mạng'})`, 400);
+    throw new AppError(`Không thể kết nối đến đường dẫn này hoặc bị chặn bởi chính sách bảo mật SSRF (${netErr.message || 'Lỗi kết nối'})`, 400);
   }
 
   if (!resp.ok) throw new AppError(`Máy chủ chứa ảnh từ chối tải (Mã HTTP: ${resp.status})`, 400);
   const mimeType = resp.headers.get('content-type') || 'image/jpeg';
   if (!mimeType.startsWith('image/')) throw new AppError('Đường dẫn này không phải là định dạng hình ảnh hợp lệ', 400);
 
-  const buffer   = Buffer.from(await resp.arrayBuffer());
+  const buffer = Buffer.from(await resp.arrayBuffer());
   const fileHash = computeHash(buffer);
 
   // Check duplicate
@@ -200,17 +209,17 @@ const uploadMediaFromUrl = async (url, folderId, uploadedBy = null) => {
 
   const saved = await Media.create({
     filename,
-    url:        result.secure_url,
-    publicId:   result.public_id,
-    folderId:   uploadFolder._id,
+    url: result.secure_url,
+    publicId: result.public_id,
+    folderId: uploadFolder._id,
     mimeType,
-    size:       result.bytes,
-    width:      result.width,
-    height:     result.height,
-    altText:    generateAltText(filename),
-    caption:    '',
+    size: result.bytes,
+    width: result.width,
+    height: result.height,
+    altText: generateAltText(filename),
+    caption: '',
     uploadedBy,
-    hash:       fileHash,
+    hash: fileHash,
   });
 
   await saved.populate({ path: 'folderId', populate: { path: 'parentId', select: 'name slug _id' } });
@@ -225,8 +234,8 @@ const browseMedia = async ({ folderId, page = 1, limit = 20, sortBy = 'createdAt
 
   if (folderId) {
     const allFolderIds = await getAllSubFolderIds(folderId);
-    const subFolders   = await Folder.find({ parentId: folderId }, 'name slug position').sort('position');
-    const skip  = (page - 1) * limit;
+    const subFolders = await Folder.find({ parentId: folderId }, 'name slug position').sort('position');
+    const skip = (page - 1) * limit;
     const query = { folderId: { $in: allFolderIds } };
     const total = await Media.countDocuments(query);
     const items = await Media.find(query).populate('folderId', 'name slug _id').sort(sort).skip(skip).limit(limit);
@@ -237,7 +246,7 @@ const browseMedia = async ({ folderId, page = 1, limit = 20, sortBy = 'createdAt
     };
   }
 
-  const skip  = (page - 1) * limit;
+  const skip = (page - 1) * limit;
   const total = await Media.countDocuments({});
   const items = await Media.find().populate('folderId', 'name slug').sort(sort).skip(skip).limit(limit);
   return { type: 'all', media: items, total, page, limit, totalPages: Math.ceil(total / limit) };
@@ -249,7 +258,7 @@ const browseMedia = async ({ folderId, page = 1, limit = 20, sortBy = 'createdAt
 const searchMedia = async ({ q, page = 1, limit = 20, sortBy = 'createdAt', sortDir = 'desc' }) => {
   if (!q?.trim()) return { folders: [], media: [], total: 0, page, limit, totalPages: 0 };
   const regex = new RegExp(q.trim(), 'i');
-  const sort  = { [sortBy]: sortDir === 'asc' ? 1 : -1 };
+  const sort = { [sortBy]: sortDir === 'asc' ? 1 : -1 };
 
   const directFolders = await Folder.find({ $or: [{ name: regex }, { slug: regex }] }, 'name slug parentId _id').lean();
   let folderIds = directFolders.map((f) => f._id);
@@ -390,7 +399,7 @@ const getUnusedMedia = async ({ page = 1, limit = 30 } = {}) => {
     ? { _id: { $nin: Array.from(usedIds) } }
     : {};
 
-  const skip  = (page - 1) * limit;
+  const skip = (page - 1) * limit;
   const total = await Media.countDocuments(query);
   const items = await Media.find(query)
     .populate('folderId', 'name slug')
@@ -422,7 +431,7 @@ const updateMediaMeta = async (id, { altText, caption }) => {
   const media = await Media.findById(id);
   if (!media) throw new AppError('Không tìm thấy file', 404);
   if (altText !== undefined) media.altText = altText;
-  if (caption !== undefined) media.caption  = caption;
+  if (caption !== undefined) media.caption = caption;
   await media.save();
   return media;
 };
@@ -466,7 +475,7 @@ const deleteMedia = async (id, force = false) => {
 // ---------------------------------------------------------------------------
 const deleteMediaBulk = async (ids, force = false) => {
   if (!force) {
-    const usages  = await checkMediaUsages(ids);
+    const usages = await checkMediaUsages(ids);
     const usedIds = Object.keys(usages).filter((k) => usages[k].length > 0);
     if (usedIds.length > 0) {
       throw new AppError(
@@ -489,16 +498,16 @@ const getMediaStats = async () => {
   const [stats] = await Media.aggregate([
     {
       $group: {
-        _id:        null,
+        _id: null,
         totalFiles: { $sum: 1 },
-        totalSize:  { $sum: '$size' },
-        byType:     { $push: { mimeType: '$mimeType', size: '$size' } },
+        totalSize: { $sum: '$size' },
+        byType: { $push: { mimeType: '$mimeType', size: '$size' } },
       },
     },
     {
       $project: {
         totalFiles: 1,
-        totalSize:  1,
+        totalSize: 1,
         images: { $size: { $filter: { input: '$byType', as: 'f', cond: { $regexMatch: { input: '$$f.mimeType', regex: '^image/' } } } } },
         videos: { $size: { $filter: { input: '$byType', as: 'f', cond: { $regexMatch: { input: '$$f.mimeType', regex: '^video/' } } } } },
       },
@@ -527,6 +536,7 @@ const getMediaByIds = async (ids) => {
 
 module.exports = {
   uploadMedia, uploadMediaFromUrl,
+  assertSafePublicUrl,
   browseMedia, searchMedia,
   checkMediaUsages,
   getSingleMediaUsage,

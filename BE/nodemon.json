@@ -1,0 +1,9 @@
+{
+  "watch": ["src", "server.js"],
+  "ignore": [
+    "src/template/*.json",
+    "*.log",
+    "scripts/*"
+  ],
+  "ext": "js,mjs,cjs"
+}

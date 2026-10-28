@@ -40,26 +40,55 @@ const COOKIE_OPTIONS_SESSION = {
 // Legacy alias giữ cho các chỗ khác import
 const COOKIE_OPTIONS = COOKIE_OPTIONS_PERSISTENT;
 
-const buildTokenResponse = async (user, res, rememberMe = false) => {
+const buildTokenResponse = async (user, res, rememberMe = false, req = null) => {
   const accessToken = generateAccessToken(user._id);
   const refreshToken = generateRefreshToken(user._id);
 
   await User.findByIdAndUpdate(user._id, { refreshToken });
 
-  const cookieOpts = rememberMe ? COOKIE_OPTIONS_PERSISTENT : COOKIE_OPTIONS_SESSION;
-  res.cookie('refreshToken', refreshToken, cookieOpts);
+  if (res && typeof res.cookie === 'function') {
+    const isStaffOrAdmin =
+      user.role === 'admin' ||
+      user.role === 'administrator' ||
+      user.role === 'staff';
+    const isFromAdminReq =
+      req?.headers?.['x-admin-portal'] === 'true' ||
+      req?.headers?.origin?.includes('5173') ||
+      req?.headers?.referer?.includes('5173') ||
+      req?.body?.isAdminPortal ||
+      req?.body?.isAdminRequest;
+
+    const cookieName = (isStaffOrAdmin || isFromAdminReq) ? 'adminRefreshToken' : 'refreshToken';
+    const cookieOpts = rememberMe ? COOKIE_OPTIONS_PERSISTENT : COOKIE_OPTIONS_SESSION;
+    res.cookie(cookieName, refreshToken, cookieOpts);
+  }
 
   return { accessToken, refreshToken };
 };
 
 const registerUser = async (data) => {
-  const emailTaken = await User.findOne({ email: data.email });
+  const email = (data.email || '').toLowerCase().trim();
+  const phone = (data.phone || '').trim();
+
+  const emailTaken = await User.findOne({ email });
   if (emailTaken) throw new AppError('Email đã được sử dụng', 400);
 
-  const phoneTaken = await User.findOne({ phone: data.phone });
-  if (phoneTaken) throw new AppError('Số điện thoại đã được sử dụng', 400);
+  if (phone) {
+    const phoneTaken = await User.findOne({ phone });
+    if (phoneTaken) throw new AppError('Số điện thoại đã được sử dụng', 400);
+  }
 
-  return User.create(data);
+  // Chống Mass Assignment: Chỉ trích xuất các trường được phép của user thông thường
+  const safePayload = {
+    fullName: (data.fullName || '').trim(),
+    email,
+    phone,
+    password: data.password,
+    role: 'user', // Cố định role là user, không thể tự nâng quyền khi đăng ký
+    isActive: true,
+  };
+
+  return User.create(safePayload);
 };
 
 // So sánh chuỗi thời gian bất biến (Constant-time comparison) chống Timing Attack
@@ -150,20 +179,24 @@ const loginUser = async (email, password, req = null) => {
   const attemptKey = `${normalizedEmail}::${fingerprint}`;
   const deviceAttempt = deviceLoginAttempts.get(attemptKey);
 
-  // 2. Kiểm tra xem THIẾT BỊ NÀY có đang bị khóa 5 phút vì sai pass 5 lần không
-  if (deviceAttempt?.lockUntil && deviceAttempt.lockUntil.getTime() > Date.now()) {
-    const remainingSeconds = Math.max(1, Math.ceil((deviceAttempt.lockUntil.getTime() - Date.now()) / 1000));
-    const unlockTimeStr = deviceAttempt.lockUntil.toLocaleTimeString('vi-VN', {
+  // 2. Kiểm tra xem TÀI KHOẢN hoặc THIẾT BỊ NÀY có đang bị khóa 5 phút vì sai pass 5 lần không
+  const isUserLocked = user.lockUntil && user.lockUntil.getTime() > Date.now();
+  const isDeviceLocked = deviceAttempt?.lockUntil && deviceAttempt.lockUntil.getTime() > Date.now();
+  const activeLockUntil = isUserLocked ? user.lockUntil : (isDeviceLocked ? deviceAttempt.lockUntil : null);
+
+  if (activeLockUntil) {
+    const remainingSeconds = Math.max(1, Math.ceil((activeLockUntil.getTime() - Date.now()) / 1000));
+    const unlockTimeStr = activeLockUntil.toLocaleTimeString('vi-VN', {
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',
       hour12: false,
     });
     throw new AppError(
-      `Thiết bị này đã nhập sai mật khẩu 5 lần liên tiếp. Tạm khóa đăng nhập 5 phút trên thiết bị. Thời gian mở lại: ${unlockTimeStr}.`,
+      `Tài khoản hoặc thiết bị này đã nhập sai mật khẩu 5 lần liên tiếp. Tạm khóa đăng nhập 5 phút. Thời gian mở lại: ${unlockTimeStr}.`,
       429,
       {
-        lockUntil: deviceAttempt.lockUntil,
+        lockUntil: activeLockUntil,
         remainingSeconds,
       }
     );
@@ -173,11 +206,16 @@ const loginUser = async (email, password, req = null) => {
   const isValid = await user.matchPassword(password);
 
   if (!isValid) {
-    const currentAttempts = (deviceAttempt?.attempts || 0) + 1;
+    const currentAttempts = Math.max((deviceAttempt?.attempts || 0), (user.failedLoginAttempts || 0)) + 1;
     const now = Date.now();
+    user.failedLoginAttempts = currentAttempts;
 
     if (currentAttempts >= 5) {
-      const lockUntil = new Date(now + 5 * 60 * 1000); // Khóa 5 phút riêng cho thiết bị này
+      const lockUntil = new Date(now + 5 * 60 * 1000);
+      user.lockUntil = lockUntil;
+      user.failedLoginAttempts = 0;
+      await user.save({ validateBeforeSave: false });
+
       deviceLoginAttempts.set(attemptKey, {
         attempts: 0,
         lockUntil,
@@ -192,7 +230,7 @@ const loginUser = async (email, password, req = null) => {
       });
 
       throw new AppError(
-        `Bạn đã nhập sai mật khẩu 5 lần liên tiếp. Thiết bị tạm khóa 5 phút. Thời gian mở lại: ${unlockTimeStr}.`,
+        `Tài khoản đã nhập sai mật khẩu 5 lần liên tiếp. Tạm khóa 5 phút. Thời gian mở lại: ${unlockTimeStr}.`,
         429,
         {
           lockUntil,
@@ -200,6 +238,7 @@ const loginUser = async (email, password, req = null) => {
         }
       );
     } else {
+      await user.save({ validateBeforeSave: false });
       deviceLoginAttempts.set(attemptKey, {
         attempts: currentAttempts,
         lockUntil: null,
@@ -208,7 +247,7 @@ const loginUser = async (email, password, req = null) => {
 
       const remainingAttempts = 5 - currentAttempts;
       throw new AppError(
-        `Email hoặc mật khẩu không chính xác. Bạn còn ${remainingAttempts} lần thử trên thiết bị này trước khi bị tạm khóa 5 phút.`,
+        `Email hoặc mật khẩu không chính xác. Bạn còn ${remainingAttempts} lần thử trước khi tài khoản bị tạm khóa 5 phút.`,
         401,
         {
           remainingAttempts,
@@ -217,10 +256,9 @@ const loginUser = async (email, password, req = null) => {
     }
   }
 
-  // 4. Mật khẩu ĐÚNG: Xóa toàn bộ vết khóa của thiết bị này
+  // 4. Mật khẩu ĐÚNG: Xóa toàn bộ vết khóa của thiết bị và tài khoản này
   deviceLoginAttempts.delete(attemptKey);
 
-  // Nếu trong DB có cờ lock cũ của User thì cũng xóa sạch
   if (user.failedLoginAttempts > 0 || user.lockUntil) {
     user.failedLoginAttempts = 0;
     user.lockUntil = null;
@@ -540,8 +578,7 @@ const forgotPassword = async (email) => {
   try {
     await sendResetPasswordEmail(user.email, resetToken);
     return {
-      message: 'Email hướng dẫn đặt lại mật khẩu đã được gửi',
-      resetToken: process.env.NODE_ENV === 'development' ? resetToken : undefined,
+      message: 'Email hướng dẫn đặt lại mật khẩu đã được gửi đến hộp thư của bạn.',
     };
   } catch (error) {
     user.resetPasswordToken = undefined;
@@ -588,8 +625,7 @@ const sendEmailVerification = async (userId) => {
   try {
     await sendVerificationEmail(user.email, verifyToken);
     return {
-      message: 'Email xác minh đã được gửi',
-      verifyToken: process.env.NODE_ENV === 'development' ? verifyToken : undefined,
+      message: 'Email xác minh đã được gửi đến hộp thư của bạn.',
     };
   } catch (error) {
     user.emailVerificationToken = undefined;
@@ -640,7 +676,6 @@ const sendPhoneOtp = async (userId) => {
 
   return {
     message: `Đã gửi mã OTP tới số điện thoại ${user.phone}`,
-    otp: process.env.NODE_ENV === 'development' ? otp : undefined,
   };
 };
 
@@ -686,11 +721,9 @@ const registerAdmin = async (data) => {
     throw new AppError('Chức năng đăng ký Admin tạm khóa do chưa cấu hình ADMIN_SECRET_KEY trong môi trường', 403);
   }
 
-  const existingAdminCount = await User.countDocuments({ role: 'admin' });
-  if (existingAdminCount > 0) {
-    if (!data.adminSecretKey || !safeStringCompare(data.adminSecretKey, configuredSecret)) {
-      throw new AppError('Mã bí mật tạo Admin (adminSecretKey) không chính xác hoặc bị thiếu', 403);
-    }
+  // Luôn bắt buộc adminSecretKey chuẩn xác
+  if (!data.adminSecretKey || !safeStringCompare(data.adminSecretKey, configuredSecret)) {
+    throw new AppError('Mã bí mật tạo Admin (adminSecretKey) không chính xác hoặc bị thiếu', 403);
   }
 
   const emailTaken = await User.findOne({ email: data.email.toLowerCase().trim() });
@@ -1623,29 +1656,18 @@ const checkIsAdminUser = (user) => {
   if (!user || !user.isActive) return false;
   const userRole = (user.role || '').toLowerCase();
   const roleCode = (user.roleId?.code || '').toLowerCase();
-  const roleName = (user.roleId?.name || '').toLowerCase();
-  const userEmail = (user.email || '').toLowerCase();
 
-  // If role is strictly 'user' and no roleId assigned
-  if (userRole === 'user' && !user.roleId) return false;
+  const validStaffOrAdminRoles = [
+    'admin',
+    'administrator',
+    'staff',
+    'manager',
+    'inventory_manager',
+    'content_editor',
+    'customer_care',
+  ];
 
-  return (
-    userRole !== 'user' ||
-    userRole === 'admin' ||
-    userRole === 'administrator' ||
-    userRole === 'staff' ||
-    userRole === 'manager' ||
-    userRole === 'inventory_manager' ||
-    userRole === 'content_editor' ||
-    userRole === 'customer_care' ||
-    roleCode === 'admin' ||
-    roleCode === 'administrator' ||
-    roleCode === 'staff' ||
-    roleCode === 'manager' ||
-    roleName.includes('quản trị') ||
-    roleName.includes('admin') ||
-    userEmail.startsWith('admin')
-  );
+  return validStaffOrAdminRoles.includes(userRole) || validStaffOrAdminRoles.includes(roleCode);
 };
 
 /**
@@ -2042,20 +2064,15 @@ const deletePasskey = async (userId, credentialId = null) => {
 };
 
 const isSuperAdminUser = (user) => {
+  if (!user) return false;
   const userRole = (user.role || '').toLowerCase();
   const roleCode = (user.roleId?.code || '').toLowerCase();
-  const roleName = (user.roleId?.name || '').toLowerCase();
-  const userEmail = (user.email || '').toLowerCase();
 
   return (
     userRole === 'administrator' ||
     userRole === 'admin' ||
-    userRole.includes('admin') ||
     roleCode === 'administrator' ||
-    roleCode === 'admin' ||
-    roleName.includes('administrator') ||
-    roleName.includes('quản trị') ||
-    userEmail.startsWith('admin')
+    roleCode === 'admin'
   );
 };
 

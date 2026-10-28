@@ -1,16 +1,18 @@
 const Supplier = require('../models/supplier.model');
 const SupplierDebt = require('../models/supplierDebt.model');
 const AppError = require('../utils/AppError');
+const { escapeRegex } = require('../middleware/sanitize.middleware');
 
 class SupplierService {
   static async getAllSuppliers({ page = 1, limit = 20, keyword = '', isActive, status, supplierType }) {
     const query = {};
     if (keyword) {
+      const safeKw = escapeRegex(keyword);
       query.$or = [
-        { name: { $regex: keyword, $options: 'i' } },
-        { code: { $regex: keyword, $options: 'i' } },
-        { phone: { $regex: keyword, $options: 'i' } },
-        { email: { $regex: keyword, $options: 'i' } },
+        { name: { $regex: safeKw, $options: 'i' } },
+        { code: { $regex: safeKw, $options: 'i' } },
+        { phone: { $regex: safeKw, $options: 'i' } },
+        { email: { $regex: safeKw, $options: 'i' } },
       ];
     }
 

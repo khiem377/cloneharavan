@@ -11,15 +11,17 @@ const ExcelJS = require('exceljs');
 const path = require('path');
 const fs = require('fs');
 const AppError = require('../utils/AppError');
+const { escapeRegex } = require('../middleware/sanitize.middleware');
 
 class StockAuditService {
   static async getStockAudits({ page = 1, limit = 20, keyword = '', warehouseId }) {
     const query = {};
     if (warehouseId) query.warehouseId = warehouseId;
     if (keyword) {
+      const safeKw = escapeRegex(keyword);
       query.$or = [
-        { auditNumber: { $regex: keyword, $options: 'i' } },
-        { note: { $regex: keyword, $options: 'i' } },
+        { auditNumber: { $regex: safeKw, $options: 'i' } },
+        { note: { $regex: safeKw, $options: 'i' } },
       ];
     }
 

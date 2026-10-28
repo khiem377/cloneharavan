@@ -43,9 +43,10 @@ const syncFlashSalesToMenu = async () => {
       children: [],
     }));
 
-    menu.items[fsItemIndex].children = children;
-    menu.markModified('items');
-    await menu.save();
+    await Menu.updateOne(
+      { _id: menu._id },
+      { $set: { [`items.${fsItemIndex}.children`]: children } }
+    );
     return ongoingSales;
   } catch (err) {
     console.error('Error syncing flash sales to menu:', err.message);

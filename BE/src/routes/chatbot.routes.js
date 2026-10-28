@@ -12,7 +12,7 @@ setInterval(() => {
 }, 5 * 60_000).unref();
 
 const chatRateLimit = (max = 30) => (req, res, next) => {
-  const ip  = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown';
+  const ip = req.ip || req.socket?.remoteAddress || 'unknown';
   const key = `chat:${ip}`;
   const now = Date.now();
 

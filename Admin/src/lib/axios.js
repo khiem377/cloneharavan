@@ -40,7 +40,14 @@ api.interceptors.request.use(
   (config) => {
     const { accessToken, anonymousId, getOrCreateAnonymousId } = useAuthStore.getState();
 
-    // 1. Gắn Bearer Token nếu đã đăng nhập
+    // 1. Luôn gắn header nhận diện Admin Portal để BE cô lập session với Client
+    if (config.headers?.set) {
+      config.headers.set('x-admin-portal', 'true');
+    } else if (config.headers) {
+      config.headers['x-admin-portal'] = 'true';
+    }
+
+    // 2. Gắn Bearer Token nếu đã đăng nhập
     if (accessToken) {
       if (config.headers?.set) {
         config.headers.set('Authorization', `Bearer ${accessToken}`);
@@ -49,7 +56,7 @@ api.interceptors.request.use(
       }
     }
 
-    // 2. Gắn anonymousId làm x-session-id để Backend tracking hoạt động
+    // 3. Gắn anonymousId làm x-session-id để Backend tracking hoạt động
     const sessionId = anonymousId || getOrCreateAnonymousId();
     if (sessionId) {
       if (config.headers?.set) {
@@ -74,21 +81,23 @@ api.interceptors.response.use(
     // 1. Xử lý lỗi 403 Forbidden
     if (status === 403) {
       const message = error.response?.data?.message || 'Bạn không có quyền thực hiện thao tác này';
-      
-      // Nếu tài khoản bị khóa / vô hiệu hóa
+      const currentUser = useAuthStore.getState().user;
+
+      // Nếu tài khoản hiện tại là khách hàng thường (role: user)
+      // HOẶC bị khóa / vô hiệu hóa / không có quyền truy cập trang quản trị -> Đăng xuất ngay lập tức
       if (
+        currentUser?.role === 'user' ||
+        message.toLowerCase().includes('khách hàng không có quyền') ||
+        message.toLowerCase().includes('tài khoản khách hàng') ||
         message.toLowerCase().includes('deactivated') ||
         message.toLowerCase().includes('khóa') ||
         message.toLowerCase().includes('bị khóa')
       ) {
         useAuthStore.getState().clearAuth();
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(
-            new CustomEvent('session:force_logout', {
-              detail: { reason: message || 'Tài khoản quản trị của bạn đã bị khóa.' },
-            })
-          );
+        if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+          window.location.href = '/login?reason=no_admin_access';
         }
+        return Promise.reject(error);
       }
       return Promise.reject(error);
     }
@@ -122,22 +131,36 @@ api.interceptors.response.use(
     try {
       const { refreshToken } = useAuthStore.getState();
       
-      // Gửi cả httpOnly cookie và body refreshToken để tương thích tối đa với BE
+      // Gửi body refreshToken cùng header x-admin-portal để BE ưu tiên chính xác token của Admin
       const { data } = await authApi.post(
         '/auth/refresh-token',
-        refreshToken ? { refreshToken } : {}
+        {
+          ...(refreshToken ? { refreshToken } : {}),
+          isAdminPortal: true,
+        },
+        {
+          headers: {
+            'x-admin-portal': 'true',
+          },
+        }
       );
 
       const newAccessToken = data.data?.accessToken;
       const newRefreshToken = data.data?.refreshToken;
+      const returnedUser = data.data?.user;
 
       if (!newAccessToken) {
         throw new Error('Dữ liệu accessToken mới không tồn tại');
       }
 
+      // Tuyệt đối không nhận tài khoản khách hàng thông thường (role: user) vào Admin
+      if (returnedUser && returnedUser.role === 'user') {
+        throw new Error('Tài khoản khách hàng không có quyền truy cập trang quản trị');
+      }
+
       // Lưu token mới vào Zustand store
       useAuthStore.getState().setAuth({
-        user: useAuthStore.getState().user,
+        user: returnedUser || useAuthStore.getState().user,
         accessToken: newAccessToken,
         refreshToken: newRefreshToken || refreshToken,
       });
@@ -156,8 +179,13 @@ api.interceptors.response.use(
       // Refresh thất bại -> Hủy hàng đợi, xóa sạch auth và chuyển hướng về /login
       processQueue(refreshError, null);
       useAuthStore.getState().clearAuth();
+      const isRoleForbidden =
+        refreshError?.message?.includes('khách hàng') ||
+        refreshError?.response?.data?.message?.includes('khách hàng');
+      const redirectReason = isRoleForbidden ? 'no_admin_access' : 'session_expired';
+
       if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
-        window.location.href = '/login?reason=session_expired';
+        window.location.href = `/login?reason=${redirectReason}`;
       }
       return Promise.reject(refreshError);
     } finally {

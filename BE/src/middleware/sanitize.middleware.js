@@ -8,7 +8,13 @@ const sanitizeValue = (val) => {
   if (typeof val === 'object' && !(val instanceof Date) && !(val instanceof RegExp)) {
     const cleanObj = {};
     for (const key of Object.keys(val)) {
-      if (key.startsWith('$') || key.includes('.')) {
+      if (
+        key.startsWith('$') ||
+        key.includes('.') ||
+        key === '__proto__' ||
+        key === 'constructor' ||
+        key === 'prototype'
+      ) {
         continue;
       }
       cleanObj[key] = sanitizeValue(val[key]);

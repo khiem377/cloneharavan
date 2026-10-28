@@ -3,6 +3,7 @@ const ProductWarehouseStock = require('../models/productWarehouseStock.model');
 const ProductVariant = require('../models/productVariant.model');
 const Product = require('../models/product.model');
 const AppError = require('../utils/AppError');
+const { escapeRegex } = require('../middleware/sanitize.middleware');
 
 class WarehouseService {
   /**
@@ -22,11 +23,12 @@ class WarehouseService {
   static async getWarehouses({ keyword = '', status = '', page = 1, limit = 50 }, user = null) {
     const filter = {};
     if (keyword) {
+      const safeKw = escapeRegex(keyword);
       filter.$or = [
-        { name: { $regex: keyword, $options: 'i' } },
-        { code: { $regex: keyword, $options: 'i' } },
-        { phone: { $regex: keyword, $options: 'i' } },
-        { 'address.detailAddress': { $regex: keyword, $options: 'i' } },
+        { name: { $regex: safeKw, $options: 'i' } },
+        { code: { $regex: safeKw, $options: 'i' } },
+        { phone: { $regex: safeKw, $options: 'i' } },
+        { 'address.detailAddress': { $regex: safeKw, $options: 'i' } },
       ];
     }
     if (status) {
@@ -266,7 +268,7 @@ class WarehouseService {
     const filter = { warehouseId: warehouse._id };
 
     if (keyword && keyword.trim()) {
-      const kw = keyword.trim();
+      const kw = escapeRegex(keyword.trim());
       const [matchedProducts, matchedVariants] = await Promise.all([
         Product.find({ name: { $regex: kw, $options: 'i' } }).select('_id'),
         ProductVariant.find({

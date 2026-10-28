@@ -3,24 +3,35 @@ const crypto = require('crypto');
 // Thuật toán mã hóa chuẩn bảo mật AES-256-GCM (Authenticated Encryption)
 const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 16;
-const SALT = 'dak_shop_settings_encryption_salt_2026';
+const SALT = process.env.SETTINGS_ENCRYPTION_SALT || 'dak_shop_settings_encryption_salt_2026';
 const LEGACY_SALT = 'haravan_settings_encryption_salt_2026';
 
-// Tạo danh sách secret key cố định 32 bytes từ biến môi trường và legacy fallbacks
+const HKDF_SALT = 'haravan_aead_hkdf_salt_2026';
+const HKDF_INFO = 'haravan_settings_encryption_v1';
+
+// Tạo key 32-bytes qua chuẩn HKDF (HMAC-based Key Derivation Function - RFC 5869)
+const deriveKeyHkdf = (secret) => {
+  return Buffer.from(crypto.hkdfSync('sha256', secret, HKDF_SALT, HKDF_INFO, 32));
+};
+
+// Tạo danh sách secret key 32 bytes từ biến môi trường (Hỗ trợ cả HKDF mới và scrypt cũ để tương thích ngược)
 const getCandidateKeys = () => {
   const secrets = [
     process.env.SETTINGS_ENCRYPTION_KEY,
     process.env.ADMIN_SECRET_KEY,
-    'admin_secret_key_haravan_2026',
-    'haravan_default_secret_key_2026_xyz',
-    'dak_shop_default_secret_key_2026_xyz',
+    process.env.JWT_SECRET,
   ].filter(Boolean);
 
-  const salts = [SALT, LEGACY_SALT];
   const keys = [];
 
   for (const s of secrets) {
-    for (const salt of salts) {
+    // 1. Thử khóa chuẩn HKDF (chuẩn hiện đại)
+    try {
+      keys.push(deriveKeyHkdf(s));
+    } catch {}
+
+    // 2. Thử khóa scrypt cũ (để tương thích ngược với dữ liệu đã lưu trong DB)
+    for (const salt of [SALT, LEGACY_SALT]) {
       try {
         keys.push(crypto.scryptSync(s, salt, 32));
       } catch {}
@@ -30,8 +41,11 @@ const getCandidateKeys = () => {
 };
 
 const getPrimaryEncryptionKey = () => {
-  const secret = process.env.SETTINGS_ENCRYPTION_KEY || process.env.ADMIN_SECRET_KEY || 'dak_shop_default_secret_key_2026_xyz';
-  return crypto.scryptSync(secret, SALT, 32);
+  const secret = process.env.SETTINGS_ENCRYPTION_KEY || process.env.ADMIN_SECRET_KEY || process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error('[Security Exception] Không tìm thấy khóa bí mật mã hóa (SETTINGS_ENCRYPTION_KEY/ADMIN_SECRET_KEY). Vui lòng cấu hình trong file .env!');
+  }
+  return deriveKeyHkdf(secret);
 };
 
 /**

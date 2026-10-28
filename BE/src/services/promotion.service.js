@@ -1,5 +1,6 @@
 const Promotion = require('../models/promotion.model');
 const { AppError } = require('../utils/AppError');
+const { escapeRegex } = require('../middleware/sanitize.middleware');
 
 const isItemInScope = (item, scope) => {
   if (scope.type === 'all') return true;
@@ -41,7 +42,7 @@ const calcItemDiscount = (promotion, item) => {
 
 const getAllPromotions = async (query = {}) => {
   const filter = {};
-  if (query.keyword) filter.name = { $regex: query.keyword, $options: 'i' };
+  if (query.keyword) filter.name = { $regex: escapeRegex(query.keyword), $options: 'i' };
   if (query.isActive !== undefined) filter.isActive = query.isActive === 'true';
   if (query.type) filter.type = query.type;
 

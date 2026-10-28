@@ -23,13 +23,7 @@ const requirePermission = (requiredPermissions) => {
 
       // 1. Administrator / Super Admin -> Auto Full Access tuyệt đối (*)
       const r = (req.user?.role || '').toLowerCase();
-      const email = (req.user?.email || '').toLowerCase();
-      if (
-        r === 'administrator' ||
-        r === 'admin' ||
-        r.includes('admin') ||
-        email.startsWith('admin')
-      ) {
+      if (r === 'administrator' || r === 'admin') {
         return next();
       }
 
@@ -47,17 +41,13 @@ const requirePermission = (requiredPermissions) => {
 
       const userRole = (user.role || '').toLowerCase();
       const roleDocCode = (user.roleId?.code || '').toLowerCase();
-      const roleDocName = (user.roleId?.name || '').toLowerCase();
 
       // Kiểm tra lại role code của roleDoc hoặc user role
       if (
         userRole === 'administrator' ||
         userRole === 'admin' ||
-        userRole.includes('admin') ||
         roleDocCode === 'administrator' ||
-        roleDocCode === 'admin' ||
-        roleDocName.includes('administrator') ||
-        roleDocName.includes('quản trị')
+        roleDocCode === 'admin'
       ) {
         return next();
       }
