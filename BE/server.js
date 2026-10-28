@@ -30,8 +30,7 @@ connectDB()
             const seedCustomerGroups = require('./scripts/seed-customer-groups-and-sync');
             seedCustomerGroups(false).catch(() => {});
           }
-        })
-        .catch(() => {});
+        });
     });
 
     const { initSocket } = require('./src/config/socket');
@@ -44,5 +43,5 @@ connectDB()
   .catch((err) => {
     console.error('Failed to connect to DB and start server:', err);
   });
-// reload nodemon
+// reload nodemon 2026-10-28 08:13:00
 

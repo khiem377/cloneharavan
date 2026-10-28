@@ -229,7 +229,15 @@ const startCronJobs = () => {
     } catch (e) {}
   });
 
-  console.log('[CronJobs] 6 background jobs scheduled (ALS, Item-CF, SearchLog, Banner, Upsell, FlashSale)');
+  // Stock Reconciliation & Anti-Leak Sync: every 30 minutes
+  cron.schedule('*/30 * * * *', () => {
+    try {
+      const { reconcileAndSyncStock } = require('../services/stockSync.service');
+      reconcileAndSyncStock().catch((err) => cronLog.error('StockSync', err));
+    } catch (e) {}
+  });
+
+  console.log('[CronJobs] 7 background jobs scheduled (ALS, Item-CF, SearchLog, Banner, Upsell, FlashSale, StockSync)');
 
   // Run in background 10 seconds after startup to avoid blocking server boot
   setTimeout(() => {
@@ -241,6 +249,10 @@ const startCronJobs = () => {
     autoHideExpiredBanners().catch(() => { });
     runUpsellBatch().catch(() => { });
     runAlsIfStale().catch(() => { });
+    try {
+      const { reconcileAndSyncStock } = require('../services/stockSync.service');
+      reconcileAndSyncStock().catch(() => {});
+    } catch (e) {}
   }, 3000);
 };
 
