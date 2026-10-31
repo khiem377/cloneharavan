@@ -96,7 +96,8 @@ const getOrderById = async (req, res, next) => {
 const getOrderStatus = async (req, res, next) => {
   try {
     const userId = req.user._id;
-    const statusData = await orderService.getOrderStatus(req.params.id, userId);
+    const userRole = req.user?.role || 'user';
+    const statusData = await orderService.getOrderStatus(req.params.id, userId, userRole);
     res.json({
       success: true,
       data: statusData,
@@ -180,12 +181,25 @@ const getPendingOrdersCount = async (req, res, next) => {
   }
 };
 
+const getOrderByIdForAdmin = async (req, res, next) => {
+  try {
+    const order = await orderService.getOrderByIdForAdmin(req.params.id);
+    res.json({
+      success: true,
+      data: order,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   previewOrder,
   createOrder,
-  checkoutCOD: createOrder, // alias giữ tương thích ngược
+  checkoutCOD: createOrder,
   cancelOrder,
   getOrderById,
+  getOrderByIdForAdmin,
   getOrderStatus,
   getMyOrders,
   getAllOrders,

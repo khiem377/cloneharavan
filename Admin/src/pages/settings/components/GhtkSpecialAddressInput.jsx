@@ -104,7 +104,7 @@ export default function GhtkSpecialAddressInput({
 
       {/* DROPDOWN MENU CHUẨN GHTK: 'Nhập để tìm kiếm địa chỉ đặc biệt (Tòa nhà, hẻm, đường)' */}
       {isOpen && (
-        <div className="absolute z-50 left-0 right-0 mt-1 bg-white dark:bg-card border border-[#dfe3e8] dark:border-border rounded-[6px] shadow-lg overflow-hidden animate-in fade-in-50 zoom-in-95 duration-100">
+        <div className="absolute z-50 left-0 right-0 mt-1 bg-white dark:bg-card border border-[#dfe3e8] dark:border-border rounded-[6px] shadow-sm overflow-hidden animate-in fade-in-50 zoom-in-95 duration-100">
           <div className="p-2 border-b border-[#dfe3e8] dark:border-border bg-[#fafbfb] dark:bg-muted/30 relative">
             <Search className="w-3.5 h-3.5 text-[#919eab] dark:text-muted-foreground absolute left-4.5 top-4.5 pointer-events-none" />
             <input

@@ -110,21 +110,20 @@ export default function CustomerGroupModal({ isOpen, onClose, group = null }) {
   const isPending = createMut.isPending || updateMut.isPending;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <Card className="flex w-full max-w-xl flex-col overflow-hidden rounded-[6px] border border-border bg-card shadow-xl text-foreground">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <Card className="flex w-full max-w-xl flex-col overflow-hidden rounded-[6px] border border-border bg-card shadow-sm text-foreground">
         <CardHeader className="p-4 border-b border-border flex flex-row items-center justify-between space-y-0">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
             <Sparkles className="size-4 text-primary" />
             {group ? 'Cập nhật nhóm khách hàng' : 'Thêm mới nhóm khách hàng'}
           </CardTitle>
-          <Button variant="ghost" size="icon" className="h-7 w-7 rounded-[4px]" onClick={onClose}>
+          <Button variant="ghost" size="icon" className="h-7 w-7 rounded-[6px] active:scale-[0.98]" onClick={onClose}>
             <X className="size-4" />
           </Button>
         </CardHeader>
 
         <form onSubmit={handleSubmit}>
           <CardContent className="p-4 flex flex-col gap-4 max-h-[75vh] overflow-y-auto">
-            {/* Tên và Mã */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-medium">Tên nhóm <span className="text-destructive">*</span></label>

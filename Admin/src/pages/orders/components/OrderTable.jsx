@@ -133,7 +133,11 @@ export default function OrderTable({
             {isColumnVisible('payment') && <TableHead className="w-32 text-center">Trạng thái thanh toán</TableHead>}
             {isColumnVisible('status') && <TableHead className="w-36 text-center">Trạng thái xử lý</TableHead>}
             {isColumnVisible('shipping') && <TableHead className="w-40">Dịch vụ vận chuyển</TableHead>}
-            {isColumnVisible('actions') && <TableHead className="text-right w-36">Thao tác</TableHead>}
+            {isColumnVisible('actions') && (
+              <TableHead className="text-right w-36 sticky right-0 z-20 bg-secondary/95 dark:bg-secondary shadow-[-6px_0_10px_-4px_rgba(0,0,0,0.08)] border-l border-border/70">
+                Thao tác
+              </TableHead>
+            )}
           </TableRow>
         </TableHeader>
 
@@ -150,7 +154,11 @@ export default function OrderTable({
                 {isColumnVisible('payment') && <TableCell className="text-center"><Skeleton className="h-5 w-20 mx-auto rounded-[4px]" /></TableCell>}
                 {isColumnVisible('status') && <TableCell className="text-center"><Skeleton className="h-5 w-24 mx-auto rounded-[4px]" /></TableCell>}
                 {isColumnVisible('shipping') && <TableCell><Skeleton className="h-4 w-24" /></TableCell>}
-                {isColumnVisible('actions') && <TableCell className="text-right"><Skeleton className="h-7 w-16 ml-auto rounded-[4px]" /></TableCell>}
+                {isColumnVisible('actions') && (
+                  <TableCell className="text-right sticky right-0 z-10 bg-background shadow-[-6px_0_10px_-4px_rgba(0,0,0,0.08)] border-l border-border/70">
+                    <Skeleton className="h-7 w-16 ml-auto rounded-[4px]" />
+                  </TableCell>
+                )}
               </TableRow>
             ))
           ) : orders.length === 0 ? (
@@ -177,7 +185,7 @@ export default function OrderTable({
               return (
                 <TableRow
                   key={order._id}
-                  className="transition-colors hover:bg-muted/40 cursor-pointer"
+                  className="group transition-colors hover:bg-muted/40 cursor-pointer"
                   onClick={() => onViewOrder(order)}
                 >
                   {/* Mã đơn */}
@@ -342,7 +350,10 @@ export default function OrderTable({
 
                   {/* Thao tác */}
                   {isColumnVisible('actions') && (
-                    <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                    <TableCell
+                      className="text-right sticky right-0 z-10 bg-background group-hover:bg-muted/70 shadow-[-6px_0_10px_-4px_rgba(0,0,0,0.08)] border-l border-border/70"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <div className="flex items-center justify-end gap-1.5">
                         <Button
                           variant="ghost"

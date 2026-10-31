@@ -214,7 +214,7 @@ export default function PaymentMethodsTab() {
                           </button>
 
                           {activeMenu === gateway.code && (
-                            <div className="absolute right-0 top-9 w-44 bg-white dark:bg-card border border-[#dfe3e8] dark:border-border rounded-[6px] shadow-lg py-1 z-30 text-[13px]">
+                            <div className="absolute right-0 top-9 w-44 bg-white dark:bg-card border border-[#dfe3e8] dark:border-border rounded-[6px] shadow-sm py-1 z-30 text-[13px]">
                               <button
                                 type="button"
                                 onClick={() => handleTestHandshake(gateway.code)}

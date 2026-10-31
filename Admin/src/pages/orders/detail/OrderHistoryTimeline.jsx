@@ -81,10 +81,10 @@ export default function OrderHistoryTimeline({ order, shipment }) {
           {formatDateGroup(order.createdAt)}
         </div>
 
-        <div className="space-y-4 relative pl-4 border-l-2 border-primary/20 ml-1.5">
+        <div className="space-y-4 relative pl-4 border-l border-primary/30 ml-1.5">
           {events.map((ev, idx) => (
             <div key={idx} className="relative text-xs">
-              <span className="absolute -left-[21px] top-1 size-2 rounded-full bg-primary ring-4 ring-background" />
+              <span className="absolute -left-[20.5px] top-1 size-2 rounded-full bg-primary ring-4 ring-background" />
 
               <div className="flex flex-wrap items-baseline gap-2">
                 <span className="font-mono tabular-nums text-muted-foreground text-[11px]">

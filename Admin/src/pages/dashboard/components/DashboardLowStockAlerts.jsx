@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
-import { AlertTriangleIcon, ChevronRightIcon, CheckCircleIcon, PackageIcon } from '@/components/ui/Icons';
+import { ChevronRightIcon, CheckCircleIcon, PackageIcon } from '@/components/ui/Icons';
+import { DashWarningSignatureIcon } from '@/components/ui/SignatureIcons';
 import { Badge } from '@/components/ui/badge';
 
 export default function DashboardLowStockAlerts({ lowStockVariants = [] }) {
@@ -8,7 +9,7 @@ export default function DashboardLowStockAlerts({ lowStockVariants = [] }) {
       <div className="flex items-center justify-between pb-2 border-b border-border mb-2">
         <div>
           <h2 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-            <AlertTriangleIcon className="size-4 text-amber-500" />
+            <DashWarningSignatureIcon size={18} className="text-amber-500" />
             <span>Sản phẩm sắp hết hàng</span>
           </h2>
           <p className="text-[11px] text-muted-foreground mt-0.5">Cần nhập thêm để duy trì kinh doanh</p>
@@ -49,11 +50,10 @@ export default function DashboardLowStockAlerts({ lowStockVariants = [] }) {
                 </p>
               </div>
               <span
-                className={`shrink-0 inline-flex items-center rounded-[4px] px-1.5 py-0.5 text-[11px] font-bold font-mono border ${
-                  v.stock <= 3
+                className={`shrink-0 inline-flex items-center rounded-[4px] px-1.5 py-0.5 text-[11px] font-bold font-mono border ${v.stock <= 3
                     ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
                     : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
-                }`}
+                  }`}
               >
                 Tồn: {v.stock}
               </span>

@@ -819,6 +819,211 @@ class StoreSettingService {
       message: 'Thông tin kết nối tài khoản Sandbox đã được lưu và sẵn sàng hoạt động.',
     };
   }
+
+  /**
+   * Lấy danh sách mẫu thông báo email & branding & smtp
+   */
+  static async getNotificationTemplates() {
+    const emailService = require('./email.service');
+    const setting = await StoreSetting.getSingleton();
+
+    const customTemplates = setting.notificationSettings?.customTemplates || {};
+    const smtpConfig = setting.notificationSettings?.smtpConfig || {};
+
+    return {
+      templates: emailService.EMAIL_TEMPLATES_CONFIG.map((t) => ({
+        id: t.id,
+        group: t.group,
+        name: t.name,
+        description: t.description,
+        defaultSubject: t.defaultSubject,
+        enabled: setting.notificationSettings?.emailTriggers?.[t.id] ?? true,
+        isCustomized: Boolean(customTemplates[t.id]?.isCustomized),
+      })),
+      branding: {
+        logoUrl: setting.notificationSettings?.emailBranding?.logoUrl || setting.storeInfo?.logo || '',
+        logoWidth: setting.notificationSettings?.emailBranding?.logoWidth || 180,
+        primaryColor: setting.notificationSettings?.emailBranding?.primaryColor || '#0088ff',
+      },
+      smtpConfig: {
+        host: smtpConfig.host || process.env.EMAIL_HOST || 'smtp.gmail.com',
+        port: Number(smtpConfig.port) || Number(process.env.EMAIL_PORT) || 587,
+        secure: smtpConfig.secure !== undefined ? Boolean(smtpConfig.secure) : (Number(smtpConfig.port || process.env.EMAIL_PORT) === 465),
+        user: smtpConfig.user || process.env.EMAIL_USER || '',
+        pass: (smtpConfig.pass || process.env.EMAIL_PASS) ? maskSecret(smtpConfig.pass || process.env.EMAIL_PASS) : '',
+        hasPassword: Boolean(smtpConfig.pass || process.env.EMAIL_PASS),
+        fromName: smtpConfig.fromName || setting.storeInfo?.name || process.env.SHOP_NAME || 'Dak Shop',
+      },
+      storeInfo: {
+        name: setting.storeInfo?.name || 'Dak Shop',
+        logo: setting.storeInfo?.logo || '',
+      },
+    };
+  }
+
+  /**
+   * Lấy thông tin chi tiết của 1 mẫu email để mở form chỉnh sửa
+   */
+  static async getTemplateDetail(templateId) {
+    const emailService = require('./email.service');
+    const setting = await StoreSetting.getSingleton();
+
+    const customConfig = (setting.notificationSettings?.customTemplates?.[templateId]) || null;
+    const preview = await emailService.renderEmailTemplate(templateId, {});
+
+    return {
+      template: {
+        id: preview.template.id,
+        group: preview.template.group,
+        name: preview.template.name,
+        description: preview.template.description,
+      },
+      defaults: preview.defaults || {},
+      availableVariables: preview.availableVariables || [],
+      custom: customConfig,
+      preview: {
+        subject: preview.subject,
+        html: preview.html,
+      },
+    };
+  }
+
+  /**
+   * Lưu tùy chỉnh nội dung cho 1 mẫu email
+   */
+  static async saveCustomTemplate(templateId, data, userId) {
+    const { subject, greetingMessage, specialNote, ctaText, footerNote } = data;
+    const setting = await StoreSetting.getSingleton();
+
+    if (!setting.notificationSettings) {
+      setting.notificationSettings = {};
+    }
+    if (!setting.notificationSettings.customTemplates) {
+      setting.notificationSettings.customTemplates = {};
+    }
+
+    setting.notificationSettings.customTemplates[templateId] = {
+      subject: (subject || '').trim(),
+      greetingMessage: (greetingMessage || '').trim(),
+      specialNote: (specialNote || '').trim(),
+      ctaText: (ctaText || '').trim(),
+      footerNote: (footerNote || '').trim(),
+      isCustomized: true,
+      updatedAt: new Date(),
+    };
+
+    setting.markModified('notificationSettings.customTemplates');
+    setting.updatedBy = userId;
+    await setting.save();
+
+    return setting.notificationSettings.customTemplates[templateId];
+  }
+
+  /**
+   * Khôi phục 1 mẫu email về template mặc định
+   */
+  static async resetCustomTemplate(templateId, userId) {
+    const setting = await StoreSetting.getSingleton();
+
+    if (setting.notificationSettings?.customTemplates?.[templateId]) {
+      delete setting.notificationSettings.customTemplates[templateId];
+      setting.markModified('notificationSettings.customTemplates');
+      setting.updatedBy = userId;
+      await setting.save();
+    }
+    return { success: true };
+  }
+
+  /**
+   * Cập nhật cấu hình thông báo (branding & triggers)
+   */
+  static async updateNotificationSettings({ emailBranding, emailTriggers }, userId) {
+    const setting = await StoreSetting.getSingleton();
+
+    setting.notificationSettings = {
+      ...(setting.notificationSettings?.toObject?.() || {}),
+      emailBranding: {
+        ...(setting.notificationSettings?.emailBranding?.toObject?.() || {}),
+        ...(emailBranding || {}),
+      },
+      emailTriggers: {
+        ...(setting.notificationSettings?.emailTriggers?.toObject?.() || {}),
+        ...(emailTriggers || {}),
+      },
+    };
+
+    setting.updatedBy = userId;
+    await setting.save();
+    return setting.notificationSettings;
+  }
+
+  /**
+   * Cập nhật cấu hình máy chủ gửi thư SMTP riêng
+   */
+  static async updateSmtpConfig({ host, port, secure, user, pass, fromName }, userId) {
+    const { encrypt } = require('../utils/crypto.util');
+    const setting = await StoreSetting.getSingleton();
+
+    if (!setting.notificationSettings) {
+      setting.notificationSettings = {};
+    }
+    const currentSmtp = setting.notificationSettings.smtpConfig || {};
+
+    let finalPass = currentSmtp.pass || '';
+    if (pass && !pass.includes('•••')) {
+      finalPass = encrypt(pass);
+    }
+
+    const targetPort = Number(port) || 587;
+    setting.notificationSettings.smtpConfig = {
+      host: (host || 'smtp.gmail.com').trim(),
+      port: targetPort,
+      secure: secure !== undefined ? Boolean(secure) : targetPort === 465,
+      user: (user || '').trim(),
+      pass: finalPass,
+      fromName: (fromName || '').trim(),
+      fromEmail: (user || '').trim(),
+      isEnabled: true,
+    };
+
+    setting.markModified('notificationSettings.smtpConfig');
+    setting.updatedBy = userId;
+    await setting.save();
+
+    return {
+      ...setting.notificationSettings.smtpConfig.toObject(),
+      pass: '••••••••',
+    };
+  }
+
+  /**
+   * Kiểm tra kết nối SMTP
+   */
+  static async testSmtpConfig({ host, port, secure, user, pass, fromName, fromEmail, targetEmail }) {
+    const emailService = require('./email.service');
+    const { decrypt } = require('../utils/crypto.util');
+    const setting = await StoreSetting.getSingleton();
+
+    let actualPass = pass;
+    if (!actualPass || actualPass.includes('•••')) {
+      actualPass = decrypt(setting.notificationSettings?.smtpConfig?.pass) || setting.notificationSettings?.smtpConfig?.pass;
+    }
+
+    if (!actualPass) {
+      throw new AppError('Vui lòng nhập mật khẩu ứng dụng SMTP để kiểm tra', 400);
+    }
+
+    return await emailService.testSmtpConnection({
+      host: host || setting.notificationSettings?.smtpConfig?.host || 'smtp.gmail.com',
+      port: port || setting.notificationSettings?.smtpConfig?.port || 587,
+      secure: secure !== undefined ? secure : setting.notificationSettings?.smtpConfig?.secure,
+      user: user || setting.notificationSettings?.smtpConfig?.user,
+      pass: actualPass,
+      fromName: fromName || setting.notificationSettings?.smtpConfig?.fromName,
+      fromEmail: fromEmail || setting.notificationSettings?.smtpConfig?.fromEmail,
+      targetEmail,
+    });
+  }
 }
 
 module.exports = StoreSettingService;

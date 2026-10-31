@@ -1,6 +1,15 @@
+import React from 'react';
 import { Search, RefreshCw, Download, Lock, Unlock } from '@/components/ui/Icons';
 import ColumnToggleDropdown from '@/components/ui/ColumnToggleDropdown';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 export default function CustomerToolbar({
   keyword,
@@ -61,61 +70,65 @@ export default function CustomerToolbar({
         <div className="flex flex-wrap items-center gap-2">
           {/* Search */}
           <div className="relative w-full sm:w-64">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
-            <input
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground z-10" />
+            <Input
               type="text"
               placeholder="Tìm theo tên, email, sđt..."
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
-              className="w-full h-8 pl-8 pr-3 rounded-[6px] border border-border bg-card text-xs text-foreground placeholder:text-muted-foreground outline-none focus:border-ring focus:ring-1 focus:ring-ring transition-colors"
+              className="w-full h-8 pl-8 pr-3 rounded-[6px] text-xs"
             />
           </div>
 
           {/* Status Filter */}
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="h-8 px-2.5 rounded-[6px] border border-border bg-card text-xs text-foreground outline-none focus:border-ring transition-colors cursor-pointer"
-          >
-            <option value="all">Tất cả trạng thái</option>
-            <option value="active">Đang hoạt động</option>
-            <option value="inactive">Đã khóa</option>
-          </select>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="h-8 w-36 rounded-[6px] text-xs">
+              <SelectValue placeholder="Trạng thái" />
+            </SelectTrigger>
+            <SelectContent className="rounded-[6px]">
+              <SelectItem value="all">Tất cả trạng thái</SelectItem>
+              <SelectItem value="active">Đang hoạt động</SelectItem>
+              <SelectItem value="inactive">Đã khóa</SelectItem>
+            </SelectContent>
+          </Select>
 
           {/* Provider Filter */}
-          <select
-            value={providerFilter}
-            onChange={(e) => setProviderFilter(e.target.value)}
-            className="h-8 px-2.5 rounded-[6px] border border-border bg-card text-xs text-foreground outline-none focus:border-ring transition-colors cursor-pointer"
-          >
-            <option value="all">Nguồn: Tất cả</option>
-            <option value="zalo">Zalo</option>
-            <option value="google">Google</option>
-            <option value="tiktok">TikTok</option>
-            <option value="local">Email / Mật khẩu</option>
-          </select>
+          <Select value={providerFilter} onValueChange={setProviderFilter}>
+            <SelectTrigger className="h-8 w-36 rounded-[6px] text-xs">
+              <SelectValue placeholder="Nguồn" />
+            </SelectTrigger>
+            <SelectContent className="rounded-[6px]">
+              <SelectItem value="all">Nguồn: Tất cả</SelectItem>
+              <SelectItem value="zalo">Zalo</SelectItem>
+              <SelectItem value="google">Google</SelectItem>
+              <SelectItem value="tiktok">TikTok</SelectItem>
+              <SelectItem value="local">Email / Mật khẩu</SelectItem>
+            </SelectContent>
+          </Select>
 
           {/* Phone Filter */}
-          <select
-            value={phoneFilter}
-            onChange={(e) => setPhoneFilter(e.target.value)}
-            className="h-8 px-2.5 rounded-[6px] border border-border bg-card text-xs text-foreground outline-none focus:border-ring transition-colors cursor-pointer"
-          >
-            <option value="all">SĐT: Tất cả</option>
-            <option value="has_phone">Có số ĐT</option>
-            <option value="no_phone">Chưa có số ĐT</option>
-          </select>
+          <Select value={phoneFilter} onValueChange={setPhoneFilter}>
+            <SelectTrigger className="h-8 w-32 rounded-[6px] text-xs">
+              <SelectValue placeholder="SĐT" />
+            </SelectTrigger>
+            <SelectContent className="rounded-[6px]">
+              <SelectItem value="all">SĐT: Tất cả</SelectItem>
+              <SelectItem value="has_phone">Có số ĐT</SelectItem>
+              <SelectItem value="no_phone">Chưa có số ĐT</SelectItem>
+            </SelectContent>
+          </Select>
 
           {/* Address Filter */}
-          <select
-            value={addressFilter}
-            onChange={(e) => setAddressFilter(e.target.value)}
-            className="h-8 px-2.5 rounded-[6px] border border-border bg-card text-xs text-foreground outline-none focus:border-ring transition-colors cursor-pointer"
-          >
-            <option value="all">Địa chỉ: Tất cả</option>
-            <option value="has_addr">Đã có địa chỉ</option>
-            <option value="no_addr">Chưa có địa chỉ</option>
-          </select>
+          <Select value={addressFilter} onValueChange={setAddressFilter}>
+            <SelectTrigger className="h-8 w-36 rounded-[6px] text-xs">
+              <SelectValue placeholder="Địa chỉ" />
+            </SelectTrigger>
+            <SelectContent className="rounded-[6px]">
+              <SelectItem value="all">Địa chỉ: Tất cả</SelectItem>
+              <SelectItem value="has_addr">Đã có địa chỉ</SelectItem>
+              <SelectItem value="no_addr">Chưa có địa chỉ</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Bulk Action Buttons */}
@@ -125,7 +138,7 @@ export default function CustomerToolbar({
               variant="outline"
               size="sm"
               onClick={onBulkUnlock}
-              className="h-8 px-2.5 rounded-[6px] text-xs gap-1 font-semibold text-emerald-600 hover:bg-emerald-500/10"
+              className="h-8 px-2.5 rounded-[6px] text-xs gap-1 font-semibold text-emerald-600 hover:bg-emerald-500/10 active:scale-[0.98]"
             >
               <Unlock className="size-3.5" />
               <span>Mở khóa ({selectedCount})</span>
@@ -134,7 +147,7 @@ export default function CustomerToolbar({
               variant="outline"
               size="sm"
               onClick={onBulkLock}
-              className="h-8 px-2.5 rounded-[6px] text-xs gap-1 font-semibold text-destructive hover:bg-destructive/10"
+              className="h-8 px-2.5 rounded-[6px] text-xs gap-1 font-semibold text-destructive hover:bg-destructive/10 active:scale-[0.98]"
             >
               <Lock className="size-3.5" />
               <span>Khóa ({selectedCount})</span>

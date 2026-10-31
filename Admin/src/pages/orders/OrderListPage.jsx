@@ -146,7 +146,16 @@ export default function OrderListPage() {
   return (
     <div className="space-y-4 p-4 sm:p-6 max-w-[1600px] mx-auto animate-in fade-in duration-200">
       {/* Top Statistics */}
-      <OrderStatsGrid orders={orders} stats={stats} totalCount={pagination.total} />
+      <OrderStatsGrid
+        orders={orders}
+        stats={stats}
+        totalCount={pagination.total}
+        activeStatus={statusFilter}
+        onSelectStatus={(st) => {
+          setStatusFilter(st);
+          setPage(1);
+        }}
+      />
 
       {/* Toolbar / Filters */}
       <OrderToolbar
@@ -169,6 +178,7 @@ export default function OrderListPage() {
         isFetching={isFetching}
         columnVisibility={columnVisibility}
         onExportCsv={handleExportCsv}
+        stats={stats}
       />
 
       {/* Main Table */}

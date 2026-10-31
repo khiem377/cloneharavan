@@ -1,8 +1,23 @@
 import React from 'react';
-import { Search, RefreshCw, Download, Filter } from '@/components/ui/Icons';
+import { Search, RefreshCw, Download } from '@/components/ui/Icons';
 import ColumnToggleDropdown from '@/components/ui/ColumnToggleDropdown';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  OrderTotalBoxIcon,
+  OrderPendingClockIcon,
+  OrderConfirmedStampIcon,
+  OrderShippingTruckIcon,
+  OrderDeliveredSuccessIcon,
+  OrderCancelledIcon,
+} from './OrderCustomIcons';
 
 export default function OrderToolbar({
   search,
@@ -15,22 +30,25 @@ export default function OrderToolbar({
   isFetching,
   columnVisibility,
   onExportCsv,
+  stats,
 }) {
   const ORDER_STATUS_TABS = [
-    { key: 'ALL', label: 'Tất cả' },
-    { key: 'PENDING', label: 'Chờ duyệt', dot: 'bg-amber-400' },
-    { key: 'CONFIRMED', label: 'Đã duyệt', dot: 'bg-indigo-400' },
-    { key: 'SHIPPING', label: 'Đang giao', dot: 'bg-cyan-500' },
-    { key: 'DELIVERED', label: 'Hoàn tất', dot: 'bg-emerald-500' },
-    { key: 'CANCELLED', label: 'Đã hủy', dot: 'bg-rose-500' },
+    { key: 'ALL', label: 'Tất cả', Icon: OrderTotalBoxIcon, count: stats?.total },
+    { key: 'PENDING', label: 'Chờ duyệt', Icon: OrderPendingClockIcon, count: stats?.pending },
+    { key: 'CONFIRMED', label: 'Đã duyệt', Icon: OrderConfirmedStampIcon, count: stats?.confirmed },
+    { key: 'SHIPPING', label: 'Đang giao', Icon: OrderShippingTruckIcon, count: stats?.shipping },
+    { key: 'DELIVERED', label: 'Hoàn tất', Icon: OrderDeliveredSuccessIcon, count: stats?.delivered },
+    { key: 'CANCELLED', label: 'Đã hủy', Icon: OrderCancelledIcon, count: stats?.cancelled },
   ];
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3.5">
       {/* Header row */}
       <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-border">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-foreground">Đơn hàng</h1>
+          <h1 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
+            Đơn hàng
+          </h1>
           <p className="text-xs text-muted-foreground mt-0.5">
             Quản lý quy trình đóng gói, xác nhận đơn và điều phối tồn kho vật lý
           </p>
@@ -41,7 +59,7 @@ export default function OrderToolbar({
             size="sm"
             onClick={onRefresh}
             disabled={isFetching}
-            className="h-8 rounded-[6px] gap-1.5 text-xs font-semibold cursor-pointer"
+            className="h-8 rounded-[6px] gap-1.5 text-xs font-semibold cursor-pointer active:scale-[0.98]"
           >
             <RefreshCw className={`size-3.5 ${isFetching ? 'animate-spin' : ''}`} />
             <span>Làm mới</span>
@@ -51,7 +69,7 @@ export default function OrderToolbar({
             variant="outline"
             size="sm"
             onClick={onExportCsv}
-            className="h-8 rounded-[6px] gap-1.5 text-xs font-semibold cursor-pointer"
+            className="h-8 rounded-[6px] gap-1.5 text-xs font-semibold cursor-pointer active:scale-[0.98]"
           >
             <Download className="size-3.5" />
             <span>Xuất CSV</span>
@@ -61,38 +79,45 @@ export default function OrderToolbar({
         </div>
       </div>
 
-      {/* Quick Status Tabs */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+      {/* Quick Status Tabs with Custom Icons & Counts */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none border-b border-border/60">
         {ORDER_STATUS_TABS.map((tab) => {
           const isActive = statusFilter === tab.key;
+          const TabIcon = tab.Icon;
+          const count = tab.count !== undefined ? tab.count : null;
+
           return (
-            <Button
+            <button
               key={tab.key}
-              variant={isActive ? 'default' : 'secondary'}
-              size="sm"
+              type="button"
               onClick={() => setStatusFilter(tab.key)}
-              className={`h-7 px-3 rounded-[6px] text-xs font-medium gap-1.5 shrink-0 cursor-pointer shadow-none ${
-                isActive ? 'font-semibold' : 'text-muted-foreground hover:text-foreground'
+              className={`h-8 px-3 rounded-[6px] text-xs font-medium inline-flex items-center gap-2 shrink-0 cursor-pointer transition-all duration-150 active:scale-[0.98] ${
+                isActive
+                  ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+                  : 'bg-secondary/60 text-muted-foreground hover:text-foreground hover:bg-secondary'
               }`}
             >
-              {tab.dot && (
-                <span
-                  className={`size-1.5 rounded-full ${
-                    isActive ? 'bg-primary-foreground' : tab.dot
-                  }`}
-                />
-              )}
+              <TabIcon size={14} className={isActive ? 'text-primary-foreground' : 'text-muted-foreground'} />
               <span>{tab.label}</span>
-            </Button>
+              {count !== null && (
+                <span
+                  className={`text-[10px] font-mono px-1.5 py-0.2 rounded-[4px] tabular-nums font-bold ${
+                    isActive ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-muted text-muted-foreground'
+                  }`}
+                >
+                  {count}
+                </span>
+              )}
+            </button>
           );
         })}
       </div>
 
-      {/* Filters row */}
+      {/* Filters row: Search & Payment Dropdown */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-          {/* Search */}
-          <div className="relative w-full sm:w-72">
+          {/* Search Input */}
+          <div className="relative w-full sm:w-80">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground z-10" />
             <Input
               type="text"
@@ -104,16 +129,17 @@ export default function OrderToolbar({
           </div>
 
           {/* Payment Status Filter */}
-          <select
-            value={paymentFilter}
-            onChange={(e) => setPaymentFilter(e.target.value)}
-            className="h-8 px-2.5 rounded-[6px] border border-border bg-card text-xs text-foreground outline-none focus:border-ring transition-colors cursor-pointer"
-          >
-            <option value="ALL">Thanh toán: Tất cả</option>
-            <option value="UNPAID">Chưa thanh toán</option>
-            <option value="PAID">Đã thanh toán</option>
-            <option value="REFUNDED">Đã hoàn tiền</option>
-          </select>
+          <Select value={paymentFilter} onValueChange={setPaymentFilter}>
+            <SelectTrigger className="h-8 w-48 rounded-[6px] text-xs">
+              <SelectValue placeholder="Trạng thái thanh toán" />
+            </SelectTrigger>
+            <SelectContent className="rounded-[6px]">
+              <SelectItem value="ALL">Thanh toán: Tất cả</SelectItem>
+              <SelectItem value="UNPAID">Chưa thanh toán</SelectItem>
+              <SelectItem value="PAID">Đã thanh toán</SelectItem>
+              <SelectItem value="REFUNDED">Đã hoàn tiền</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
     </div>

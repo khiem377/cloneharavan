@@ -66,23 +66,22 @@ export default function UploadUrlModal({ isOpen, onClose, onSuccess }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 animate-in fade-in duration-150"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-in fade-in duration-150"
       onClick={(e) => e.stopPropagation()}
     >
       <div
-        className="w-full max-w-[500px] bg-white dark:bg-card rounded-[6px] shadow-xl overflow-hidden border border-[#dfe3e8] dark:border-border animate-in zoom-in-95 duration-150"
+        className="w-full max-w-[500px] bg-card rounded-[6px] shadow-sm overflow-hidden border border-border animate-in zoom-in-95 duration-150"
         role="dialog"
         aria-modal="true"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* MODAL HEADER (SAPO 100%) */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[#f4f6f8] dark:border-border">
-          <h3 className="text-[15px] font-bold text-[#212b36] dark:text-foreground">Thêm ảnh từ URL</h3>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+          <h3 className="text-sm font-bold text-foreground">Thêm ảnh từ URL</h3>
           <button
             type="button"
             onClick={onClose}
             disabled={loading}
-            className="p-1 text-[#637381] dark:text-muted-foreground hover:text-[#212b36] dark:hover:text-foreground rounded-[4px] hover:bg-[#f4f6f8] dark:hover:bg-accent transition-colors"
+            className="p-1 text-muted-foreground hover:text-foreground rounded-[6px] hover:bg-muted active:scale-[0.98] transition-all cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>

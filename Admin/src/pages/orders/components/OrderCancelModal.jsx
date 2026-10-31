@@ -35,10 +35,9 @@ export default function OrderCancelModal({
       onClick={onClose}
     >
       <div
-        className="flex w-full max-w-md flex-col overflow-hidden rounded-[8px] border border-border bg-card shadow-xl text-card-foreground"
+        className="flex w-full max-w-md flex-col overflow-hidden rounded-[6px] border border-border bg-card shadow-sm text-card-foreground"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
           <div className="flex items-center gap-2.5">
             <div className="size-8 rounded-[6px] bg-rose-500/10 text-rose-600 flex items-center justify-center">
@@ -53,7 +52,7 @@ export default function OrderCancelModal({
           </div>
           <button
             type="button"
-            className="inline-flex size-7 items-center justify-center rounded-[4px] text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
+            className="inline-flex size-7 items-center justify-center rounded-[6px] text-muted-foreground hover:bg-muted hover:text-foreground active:scale-[0.98] transition-all cursor-pointer"
             onClick={onClose}
           >
             <X className="size-4" />

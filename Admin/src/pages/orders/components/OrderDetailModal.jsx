@@ -71,10 +71,9 @@ export default function OrderDetailModal({
       onClick={onClose}
     >
       <div
-        className="flex w-full max-w-3xl flex-col overflow-hidden rounded-[8px] border border-border bg-card shadow-xl text-card-foreground"
+        className="flex w-full max-w-3xl flex-col overflow-hidden rounded-[6px] border border-border bg-card shadow-sm text-card-foreground"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
         <div className="flex items-center justify-between border-b border-border px-5 py-4 bg-muted/20">
           <div className="flex items-center gap-3">
             <div className="size-8 rounded-[6px] bg-primary/10 text-primary flex items-center justify-center">
@@ -88,7 +87,7 @@ export default function OrderDetailModal({
                 <button
                   type="button"
                   onClick={() => copyOrderCode(order.orderCode)}
-                  className="p-1 rounded-[4px] hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                  className="p-1 rounded-[6px] hover:bg-muted text-muted-foreground hover:text-foreground active:scale-[0.98] transition-all cursor-pointer"
                   title="Sao chép mã đơn"
                 >
                   <Copy className="size-3" />
@@ -102,14 +101,14 @@ export default function OrderDetailModal({
 
           <div className="flex items-center gap-2">
             <span
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[4px] text-xs font-semibold ${statusCfg.badgeClass}`}
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[6px] text-xs font-semibold ${statusCfg.badgeClass}`}
             >
               <statusCfg.icon className="size-3.5" />
               <span>{statusCfg.label}</span>
             </span>
             <button
               type="button"
-              className="inline-flex size-7 items-center justify-center rounded-[4px] text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
+              className="inline-flex size-7 items-center justify-center rounded-[6px] text-muted-foreground hover:bg-muted hover:text-foreground active:scale-[0.98] transition-all cursor-pointer"
               onClick={onClose}
             >
               <X className="size-4" />
@@ -117,7 +116,6 @@ export default function OrderDetailModal({
           </div>
         </div>
 
-        {/* Body */}
         <div className="flex flex-col gap-5 p-5 overflow-y-auto max-h-[75vh]">
           {/* Thông báo tình trạng tồn kho */}
           <div className="rounded-[6px] border border-border bg-secondary/30 p-3 flex items-start gap-2.5 text-xs">

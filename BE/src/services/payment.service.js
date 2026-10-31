@@ -414,7 +414,7 @@ const handleOnepayIPN = async (params = {}) => {
 /**
  * 5. Kiểm tra trạng thái thanh toán của một đơn hàng
  */
-const getPaymentStatus = async (orderId, userId = null) => {
+const getPaymentStatus = async (orderId, user = null) => {
   if (!orderId) {
     throw new AppError('Mã đơn hàng (orderId) là bắt buộc', 400);
   }
@@ -424,8 +424,14 @@ const getPaymentStatus = async (orderId, userId = null) => {
     throw new AppError('Không tìm thấy thông tin đơn hàng', 404);
   }
 
-  if (userId && order.userId && order.userId.toString() !== userId.toString()) {
-    throw new AppError('Bạn không có quyền xem thông tin thanh toán của đơn hàng này', 403);
+  if (user) {
+    const userRole = String(user.role || '').toLowerCase();
+    const isStaffOrAdmin = userRole !== 'user' && userRole !== 'guest' && userRole !== '';
+    if (!isStaffOrAdmin) {
+      if (!order.userId || order.userId.toString() !== (user._id || user).toString()) {
+        throw new AppError('Bạn không có quyền xem thông tin thanh toán của đơn hàng này', 403);
+      }
+    }
   }
 
   return {

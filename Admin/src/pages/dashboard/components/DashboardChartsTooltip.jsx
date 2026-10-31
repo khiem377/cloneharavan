@@ -1,7 +1,7 @@
 export default function DashboardChartsTooltip({ active, payload, label }) {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-popover text-popover-foreground border border-border rounded-[6px] px-3 py-2 text-xs shadow-md z-50 min-w-[150px] antialiased">
+      <div className="bg-popover text-popover-foreground border border-border rounded-[6px] px-3 py-2 text-xs shadow-xs z-50 min-w-[150px] antialiased">
         <p className="text-muted-foreground font-semibold border-b border-border pb-1 mb-1.5 font-mono text-[11px] flex items-center justify-between">
           <span>Thời gian</span>
           <span className="text-foreground">{label}</span>

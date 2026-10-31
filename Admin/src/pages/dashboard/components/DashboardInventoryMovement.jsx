@@ -27,11 +27,10 @@ export default function DashboardInventoryMovement({ invMonthlyData = [], invRan
             <button
               key={opt.v}
               onClick={() => setInvRange(opt.v)}
-              className={`px-2 py-0.5 rounded-[3px] text-[10px] font-semibold font-mono transition-colors cursor-pointer ${
-                invRange === opt.v
+              className={`px-2 py-0.5 rounded-[3px] text-[10px] font-semibold font-mono transition-colors cursor-pointer ${invRange === opt.v
                   ? 'bg-background text-foreground shadow-2xs font-bold'
                   : 'text-muted-foreground hover:text-foreground'
-              }`}
+                }`}
             >
               {opt.l}
             </button>

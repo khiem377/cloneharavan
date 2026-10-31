@@ -35,7 +35,7 @@ const createPayment = catchAsync(async (req, res) => {
  * Kiểm tra trạng thái thanh toán của một đơn hàng
  */
 const getPaymentStatus = catchAsync(async (req, res) => {
-  const result = await paymentService.getPaymentStatus(req.params.id, req.user?._id);
+  const result = await paymentService.getPaymentStatus(req.params.id, req.user);
   res.status(200).json({
     success: true,
     data: result,

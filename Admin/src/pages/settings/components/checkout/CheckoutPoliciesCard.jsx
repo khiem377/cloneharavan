@@ -121,7 +121,7 @@ export default function CheckoutPoliciesCard({
               <HelpCircle className="w-3.5 h-3.5" />
             </button>
             {showNoticeTooltip && (
-              <div className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-2 bg-[#212b36] text-white text-[11px] rounded shadow-lg pointer-events-none">
+              <div className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-2 bg-[#212b36] text-white text-[11px] rounded shadow-sm pointer-events-none">
                 Hiển thị lưu ý hoặc ghi chú quan trọng cho khách hàng ngay trước khi xác nhận đặt hàng.
               </div>
             )}
@@ -154,9 +154,8 @@ export default function CheckoutPoliciesCard({
           >
             <HelpCircle className="w-3.5 h-3.5 text-[#637381] dark:text-muted-foreground hover:text-[#212b36] dark:hover:text-foreground" />
 
-            {/* POPOVER RECAPTCHA CHUẨN SAPO 100% (ẢNH 4) */}
             {showRecaptchaTooltip && (
-              <div className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2.5 w-[290px] bg-[#212b36] text-white p-3.5 rounded-[6px] shadow-2xl pointer-events-none animate-in fade-in-50 zoom-in-95 duration-100 border border-[#384351]">
+              <div className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2.5 w-[290px] bg-[#212b36] text-white p-3.5 rounded-[6px] shadow-sm pointer-events-none animate-in fade-in-50 zoom-in-95 duration-100 border border-[#384351]">
                 <RecaptchaBadge />
                 <p className="text-[11.5px] leading-relaxed text-[#dfe3e8]">
                   reCAPTCHA yêu cầu người dùng xác nhận mình là con người giúp bảo vệ trang web, cải thiện an ninh và tăng cường trải nghiệm, bảo mật của người dùng.

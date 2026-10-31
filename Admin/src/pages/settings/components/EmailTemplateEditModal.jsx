@@ -159,7 +159,7 @@ export default function EmailTemplateEditModal({ templateId, isOpen, onClose, on
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
-        className="w-[95vw] max-w-6xl h-[92vh] flex flex-col p-0 gap-0 overflow-hidden rounded-[6px] border-border bg-background shadow-lg"
+        className="w-[95vw] max-w-6xl h-[92vh] flex flex-col p-0 gap-0 overflow-hidden rounded-[6px] border-border bg-background shadow-sm"
         showCloseButton={false}
       >
         {/* Modal Header */}

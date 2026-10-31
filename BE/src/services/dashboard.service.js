@@ -9,6 +9,7 @@ const StockMovement = require('../models/stockMovement.model');
 const User = require('../models/user.model');
 const Coupon = require('../models/coupon.model');
 const Comment = require('../models/comment.model');
+const Order = require('../models/order.model');
 
 // ==========================================================================
 // In-Memory TTL Cache (Fast local caching, ready to swap to Redis later)
@@ -127,6 +128,7 @@ const getOverviewStats = async (period = '30days') => {
   const [
     [productFacetRes],
     [userFacetRes],
+    [orderFacetRes],
     [blogFacetRes],
     [mediaStatsRes],
     totalVariants,
@@ -142,6 +144,8 @@ const getOverviewStats = async (period = '30days') => {
     brandDistributionRaw,
     userGrowthAgg,
     productGrowthAgg,
+    revenueGrowthAgg,
+    recentOrders,
     recentProducts,
     rawRecentBlogPosts,
     recentCustomers,
@@ -168,6 +172,34 @@ const getOverviewStats = async (period = '30days') => {
           activeCustomers: [{ $match: { role: 'user', isActive: true } }, { $count: 'val' }],
           newCustomers: [{ $match: { role: 'user', createdAt: { $gte: periodStart } } }, { $count: 'val' }],
           prevNewCustomers: [{ $match: { role: 'user', createdAt: { $gte: prevStart, $lt: periodStart } } }, { $count: 'val' }],
+        },
+      },
+    ]),
+
+    // 3. Order Facet (Financial & Ops KPIs)
+    Order.aggregate([
+      {
+        $facet: {
+          totalOrders: [{ $count: 'val' }],
+          periodOrders: [{ $match: { createdAt: { $gte: periodStart } } }, { $count: 'val' }],
+          prevPeriodOrders: [{ $match: { createdAt: { $gte: prevStart, $lt: periodStart } } }, { $count: 'val' }],
+          totalRevenue: [
+            { $match: { orderStatus: { $ne: 'CANCELLED' } } },
+            { $group: { _id: null, total: { $sum: '$pricing.totalAmount' } } },
+          ],
+          periodRevenue: [
+            { $match: { orderStatus: { $ne: 'CANCELLED' }, createdAt: { $gte: periodStart } } },
+            { $group: { _id: null, total: { $sum: '$pricing.totalAmount' } } },
+          ],
+          prevPeriodRevenue: [
+            { $match: { orderStatus: { $ne: 'CANCELLED' }, createdAt: { $gte: prevStart, $lt: periodStart } } },
+            { $group: { _id: null, total: { $sum: '$pricing.totalAmount' } } },
+          ],
+          pending: [{ $match: { orderStatus: 'PENDING' } }, { $count: 'val' }],
+          confirmed: [{ $match: { orderStatus: 'CONFIRMED' } }, { $count: 'val' }],
+          shipping: [{ $match: { orderStatus: 'SHIPPING' } }, { $count: 'val' }],
+          delivered: [{ $match: { orderStatus: 'DELIVERED' } }, { $count: 'val' }],
+          cancelled: [{ $match: { orderStatus: 'CANCELLED' } }, { $count: 'val' }],
         },
       },
     ]),
@@ -263,7 +295,27 @@ const getOverviewStats = async (period = '30days') => {
       },
     ]).catch(() => []),
 
-    // 11. Recent Products (Top 5)
+    // 11. Revenue Growth Trend (last 6 months)
+    Order.aggregate([
+      { $match: { orderStatus: { $ne: 'CANCELLED' }, createdAt: { $gte: sixMonthStart } } },
+      {
+        $group: {
+          _id: { year: { $year: '$createdAt' }, month: { $month: '$createdAt' } },
+          revenue: { $sum: '$pricing.totalAmount' },
+          ordersCount: { $sum: 1 },
+        },
+      },
+    ]).catch(() => []),
+
+    // 12. Recent Orders (Top 6)
+    Order.find({})
+      .sort({ createdAt: -1 })
+      .limit(6)
+      .select('orderCode shippingAddress pricing orderStatus paymentStatus paymentMethod items createdAt')
+      .lean()
+      .catch(() => []),
+
+    // 13. Recent Products (Top 5)
     Product.find({ isActive: true })
       .sort({ createdAt: -1 })
       .limit(5)
@@ -272,7 +324,7 @@ const getOverviewStats = async (period = '30days') => {
       .lean()
       .catch(() => []),
 
-    // 12. Recent Blog Posts (Top 5)
+    // 14. Recent Blog Posts (Top 5)
     BlogPost.find({})
       .sort({ createdAt: -1 })
       .limit(5)
@@ -281,7 +333,7 @@ const getOverviewStats = async (period = '30days') => {
       .lean()
       .catch(() => []),
 
-    // 13. Recent Customers (Top 5)
+    // 15. Recent Customers (Top 5)
     User.find({ role: 'user' })
       .sort({ createdAt: -1 })
       .limit(5)
@@ -350,6 +402,33 @@ const getOverviewStats = async (period = '30days') => {
     sp_moi: pMap[`${s.year}-${s.month}`] || 0,
   }));
 
+  // Extract from order facet
+  const totalOrders = orderFacetRes?.totalOrders?.[0]?.val || 0;
+  const periodOrders = orderFacetRes?.periodOrders?.[0]?.val || 0;
+  const prevPeriodOrders = orderFacetRes?.prevPeriodOrders?.[0]?.val || 0;
+  const totalRevenue = orderFacetRes?.totalRevenue?.[0]?.total || 0;
+  const periodRevenue = orderFacetRes?.periodRevenue?.[0]?.total || 0;
+  const prevPeriodRevenue = orderFacetRes?.prevPeriodRevenue?.[0]?.total || 0;
+  const pendingOrders = orderFacetRes?.pending?.[0]?.val || 0;
+  const confirmedOrders = orderFacetRes?.confirmed?.[0]?.val || 0;
+  const shippingOrders = orderFacetRes?.shipping?.[0]?.val || 0;
+  const deliveredOrders = orderFacetRes?.delivered?.[0]?.val || 0;
+  const cancelledOrders = orderFacetRes?.cancelled?.[0]?.val || 0;
+
+  // Format revenue growth trend
+  const rMap = {};
+  (revenueGrowthAgg || []).forEach((r) => {
+    rMap[`${r._id.year}-${r._id.month}`] = {
+      revenue: r.revenue,
+      orders: r.ordersCount,
+    };
+  });
+  const revenueGrowthTrend = sixMonthSlots.map((s) => ({
+    month: s.label,
+    revenue: rMap[`${s.year}-${s.month}`]?.revenue || 0,
+    orders: rMap[`${s.year}-${s.month}`]?.orders || 0,
+  }));
+
   // Format blog posts thumbnails
   const recentBlogPosts = (rawRecentBlogPosts || []).map((post) => ({
     ...post,
@@ -358,6 +437,21 @@ const getOverviewStats = async (period = '30days') => {
 
   const result = {
     stats: {
+      // Financial & Order Core KPIs
+      totalOrders,
+      periodOrders,
+      ordersGrowth: growthPct(periodOrders, prevPeriodOrders),
+      totalRevenue,
+      periodRevenue,
+      revenueGrowth: growthPct(periodRevenue, prevPeriodRevenue),
+      ordersByStatus: {
+        pending: pendingOrders,
+        confirmed: confirmedOrders,
+        shipping: shippingOrders,
+        delivered: deliveredOrders,
+        cancelled: cancelledOrders,
+      },
+      // Catalog & Stock
       totalProducts,
       publishedProducts,
       lowStockProducts,
@@ -394,6 +488,8 @@ const getOverviewStats = async (period = '30days') => {
     categoryDistribution,
     brandDistribution,
     topProducts,
+    revenueGrowthTrend,
+    recentOrders: recentOrders || [],
     userGrowthTrend,
     productGrowthTrend,
     recentProducts,

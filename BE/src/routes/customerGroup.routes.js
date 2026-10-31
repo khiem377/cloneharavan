@@ -16,7 +16,7 @@ const { requirePermission } = require('../middleware/permission.middleware');
 router.use(protect);
 
 router.post('/seed-default', requirePermission(['user.edit', 'customer.manage', 'user.view']), seedDefaultGroups);
-router.get('/options', getOptions);
+router.get('/options', requirePermission(['user.view', 'user.edit', 'customer.view', 'order.manage', 'setting.view']), getOptions);
 router.get('/', requirePermission(['user.view', 'user.edit', 'customer.view']), getGroups);
 router.get('/:id', requirePermission(['user.view', 'user.edit', 'customer.view']), getGroupById);
 router.post('/', requirePermission(['user.edit', 'customer.manage']), createGroup);

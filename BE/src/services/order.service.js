@@ -1039,9 +1039,12 @@ const cancelOrder = async (orderId, userId, reason = '', userRole = 'user') => {
   if (!existingOrder) throw new AppError('Không tìm thấy đơn hàng', 404);
 
   // Kiểm tra quyền hủy (Khách hàng sở hữu đơn hoặc Nhân viên/Admin)
-  const isStaffOrAdmin = userRole !== 'user';
-  if (!isStaffOrAdmin && userId && existingOrder.userId && existingOrder.userId.toString() !== userId.toString()) {
-    throw new AppError('Bạn không có quyền hủy đơn hàng này', 403);
+  const roleStr = String(userRole || '').toLowerCase();
+  const isStaffOrAdmin = roleStr !== '' && roleStr !== 'user' && roleStr !== 'guest';
+  if (!isStaffOrAdmin) {
+    if (!userId || !existingOrder.userId || existingOrder.userId.toString() !== userId.toString()) {
+      throw new AppError('Bạn không có quyền hủy đơn hàng này', 403);
+    }
   }
 
   if (!['PENDING', 'CONFIRMED'].includes(existingOrder.orderStatus)) {
@@ -1438,9 +1441,12 @@ const getOrderById = async (orderIdOrCode, userId = null, userRole = 'user') => 
   }
   if (!order) throw new AppError('Không tìm thấy đơn hàng', 404);
 
-  // BẢO VỆ THÔNG TIN CÁ NHÂN & AN TOÀN DỮ LIỆU:
-  // Người xem bắt buộc phải đăng nhập và là chính chủ đơn hàng (hoặc Admin/Nhân viên)
-  const isStaffOrAdmin = ['admin', 'staff', 'manager'].includes(userRole);
+  const roleStr = String(userRole || '').toLowerCase();
+  const isStaffOrAdmin =
+    roleStr !== '' &&
+    roleStr !== 'user' &&
+    roleStr !== 'guest';
+
   if (!isStaffOrAdmin) {
     if (!userId) {
       throw new AppError('Vui lòng đăng nhập để xem thông tin đơn hàng này', 401);
@@ -1666,12 +1672,16 @@ const getAllOrders = async (query = {}) => {
 /**
  * 7. LẤY TRẠNG THÁI NHANH ĐƠN HÀNG (ORDER STATUS)
  */
-const getOrderStatus = async (orderId, userId = null) => {
+const getOrderStatus = async (orderId, userId = null, userRole = 'user') => {
   const order = await Order.findById(orderId).lean();
   if (!order) throw new AppError('Không tìm thấy đơn hàng', 404);
 
-  if (userId && order.userId && order.userId.toString() !== userId.toString()) {
-    throw new AppError('Bạn không có quyền xem trạng thái đơn hàng này', 403);
+  const roleStr = String(userRole || '').toLowerCase();
+  const isStaffOrAdmin = roleStr !== '' && roleStr !== 'user' && roleStr !== 'guest';
+  if (!isStaffOrAdmin) {
+    if (!userId || !order.userId || order.userId.toString() !== userId.toString()) {
+      throw new AppError('Bạn không có quyền xem trạng thái đơn hàng này', 403);
+    }
   }
 
   return {
@@ -1688,12 +1698,17 @@ const getOrderStatus = async (orderId, userId = null) => {
   };
 };
 
+const getOrderByIdForAdmin = async (orderIdOrCode) => {
+  return getOrderById(orderIdOrCode, null, 'administrator');
+};
+
 module.exports = {
   previewOrder,
   createOrderCOD,
   cancelOrder,
   updateOrderStatus,
   getOrderById,
+  getOrderByIdForAdmin,
   getOrderStatus,
   getMyOrders,
   getAllOrders,

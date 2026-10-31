@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const orderCtrl = require('../controllers/order.controller');
-const { protect, authorize, optionalAuth } = require('../middleware/auth.middleware');
+const { protect, optionalAuth } = require('../middleware/auth.middleware');
+const { requirePermission } = require('../middleware/permission.middleware');
 
 // 0. Kiểm tra đơn hàng trước khi đặt (Preview Order)
 router.post('/preview', protect, orderCtrl.previewOrder);
@@ -14,12 +15,13 @@ router.post('/checkout-cod', protect, orderCtrl.checkoutCOD);
 router.get('/', protect, orderCtrl.getMyOrders);
 router.get('/my-orders', protect, orderCtrl.getMyOrders);
 
-// 3. Admin: Lấy danh sách toàn bộ đơn hàng
-router.get('/admin/all', protect, authorize('admin'), orderCtrl.getAllOrders);
-router.get('/admin/pending-count', protect, authorize('admin'), orderCtrl.getPendingOrdersCount);
+// 3. Admin: Quản trị danh sách & chi tiết đơn hàng
+router.get('/admin/all', protect, requirePermission(['order.view', 'order.manage']), orderCtrl.getAllOrders);
+router.get('/admin/pending-count', protect, requirePermission(['order.view', 'order.manage']), orderCtrl.getPendingOrdersCount);
+router.get('/admin/:id', protect, requirePermission(['order.view', 'order.manage']), orderCtrl.getOrderByIdForAdmin);
 
 // 4. Admin: Cập nhật trạng thái đơn hàng (CONFIRMED -> SHIPPING -> DELIVERED -> RETURNED)
-router.patch('/admin/:id/status', protect, authorize('admin'), orderCtrl.updateOrderStatus);
+router.patch('/admin/:id/status', protect, requirePermission('order.manage'), orderCtrl.updateOrderStatus);
 
 // 5. Kiểm tra trạng thái đơn hàng nhanh (GET /:id/status)
 router.get('/:id/status', protect, orderCtrl.getOrderStatus);

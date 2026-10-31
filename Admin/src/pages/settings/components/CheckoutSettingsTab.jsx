@@ -107,11 +107,10 @@ export default function CheckoutSettingsTab({ initialData, onRefresh }) {
 
   return (
     <form onSubmit={handleSave} className="space-y-6 max-w-[880px] pb-12">
-      {/* SAPO TOP BAR: CHỈNH SỬA CHƯA ĐƯỢC LƯU + NÚT HỦY & LƯU */}
-      <div className="flex items-center justify-between pb-1 border-b border-[#f4f6f8] dark:border-border">
-        <div className="text-[13px] text-[#637381] dark:text-muted-foreground">
+      <div className="flex items-center justify-between pb-1 border-b border-border">
+        <div className="text-[13px] text-muted-foreground">
           {isDirty ? (
-            <span className="text-[#e29000] dark:text-amber-400 font-medium animate-pulse">● Chỉnh sửa chưa được lưu</span>
+            <span className="text-amber-600 dark:text-amber-400 font-medium">● Chỉnh sửa chưa được lưu</span>
           ) : (
             <span>Cấu hình trang thanh toán</span>
           )}

@@ -201,17 +201,15 @@ export default function ConnectShippingModal({ isOpen, onClose, provider, onSucc
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[560px] p-0 bg-white dark:bg-card rounded-[6px] border border-[#dfe3e8] dark:border-border shadow-2xl overflow-hidden">
-        {/* MODAL HEADER */}
-        <div className="p-6 pb-4 border-b border-[#dfe3e8] dark:border-border">
-          <DialogTitle className="text-base font-semibold text-[#212b36] dark:text-foreground mb-3">
+      <DialogContent className="max-w-[560px] p-0 bg-card rounded-[6px] border border-border shadow-sm overflow-hidden">
+        <div className="p-6 pb-4 border-b border-border">
+          <DialogTitle className="text-base font-semibold text-foreground mb-3">
             Kết nối đối tác
           </DialogTitle>
 
-          {/* Logo Shop ⇄ Hãng (Chuẩn Client Header) */}
-          <div className="flex items-center justify-center gap-6 py-2 bg-[#fafbfb] dark:bg-muted/40 rounded-[6px] border border-[#f4f6f8] dark:border-border">
+          <div className="flex items-center justify-center gap-6 py-2 bg-muted/40 rounded-[6px] border border-border">
             <ShopLogo className="h-6" />
-            <span className="text-[#919eab] font-mono text-base font-bold">⇄</span>
+            <span className="text-muted-foreground font-mono text-base font-bold">⇄</span>
             <div className="min-h-[36px] flex items-center bg-white dark:bg-white/95 rounded-[6px] px-2 py-0.5">
               <CarrierLogo code={code} />
             </div>

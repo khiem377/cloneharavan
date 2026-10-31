@@ -77,7 +77,11 @@ export default function CustomerTable({
             {isColumnVisible('address') && <TableHead>Địa chỉ mặc định</TableHead>}
             {isColumnVisible('createdAt') && <TableHead>Ngày tham gia</TableHead>}
             {isColumnVisible('status') && <TableHead>Trạng thái</TableHead>}
-            {isColumnVisible('actions') && <TableHead className="text-right w-24">Thao tác</TableHead>}
+            {isColumnVisible('actions') && (
+              <TableHead className="text-right w-24 sticky right-0 z-20 bg-muted/95 dark:bg-card shadow-[-6px_0_10px_-4px_rgba(0,0,0,0.08)] border-l border-border/70">
+                Thao tác
+              </TableHead>
+            )}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -97,7 +101,7 @@ export default function CustomerTable({
               return (
                 <TableRow
                   key={user._id}
-                  className={`transition-colors hover:bg-muted/40 ${
+                  className={`group transition-colors hover:bg-muted/40 ${
                     isSelected ? 'bg-primary/5 ring-1 ring-inset ring-primary/30' : ''
                   }`}
                 >
@@ -269,7 +273,7 @@ export default function CustomerTable({
 
                   {/* Actions */}
                   {isColumnVisible('actions') && (
-                    <TableCell className="px-3 py-2 text-right">
+                    <TableCell className="px-3 py-2 text-right sticky right-0 z-10 bg-background group-hover:bg-muted/70 shadow-[-6px_0_10px_-4px_rgba(0,0,0,0.08)] border-l border-border/70">
                       <div className="flex items-center justify-end gap-1">
                         <Button
                           variant="ghost"

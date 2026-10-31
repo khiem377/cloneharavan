@@ -83,7 +83,7 @@ export default function AddressApiSelect({
               id: w.id,
               name: w.name,
               code: w.id,
-              districtName: w.district?.name || w.name,
+              districtName: w.district?.name || '',
               oldName:
                 Array.isArray(w.old_wards) && w.old_wards.length > 0
                   ? w.old_wards.map((ow) => ow.name).join(', ')
@@ -287,9 +287,8 @@ export default function AddressApiSelect({
           />
         </button>
 
-        {/* HOVER TOOLTIP KHI CÓ ĐỊA GIỚI CŨ HOẶC TEXT BỊ TRUNCATE */}
         {isHovered && !isOpen && fullDisplayText && (isOverflowing || currentItem?.oldName) && (
-          <div className="absolute bottom-full left-0 mb-1.5 z-60 px-3 py-1.5 text-[12px] leading-snug rounded-[6px] bg-[#212b36] dark:bg-popover text-white dark:text-popover-foreground border border-slate-700 dark:border-border shadow-xl pointer-events-none max-w-sm sm:max-w-md break-words animate-in fade-in-50 zoom-in-95 duration-100">
+          <div className="absolute bottom-full left-0 mb-1.5 z-60 px-3 py-1.5 text-[12px] leading-snug rounded-[6px] bg-[#212b36] dark:bg-popover text-white dark:text-popover-foreground border border-slate-700 dark:border-border shadow-sm pointer-events-none max-w-sm sm:max-w-md break-words animate-in fade-in-50 zoom-in-95 duration-100">
             <div className="font-medium text-white dark:text-foreground">{value}</div>
             {currentItem?.oldName && (
               <div className="text-[11.5px] text-slate-300 dark:text-muted-foreground mt-0.5">
@@ -300,9 +299,8 @@ export default function AddressApiSelect({
         )}
       </div>
 
-      {/* DROPDOWN MENU PHONG CÁCH GHTK / SAPO QUA LIVE CARRIER API */}
       {isOpen && (
-        <div className="absolute z-50 left-0 right-0 mt-1 bg-white dark:bg-card border border-[#dfe3e8] dark:border-border rounded-[6px] shadow-lg overflow-hidden animate-in fade-in-50 zoom-in-95 duration-100">
+        <div className="absolute z-50 left-0 right-0 mt-1 bg-card border border-border rounded-[6px] shadow-sm overflow-hidden animate-in fade-in-50 zoom-in-95 duration-100">
           {/* Ô TÌM KIẾM 'Nhập từ khóa' */}
           <div className="p-2 border-b border-[#dfe3e8] dark:border-border bg-[#fafbfb] dark:bg-muted/30 relative">
             <Search className="w-3.5 h-3.5 text-[#919eab] dark:text-muted-foreground absolute left-4.5 top-4.5 pointer-events-none" />

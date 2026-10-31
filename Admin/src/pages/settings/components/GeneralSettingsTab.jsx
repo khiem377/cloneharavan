@@ -65,13 +65,22 @@ export default function GeneralSettingsTab({ initialData, onRefresh }) {
     try {
       setSaving(true);
       const addr = formData.storeInfo?.address || {};
-      const addressParts = [
+      const rawParts = [
         addr.detailNumber,
         addr.street,
         addr.ward,
         addr.district,
         addr.province,
       ].map((s) => (s || '').trim()).filter(Boolean);
+      const seen = new Set();
+      const addressParts = [];
+      for (const p of rawParts) {
+        const key = p.toLowerCase();
+        if (!seen.has(key)) {
+          seen.add(key);
+          addressParts.push(p);
+        }
+      }
 
       const payloadToSend = {
         ...formData,

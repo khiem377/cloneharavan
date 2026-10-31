@@ -171,7 +171,7 @@ export default function ShippingProvidersTab() {
 
                       {/* Dropdown menu */}
                       {activeMenu === carrier.code && (
-                        <div className="absolute right-0 top-8 w-44 bg-white dark:bg-card border border-[#dfe3e8] dark:border-border rounded-[6px] shadow-lg py-1 z-30 text-[13px] text-[#212b36] dark:text-foreground">
+                        <div className="absolute right-0 top-8 w-44 bg-white dark:bg-card border border-[#dfe3e8] dark:border-border rounded-[6px] shadow-sm py-1 z-30 text-[13px] text-[#212b36] dark:text-foreground">
                           {!carrier.isDefault && (
                             <button
                               type="button"

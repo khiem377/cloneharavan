@@ -1,12 +1,16 @@
 import { Link } from 'react-router-dom';
 import { ChevronRightIcon } from '@/components/ui/Icons';
+import { DashTopProductsSignatureIcon } from '@/components/ui/SignatureIcons';
 
 export default function DashboardTopProducts({ topProducts = [] }) {
   return (
     <div className="border border-border bg-card rounded-[6px] p-4 shadow-2xs">
       <div className="flex items-center justify-between pb-3 border-b border-border mb-3">
         <div>
-          <h2 className="text-sm font-semibold text-foreground">Sản phẩm xem nhiều nhất</h2>
+          <h2 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+            <DashTopProductsSignatureIcon size={18} className="text-indigo-600" />
+            <span>Sản phẩm xem nhiều nhất</span>
+          </h2>
           <p className="text-[11px] text-muted-foreground mt-0.5">Xếp hạng theo mức độ quan tâm của khách hàng</p>
         </div>
         <Link

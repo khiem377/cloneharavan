@@ -7,9 +7,8 @@ export const orderService = {
     return res.data;
   },
 
-  // Lấy chi tiết đơn hàng theo ID
   getOrderById: async (id) => {
-    const res = await api.get(`/orders/${id}`);
+    const res = await api.get(`/orders/admin/${id}`);
     return res.data;
   },
 
