@@ -88,7 +88,7 @@ const handleCarrierWebhook = catchAsync(async (req, res) => {
 
 // 10. Tra cứu vận đơn theo mã đơn hàng
 const getShipmentByOrderCode = catchAsync(async (req, res) => {
-  const result = await ShipmentService.getShipmentByOrderCode(req.params.orderCode);
+  const result = await ShipmentService.getShipmentByOrderCode(req.params.orderCode, req.user);
   res.status(200).json({
     success: true,
     data: result,

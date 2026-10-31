@@ -179,7 +179,9 @@ export default function ShipmentsListPage() {
                 <TableHead className="text-xs font-semibold py-2.5">Đối tác</TableHead>
                 <TableHead className="text-xs font-semibold py-2.5">Người nhận</TableHead>
                 <TableHead className="text-xs font-semibold py-2.5">Kho lấy hàng</TableHead>
-                <TableHead className="text-xs font-semibold py-2.5 text-center w-20">Thao tác</TableHead>
+                <TableHead className="text-xs font-semibold py-2.5 text-center w-28 sticky right-0 z-20 bg-muted/95 dark:bg-card shadow-[-6px_0_10px_-4px_rgba(0,0,0,0.08)] border-l border-border/70">
+                  Thao tác
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -195,7 +197,9 @@ export default function ShipmentsListPage() {
                     <TableCell><Skeleton className="h-4 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-28" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                    <TableCell className="text-center"><Skeleton className="h-7 w-14 mx-auto" /></TableCell>
+                    <TableCell className="text-center sticky right-0 z-10 bg-background shadow-[-6px_0_10px_-4px_rgba(0,0,0,0.08)] border-l border-border/70">
+                      <Skeleton className="h-7 w-14 mx-auto" />
+                    </TableCell>
                   </TableRow>
                 ))
               ) : shipments.length === 0 ? (
@@ -206,7 +210,7 @@ export default function ShipmentsListPage() {
                 </TableRow>
               ) : (
                 shipments.map((s) => (
-                  <TableRow key={s._id} className="hover:bg-muted/30 transition-colors">
+                  <TableRow key={s._id} className="group hover:bg-muted/30 transition-colors">
                     <TableCell className="py-2.5 font-mono text-xs font-medium text-primary hover:underline cursor-pointer" onClick={() => setSelectedShipment(s)}>
                       {s.shipmentCode}
                     </TableCell>
@@ -231,7 +235,7 @@ export default function ShipmentsListPage() {
                       <span className="text-[11px] text-muted-foreground font-mono">{s.receiverInfo?.phone}</span>
                     </TableCell>
                     <TableCell className="py-2.5 text-xs text-muted-foreground truncate max-w-[120px]">{s.warehouseName || 'Cửa hàng chính'}</TableCell>
-                    <TableCell className="py-2.5 text-center">
+                    <TableCell className="py-2.5 text-center sticky right-0 z-10 bg-background group-hover:bg-muted/70 shadow-[-6px_0_10px_-4px_rgba(0,0,0,0.08)] border-l border-border/70">
                       <div className="flex items-center justify-center gap-1">
                         <Button
                           variant="ghost"

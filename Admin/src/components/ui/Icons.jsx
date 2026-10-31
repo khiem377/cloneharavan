@@ -914,7 +914,7 @@ export const DashProductIcon = ({ size = 26, className = '', ...p }) => (
 export const DashUserIcon = ({ size = 26, className = '', ...p }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} {...p}>
     {/* Outer biometric hex shield aura */}
-    <path d="M12 2L20 6.5V14.5L12 22L4 14.5V6.5L12 2Z" fill="currentColor" opacity="0.08" stroke="currentColor" strokeWidth="1.4" strokeDasharray="3 2" opacity="0.4" strokeLinejoin="round" />
+    <path d="M12 2L20 6.5V14.5L12 22L4 14.5V6.5L12 2Z" fill="currentColor" fillOpacity="0.08" stroke="currentColor" strokeWidth="1.4" strokeDasharray="3 2" strokeOpacity="0.4" strokeLinejoin="round" />
     {/* Secondary member avatar background */}
     <circle cx="16.8" cy="7.2" r="2.4" fill="currentColor" opacity="0.25" stroke="currentColor" strokeWidth="1.2" />
     <path d="M15.5 13.5C17.2 13.5 19.5 14.5 20.2 16.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" opacity="0.5" />
@@ -2005,7 +2005,135 @@ export const FolderGroupIcon = (p) => (
   </Ic>
 );
 
-// Re-export all standard Lucide icons for compatibility across pages
+// ═══════════════════════════════════════════════════════════════
+//  SHIPPING & LOGISTICS (CUSTOM DUAL-TONE SVG ICONS)
+// ═══════════════════════════════════════════════════════════════
+
+/** ShippingTruckCustomIcon — Logistics Delivery Truck with Cargo Bay */
+export const ShippingTruckCustomIcon = (p) => (
+  <Ic {...p}>
+    <path
+      d="M1 5h14v10H1z"
+      fill="currentColor"
+      opacity="0.14"
+      strokeWidth="0"
+    />
+    <path d="M1 5h14v10H1z" />
+    <path d="M15 8h4.2a1 1 0 0 1 .8.4l2.5 3.3a1 1 0 0 1 .2.6V15h-7.7V8z" />
+    <circle cx="5.5" cy="17.5" r="2.5" fill="currentColor" opacity="0.2" />
+    <circle cx="5.5" cy="17.5" r="2.5" />
+    <circle cx="17.5" cy="17.5" r="2.5" fill="currentColor" opacity="0.2" />
+    <circle cx="17.5" cy="17.5" r="2.5" />
+    <line x1="8" y1="17.5" x2="15" y2="17.5" />
+    <line x1="1" y1="15" x2="3" y2="15" />
+    <path d="M5 8.5h6M5 11.5h4" strokeWidth="1.4" opacity="0.6" />
+  </Ic>
+);
+
+/** ShippingBoxCustomIcon — Sealed Parcel Carton with Shipping Slip */
+export const ShippingBoxCustomIcon = (p) => (
+  <Ic {...p}>
+    <path
+      d="M3 7.5L12 3l9 4.5v9L12 21l-9-4.5v-9z"
+      fill="currentColor"
+      opacity="0.14"
+      strokeWidth="0"
+    />
+    <path d="M3 7.5L12 3l9 4.5v9L12 21l-9-4.5v-9z" />
+    <path d="M12 3v18" />
+    <path d="M3 7.5l9 4.5 9-4.5" />
+    <path d="M7.5 14.5l3 1.5M7.5 12l2 1" strokeWidth="1.4" opacity="0.7" />
+  </Ic>
+);
+
+/** ShippingCodMoneyCustomIcon — COD Cash on Delivery & Currency Coin */
+export const ShippingCodMoneyCustomIcon = (p) => (
+  <Ic {...p}>
+    <rect
+      x="2"
+      y="5"
+      width="16"
+      height="11"
+      rx="2"
+      fill="currentColor"
+      opacity="0.14"
+      strokeWidth="0"
+    />
+    <rect x="2" y="5" width="16" height="11" rx="2" />
+    <circle cx="10" cy="10.5" r="2.5" />
+    <circle cx="17" cy="16" r="4.5" fill="currentColor" opacity="0.25" strokeWidth="0" />
+    <circle cx="17" cy="16" r="4.5" />
+    <path d="M15.5 16h3M17 14.5v3" strokeWidth="1.5" />
+  </Ic>
+);
+
+/** ShippingAlertCustomIcon — Shipping Exception / Failed Delivery Warning */
+export const ShippingAlertCustomIcon = (p) => (
+  <Ic {...p}>
+    <path
+      d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
+      fill="currentColor"
+      opacity="0.14"
+      strokeWidth="0"
+    />
+    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+    <line x1="12" y1="9" x2="12" y2="13" strokeWidth="1.9" />
+    <circle cx="12" cy="17" r="1.1" fill="currentColor" strokeWidth="0" />
+  </Ic>
+);
+
+/** ShippingSuccessRateCustomIcon — Completed Delivery Target Badge */
+export const ShippingSuccessRateCustomIcon = (p) => (
+  <Ic {...p}>
+    <circle cx="12" cy="12" r="9" fill="currentColor" opacity="0.14" strokeWidth="0" />
+    <circle cx="12" cy="12" r="9" />
+    <path d="M8 12l3 3 5-6" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+  </Ic>
+);
+
+/** ShippingReconcileCustomIcon — Financial COD Balance & Ledger Sheet */
+export const ShippingReconcileCustomIcon = (p) => (
+  <Ic {...p}>
+    <path
+      d="M4 4v16a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V8.5L15.5 4H5a1 1 0 0 0-1 1z"
+      fill="currentColor"
+      opacity="0.14"
+      strokeWidth="0"
+    />
+    <path d="M4 4v16a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V8.5L15.5 4H5a1 1 0 0 0-1 1z" />
+    <path d="M15 4v5h5" />
+    <line x1="8" y1="13" x2="16" y2="13" strokeWidth="1.5" />
+    <line x1="8" y1="17" x2="13" y2="17" strokeWidth="1.5" />
+    <path d="M8 9h3" strokeWidth="1.5" />
+  </Ic>
+);
+
+/** ShippingCarrierCustomIcon — Shipping Carrier / Fulfillment Hub */
+export const ShippingCarrierCustomIcon = (p) => (
+  <Ic {...p}>
+    <rect x="3" y="4" width="18" height="16" rx="2" fill="currentColor" opacity="0.14" strokeWidth="0" />
+    <rect x="3" y="4" width="18" height="16" rx="2" />
+    <path d="M3 10h18" />
+    <path d="M10 4v16" />
+    <circle cx="6.5" cy="7" r="1" fill="currentColor" strokeWidth="0" />
+    <circle cx="14" cy="15" r="2" />
+    <path d="M16 15l2 2" strokeWidth="1.5" />
+  </Ic>
+);
+
+/** ShippingRouteCustomIcon — Waypoint Trajectory & Trip Milestone */
+export const ShippingRouteCustomIcon = (p) => (
+  <Ic {...p}>
+    <circle cx="5" cy="6" r="2.5" fill="currentColor" opacity="0.2" />
+    <circle cx="5" cy="6" r="2.5" />
+    <circle cx="19" cy="18" r="2.5" fill="currentColor" opacity="0.2" />
+    <circle cx="19" cy="18" r="2.5" />
+    <path d="M5 8.5v3a4 4 0 0 0 4 4h6a4 4 0 0 1 4 4v-1" strokeDasharray="3 3" />
+    <path d="M12 11l2 2-2 2" strokeWidth="1.4" />
+  </Ic>
+);
+
+export * from '@/pages/staffs/components/RoleCustomIcons';
 export * from 'lucide-react';
 
 

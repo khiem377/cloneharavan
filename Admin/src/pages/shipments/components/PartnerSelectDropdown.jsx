@@ -42,7 +42,7 @@ export default function PartnerSelectDropdown({
       </button>
 
       {isOpen && (
-        <div className="absolute left-0 top-[calc(100%+4px)] z-50 w-full bg-white dark:bg-card border border-[#dfe3e8] dark:border-border rounded-[6px] shadow-lg py-1 text-[12.5px]">
+        <div className="absolute left-0 top-[calc(100%+4px)] z-50 w-full bg-white dark:bg-card border border-[#dfe3e8] dark:border-border rounded-[6px] shadow-sm py-1 text-[12.5px]">
           {/* Search box */}
           <div className="px-2 py-1.5 border-b border-[#dfe3e8] dark:border-border">
             <div className="relative">

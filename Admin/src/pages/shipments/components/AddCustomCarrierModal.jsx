@@ -34,11 +34,10 @@ export default function AddCustomCarrierModal({ isOpen, onClose, onAdd }) {
 
   return (
     <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white dark:bg-card border border-[#dfe3e8] dark:border-border rounded-[6px] shadow-xl max-w-xl w-full p-6 space-y-4">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-[#dfe3e8] dark:border-border pb-3">
-          <h4 className="text-[15px] font-semibold text-[#212b36] dark:text-foreground">Thêm mới đối tác tự liên hệ</h4>
-          <button type="button" onClick={onClose} className="p-1 text-[#637381] hover:text-[#212b36] cursor-pointer">
+      <div className="bg-card border border-border rounded-[6px] shadow-sm max-w-xl w-full p-6 space-y-4">
+        <div className="flex items-center justify-between border-b border-border pb-3">
+          <h4 className="text-sm font-semibold text-foreground">Thêm mới đối tác tự liên hệ</h4>
+          <button type="button" onClick={onClose} className="p-1 rounded-[6px] text-muted-foreground hover:bg-muted hover:text-foreground active:scale-[0.98] transition-all cursor-pointer">
             <X className="w-4 h-4" />
           </button>
         </div>

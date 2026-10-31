@@ -1,23 +1,13 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { useState, useEffect, useRef, Suspense } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import AppSidebar from './Sidebar';
+import Topbar from './Topbar';
 import SessionStreamListener from '@/components/common/SessionStreamListener';
-import ThemeToggle from '@/components/ui/ThemeToggle';
-import NotificationDropdown from './NotificationDropdown';
-import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
-import { Separator } from '@/components/ui/separator';
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb';
-import useAuthStore from '@/store/authStore';
-import { authService } from '@/services/auth.service';
-import { toast } from '@/providers/ToastProvider';
-import { cn } from '@/lib/utils';
+import ErrorBoundary from '@/components/common/ErrorBoundary';
+import CommandPalette from '@/components/command/CommandPalette';
+import AdminTourGuide from '@/components/tour/AdminTourGuide';
+import ChangePasswordModal from './modals/ChangePasswordModal';
+import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 
 const PAGE_TITLES = {
   '/notifications':    'Thông báo',
@@ -31,8 +21,8 @@ const PAGE_TITLES = {
   '/products/combos':  'Combo sản phẩm',
   '/orders':           'Quản lý đơn hàng',
   '/orders/':          'Chi tiết đơn hàng',
-  '/shipments':        'Danh sách vận đơn',
   '/shipments/overview': 'Tổng quan vận chuyển',
+  '/shipments':        'Danh sách vận đơn',
   '/customers':        'Danh sách khách hàng',
   '/customers/groups': 'Nhóm khách hàng',
   '/staffs':           'Nhân viên & Quản trị',
@@ -65,167 +55,33 @@ const PAGE_TITLES = {
   '/profile':          'Hồ sơ tài khoản & Quản trị',
 };
 
-// ── Change Password Modal (Flat, 1px border, 6px radius) ───────────────────────
-function ChangePasswordModal({ onClose }) {
-  const [form, setForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
-  const [show, setShow] = useState({ current: false, next: false, confirm: false });
-  const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState({});
-
-  const set = (key, val) => {
-    setForm((p) => ({ ...p, [key]: val }));
-    setErrors((p) => ({ ...p, [key]: '' }));
-  };
-
-  const validate = () => {
-    const e = {};
-    if (!form.currentPassword) e.currentPassword = 'Vui lòng nhập mật khẩu hiện tại';
-    if (form.newPassword.length < 6) e.newPassword = 'Tối thiểu 6 ký tự';
-    if (form.newPassword !== form.confirmPassword) e.confirmPassword = 'Mật khẩu xác nhận không khớp';
-    return e;
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const errs = validate();
-    if (Object.keys(errs).length) {
-      setErrors(errs);
-      return;
-    }
-    setLoading(true);
-    try {
-      await authService.changePassword({
-        currentPassword: form.currentPassword,
-        newPassword: form.newPassword,
-      });
-      toast.success('Đổi mật khẩu thành công');
-      onClose();
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Đổi mật khẩu thất bại');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 antialiased">
-      <div className="w-full max-w-md rounded-[6px] border border-border bg-card p-6 shadow-sm text-card-foreground">
-        <div className="flex items-center justify-between border-b border-border pb-3 mb-4">
-          <div className="flex items-center gap-2">
-            <KeyRound className="size-4 text-primary" />
-            <h3 className="text-sm font-semibold text-foreground">Đổi mật khẩu tài khoản</h3>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="size-7 flex items-center justify-center rounded-[4px] text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-          >
-            <X size={16} />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3.5">
-          {[
-            { key: 'currentPassword', label: 'Mật khẩu hiện tại', showKey: 'current' },
-            { key: 'newPassword', label: 'Mật khẩu mới', showKey: 'next' },
-            { key: 'confirmPassword', label: 'Xác nhận mật khẩu mới', showKey: 'confirm' },
-          ].map(({ key, label, showKey }) => (
-            <div className="flex flex-col gap-1.5" key={key}>
-              <label className="text-xs font-semibold text-foreground">{label}</label>
-              <div className="relative">
-                <input
-                  type={show[showKey] ? 'text' : 'password'}
-                  className={cn(
-                    'h-9 w-full rounded-[6px] border border-input bg-background pl-3 pr-9 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-ring focus:ring-1 focus:ring-ring',
-                    errors[key] && 'border-destructive focus:border-destructive focus:ring-destructive'
-                  )}
-                  value={form[key]}
-                  onChange={(e) => set(key, e.target.value)}
-                  placeholder={`Nhập ${label.toLowerCase()}`}
-                />
-                <button
-                  type="button"
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  onClick={() => setShow((p) => ({ ...p, [showKey]: !p[showKey] }))}
-                >
-                  {show[showKey] ? <EyeOff size={15} /> : <Eye size={15} />}
-                </button>
-              </div>
-              {errors[key] && <span className="text-[11px] font-medium text-destructive">{errors[key]}</span>}
-            </div>
-          ))}
-
-          <div className="mt-2 flex items-center justify-end gap-2 border-t border-border pt-4">
-            <button
-              type="button"
-              className="h-9 px-3.5 rounded-[6px] border border-border text-xs font-semibold text-foreground hover:bg-accent transition-colors active:scale-[0.98]"
-              onClick={onClose}
-              disabled={loading}
-            >
-              Hủy
-            </button>
-            <button
-              type="submit"
-              className="h-9 px-4 rounded-[6px] bg-primary text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-colors flex items-center gap-1.5 active:scale-[0.98] disabled:opacity-50"
-              disabled={loading}
-            >
-              {loading && <Loader2 size={14} className="animate-spin" />}
-              <span>Lưu thay đổi</span>
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-
-// ── Topbar (Clean, Flat, Border-b 1px, 6px controls) ──────────────────────────
-function Topbar({ title }) {
-  return (
-    <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-background px-4">
-      <div className="flex items-center gap-2.5">
-        <SidebarTrigger className="-ml-1 size-8 rounded-[6px] border border-border bg-card hover:bg-accent text-foreground flex items-center justify-center transition-colors active:scale-[0.98]" />
-        <Separator orientation="vertical" className="h-4" />
-        <Breadcrumb>
-          <BreadcrumbList className="text-xs font-medium">
-            <BreadcrumbItem className="hidden md:block">
-              <BreadcrumbLink href="/dashboard" className="text-muted-foreground hover:text-foreground">
-                Quản trị
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator className="hidden md:block" />
-            <BreadcrumbItem>
-              <BreadcrumbPage className="font-semibold text-foreground">{title}</BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-      </div>
-
-      <div className="flex items-center gap-2">
-        {/* Studio-grade Smooth Theme Toggle Button */}
-        <ThemeToggle />
-
-        {/* Notification Bell Dropdown */}
-        <NotificationDropdown />
-      </div>
-    </header>
-  );
-}
-
-// ── AdminLayout ───────────────────────────────────────────────────────────────
 export default function AdminLayout() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const navigateRef = useRef(navigate);
   navigateRef.current = navigate;
-  const [modal, setModal] = useState(null); // 'profile' | 'changepass'
+
+  const [modal, setModal] = useState(null); // 'changepass'
+  const [commandOpen, setCommandOpen] = useState(false);
+  const [tourOpen, setTourOpen] = useState(false);
 
   useEffect(() => {
     window.__navigate__ = (...args) => navigateRef.current(...args);
     return () => {
       delete window.__navigate__;
     };
+  }, []);
+
+  // Global Keyboard Listener for Ctrl + K / Cmd + K
+  useEffect(() => {
+    const handleGlobalKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setCommandOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
   }, []);
 
   const title =
@@ -236,43 +92,65 @@ export default function AdminLayout() {
   return (
     <SidebarProvider defaultOpen={true}>
       <SessionStreamListener />
-      <AppSidebar
-        onProfile={() => navigate('/profile')}
-        onChangePass={() => setModal('changepass')}
-      />
+      <div data-tour="sidebar">
+        <AppSidebar
+          onProfile={() => navigate('/profile')}
+          onChangePass={() => setModal('changepass')}
+        />
+      </div>
+
       <SidebarInset className="min-h-[100dvh] max-h-[100dvh] overflow-hidden flex flex-col bg-background">
-        <Topbar title={title} />
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-background">
-          <Suspense
-            fallback={
-              <div className="space-y-6 max-w-7xl mx-auto animate-pulse select-none">
-                <div className="space-y-2">
-                  <div className="h-6 w-48 rounded-[4px] bg-muted/70" />
-                  <div className="h-3.5 w-80 rounded-[4px] bg-muted/50" />
-                </div>
-                <div className="rounded-[6px] border border-border bg-card p-6 space-y-4">
-                  <div className="flex items-center justify-between pb-3 border-b border-border">
-                    <div className="h-4 w-32 rounded-[4px] bg-muted/70" />
-                    <div className="h-8 w-24 rounded-[6px] bg-muted/60" />
+        <Topbar
+          title={title}
+          onOpenCommandPalette={() => setCommandOpen(true)}
+          onStartTour={() => setTourOpen(true)}
+        />
+
+        <main data-tour="workspace" className="flex-1 overflow-y-auto p-4 md:p-6 bg-background">
+          <ErrorBoundary>
+            <Suspense
+              fallback={
+                <div className="space-y-6 max-w-7xl mx-auto animate-pulse select-none">
+                  <div className="space-y-2">
+                    <div className="h-6 w-48 rounded-[4px] bg-muted/70" />
+                    <div className="h-3.5 w-80 rounded-[4px] bg-muted/50" />
                   </div>
-                  <div className="space-y-3 pt-2">
-                    <div className="h-10 w-full rounded-[6px] bg-muted/40" />
-                    <div className="h-10 w-full rounded-[6px] bg-muted/30" />
-                    <div className="h-10 w-full rounded-[6px] bg-muted/40" />
+                  <div className="rounded-[6px] border border-border bg-card p-6 space-y-4">
+                    <div className="flex items-center justify-between pb-3 border-b border-border">
+                      <div className="h-4 w-32 rounded-[4px] bg-muted/70" />
+                      <div className="h-8 w-24 rounded-[6px] bg-muted/60" />
+                    </div>
+                    <div className="space-y-3 pt-2">
+                      <div className="h-10 w-full rounded-[6px] bg-muted/40" />
+                      <div className="h-10 w-full rounded-[6px] bg-muted/30" />
+                      <div className="h-10 w-full rounded-[6px] bg-muted/40" />
+                    </div>
                   </div>
                 </div>
-              </div>
-            }
-          >
-            <Outlet />
-          </Suspense>
+              }
+            >
+              <Outlet />
+            </Suspense>
+          </ErrorBoundary>
         </main>
       </SidebarInset>
 
-      {/* Modals */}
+      {/* Command Palette Spotlight (Ctrl + K) */}
+      <CommandPalette
+        isOpen={commandOpen}
+        onClose={() => setCommandOpen(false)}
+        onChangePass={() => setModal('changepass')}
+        onStartTour={() => setTourOpen(true)}
+      />
+
+      {/* Interactive Mascot Tour Guide */}
+      <AdminTourGuide
+        isOpen={tourOpen}
+        onClose={() => setTourOpen(false)}
+      />
+
+      {/* Change Password Modal */}
       {modal === 'changepass' && <ChangePasswordModal onClose={() => setModal(null)} />}
     </SidebarProvider>
   );
 }
-
-

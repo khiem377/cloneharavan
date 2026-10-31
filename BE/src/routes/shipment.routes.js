@@ -23,19 +23,21 @@ const { requirePermission } = require('../middleware/permission.middleware');
 // Tuyến đường nhận Webhook từ hãng vận chuyển (Công khai, không qua protect JWT)
 router.post('/webhooks/:carrier', handleCarrierWebhook);
 
-// Dev tiện ích: Chạy script fix đơn hàng test & master data sản phẩm
-router.get('/dev-fix-test-orders', async (req, res) => {
+router.use(protect);
+
+// Dev tiện ích: Chạy script fix đơn hàng test & master data sản phẩm (Admin Only)
+router.get('/dev-fix-test-orders', requirePermission('setting.manage'), async (req, res) => {
   try {
     const { runFix } = require('../../scripts/fix_test_orders_products');
     const result = await runFix();
     res.json({ success: true, ...result });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message, stack: err.stack });
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 
-// Dev tiện ích: Đồng bộ lại thông tin khách hàng, sản phẩm và tổng tiền cho các phiếu xuất kho
-router.get('/dev-fix-stock-exports', async (req, res) => {
+// Dev tiện ích: Đồng bộ lại thông tin khách hàng, sản phẩm và tổng tiền cho các phiếu xuất kho (Admin Only)
+router.get('/dev-fix-stock-exports', requirePermission('setting.manage'), async (req, res) => {
   try {
     const StockExport = require('../models/stockExport.model');
     const exportsList = await StockExport.find().sort({ createdAt: -1 }).limit(5).lean();
@@ -44,8 +46,6 @@ router.get('/dev-fix-stock-exports', async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 });
-
-router.use(protect);
 
 // 1. Thống kê tổng quan vận chuyển
 router.get('/overview', requirePermission(['order.view', 'order.manage', 'setting.view']), getOverview);
@@ -57,9 +57,9 @@ router.get('/eligible-orders', requirePermission(['order.view', 'order.manage'])
 router.get('/', requirePermission(['order.view', 'order.manage', 'setting.view']), getShipmentsList);
 
 // 4.0 Tra cứu nhiều vận đơn theo danh sách mã đơn hàng (Admin bảng đơn hàng)
-router.get('/by-orders', getShipmentsByOrderCodes);
+router.get('/by-orders', requirePermission(['order.view', 'order.manage', 'setting.view']), getShipmentsByOrderCodes);
 
-// 4.1 Tra cứu vận đơn theo mã đơn hàng (Khách hàng & hệ thống)
+// 4.1 Tra cứu vận đơn theo mã đơn hàng (Khách hàng sở hữu đơn & Admin hệ thống)
 router.get('/by-order/:orderCode', getShipmentByOrderCode);
 
 // 4.2 Thống kê đối soát tiền COD

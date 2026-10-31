@@ -72,19 +72,18 @@ export default function ShipmentDetailModal({ shipment, isOpen, onClose, onRefre
   const isCancellable = ['ready_to_pick', 'picking'].includes(currentStatus);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="bg-white dark:bg-card border border-[#dfe3e8] dark:border-border rounded-[6px] shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#dfe3e8] dark:border-border">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="bg-card border border-border rounded-[6px] shadow-sm max-w-4xl w-full max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-border">
           <div className="flex items-center gap-2.5">
-            <h3 className="text-[16px] font-bold text-[#212b36] dark:text-foreground font-mono">
+            <h3 className="text-base font-bold text-foreground font-mono">
               {shipment.shipmentCode}
             </h3>
             <select
               value={currentStatus}
               disabled={updatingStatus}
               onChange={(e) => handleUpdateStatus(e.target.value)}
-              className="h-7 px-2 text-[12px] font-medium rounded-[4px] border border-[#b3ddff] bg-[#f0f7ff] text-[#0088ff] dark:bg-primary/10 dark:text-primary dark:border-primary/30 cursor-pointer focus:outline-none"
+              className="h-7 px-2 text-xs font-medium rounded-[6px] border border-primary/30 bg-primary/10 text-primary cursor-pointer focus:outline-none"
               title="Bấm để chuyển trạng thái vận đơn"
             >
               <option value="ready_to_pick">Chờ lấy hàng</option>

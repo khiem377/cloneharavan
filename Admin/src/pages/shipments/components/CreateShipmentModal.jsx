@@ -131,12 +131,11 @@ export default function CreateShipmentModal({ isOpen, onClose, onSuccess, initia
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="bg-white dark:bg-card border border-[#dfe3e8] dark:border-border rounded-[6px] shadow-2xl max-w-3xl w-full max-h-[92vh] flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3 border-b border-[#dfe3e8] dark:border-border">
-          <h3 className="text-[15px] font-semibold text-[#212b36] dark:text-foreground">Tạo vận đơn / Giao hàng</h3>
-          <button type="button" onClick={onClose} className="p-1 text-[#637381] hover:text-[#212b36] cursor-pointer">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="bg-card border border-border rounded-[6px] shadow-sm max-w-3xl w-full max-h-[92vh] flex flex-col">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-border">
+          <h3 className="text-sm font-semibold text-foreground">Tạo vận đơn / Giao hàng</h3>
+          <button type="button" onClick={onClose} className="p-1 rounded-[6px] text-muted-foreground hover:bg-muted hover:text-foreground active:scale-[0.98] cursor-pointer transition-all">
             <X className="w-4 h-4" />
           </button>
         </div>

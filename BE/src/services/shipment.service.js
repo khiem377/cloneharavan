@@ -32,7 +32,10 @@ class ShipmentService {
       if (toDate) query.createdAt.$lte = new Date(toDate);
     }
 
-    const allShipments = await Shipment.find(query).lean();
+    const [allShipments, codStats] = await Promise.all([
+      Shipment.find(query).sort({ createdAt: -1 }).lean(),
+      this.getCODReconciliationStats(),
+    ]);
 
     const initialStats = {
       ready_to_pick: { count: 0, cod: 0 },
@@ -48,12 +51,24 @@ class ShipmentService {
     const carrierStats = {};
     let totalDelivered = 0;
     let totalCompleted = 0;
+    let totalCodAmount = 0;
+    let totalShippingFee = 0;
+    let attentionCount = 0;
 
     allShipments.forEach((s) => {
       const st = s.status || 'ready_to_pick';
+      const cod = s.codAmount || 0;
+      const fee = s.shippingFee || 0;
+      totalCodAmount += cod;
+      totalShippingFee += fee;
+
+      if (['delivery_fail', 'returning', 'cancelled'].includes(st)) {
+        attentionCount += 1;
+      }
+
       if (initialStats[st]) {
         initialStats[st].count += 1;
-        initialStats[st].cod += s.codAmount || 0;
+        initialStats[st].cod += cod;
       }
 
       // Đếm theo đối tác
@@ -63,13 +78,19 @@ class ShipmentService {
           code: cCode,
           name: s.carrierName || cCode.toUpperCase(),
           count: 0,
+          deliveredCount: 0,
+          codAmount: 0,
+          totalFee: 0,
         };
       }
       carrierStats[cCode].count += 1;
+      carrierStats[cCode].codAmount += cod;
+      carrierStats[cCode].totalFee += fee;
 
       if (st === 'delivered') {
         totalDelivered += 1;
         totalCompleted += 1;
+        carrierStats[cCode].deliveredCount += 1;
       } else if (['returned', 'cancelled'].includes(st)) {
         totalCompleted += 1;
       }
@@ -81,7 +102,12 @@ class ShipmentService {
       statusSummary: initialStats,
       carrierDistribution: Object.values(carrierStats),
       totalShipments: allShipments.length,
+      totalCodAmount,
+      totalShippingFee,
+      attentionCount,
       successRate,
+      codStats,
+      recentShipments: allShipments.slice(0, 8),
     };
   }
 
@@ -286,13 +312,26 @@ class ShipmentService {
   /**
    * Tra cứu vận đơn theo mã đơn hàng (Dành cho khách hàng & hệ thống)
    */
-  static async getShipmentByOrderCode(orderCode) {
+  static async getShipmentByOrderCode(orderCode, user = null) {
+    const formattedCode = String(orderCode || '').toUpperCase();
     const shipment = await Shipment.findOne({
-      orderCode: String(orderCode || '').toUpperCase(),
+      orderCode: formattedCode,
       status: { $ne: 'cancelled' },
     }).lean();
 
     if (!shipment) return null;
+
+    // Kiểm tra quyền sở hữu đối với người dùng thông thường
+    if (user) {
+      const roleStr = String(user.role || '').toLowerCase();
+      const isStaffOrAdmin = roleStr !== '' && roleStr !== 'user' && roleStr !== 'guest';
+      if (!isStaffOrAdmin) {
+        const order = await Order.findOne({ orderCode: formattedCode }).select('userId').lean();
+        if (order && order.userId && order.userId.toString() !== user._id.toString()) {
+          throw new AppError('Bạn không có quyền xem thông tin vận chuyển của đơn hàng này', 403);
+        }
+      }
+    }
 
     let trackingUrl = '';
     const code = (shipment.carrierCode || '').toLowerCase();
@@ -1107,10 +1146,26 @@ class ShipmentService {
   }
 
   /**
-   * Xử lý Webhook callback từ hãng vận chuyển
+   * Xử lý Webhook callback từ hãng vận chuyển (kèm xác thực Webhook Token / Secret)
    */
-  static async handleCarrierWebhook(carrier, body, headers) {
-    if (carrier === 'viettelpost') {
+  static async handleCarrierWebhook(carrier, body, headers = {}) {
+    const carrierLower = String(carrier || '').toLowerCase();
+    const token =
+      headers['token'] ||
+      headers['x-token'] ||
+      headers['x-ghn-token'] ||
+      headers['authorization'] ||
+      '';
+
+    if (carrierLower === 'viettelpost') {
+      const configuredToken = process.env.VIETTELPOST_WEBHOOK_TOKEN || process.env.VIETTEL_POST_TOKEN;
+      if (configuredToken && token) {
+        const cleanToken = token.replace(/^Bearer\s+/i, '');
+        if (cleanToken !== configuredToken) {
+          return { status: 401, message: 'Unauthorized: Invalid Viettel Post Webhook Token' };
+        }
+      }
+
       const payloadData = body.DATA || body.data || body;
       const orderNumber = payloadData.ORDER_NUMBER || body.ORDER_NUMBER;
       const statusCode = payloadData.ORDER_STATUS || body.ORDER_STATUS;
@@ -1135,7 +1190,27 @@ class ShipmentService {
       return { status: 200, message: 'OK' };
     }
 
-    if (carrier === 'ghn') {
+    if (carrierLower === 'ghn') {
+      const configuredToken = process.env.GHN_API_TOKEN || process.env.GHN_WEBHOOK_SECRET;
+      let isTokenValid = Boolean(configuredToken && (token === configuredToken || token.replace(/^Bearer\s+/i, '') === configuredToken));
+
+      if (!isTokenValid) {
+        const ghnProvider = await ShippingProvider.findOne({ code: 'ghn' }).select('+encryptedCredentials');
+        if (ghnProvider?.encryptedCredentials) {
+          try {
+            const creds = decryptObject(ghnProvider.encryptedCredentials);
+            if (creds?.token && (creds.token === token || creds.token === token.replace(/^Bearer\s+/i, ''))) {
+              isTokenValid = true;
+            }
+          } catch (_) {}
+        }
+      }
+
+      // Nếu hệ thống đã cấu hình token thì bắt buộc phải đúng
+      if (configuredToken && !isTokenValid) {
+        return { status: 401, message: 'Unauthorized: Invalid GHN Webhook Token' };
+      }
+
       const orderCode = body.OrderCode || body.order_code;
       const status = body.Status || body.status;
       if (!orderCode) {
