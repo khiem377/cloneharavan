@@ -73,7 +73,7 @@ export default function MultiSelectSearch({
       </button>
 
       {open && (
-        <div className="absolute z-50 mt-1 w-full bg-popover border border-border rounded-lg shadow-lg overflow-hidden">
+        <div className="absolute z-50 mt-1 w-full bg-popover border border-border rounded-[6px] shadow-sm overflow-hidden">
           <div className="p-2 border-b border-border">
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
@@ -82,7 +82,7 @@ export default function MultiSelectSearch({
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder="Tìm kiếm..."
-                className="w-full h-8 pl-8 pr-3 rounded-md border border-input bg-background text-xs outline-none focus:border-ring"
+                className="w-full h-8 pl-8 pr-3 rounded-[6px] border border-input bg-background text-xs outline-none focus:border-ring"
               />
             </div>
           </div>

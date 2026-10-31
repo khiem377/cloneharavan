@@ -267,7 +267,7 @@ export default function PromotionDateRangePicker({
 
       {/* Popover Custom Date Picker */}
       {isOpen && (
-        <div className="absolute left-0 top-full mt-1.5 z-50 w-84 sm:w-96 rounded-[6px] border border-border bg-popover text-popover-foreground shadow-lg p-3.5 space-y-3 animate-in fade-in duration-100">
+        <div className="absolute left-0 top-full mt-1.5 z-50 w-84 sm:w-96 rounded-[6px] border border-border bg-popover text-popover-foreground shadow-sm p-3.5 space-y-3 animate-in fade-in duration-100">
           {/* Quick Presets for Future Promotions */}
           <div className="space-y-1.5 border-b border-border pb-2.5">
             <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">

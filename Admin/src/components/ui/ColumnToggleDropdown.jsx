@@ -69,12 +69,12 @@ export default function ColumnToggleDropdown(props) {
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
-        className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-border bg-card px-3 text-xs font-medium text-foreground hover:bg-muted transition-colors cursor-pointer shadow-2xs focus:outline-none focus:ring-2 focus:ring-ring/20"
+        className="inline-flex h-9 items-center justify-center gap-2 rounded-[6px] border border-border bg-card px-3 text-xs font-medium text-foreground hover:bg-muted transition-all cursor-pointer shadow-2xs focus:outline-none focus:ring-2 focus:ring-ring/20 active:scale-[0.98]"
         title="Tuỳ chỉnh hiển thị các cột trong bảng"
       >
         <ColumnsIcon size={14} className="text-primary shrink-0" />
         <span>{buttonText}</span>
-        <span className="ml-0.5 rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+        <span className="ml-0.5 rounded-[4px] bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary font-mono tabular-nums">
           {visibleCount}/{totalCount}
         </span>
       </button>
@@ -84,7 +84,7 @@ export default function ColumnToggleDropdown(props) {
         <div
           className={`absolute ${
             align === 'right' ? 'right-0' : 'left-0'
-          } mt-2 w-64 rounded-xl border border-border bg-card shadow-xl z-50 overflow-hidden animate-in fade-in-50 zoom-in-95 duration-100`}
+          } mt-2 w-64 rounded-[6px] border border-border bg-card shadow-xs z-50 overflow-hidden animate-in fade-in-50 zoom-in-95 duration-100`}
         >
           {/* Header */}
           <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-border bg-muted/30">

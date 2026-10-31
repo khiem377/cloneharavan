@@ -111,7 +111,7 @@ export default function SearchableSelect({
       {isOpen && (
         <div
           className={cn(
-            'absolute left-0 right-0 z-50 min-w-[180px] rounded-[6px] border border-border bg-popover text-popover-foreground shadow-lg overflow-hidden animate-in fade-in-50 duration-100',
+            'absolute left-0 right-0 z-50 min-w-[180px] rounded-[6px] border border-border bg-popover text-popover-foreground shadow-sm overflow-hidden animate-in fade-in-50 duration-100',
             openUpwards ? 'bottom-full mb-1 zoom-in-95 origin-bottom' : 'top-full mt-1 zoom-in-95 origin-top'
           )}
         >

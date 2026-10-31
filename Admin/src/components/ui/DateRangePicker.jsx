@@ -476,7 +476,7 @@ export default function DateRangePicker({
       {/* Popover Dropdown */}
       {isOpen && (
         <div
-          className={`absolute top-full mt-1.5 z-50 rounded-[6px] border border-border bg-card text-card-foreground shadow-lg animate-in fade-in-0 zoom-in-95 duration-100 flex flex-col md:flex-row overflow-hidden ${
+          className={`absolute top-full mt-1.5 z-50 rounded-[6px] border border-border bg-card text-card-foreground shadow-sm animate-in fade-in-0 zoom-in-95 duration-100 flex flex-col md:flex-row overflow-hidden ${
             align === 'right' ? 'right-0' : 'left-0'
           }`}
           style={{ minWidth: '660px', maxWidth: '92vw' }}

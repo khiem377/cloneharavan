@@ -95,7 +95,7 @@ function RenderMarkdown({ text = '' }) {
         if (block.type === 'table') {
           const { headers, rows } = block.data;
           return (
-            <div key={idx} className="my-2 overflow-x-auto rounded-lg border border-border bg-background/80 shadow-sm">
+            <div key={idx} className="my-2 overflow-x-auto rounded-[6px] border border-border bg-background shadow-xs">
               <table className="w-full text-xs text-left border-collapse">
                 <thead className="bg-muted text-foreground font-semibold">
                   <tr>
@@ -253,26 +253,23 @@ export default function ChatbotBubble() {
   return (
     <>
       <style>{waveStyle}</style>
-      {/* Nút bấm mở khung chat */}
       <button
         onClick={() => setOpen(o => !o)}
-        className="fixed bottom-6 right-6 z-[9999] rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 transition-all active:scale-95 flex items-center justify-center"
+        className="fixed bottom-6 right-6 z-[9999] rounded-[6px] bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 transition-all active:scale-[0.98] flex items-center justify-center cursor-pointer"
         title="Trợ lý AI Shop"
-        style={{ width: 54, height: 54 }}
+        style={{ width: 48, height: 48 }}
       >
-        {open ? <X size={22} /> : <BotIcon />}
+        {open ? <X size={20} /> : <BotIcon />}
       </button>
 
-      {/* Cửa sổ Chatbot mở rộng */}
       {open && (
         <div
-          className="fixed bottom-20 right-6 z-[9998] w-[380px] sm:w-[440px] max-w-[calc(100vw-2rem)] rounded-2xl border border-border bg-background shadow-2xl flex flex-col overflow-hidden transition-all"
+          className="fixed bottom-20 right-6 z-[9998] w-[380px] sm:w-[440px] max-w-[calc(100vw-2rem)] rounded-[6px] border border-border bg-background shadow-sm flex flex-col overflow-hidden transition-all"
           style={{ height: 540, maxHeight: '85vh' }}
         >
-          {/* Header */}
           <div className="flex items-center justify-between px-4 py-3.5 bg-primary text-primary-foreground shrink-0">
             <div className="flex items-center gap-2.5">
-              <div className="size-9 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+              <div className="size-8 rounded-[6px] bg-white/20 flex items-center justify-center shrink-0">
                 <BotIcon />
               </div>
               <div>
@@ -282,29 +279,28 @@ export default function ChatbotBubble() {
             </div>
             <button
               onClick={reset}
-              className="p-1.5 rounded-md hover:bg-white/20 transition-colors text-primary-foreground/90 hover:text-primary-foreground"
+              className="p-1.5 rounded-[6px] hover:bg-white/20 active:scale-[0.98] transition-all text-primary-foreground/90 hover:text-primary-foreground cursor-pointer"
               title="Bắt đầu cuộc trò chuyện mới"
             >
               <TrashIcon />
             </button>
           </div>
 
-          {/* Danh sách tin nhắn */}
           <div className="flex-1 overflow-y-auto px-3.5 py-3 space-y-3">
             {messages.map((m, i) => (
               <div key={i} className={`flex gap-2 ${m.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
                 {m.role === 'bot' && (
-                  <div className="size-7 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0 mt-0.5">
+                  <div className="size-7 rounded-[6px] bg-primary/10 text-primary flex items-center justify-center shrink-0 mt-0.5">
                     <BotIcon />
                   </div>
                 )}
                 <div
-                  className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed break-words shadow-sm
+                  className={`max-w-[85%] rounded-[6px] px-3.5 py-2.5 text-sm leading-relaxed break-words shadow-xs
                     ${m.role === 'user'
-                      ? 'bg-primary text-primary-foreground rounded-tr-xs'
+                      ? 'bg-primary text-primary-foreground'
                       : m.error
-                        ? 'bg-destructive/10 text-destructive border border-destructive/20 rounded-tl-xs'
-                        : 'bg-muted/70 border border-border/50 text-foreground rounded-tl-xs'
+                        ? 'bg-destructive/10 text-destructive border border-destructive/20'
+                        : 'bg-muted/70 border border-border text-foreground'
                     }`}
                 >
                   <RenderMarkdown text={m.text || (m.streaming ? '' : '…')} />
@@ -317,13 +313,12 @@ export default function ChatbotBubble() {
               </div>
             ))}
 
-            {/* Indicator khi đang gọi Tool / AI xử lý */}
             {loading && !messages.some(m => m.streaming) && (
               <div className="flex gap-2">
-                <div className="size-7 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <div className="size-7 rounded-[6px] bg-primary/10 text-primary flex items-center justify-center shrink-0">
                   <BotIcon />
                 </div>
-                <div className="bg-muted/70 border border-border/50 rounded-2xl rounded-tl-xs px-4 py-3 flex gap-1.5 items-center">
+                <div className="bg-muted/70 border border-border rounded-[6px] px-4 py-3 flex gap-1.5 items-center">
                   {[0, 150, 300].map(d => (
                     <span
                       key={d}
@@ -338,9 +333,8 @@ export default function ChatbotBubble() {
             <div ref={bottomRef} />
           </div>
 
-          {/* Ô nhập liệu tự động mở rộng (Auto-expanding Textarea) */}
-          <div className="px-3.5 py-3 border-t border-border shrink-0 bg-background/50">
-            <div className="flex items-end gap-2 rounded-xl border border-input bg-background focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/20 transition-all px-3 py-2">
+          <div className="px-3.5 py-3 border-t border-border shrink-0 bg-background">
+            <div className="flex items-end gap-2 rounded-[6px] border border-input bg-background focus-within:border-ring focus-within:ring-1 focus-within:ring-ring transition-all px-3 py-2">
               <textarea
                 ref={inputRef}
                 rows={1}
@@ -356,7 +350,7 @@ export default function ChatbotBubble() {
               <button
                 onClick={send}
                 disabled={!input.trim() || loading}
-                className="size-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 transition-all disabled:opacity-40 disabled:cursor-not-allowed shrink-0 shadow-xs mb-0.5"
+                className="size-8 rounded-[6px] bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed shrink-0 shadow-xs mb-0.5 cursor-pointer"
               >
                 {loading ? <Loader2 size={14} className="animate-spin" /> : <SendIcon />}
               </button>

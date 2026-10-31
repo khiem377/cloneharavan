@@ -44,7 +44,7 @@ export default function RichTextEditor({ value, onChange }) {
   };
 
   return (
-    <div className="rich-editor-wrap border border-border rounded-lg overflow-hidden shadow-2xs">
+    <div className="rich-editor-wrap border border-border rounded-[6px] overflow-hidden shadow-2xs">
       <input
         ref={fileInputRef}
         type="file"

@@ -162,7 +162,7 @@ const Sidebar = React.forwardRef(
             data-sidebar="sidebar"
             data-mobile="true"
             className={cn(
-              "fixed inset-y-0 left-0 z-50 flex h-full w-[var(--sidebar-width-mobile)] flex-col bg-sidebar p-0 text-sidebar-foreground border-r border-sidebar-border shadow-lg transition-transform duration-300 ease-in-out md:hidden",
+              "fixed inset-y-0 left-0 z-50 flex h-full w-[var(--sidebar-width-mobile)] flex-col bg-sidebar p-0 text-sidebar-foreground border-r border-sidebar-border shadow-sm transition-transform duration-300 ease-in-out md:hidden",
               openMobile ? "translate-x-0" : "-translate-x-full",
               className
             )}
@@ -208,7 +208,7 @@ const Sidebar = React.forwardRef(
         >
           <div
             data-sidebar="sidebar"
-            className="flex h-full w-full flex-col bg-sidebar border-r border-sidebar-border group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:border-sidebar-border group-data-[variant=floating]:shadow-sm"
+            className="flex h-full w-full flex-col bg-sidebar border-r border-sidebar-border group-data-[variant=floating]:rounded-[6px] group-data-[variant=floating]:border group-data-[variant=floating]:border-sidebar-border group-data-[variant=floating]:shadow-sm"
           >
             {children}
           </div>
@@ -272,7 +272,7 @@ const SidebarInset = React.forwardRef(({ className, ...props }, ref) => {
       ref={ref}
       className={cn(
         "relative flex min-h-svh flex-1 flex-col min-w-0 w-full bg-background",
-        "peer-data-[variant=inset]:min-h-[calc(100svh-theme(spacing.4))] md:peer-data-[variant=inset]:m-2 md:peer-data-[state=collapsed]:peer-data-[variant=inset]:ml-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:shadow-sm",
+        "peer-data-[variant=inset]:min-h-[calc(100svh-theme(spacing.4))] md:peer-data-[variant=inset]:m-2 md:peer-data-[state=collapsed]:peer-data-[variant=inset]:ml-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-[6px] md:peer-data-[variant=inset]:shadow-sm",
         className
       )}
       {...props}

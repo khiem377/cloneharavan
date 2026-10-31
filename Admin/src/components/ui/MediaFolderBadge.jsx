@@ -1,12 +1,3 @@
-/**
- * MediaFolderBadge — hien thi folder path cua 1 anh khi hover
- *
- * Dung khi da co media object day du (co folderId.name):
- *   <MediaFolderBadge media={mediaObj} />
- /**
- * MediaFolderBadge
- * Click vao folder overlay -> navigate den /media?folder=<id>
- */
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Folder, ExternalLink } from '@/components/ui/Icons';
@@ -15,7 +6,7 @@ import { useMediaUsage } from '@/hooks/useMedia';
 function getFolderInfo(media) {
   if (!media?.folderId) return null;
   const folder = media.folderId;
-  if (typeof folder === 'string') return null; // chua populate
+  if (typeof folder === 'string') return null;
   const parent = folder.parentId;
   const path = parent && typeof parent === 'object'
     ? `${parent.name} / ${folder.name}`
@@ -23,22 +14,21 @@ function getFolderInfo(media) {
   return { path, id: folder._id };
 }
 
-// ─── MediaUsageList — danh sach noi dung anh ───────────────────────────────
 export function MediaUsageList({ mediaId }) {
   const { data: usages = [], isLoading } = useMediaUsage(mediaId);
 
   if (isLoading) {
     return (
       <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground animate-pulse">
-        <div className="h-2 w-24 rounded bg-muted" />
+        <div className="h-2 w-24 rounded-[4px] bg-muted" />
       </div>
     );
   }
 
   if (!usages.length) {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground font-medium">
-        Chua su dung
+      <span className="inline-flex items-center gap-1 rounded-[4px] bg-muted px-2 py-0.5 text-[10px] text-muted-foreground font-medium">
+        Chưa sử dụng
       </span>
     );
   }
@@ -51,7 +41,7 @@ export function MediaUsageList({ mediaId }) {
           href={u.adminUrl}
           target="_blank"
           rel="noreferrer"
-          className="inline-flex items-center gap-1.5 rounded-md bg-primary/5 border border-primary/15 px-2 py-1 text-[10px] text-primary font-medium hover:bg-primary/10 transition-colors"
+          className="inline-flex items-center gap-1.5 rounded-[6px] bg-primary/5 border border-primary/15 px-2 py-1 text-[10px] text-primary font-medium hover:bg-primary/10 transition-colors"
         >
           <span className="truncate flex-1">{u.displayName}: {u.entityName}</span>
           <ExternalLink size={9} className="shrink-0" />
@@ -61,27 +51,17 @@ export function MediaUsageList({ mediaId }) {
   );
 }
 
-// ─── MediaFolderTag — badge folder nho hien tren thumbnail ──────────────────
 export function MediaFolderTag({ media }) {
   const info = getFolderInfo(media);
   if (!info) return null;
   return (
-    <span className="inline-flex items-center gap-1 rounded-md bg-black/60 px-1.5 py-0.5 text-[10px] text-white font-medium">
+    <span className="inline-flex items-center gap-1 rounded-[4px] bg-black/60 px-1.5 py-0.5 text-[10px] text-white font-medium">
       <Folder size={9} className="shrink-0" />
       <span className="truncate max-w-[120px]">{info.path}</span>
     </span>
   );
 }
 
-// ─── MediaThumbnailHover — wrapper boc ngoai thumbnail, them hover overlay ──
-/**
- * @param {object} media    - full media object (co folderId.name)
- * @param {node}   children - thumbnail img element
- * @param {string} className
- *
- * Khi hover: hien overlay bottom voi ten folder
- * Click vao folder badge: navigate den /media?folder=<folderId>
- */
 export function MediaThumbnailHover({ media, children, className = '' }) {
   const [hovered, setHovered] = useState(false);
   const navigate = useNavigate();
@@ -106,8 +86,8 @@ export function MediaThumbnailHover({ media, children, className = '' }) {
         <button
           type="button"
           onClick={handleFolderClick}
-          className="absolute inset-x-0 bottom-0 z-20 flex items-center gap-1 bg-black/75 hover:bg-black/90 px-1.5 py-1 rounded-b-md transition-colors w-full text-left"
-          title={`Mo thu muc: ${folderInfo.path}`}
+          className="absolute inset-x-0 bottom-0 z-20 flex items-center gap-1 bg-black/75 hover:bg-black/90 px-1.5 py-1 rounded-b-[6px] transition-colors w-full text-left"
+          title={`Mở thư mục: ${folderInfo.path}`}
         >
           <Folder size={9} className="text-amber-400 shrink-0" />
           <span className="text-[9px] text-white truncate flex-1">{folderInfo.path}</span>
@@ -119,4 +99,3 @@ export function MediaThumbnailHover({ media, children, className = '' }) {
 }
 
 export default MediaFolderTag;
-

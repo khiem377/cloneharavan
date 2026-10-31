@@ -224,11 +224,10 @@ export default function DateTimePicker({
 
   return (
     <div ref={containerRef} className={`relative inline-block w-full ${className}`}>
-      {/* Input Box Trigger */}
       <div
         onClick={() => !disabled && setIsOpen(!isOpen)}
-        className={`flex items-center justify-between h-9 px-3 rounded-lg border bg-background text-sm cursor-pointer select-none transition-all ${
-          isOpen ? 'border-primary ring-2 ring-primary/20' : 'border-input hover:border-accent-foreground/30'
+        className={`flex items-center justify-between h-9 px-3 rounded-[6px] border bg-background text-sm cursor-pointer select-none transition-all ${
+          isOpen ? 'border-primary ring-1 ring-primary' : 'border-input hover:border-accent-foreground/30'
         } ${disabled ? 'opacity-50 cursor-not-allowed bg-muted' : ''}`}
       >
         <div className="flex items-center gap-2 min-w-0">
@@ -257,7 +256,7 @@ export default function DateTimePicker({
       {/* Popover Dropdown */}
       {isOpen && (
         <div
-          className={`absolute z-50 mt-1.5 p-3 rounded-xl border border-border bg-popover text-popover-foreground shadow-2xl transition-all ${
+          className={`absolute z-50 mt-1.5 p-3 rounded-[6px] border border-border bg-popover text-popover-foreground shadow-sm transition-all ${
             align === 'right' ? 'right-0' : 'left-0'
           } w-[320px] sm:w-[340px]`}
         >
@@ -306,7 +305,7 @@ export default function DateTimePicker({
               <button
                 type="button"
                 onClick={() => setViewDate(new Date(currentYear - 1, currentMonth, 1))}
-                className="size-7 rounded-lg border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-colors cursor-pointer text-xs font-bold"
+                className="size-7 rounded-[6px] border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent active:scale-[0.98] transition-all cursor-pointer text-xs font-bold"
                 title="Lùi 1 năm"
               >
                 «
@@ -314,19 +313,18 @@ export default function DateTimePicker({
               <button
                 type="button"
                 onClick={handlePrevMonth}
-                className="size-7 rounded-lg border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-colors cursor-pointer"
+                className="size-7 rounded-[6px] border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent active:scale-[0.98] transition-all cursor-pointer"
                 title="Lùi 1 tháng"
               >
                 <ChevronLeftIcon className="size-4" />
               </button>
             </div>
 
-            {/* Direct Month & Year Dropdowns */}
             <div className="flex items-center gap-1">
               <select
                 value={currentMonth}
                 onChange={(e) => setViewDate(new Date(currentYear, Number(e.target.value), 1))}
-                className="h-7 px-1 rounded-md border border-input bg-card text-xs font-bold text-foreground outline-none focus:border-primary cursor-pointer hover:bg-accent transition-colors"
+                className="h-7 px-1 rounded-[6px] border border-input bg-card text-xs font-bold text-foreground outline-none focus:border-primary cursor-pointer hover:bg-accent transition-colors"
                 title="Chọn nhanh tháng"
               >
                 {MONTH_NAMES_VI.map((m, idx) => (
@@ -337,7 +335,7 @@ export default function DateTimePicker({
               <select
                 value={currentYear}
                 onChange={(e) => setViewDate(new Date(Number(e.target.value), currentMonth, 1))}
-                className="h-7 px-1 rounded-md border border-input bg-card text-xs font-bold text-foreground outline-none focus:border-primary cursor-pointer hover:bg-accent transition-colors"
+                className="h-7 px-1 rounded-[6px] border border-input bg-card text-xs font-bold text-foreground outline-none focus:border-primary cursor-pointer hover:bg-accent transition-colors"
                 title="Chọn nhanh năm"
               >
                 {Array.from({ length: 30 }, (_, i) => 2020 + i).map((y) => (
@@ -350,7 +348,7 @@ export default function DateTimePicker({
               <button
                 type="button"
                 onClick={handleNextMonth}
-                className="size-7 rounded-lg border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-colors cursor-pointer"
+                className="size-7 rounded-[6px] border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent active:scale-[0.98] transition-all cursor-pointer"
                 title="Tới 1 tháng"
               >
                 <ChevronRightIcon className="size-4" />
@@ -358,7 +356,7 @@ export default function DateTimePicker({
               <button
                 type="button"
                 onClick={() => setViewDate(new Date(currentYear + 1, currentMonth, 1))}
-                className="size-7 rounded-lg border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-colors cursor-pointer text-xs font-bold"
+                className="size-7 rounded-[6px] border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent active:scale-[0.98] transition-all cursor-pointer text-xs font-bold"
                 title="Tới 1 năm"
               >
                 »
@@ -366,7 +364,6 @@ export default function DateTimePicker({
             </div>
           </div>
 
-          {/* Day of Week Header */}
           <div className="grid grid-cols-7 gap-1 text-center mb-1">
             {DAY_NAMES_VI.map((d) => (
               <span key={d} className="text-[11px] font-semibold text-muted-foreground py-1">
@@ -375,7 +372,6 @@ export default function DateTimePicker({
             ))}
           </div>
 
-          {/* Calendar Day Grid */}
           <div className="grid grid-cols-7 gap-1 text-center mb-3">
             {calendarDays.map((d, idx) => {
               const selected = isSelected(d);
@@ -386,9 +382,9 @@ export default function DateTimePicker({
                   key={idx}
                   type="button"
                   onClick={() => handleDateClick(d.day, d.isCurrentMonth, d.monthOffset)}
-                  className={`h-8 rounded-lg text-xs font-medium transition-all flex items-center justify-center cursor-pointer ${
+                  className={`h-8 rounded-[6px] text-xs font-mono tabular-nums font-medium active:scale-[0.98] transition-all flex items-center justify-center cursor-pointer ${
                     selected
-                      ? 'bg-primary text-primary-foreground font-bold shadow-md'
+                      ? 'bg-primary text-primary-foreground font-bold shadow-xs'
                       : d.isCurrentMonth
                       ? today
                         ? 'border border-primary text-primary font-bold bg-primary/5'
@@ -402,7 +398,6 @@ export default function DateTimePicker({
             })}
           </div>
 
-          {/* Time Selector (24-hour format) */}
           {showTime && (
             <div className="pt-2.5 border-t border-border flex items-center justify-between">
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
@@ -410,11 +405,10 @@ export default function DateTimePicker({
                 <span>Giờ (24h):</span>
               </div>
               <div className="flex items-center gap-1">
-                {/* Hour Select */}
                 <select
                   value={selectedHour}
                   onChange={(e) => handleTimeChange(Number(e.target.value), selectedMinute)}
-                  className="h-8 px-2 rounded-md border border-input bg-card text-xs font-bold text-foreground outline-none focus:border-primary cursor-pointer"
+                  className="h-8 px-2 rounded-[6px] border border-input bg-card text-xs font-bold text-foreground outline-none focus:border-primary cursor-pointer font-mono tabular-nums"
                 >
                   {Array.from({ length: 24 }, (_, i) => (
                     <option key={i} value={i}>
@@ -425,11 +419,10 @@ export default function DateTimePicker({
 
                 <span className="font-bold text-foreground">:</span>
 
-                {/* Minute Select */}
                 <select
                   value={selectedMinute}
                   onChange={(e) => handleTimeChange(selectedHour, Number(e.target.value))}
-                  className="h-8 px-2 rounded-md border border-input bg-card text-xs font-bold text-foreground outline-none focus:border-primary cursor-pointer"
+                  className="h-8 px-2 rounded-[6px] border border-input bg-card text-xs font-bold text-foreground outline-none focus:border-primary cursor-pointer font-mono tabular-nums"
                 >
                   {Array.from({ length: 60 }, (_, i) => (
                     <option key={i} value={i}>
@@ -441,19 +434,18 @@ export default function DateTimePicker({
             </div>
           )}
 
-          {/* Confirm Footer */}
           <div className="mt-3 pt-2 border-t border-border/60 flex items-center justify-between">
             <button
               type="button"
               onClick={() => handlePreset('clear')}
-              className="text-[11px] text-muted-foreground hover:text-destructive transition-colors font-medium cursor-pointer"
+              className="text-[11px] text-muted-foreground hover:text-destructive active:scale-[0.98] transition-all font-medium cursor-pointer"
             >
               Xóa
             </button>
             <button
               type="button"
               onClick={() => setIsOpen(false)}
-              className="px-3 py-1 bg-primary text-primary-foreground text-xs font-semibold rounded-md hover:bg-primary/90 transition-colors cursor-pointer"
+              className="px-3 py-1 bg-primary text-primary-foreground text-xs font-semibold rounded-[6px] hover:bg-primary/90 active:scale-[0.98] transition-all cursor-pointer"
             >
               Xác nhận
             </button>

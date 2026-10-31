@@ -12,23 +12,37 @@ import {
 import SearchableSelect from './SearchableSelect';
 
 export default function DataTablePagination({
-  page = 1,
-  pageSize = 10,
+  pagination,
+  page,
+  pageSize,
+  limit,
   total,
   totalItems,
   totalPages,
   onPageChange,
   onPageSizeChange,
+  onLimitChange,
   pageSizeOptions = [10, 20, 50, 100],
   showPageSize = true,
   showJumpToPage = true,
   className = '',
 }) {
-  const rawTotal = totalItems !== undefined ? totalItems : (total !== undefined ? total : 0);
-  const numPage = typeof page === 'number' && !isNaN(page) ? page : (parseInt(page, 10) || 1);
-  const numPageSize = typeof pageSize === 'number' && !isNaN(pageSize) ? pageSize : (parseInt(pageSize, 10) || 10);
+  const effectivePage = page ?? pagination?.page ?? 1;
+  const effectivePageSize = pageSize ?? limit ?? pagination?.limit ?? pagination?.pageSize ?? 10;
+  const rawTotal = totalItems !== undefined
+    ? totalItems
+    : (total !== undefined
+      ? total
+      : (pagination?.total !== undefined ? pagination.total : (pagination?.totalItems !== undefined ? pagination.totalItems : 0)));
+
+  const numPage = typeof effectivePage === 'number' && !isNaN(effectivePage) ? effectivePage : (parseInt(effectivePage, 10) || 1);
+  const numPageSize = typeof effectivePageSize === 'number' && !isNaN(effectivePageSize) ? effectivePageSize : (parseInt(effectivePageSize, 10) || 10);
   const numTotal = typeof rawTotal === 'number' && !isNaN(rawTotal) ? rawTotal : (parseInt(rawTotal, 10) || 0);
-  const effectiveTotalPages = Math.max(1, totalPages || Math.ceil(numTotal / numPageSize) || 1);
+  const effectiveTotalPages = Math.max(
+    1,
+    (totalPages ?? pagination?.totalPages ?? Math.ceil(numTotal / numPageSize)) || 1
+  );
+  const handlePageSizeChange = onPageSizeChange || onLimitChange;
 
   const [jumpInput, setJumpInput] = useState(String(numPage));
 
@@ -63,7 +77,7 @@ export default function DataTablePagination({
       {/* Right Controls Group (PageSize, JumpToPage, Pagination buttons) */}
       <div className="flex flex-wrap items-center gap-3 ml-auto">
         {/* PageSize dropdown */}
-        {showPageSize && onPageSizeChange && (
+        {showPageSize && handlePageSizeChange && (
           <div className="flex items-center gap-1.5 shrink-0">
             <span>Hiển thị</span>
             <SearchableSelect
@@ -72,13 +86,13 @@ export default function DataTablePagination({
                 label: `${opt} / trang`,
                 value: String(opt),
               }))}
-              value={String(pageSize)}
+              value={String(numPageSize)}
               onChange={(val) => {
-                onPageSizeChange(Number(val));
-                onPageChange(1);
+                handlePageSizeChange(Number(val));
+                if (onPageChange) onPageChange(1);
               }}
               creatable={false}
-              placeholder={`${pageSize} / trang`}
+              placeholder={`${numPageSize} / trang`}
             />
           </div>
         )}
