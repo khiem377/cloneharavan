@@ -360,55 +360,101 @@ const checkMediaUsages = async (ids) => {
 // Unused media finder — ảnh không được dùng ở bất kỳ đâu
 // ---------------------------------------------------------------------------
 const getUnusedMedia = async ({ page = 1, limit = 30 } = {}) => {
-  // 1. Thu thập tất cả media IDs đang được dùng
+  // 1. Thu thập tất cả media IDs và URLs đang được dùng trong hệ thống
   const usedIds = new Set();
+  const usedUrls = new Set();
+
   for (const entry of mediaRegistry) {
     const { model, mediaFields = [], urlFields = [] } = entry;
     const allFields = [...mediaFields, ...urlFields];
     if (!allFields.length) continue;
 
-    const docs = await model.find({
-      $or: allFields.map((f) => ({ [f]: { $exists: true, $ne: null, $ne: '' } })),
-    }, allFields.join(' ')).lean();
+    const orConditions = [];
+    for (const f of mediaFields) {
+      orConditions.push({ [f]: { $exists: true, $ne: null } });
+    }
+    for (const f of urlFields) {
+      orConditions.push({ [f]: { $exists: true, $nin: [null, ''] } });
+    }
+
+    if (!orConditions.length) continue;
+
+    const docs = await model.find({ $or: orConditions }, allFields.join(' ')).lean();
 
     for (const doc of docs) {
+      // Thu thập mediaId
       for (const field of mediaFields) {
         let values = [doc];
         for (const part of field.split('.')) {
-          values = values.flatMap((v) => { if (!v) return []; const val = v[part]; return Array.isArray(val) ? val : [val]; });
+          values = values.flatMap((v) => {
+            if (!v) return [];
+            const val = v[part];
+            return Array.isArray(val) ? val : [val];
+          });
         }
-        values.forEach((id) => { if (id) usedIds.add(id.toString()); });
+        values.forEach((id) => {
+          if (id && mongoose.Types.ObjectId.isValid(id)) {
+            usedIds.add(id.toString());
+          }
+        });
       }
 
+      // Thu thập URLs
       for (const field of urlFields) {
         let values = [doc];
         for (const part of field.split('.')) {
-          values = values.flatMap((v) => { if (!v) return []; const val = v[part]; return Array.isArray(val) ? val : [val]; });
+          values = values.flatMap((v) => {
+            if (!v) return [];
+            const val = v[part];
+            return Array.isArray(val) ? val : [val];
+          });
         }
-        const usedUrls = values.filter(Boolean);
-        if (usedUrls.length > 0) {
-          const matchedMedia = await Media.find({ url: { $in: usedUrls } }, '_id').lean();
-          matchedMedia.forEach((m) => usedIds.add(m._id.toString()));
-        }
+        values.forEach((u) => {
+          if (u && typeof u === 'string' && u.trim()) {
+            usedUrls.add(u.trim());
+          }
+        });
       }
     }
   }
 
+  // Map used URLs sang Media IDs
+  if (usedUrls.size > 0) {
+    const urlList = Array.from(usedUrls);
+    const matchedMedia = await Media.find({ url: { $in: urlList } }, '_id').lean();
+    matchedMedia.forEach((m) => usedIds.add(m._id.toString()));
+  }
+
+  const validObjectIds = Array.from(usedIds)
+    .filter((id) => mongoose.Types.ObjectId.isValid(id))
+    .map((id) => new mongoose.Types.ObjectId(id));
+
   // 2. Tìm media KHÔNG có trong usedIds
-  const query = usedIds.size > 0
-    ? { _id: { $nin: Array.from(usedIds) } }
+  const query = validObjectIds.length > 0
+    ? { _id: { $nin: validObjectIds } }
     : {};
 
   const skip = (page - 1) * limit;
-  const total = await Media.countDocuments(query);
-  const items = await Media.find(query)
-    .populate('folderId', 'name slug')
-    .sort({ createdAt: -1 })
-    .skip(skip)
-    .limit(limit);
 
-  return { media: items, total, page, limit, totalPages: Math.ceil(total / limit) };
+  const [total, statsAgg, items] = await Promise.all([
+    Media.countDocuments(query),
+    Media.aggregate([
+      { $match: query },
+      { $group: { _id: null, totalSize: { $sum: '$size' } } },
+    ]),
+    Media.find(query)
+      .populate('folderId', 'name slug')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+  ]);
+
+  const totalSize = statsAgg[0]?.totalSize || 0;
+
+  return { media: items, total, totalSize, page, limit, totalPages: Math.ceil(total / limit) };
 };
+
 
 // ---------------------------------------------------------------------------
 // Rename
@@ -501,15 +547,41 @@ const getMediaStats = async () => {
         _id: null,
         totalFiles: { $sum: 1 },
         totalSize: { $sum: '$size' },
-        byType: { $push: { mimeType: '$mimeType', size: '$size' } },
+        byType: { $push: { mimeType: { $ifNull: ['$mimeType', ''] }, filename: { $ifNull: ['$filename', ''] } } },
       },
     },
     {
       $project: {
         totalFiles: 1,
         totalSize: 1,
-        images: { $size: { $filter: { input: '$byType', as: 'f', cond: { $regexMatch: { input: '$$f.mimeType', regex: '^image/' } } } } },
-        videos: { $size: { $filter: { input: '$byType', as: 'f', cond: { $regexMatch: { input: '$$f.mimeType', regex: '^video/' } } } } },
+        images: {
+          $size: {
+            $filter: {
+              input: '$byType',
+              as: 'f',
+              cond: {
+                $or: [
+                  { $regexMatch: { input: '$$f.mimeType', regex: '^image/' } },
+                  { $regexMatch: { input: '$$f.filename', regex: '\\.(jpe?g|png|gif|webp|svg|avif)$', options: 'i' } },
+                ],
+              },
+            },
+          },
+        },
+        videos: {
+          $size: {
+            $filter: {
+              input: '$byType',
+              as: 'f',
+              cond: {
+                $or: [
+                  { $regexMatch: { input: '$$f.mimeType', regex: '^video/' } },
+                  { $regexMatch: { input: '$$f.filename', regex: '\\.(mp4|webm|mov|avi)$', options: 'i' } },
+                ],
+              },
+            },
+          },
+        },
       },
     },
   ]);

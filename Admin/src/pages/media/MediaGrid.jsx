@@ -226,7 +226,7 @@ function MediaCard({ item, selected, onToggle, onDeleteRequest, onPreview, onMov
 
   return (
     <div
-      className={`group relative flex flex-col rounded-[6px] border transition-all bg-card overflow-hidden cursor-pointer select-none ${selected ? 'border-primary ring-2 ring-primary/25 shadow-md' : 'border-border hover:border-primary/40'}`}
+      className={`group relative flex flex-col rounded-[6px] border transition-all bg-card overflow-hidden cursor-pointer select-none ${selected ? 'border-primary ring-2 ring-primary/25 shadow-xs' : 'border-border hover:border-primary/40'}`}
       style={{ animationDelay: `${animDelay}ms` }}
       onClick={() => onToggle(item._id)}
       draggable

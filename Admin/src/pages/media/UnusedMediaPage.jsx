@@ -57,7 +57,7 @@ export default function UnusedMediaPage() {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [showConfirm, setShowConfirm] = useState(false);
 
-  const { data: unusedData, isLoading, refetch } = useUnusedMedia({ page, limit });
+  const { data: unusedData, isLoading, isError, error, refetch } = useUnusedMedia({ page, limit });
   const { data: stats } = useMediaStats();
 
   const items = unusedData?.media ?? [];
@@ -90,7 +90,7 @@ export default function UnusedMediaPage() {
   };
 
   const allSelected = items.length > 0 && selectedIds.size === items.length;
-  const totalUnusedSize = items.reduce((acc, m) => acc + (m.size || 0), 0);
+  const totalUnusedSize = unusedData?.totalSize ?? items.reduce((acc, m) => acc + (m.size || 0), 0);
 
   return (
     <div className="p-3 sm:p-6 flex flex-col gap-5 w-full max-w-6xl mx-auto bg-background text-foreground min-h-full">
@@ -122,7 +122,7 @@ export default function UnusedMediaPage() {
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <StatCard
-          label="Tổng ảnh trong kho"
+          label="Tổng tệp trong kho"
           value={stats?.totalFiles?.toLocaleString() ?? '—'}
           sub={`${formatSize(stats?.totalSize)} tổng dung lượng`}
         />
@@ -179,6 +179,26 @@ export default function UnusedMediaPage() {
           <div className="flex justify-center items-center py-20 text-muted-foreground gap-2">
             <RefreshCw size={22} className="animate-spin text-primary" />
             <span className="text-sm">Đang quét kho ảnh...</span>
+          </div>
+        ) : isError ? (
+          <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
+            <div className="size-12 rounded-full bg-destructive/10 text-destructive flex items-center justify-center">
+              <AlertTriangle size={24} />
+            </div>
+            <div>
+              <p className="font-semibold text-foreground text-sm">Không thể tải danh sách ảnh thừa</p>
+              <p className="text-xs text-muted-foreground mt-0.5 max-w-md">
+                {error?.response?.data?.message || error?.message || 'Đã có lỗi xảy ra khi quét dữ liệu'}
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => refetch()}
+              className="h-8 px-3 rounded-[6px] text-xs font-medium"
+            >
+              <RefreshCw size={13} className="mr-1.5" /> Thử lại
+            </Button>
           </div>
         ) : items.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
