@@ -44,7 +44,7 @@ export default function OrderDetailPage() {
       // 1. Thử fetch bằng getOrderById(id)
       try {
         const res = await orderService.getOrderById(id);
-        orderData = res?.data || res;
+        orderData = res?.data?.orderCode ? res.data : (res?.orderCode ? res : (res?.data || res));
       } catch (err) {
         // 2. Nếu thất bại (có thể do id là mã đơn orderCode), thử tìm kiếm bằng getAllOrders
         const searchRes = await orderService.getAllOrders({ search: id, limit: 1 });

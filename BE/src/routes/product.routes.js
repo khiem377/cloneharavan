@@ -28,6 +28,7 @@ router.post('/compare', productController.getProductsToCompare);
 router.get('/:id/deals',    productController.getProductDeals);
 router.get('/:id',          productController.getProductById);
 
+router.post('/ai-extract-specs', protect, requirePermission('product.create'), productController.aiExtractSpecs);
 router.post('/',            protect, requirePermission('product.create'), productController.createProduct);
 router.put('/:id',          protect, requirePermission('product.edit'), productController.updateProduct);
 router.patch('/:id/status', protect, requirePermission('product.edit'), productController.toggleProductStatus);

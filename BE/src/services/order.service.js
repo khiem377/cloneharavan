@@ -24,6 +24,45 @@ const generateOrderCode = () => {
 };
 
 /**
+ * Tính toán kích thước và trọng lượng kiện hàng tổng hợp từ danh sách sản phẩm
+ * Áp dụng quy tắc xếp hàng bưu điện (GHN/GHTK) để tránh phạt hàng cồng kềnh
+ */
+const calculateCartPackageMetrics = (items = []) => {
+  let totalShippingWeight = 0;
+  let maxPkgLength = 15;
+  let maxPkgWidth = 10;
+  let totalPkgHeight = 0;
+
+  items.forEach((it) => {
+    const q = Number(it.quantity) || 1;
+    const w = Number(it.packageWeight || it.weight) || 250;
+    totalShippingWeight += (w * q);
+
+    const d = it.packageDimensions || it.dimensions || {};
+    const l = Number(d.length) || 20;
+    const wi = Number(d.width) || 15;
+    const h = Number(d.height) || 3;
+
+    if (l > maxPkgLength) maxPkgLength = l;
+    if (wi > maxPkgWidth) maxPkgWidth = wi;
+    totalPkgHeight += (h * q);
+  });
+
+  // Giới hạn an toàn chiều cao kiện hàng GHN tối đa 80cm
+  totalPkgHeight = Math.min(80, Math.max(3, Math.round(totalPkgHeight)));
+  totalShippingWeight = Math.max(100, Math.round(totalShippingWeight));
+  maxPkgLength = Math.max(15, Math.round(maxPkgLength));
+  maxPkgWidth = Math.max(10, Math.round(maxPkgWidth));
+
+  return {
+    weight: totalShippingWeight,
+    length: maxPkgLength,
+    width: maxPkgWidth,
+    height: totalPkgHeight,
+  };
+};
+
+/**
  * Đếm số lượng đơn hàng đang chờ duyệt (PENDING)
  */
 const getPendingOrdersCount = async () => {
@@ -305,6 +344,8 @@ const previewOrder = async (userId, previewData = {}) => {
       comboCode,
       comboId,
       comboPrice,
+      packageWeight: product.packageWeight || product.weight || 250,
+      packageDimensions: product.packageDimensions || product.dimensions || { length: 25, width: 18, height: 3 },
     });
   }
 
@@ -411,10 +452,14 @@ const previewOrder = async (userId, previewData = {}) => {
   }
 
   if (targetDistrictId && targetWardCode) {
+    const pkgMetrics = calculateCartPackageMetrics(previewItems);
     const feeRes = await ghnService.calculateShippingFee({
       toDistrictId: targetDistrictId,
       toWardCode: targetWardCode,
-      weight: previewItems.reduce((acc, it) => acc + (it.quantity * 300), 200),
+      weight: pkgMetrics.weight,
+      length: pkgMetrics.length,
+      width: pkgMetrics.width,
+      height: pkgMetrics.height,
       insuranceValue: 0,
       allowEstimatedFallback: true,
     });
@@ -698,6 +743,8 @@ const createOrderCOD = async (userId, orderData) => {
       comboId,
       comboPrice,
       isGift: false,
+      packageWeight: product.packageWeight || product.weight || 250,
+      packageDimensions: product.packageDimensions || product.dimensions || { length: 25, width: 18, height: 3 },
     });
   }
 
@@ -827,10 +874,14 @@ const createOrderCOD = async (userId, orderData) => {
 
   if (targetDistrictId && targetWardCode) {
     try {
+      const pkgMetrics = calculateCartPackageMetrics(orderItemsData);
       const feeRes = await ghnService.calculateShippingFee({
         toDistrictId: targetDistrictId,
         toWardCode: targetWardCode,
-        weight: orderItemsData.reduce((acc, it) => acc + (it.quantity * 300), 200),
+        weight: pkgMetrics.weight,
+        length: pkgMetrics.length,
+        width: pkgMetrics.width,
+        height: pkgMetrics.height,
         insuranceValue: 0,
         allowEstimatedFallback: true,
       });
@@ -1431,21 +1482,27 @@ const updateOrderStatus = async (orderId, { newStatus, note = '', adminUser = nu
 const getOrderById = async (orderIdOrCode, userId = null, userRole = 'user') => {
   let order = null;
   if (mongoose.Types.ObjectId.isValid(orderIdOrCode)) {
-    order = await Order.findById(orderIdOrCode);
+    order = await Order.findById(orderIdOrCode).populate('userId', 'fullName name email phone avatar');
   }
   if (!order) {
-    order = await Order.findOne({ orderCode: String(orderIdOrCode || '').trim().toUpperCase() });
+    order = await Order.findOne({ orderCode: String(orderIdOrCode || '').trim().toUpperCase() }).populate('userId', 'fullName name email phone avatar');
   }
   if (!order) throw new AppError('Không tìm thấy đơn hàng', 404);
 
   // BẢO VỆ THÔNG TIN CÁ NHÂN & AN TOÀN DỮ LIỆU:
   // Người xem bắt buộc phải đăng nhập và là chính chủ đơn hàng (hoặc Admin/Nhân viên)
-  const isStaffOrAdmin = ['admin', 'staff', 'manager'].includes(userRole);
+  const normalizedRole = String(userRole || '').toLowerCase();
+  const isStaffOrAdmin =
+    normalizedRole !== 'user' &&
+    normalizedRole !== 'guest' &&
+    normalizedRole !== '';
+
   if (!isStaffOrAdmin) {
     if (!userId) {
       throw new AppError('Vui lòng đăng nhập để xem thông tin đơn hàng này', 401);
     }
-    if (order.userId && order.userId.toString() !== userId.toString()) {
+    const orderOwnerId = order.userId?._id ? order.userId._id.toString() : order.userId?.toString();
+    if (orderOwnerId && orderOwnerId !== userId.toString()) {
       throw new AppError('Bạn không có quyền xem thông tin đơn hàng của khách hàng khác', 403);
     }
   }
@@ -1484,6 +1541,12 @@ const getOrderById = async (orderIdOrCode, userId = null, userRole = 'user') => 
       }
     : null;
   orderObj.isStockExported = se ? se.status === 'completed' : false;
+
+  // Đính kèm thông tin khách hàng snapshot & liên kết tài khoản để Admin hiển thị
+  orderObj.customer = order.userId || null;
+  orderObj.customerEmail = order.userId?.email || order.shippingAddress?.email || '';
+  orderObj.customerName = order.userId?.fullName || order.userId?.name || order.shippingAddress?.fullName || '';
+  orderObj.customerPhone = order.userId?.phone || order.shippingAddress?.phone || '';
 
   return orderObj;
 };
@@ -1561,12 +1624,16 @@ const getAllOrders = async (query = {}) => {
     filter.paymentStatus = query.paymentStatus.toUpperCase();
   }
   if (query.search) {
-    const safeSearch = escapeRegex(query.search.trim());
+    const trimmed = query.search.trim();
+    const safeSearch = escapeRegex(trimmed);
     filter.$or = [
       { orderCode: { $regex: safeSearch, $options: 'i' } },
       { 'shippingAddress.phone': { $regex: safeSearch, $options: 'i' } },
       { 'shippingAddress.fullName': { $regex: safeSearch, $options: 'i' } },
     ];
+    if (mongoose.Types.ObjectId.isValid(trimmed)) {
+      filter.$or.push({ _id: new mongoose.Types.ObjectId(trimmed) });
+    }
   }
 
   const page = Math.max(1, parseInt(query.page) || 1);
@@ -1574,7 +1641,12 @@ const getAllOrders = async (query = {}) => {
   const skip = (page - 1) * limit;
 
   const [orders, total, statusCounts] = await Promise.all([
-    Order.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+    Order.find(filter)
+      .populate('userId', 'fullName name email phone avatar')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
     Order.countDocuments(filter),
     Order.aggregate([
       {
@@ -1639,6 +1711,9 @@ const getAllOrders = async (query = {}) => {
     const isStockExported = se ? se.status === 'completed' : false;
     return {
       ...ord,
+      customerEmail: ord.userId?.email || ord.shippingAddress?.email || '',
+      customerName: ord.userId?.fullName || ord.userId?.name || ord.shippingAddress?.fullName || '',
+      customerPhone: ord.userId?.phone || ord.shippingAddress?.phone || '',
       stockExport: se
         ? {
             _id: se._id,

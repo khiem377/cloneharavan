@@ -56,7 +56,7 @@ export default function OrderSidebarInfo({
         <CardContent className="p-4 pt-0 space-y-3">
           <div className="space-y-1">
             <p className="font-semibold text-primary">
-              {addr.fullName || 'Khách vãng lai'}
+              {order.customerName || addr.fullName || order.userId?.fullName || order.userId?.name || 'Khách vãng lai'}
             </p>
             <Badge variant="secondary" className="text-[10px] font-normal py-0 px-1.5">
               Nhóm: Khách hàng bán lẻ
@@ -67,19 +67,19 @@ export default function OrderSidebarInfo({
 
           <div className="space-y-1.5">
             <span className="font-medium text-foreground block">Thông tin liên hệ</span>
-            {addr.phone ? (
+            {(order.customerPhone || addr.phone || order.userId?.phone) ? (
               <div className="flex items-center gap-1.5 font-mono text-foreground">
                 <Phone className="size-3 text-muted-foreground" />
-                <span>{addr.phone}</span>
+                <span>{order.customerPhone || addr.phone || order.userId?.phone}</span>
               </div>
             ) : (
               <span className="text-muted-foreground text-[11px]">Không có số điện thoại</span>
             )}
 
-            {order.customerEmail ? (
+            {(order.customerEmail || addr.email || order.userId?.email) ? (
               <div className="flex items-center gap-1.5 text-foreground">
                 <Mail className="size-3 text-muted-foreground" />
-                <span className="truncate">{order.customerEmail}</span>
+                <span className="truncate">{order.customerEmail || addr.email || order.userId?.email}</span>
               </div>
             ) : (
               <span className="text-muted-foreground text-[11px] block">Không có email</span>

@@ -313,6 +313,14 @@ export function useCheckout() {
     return ids;
   };
 
+  const selectedCheckoutItems = useMemo(() => {
+    const activeIds = getSelectedCheckoutIds();
+    if (!cartItems || cartItems.length === 0) return [];
+    if (!activeIds || activeIds.length === 0) return cartItems;
+    const setIds = new Set(activeIds.map((id) => String(id)));
+    return cartItems.filter((i) => setIds.has(String(i._id)) || (i.variantId && setIds.has(String(i.variantId))));
+  }, [cartItems, selectedItemIds]);
+
   // 4. Preview Order
   const triggerOrderPreview = async (couponToApply = undefined, shippingCouponToApply = undefined) => {
     const activeItemIds = getSelectedCheckoutIds();
@@ -515,6 +523,7 @@ export function useCheckout() {
     isAuthenticated,
     cart,
     cartItems,
+    selectedCheckoutItems,
     addresses,
     selectedAddressId,
     setSelectedAddressId,

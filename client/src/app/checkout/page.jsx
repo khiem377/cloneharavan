@@ -127,7 +127,7 @@ export default function CheckoutPage() {
           {/* Cột phải (5/12): Tóm tắt đơn hàng & Nút đặt hàng */}
           <div className="lg:col-span-5">
             <CheckoutOrderSummary
-              items={checkout.previewData?.items || checkout.cartItems || []}
+              items={checkout.previewData?.items || checkout.selectedCheckoutItems || []}
               gifts={checkout.previewData?.gifts || []}
               pricing={{
                 subtotal,

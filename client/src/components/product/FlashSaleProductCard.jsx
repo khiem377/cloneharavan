@@ -146,29 +146,48 @@ export default function FlashSaleProductCard({ item, onAddToCartMock, onBuyNowMo
   const compared = isCompared(productId);
 
   const handleQuickViewClick = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (productId) {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    const pId = product?._id || productId;
+    if (pId) {
       trackingService.recordInteraction({
-        productId,
+        productId: pId,
         interactionType: 'product_detail',
         context: { source: 'flash_sale_quickview' },
       });
     }
+
+    const allVariants = fetchedVariants.length > 0
+      ? fetchedVariants
+      : Array.isArray(product.variants) && product.variants.length > 0
+        ? product.variants
+        : [];
+
     openQuickView({
       ...product,
+      _id: pId,
+      id: pId,
+      name: productName,
+      slug: productSlug,
+      thumbnail,
+      images: Array.isArray(product.images) && product.images.length > 0 ? product.images : [thumbnail],
       isFlashSale: true,
       flashSalePrice: flashSalePrice,
       flashSaleOriginalPrice: originalPrice,
       price: originalPrice,
       salePrice: flashSalePrice,
-      variants: fetchedVariants.length > 0 ? fetchedVariants : product.variants,
+      variants: allVariants,
+      options: product.options || [],
     });
   };
 
   const handleCompareClick = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     if (productId) {
       trackingService.recordInteraction({
         productId,
@@ -179,266 +198,294 @@ export default function FlashSaleProductCard({ item, onAddToCartMock, onBuyNowMo
     addProduct(product);
   };
 
+  const resolvedVariant =
+    (typeof currentItem.variantId === 'object' ? currentItem.variantId : null) ||
+    (fetchedVariants && fetchedVariants[selectedVariantIdx]) ||
+    (fetchedVariants && fetchedVariants[0]) ||
+    (Array.isArray(product.variants) && product.variants[0]) ||
+    null;
+
+  const resolvedVariantId =
+    resolvedVariant?._id ||
+    (typeof currentItem.variantId === 'string' ? currentItem.variantId : null) ||
+    (typeof item.variantId === 'string' ? item.variantId : null) ||
+    item.variantId?._id ||
+    null;
+
+  const resolvedSku =
+    resolvedVariant?.sku ||
+    currentItem.sku ||
+    item.sku ||
+    product.sku ||
+    '';
+
   const handleAddToCart = async (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (isAdding) return;
-
-    const variantIdToUse = variant?._id || (typeof currentItem.variantId === 'string' ? currentItem.variantId : null);
-    const hasMultipleVariants =
-      effectiveVariantsList.length > 1 ||
-      (product.options && product.options.length > 0);
-
-    // Nếu sản phẩm có nhiều biến thể mà chưa xác định được biến thể cụ thể -> mở QuickView để khách hàng tự chọn
-    if (hasMultipleVariants && !variantIdToUse) {
-      handleQuickViewClick(e);
-      return;
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
     }
+    if (isAdding || isSoldOut) return;
 
     setIsAdding(true);
-    if (onAddToCartMock) {
-      onAddToCartMock(item);
-    }
     try {
-      const variantSku = variant?.sku || currentItem.sku || '';
-      await addToCart({
+      const res = await addToCart({
         productId: product?._id || productId,
-        variantId: variantIdToUse,
-        sku: variantSku,
+        variantId: resolvedVariantId,
+        sku: resolvedSku,
         quantity: 1,
       });
+      if (res?.success && onAddToCartMock) {
+        onAddToCartMock(item);
+      }
+    } catch (err) {
+      console.error('Flash sale add to cart error:', err);
     } finally {
       setIsAdding(false);
     }
   };
 
   const handleBuyNow = async (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    const variantIdToUse = variant?._id || (typeof currentItem.variantId === 'string' ? currentItem.variantId : null);
-    const hasMultipleVariants =
-      effectiveVariantsList.length > 1 ||
-      (product.options && product.options.length > 0);
-
-    // Nếu sản phẩm có nhiều biến thể mà chưa xác định được biến thể cụ thể -> mở QuickView để khách hàng tự chọn
-    if (hasMultipleVariants && !variantIdToUse) {
-      handleQuickViewClick(e);
-      return;
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
     }
+    if (isAdding || isSoldOut) return;
 
-    if (onBuyNowMock) {
-      onBuyNowMock(item);
+    setIsAdding(true);
+    try {
+      const res = await addToCart(
+        {
+          productId: product?._id || productId,
+          variantId: resolvedVariantId,
+          sku: resolvedSku,
+          quantity: 1,
+        },
+        { isBuyNow: true }
+      );
+      if (res?.success !== false) {
+        if (onBuyNowMock) onBuyNowMock(item);
+        router.push('/checkout');
+      }
+    } catch (err) {
+      console.error('Flash sale buy now error:', err);
+    } finally {
+      setIsAdding(false);
     }
-    const variantSku = variant?.sku || currentItem.sku || '';
-    await addToCart(
-      {
-        productId: product?._id || productId,
-        variantId: variantIdToUse,
-        sku: variantSku,
-        quantity: 1,
-      },
-      { isBuyNow: true }
-    );
-    router.push('/checkout');
   };
 
   return (
     <div className="relative group h-full">
-      <Link
-        href={`/products/${productSlug}`}
-        className="block h-full"
-        onClick={() => {
-          if (productId) {
-            trackingService.recordInteraction({
-              productId,
-              interactionType: 'view',
-              context: { source: 'flash_sale_card_click' },
-            });
-          }
-        }}
-      >
-        <Card className="h-full flex flex-col justify-between overflow-hidden rounded-[6px] border border-slate-200 bg-white hover:border-slate-400 transition-colors duration-150 p-2.5 sm:p-3 relative">
+      <Card className="h-full flex flex-col justify-between overflow-hidden rounded-[6px] border border-slate-200 bg-white hover:border-slate-400 transition-colors duration-150 p-2.5 sm:p-3 relative">
 
-          {/* Top Badges */}
-          <div className="flex items-center justify-between gap-1 mb-2 z-10">
-            {discountPercent > 0 ? (
-              <span className="px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold text-white bg-red-600">
-                GIẢM {discountPercent}%
-              </span>
-            ) : (
-              <span />
-            )}
-
-            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-[4px] uppercase ${statusBadgeClass}`}>
-              {statusText}
+        {/* Top Badges */}
+        <div className="flex items-center justify-between gap-1 mb-2 z-10">
+          {discountPercent > 0 ? (
+            <span className="px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold text-white bg-red-600">
+              GIẢM {discountPercent}%
             </span>
-          </div>
+          ) : (
+            <span />
+          )}
 
-          {/* Product Image Area */}
-          <div className="relative aspect-square w-full rounded-[4px] overflow-hidden bg-white flex items-center justify-center p-2 mb-2">
+          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-[4px] uppercase ${statusBadgeClass}`}>
+            {statusText}
+          </span>
+        </div>
+
+        {/* Product Image Area */}
+        <div className="relative aspect-square w-full rounded-[4px] overflow-hidden bg-white flex items-center justify-center p-2 mb-2">
+          <Link
+            href={`/products/${productSlug}`}
+            className="w-full h-full flex items-center justify-center"
+            onClick={() => {
+              if (productId) {
+                trackingService.recordInteraction({
+                  productId,
+                  interactionType: 'view',
+                  context: { source: 'flash_sale_card_click' },
+                });
+              }
+            }}
+          >
             <img
               src={thumbnail}
               alt={productName}
               onError={(e) => { e.currentTarget.src = FALLBACK_IMAGE; }}
-              className="w-full h-full object-contain p-1"
+              className="w-full h-full object-contain p-1 transition-transform duration-200 group-hover:scale-105"
               loading="lazy"
             />
+          </Link>
 
-            {/* Quick Actions */}
-            <div className="absolute top-1.5 right-1.5 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-20">
-              <button
-                type="button"
-                data-no-progress="true"
-                onClick={handleQuickViewClick}
-                title="Xem nhanh"
-                aria-label={`Xem nhanh ${productName}`}
-                className="size-7 rounded-[4px] bg-white border border-slate-200 hover:bg-slate-900 hover:text-white text-slate-700 flex items-center justify-center transition-colors cursor-pointer"
-              >
-                <Eye size={13} />
-              </button>
-              <button
-                type="button"
-                data-no-progress="true"
-                onClick={handleCompareClick}
-                title="So sánh"
-                aria-label={compared ? `Đã thêm ${productName} vào so sánh` : `Thêm ${productName} vào so sánh`}
-                className={`size-7 rounded-[4px] border flex items-center justify-center transition-colors cursor-pointer ${
-                  compared ? 'bg-slate-900 border-slate-900 text-white' : 'bg-white border-slate-200 hover:bg-slate-900 hover:text-white text-slate-700'
-                }`}
-              >
-                {compared ? <Check size={13} /> : <ArrowLeftRight size={13} />}
-              </button>
+          {/* Quick Actions */}
+          <div className="absolute top-1.5 right-1.5 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-20">
+            <button
+              type="button"
+              data-no-drag="true"
+              onClick={handleQuickViewClick}
+              title="Xem nhanh"
+              aria-label={`Xem nhanh ${productName}`}
+              className="size-7 rounded-[4px] bg-white border border-slate-200 hover:bg-slate-900 hover:text-white text-slate-700 flex items-center justify-center transition-colors cursor-pointer shadow-xs"
+            >
+              <Eye size={13} />
+            </button>
+            <button
+              type="button"
+              data-no-drag="true"
+              onClick={handleCompareClick}
+              title="So sánh"
+              aria-label={compared ? `Đã thêm ${productName} vào so sánh` : `Thêm ${productName} vào so sánh`}
+              className={`size-7 rounded-[4px] border flex items-center justify-center transition-colors cursor-pointer shadow-xs ${
+                compared ? 'bg-slate-900 border-slate-900 text-white' : 'bg-white border-slate-200 hover:bg-slate-900 hover:text-white text-slate-700'
+              }`}
+            >
+              {compared ? <Check size={13} /> : <ArrowLeftRight size={13} />}
+            </button>
+          </div>
+
+          {/* Sold out overlay */}
+          {isSoldOut && (
+            <div className="absolute inset-0 bg-slate-900/60 flex flex-col items-center justify-center z-10 p-2 text-center pointer-events-none">
+              <span className="px-2 py-0.5 bg-slate-900 text-white font-bold text-[10px] uppercase rounded-[4px] border border-slate-700">
+                {isOutOfWarehouse ? 'TẠM HẾT HÀNG' : 'HẾT SUẤT SALE'}
+              </span>
             </div>
+          )}
+        </div>
 
-            {/* Sold out overlay */}
-            {isSoldOut && (
-              <div className="absolute inset-0 bg-slate-900/60 flex flex-col items-center justify-center z-10 p-2 text-center">
-                <span className="px-2 py-0.5 bg-slate-900 text-white font-bold text-[10px] uppercase rounded-[4px] border border-slate-700">
-                  {isOutOfWarehouse ? 'TẠM HẾT HÀNG' : 'HẾT SUẤT SALE'}
-                </span>
+        {/* Details */}
+        <div className="flex-1 flex flex-col justify-between">
+          <div>
+            {product.brand?.name && (
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5 truncate">
+                {product.brand.name}
+              </span>
+            )}
+
+            <Link
+              href={`/products/${productSlug}`}
+              className="block"
+              onClick={() => {
+                if (productId) {
+                  trackingService.recordInteraction({
+                    productId,
+                    interactionType: 'view',
+                    context: { source: 'flash_sale_card_click' },
+                  });
+                }
+              }}
+            >
+              <h3 className="text-xs font-semibold text-slate-900 line-clamp-2 hover:text-red-600 transition-colors leading-snug h-8" title={productName}>
+                {productName}
+              </h3>
+            </Link>
+
+            {Array.isArray(effectiveVariantsList) && effectiveVariantsList.length > 1 && (
+              <div className="flex flex-wrap items-center gap-1 mt-1 pt-1 border-t border-slate-100">
+                {effectiveVariantsList.map((vItem, vIdx) => {
+                  const vObj = typeof vItem.variantId === 'object' ? vItem.variantId : null;
+                  const validAttrs = vObj?.attributes?.filter(a => {
+                    const v = String(a.value || '').trim().toLowerCase();
+                    return !['mặc định', 'mac dinh', 'default', 'default title', 'tiêu chuẩn', 'tieu chuan'].includes(v);
+                  });
+                  const vLabel = validAttrs?.length > 0
+                    ? validAttrs.map((a) => a.value).join(' ')
+                    : vObj?.displayName && !['mặc định', 'mac dinh', 'default', 'default title'].includes(String(vObj.displayName).toLowerCase().trim())
+                      ? vObj.displayName
+                      : vObj?.name || vObj?.nameOverride || `Bản ${vIdx + 1}`;
+                  const isSelected = selectedVariantIdx === vIdx;
+                  return (
+                    <button
+                      key={vItem._id || vObj?._id || vIdx}
+                      type="button"
+                      data-no-drag="true"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setSelectedVariantIdx(vIdx);
+                      }}
+                      className={`px-1.5 py-0.5 rounded-[4px] text-[10px] font-medium border transition-colors cursor-pointer ${
+                        isSelected
+                          ? 'bg-slate-900 text-white border-slate-900 font-bold shadow-2xs'
+                          : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+                      }`}
+                    >
+                      {vLabel}
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
 
-          {/* Details */}
-          <div className="flex-1 flex flex-col justify-between">
-            <div>
-              {product.brand?.name && (
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5 truncate">
-                  {product.brand.name}
+          {/* Price Box */}
+          <div className="mt-2 pt-2 border-t border-slate-100">
+            <div className="flex items-baseline gap-1.5 flex-wrap">
+              <span className="text-sm sm:text-base font-bold text-red-600 font-mono tabular-nums">
+                {flashSalePrice > 0 ? `${flashSalePrice.toLocaleString('vi-VN')}₫` : 'Liên hệ'}
+              </span>
+              {originalPrice > flashSalePrice && (
+                <span className="text-[11px] text-slate-400 line-through font-mono tabular-nums">
+                  {originalPrice.toLocaleString('vi-VN')}₫
                 </span>
-              )}
-
-              <h3 className="text-xs font-semibold text-slate-900 line-clamp-2 group-hover:text-red-600 transition-colors leading-snug h-8" title={productName}>
-                {productName}
-              </h3>
-
-              {Array.isArray(effectiveVariantsList) && effectiveVariantsList.length > 1 && (
-                <div className="flex flex-wrap items-center gap-1 mt-1 pt-1 border-t border-slate-100">
-                  {effectiveVariantsList.map((vItem, vIdx) => {
-                    const vObj = typeof vItem.variantId === 'object' ? vItem.variantId : null;
-                    const validAttrs = vObj?.attributes?.filter(a => {
-                      const v = String(a.value || '').trim().toLowerCase();
-                      return !['mặc định', 'mac dinh', 'default', 'default title', 'tiêu chuẩn', 'tieu chuan'].includes(v);
-                    });
-                    const vLabel = validAttrs?.length > 0
-                      ? validAttrs.map((a) => a.value).join(' ')
-                      : vObj?.displayName && !['mặc định', 'mac dinh', 'default', 'default title'].includes(String(vObj.displayName).toLowerCase().trim())
-                        ? vObj.displayName
-                        : vObj?.name || vObj?.nameOverride || `Bản ${vIdx + 1}`;
-                    const isSelected = selectedVariantIdx === vIdx;
-                    return (
-                      <button
-                        key={vItem._id || vObj?._id || vIdx}
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setSelectedVariantIdx(vIdx);
-                        }}
-                        className={`px-1.5 py-0.5 rounded-[4px] text-[10px] font-medium border transition-colors cursor-pointer ${
-                          isSelected
-                            ? 'bg-slate-900 text-white border-slate-900 font-bold'
-                            : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
-                        }`}
-                      >
-                        {vLabel}
-                      </button>
-                    );
-                  })}
-                </div>
               )}
             </div>
 
-            {/* Price Box */}
-            <div className="mt-2 pt-2 border-t border-slate-100">
-              <div className="flex items-baseline gap-1.5 flex-wrap">
-                <span className="text-sm sm:text-base font-bold text-red-600 font-mono tabular-nums">
-                  {flashSalePrice > 0 ? `${flashSalePrice.toLocaleString('vi-VN')}₫` : 'Liên hệ'}
+            {discountSavings > 0 && (
+              <div className="text-[10px] font-semibold text-slate-500 mt-0.5">
+                Tiết kiệm: <strong className="text-emerald-700 font-mono tabular-nums">{discountSavings.toLocaleString('vi-VN')}₫</strong>
+              </div>
+            )}
+
+            {/* Simple Flat Progress Bar */}
+            <div className="mt-2">
+              <div className="relative w-full h-3.5 bg-slate-100 rounded-[3px] overflow-hidden flex items-center border border-slate-200">
+                <div
+                  className="absolute left-0 top-0 bottom-0 bg-red-600 transition-all duration-300"
+                  style={{ width: `${Math.max(6, progressRatio)}%` }}
+                />
+                <span className="relative z-10 w-full text-center text-[9px] font-bold text-slate-800 tracking-tight px-1 truncate mix-blend-multiply">
+                  {isSoldOut ? 'HẾT SUẤT' : `Đã bán ${soldInFlashSale}/${stockLimit} suất`}
                 </span>
-                {originalPrice > flashSalePrice && (
-                  <span className="text-[11px] text-slate-400 line-through font-mono tabular-nums">
-                    {originalPrice.toLocaleString('vi-VN')}₫
-                  </span>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="mt-2.5 grid grid-cols-2 gap-1.5 pt-2 border-t border-slate-100">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                data-no-drag="true"
+                disabled={isSoldOut || isAdding}
+                onClick={handleAddToCart}
+                title="Thêm vào giỏ"
+                className="h-7 rounded-[4px] border-slate-300 bg-white text-slate-800 hover:bg-slate-100 text-[10px] font-bold gap-1 px-1 cursor-pointer"
+              >
+                {isAdding ? (
+                  <Loader2 size={12} className="shrink-0 animate-spin text-red-600" />
+                ) : (
+                  <ShoppingCart size={12} className="shrink-0" />
                 )}
-              </div>
+                <span className="truncate">{isAdding ? 'Đang thêm' : 'Thêm giỏ'}</span>
+              </Button>
 
-              {discountSavings > 0 && (
-                <div className="text-[10px] font-semibold text-slate-500 mt-0.5">
-                  Tiết kiệm: <strong className="text-emerald-700 font-mono tabular-nums">{discountSavings.toLocaleString('vi-VN')}₫</strong>
-                </div>
-              )}
-
-              {/* Simple Flat Progress Bar */}
-              <div className="mt-2">
-                <div className="relative w-full h-3.5 bg-slate-100 rounded-[3px] overflow-hidden flex items-center border border-slate-200">
-                  <div
-                    className="absolute left-0 top-0 bottom-0 bg-red-600 transition-all duration-300"
-                    style={{ width: `${Math.max(6, progressRatio)}%` }}
-                  />
-                  <span className="relative z-10 w-full text-center text-[9px] font-bold text-slate-800 tracking-tight px-1 truncate mix-blend-multiply">
-                    {isSoldOut ? 'HẾT SUẤT' : `Đã bán ${soldInFlashSale}/${stockLimit} suất`}
-                  </span>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="mt-2.5 grid grid-cols-2 gap-1.5 pt-2 border-t border-slate-100">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={isSoldOut || isAdding}
-                  onClick={handleAddToCart}
-                  title="Thêm vào giỏ"
-                  className="h-7 rounded-[4px] border-slate-300 bg-white text-slate-800 hover:bg-slate-100 text-[10px] font-bold gap-1 px-1"
-                >
-                  {isAdding ? (
-                    <Loader2 size={12} className="shrink-0 animate-spin text-red-600" />
-                  ) : (
-                    <ShoppingCart size={12} className="shrink-0" />
-                  )}
-                  <span className="truncate">{isAdding ? 'Đang thêm' : 'Thêm giỏ'}</span>
-                </Button>
-
-                <Button
-                  type="button"
-                  variant="default"
-                  size="sm"
-                  disabled={isSoldOut}
-                  onClick={handleBuyNow}
-                  title="Mua ngay"
-                  className="h-7 rounded-[4px] bg-red-600 hover:bg-red-700 text-white font-bold text-[10px] uppercase tracking-wider gap-1 px-1"
-                >
-                  <span className="truncate">Mua ngay</span>
-                </Button>
-              </div>
-
+              <Button
+                type="button"
+                variant="default"
+                size="sm"
+                data-no-drag="true"
+                disabled={isSoldOut || isAdding}
+                onClick={handleBuyNow}
+                title="Mua ngay"
+                className="h-7 rounded-[4px] bg-red-600 hover:bg-red-700 text-white font-bold text-[10px] uppercase tracking-wider gap-1 px-1 cursor-pointer"
+              >
+                <span className="truncate">Mua ngay</span>
+              </Button>
             </div>
+
           </div>
-        </Card>
-      </Link>
+        </div>
+      </Card>
     </div>
   );
 }

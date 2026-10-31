@@ -413,20 +413,17 @@ export const useCartStore = create((set, get) => ({
         ) || items[items.length - 1];
 
         if (isBuyNow && addedItem) {
-          let prevSelected = get().selectedItemIds || [];
-          if ((!prevSelected || prevSelected.length === 0) && typeof window !== 'undefined') {
-            try {
-              const raw = localStorage.getItem('checkoutItemIds') || sessionStorage.getItem('checkoutItemIds');
-              if (raw) {
-                const parsed = JSON.parse(raw);
-                if (Array.isArray(parsed) && parsed.length > 0) prevSelected = parsed;
-              }
-            } catch (_) {}
+          // Khi bấm "Mua ngay", CHỈ chọn duy nhất sản phẩm vừa mua (hoặc toàn bộ gói Combo nếu là combo item)
+          let buyNowSelected = [addedItem._id];
+          if (addedItem.isComboItem && addedItem.comboId) {
+            const siblingCombos = items.filter(
+              (it) => it.isComboItem && String(it.comboId) === String(addedItem.comboId)
+            );
+            if (siblingCombos.length > 0) {
+              buyNowSelected = siblingCombos.map((it) => it._id);
+            }
           }
-          const validSet = new Set(items.map((it) => String(it._id)));
-          const validPrev = (prevSelected || []).filter((id) => validSet.has(String(id)));
-          const accumulatedSelected = Array.from(new Set([...validPrev, addedItem._id]));
-          get()._setCartData(res.data, accumulatedSelected);
+          get()._setCartData(res.data, buyNowSelected);
         } else {
           get()._setCartData(res.data);
         }

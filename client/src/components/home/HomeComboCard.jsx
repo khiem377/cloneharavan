@@ -11,21 +11,36 @@ export default function HomeComboCard({ combo }) {
   const formatPrice = (val) =>
     new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val || 0);
 
-  const handleAddToCart = async () => {
-    if (loading || combo.virtualStock <= 0) return;
-    setLoading(true);
-    const res = await addComboToCart(combo._id, 1);
-    setLoading(false);
-    if (res?.success) {
-      setAdded(true);
-      setTimeout(() => setAdded(false), 2500);
-    }
-  };
-
+  const comboId = combo._id || combo.id;
   const items = combo.items || [];
   const savings = combo.savingsAmount || Math.max(0, (combo.totalOriginalPrice || 0) - (combo.comboPrice || 0));
   const percent = combo.savingsPercent || (combo.totalOriginalPrice > 0 ? Math.round((savings / combo.totalOriginalPrice) * 100) : 0);
-  const isOutOfStock = combo.virtualStock !== undefined && combo.virtualStock <= 0;
+  const virtualStock = typeof combo.virtualStock === 'number'
+    ? combo.virtualStock
+    : typeof combo.stock === 'number'
+      ? combo.stock
+      : 99;
+  const isOutOfStock = virtualStock <= 0;
+
+  const handleAddToCart = async (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    if (loading || isOutOfStock || !comboId) return;
+    setLoading(true);
+    try {
+      const res = await addComboToCart(comboId, 1);
+      if (res?.success) {
+        setAdded(true);
+        setTimeout(() => setAdded(false), 2500);
+      }
+    } catch (err) {
+      console.error('Error adding combo to cart:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="bg-white rounded-[6px] border border-slate-200 hover:border-slate-300 transition-colors p-4 sm:p-4.5 flex flex-col justify-between h-full">
@@ -36,9 +51,9 @@ export default function HomeComboCard({ combo }) {
             <span className="text-[10px] font-bold text-slate-600 uppercase bg-slate-100 px-2 py-0.5 rounded-[4px]">
               Gói phối ghép
             </span>
-            {combo.virtualStock > 0 ? (
+            {virtualStock > 0 ? (
               <span className="text-[11px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-[4px] border border-emerald-100">
-                Còn {combo.virtualStock} bộ
+                Còn {virtualStock} bộ
               </span>
             ) : (
               <span className="text-[11px] font-medium text-red-600 bg-red-50 px-2 py-0.5 rounded-[4px] border border-red-100">
@@ -129,6 +144,7 @@ export default function HomeComboCard({ combo }) {
 
         <button
           type="button"
+          data-no-drag="true"
           onClick={handleAddToCart}
           disabled={loading || isOutOfStock}
           className={`px-4 py-2 sm:py-2.5 rounded-[6px] font-bold text-xs sm:text-sm transition-all active:scale-[0.98] shrink-0 cursor-pointer ${

@@ -169,14 +169,12 @@ export const QuickViewModal = () => {
     };
   }, [isRendered]);
 
-  if (!isRendered || !product) return null;
-
   // Danh sách hình ảnh của sản phẩm chủ thể
   const images = [];
-  if (product.thumbnail) {
+  if (product?.thumbnail) {
     images.push(typeof product.thumbnail === 'string' ? product.thumbnail : product.thumbnail?.url);
   }
-  if (Array.isArray(product.images)) {
+  if (Array.isArray(product?.images)) {
     product.images.forEach((img) => {
       const url = typeof img === 'string' ? img : img?.url;
       if (url && !images.includes(url)) images.push(url);
@@ -190,19 +188,19 @@ export const QuickViewModal = () => {
   const currentImage = variantSelectedImage || images[activeImageIdx] || images[0];
 
   // Dynamic pricing based on selected variant, with Flash Sale taking TOP priority
-  const isFlashSale = !!(product.isFlashSale && product.flashSalePrice > 0);
+  const isFlashSale = !!(product?.isFlashSale && product?.flashSalePrice > 0);
 
   const activeSalePrice = isFlashSale
     ? product.flashSalePrice
     : selectedVariant?.salePrice !== undefined && selectedVariant?.salePrice !== null && selectedVariant.salePrice > 0
       ? selectedVariant.salePrice
-      : product.salePrice || product.cachedSalePrice || 0;
+      : product?.salePrice || product?.cachedSalePrice || 0;
 
-  const activeRegularPrice = isFlashSale && product.flashSaleOriginalPrice
+  const activeRegularPrice = isFlashSale && product?.flashSaleOriginalPrice
     ? product.flashSaleOriginalPrice
     : selectedVariant?.price !== undefined && selectedVariant?.price !== null && selectedVariant.price > 0
       ? selectedVariant.price
-      : product.price || product.cachedPrice || 0;
+      : product?.price || product?.cachedPrice || 0;
 
   const hasDiscount = activeSalePrice > 0 && activeRegularPrice > activeSalePrice;
   const displayPrice = activeSalePrice > 0 ? activeSalePrice : activeRegularPrice;
@@ -211,12 +209,13 @@ export const QuickViewModal = () => {
     ? Math.round(((activeRegularPrice - activeSalePrice) / activeRegularPrice) * 100)
     : 0;
 
-  const brandName = product.brand?.name || 'Chính hãng';
-  const brandSlug = product.brand?.slug || (product.brand?.name ? product.brand.name.toLowerCase() : '');
-  const sku = selectedVariant?.sku || product.sku || product.productCode || product._id?.slice(-8)?.toUpperCase();
+  const brandName = product?.brand?.name || 'Chính hãng';
+  const brandSlug = product?.brand?.slug || (product?.brand?.name ? product.brand.name.toLowerCase() : '');
+  const sku = selectedVariant?.sku || product?.sku || product?.productCode || product?._id?.slice(-8)?.toUpperCase();
 
   // Phân tích các nhóm thuộc tính độc lập (Màu sắc, Dung lượng, Kích thước...)
   const attributeGroups = useMemo(() => {
+    if (!product) return [];
     const validVariants = (variantsList || []).filter(
       (v) => !v.isDefault || (Array.isArray(v.attributes) && v.attributes.length > 0)
     );
@@ -292,7 +291,7 @@ export const QuickViewModal = () => {
     });
 
     return groups;
-  }, [variantsList, product.options]);
+  }, [variantsList, product?.options]);
 
   // Bộ thuộc tính hiện tại đang chọn
   const selectedAttributes = useMemo(() => {
@@ -316,13 +315,13 @@ export const QuickViewModal = () => {
 
   const groupTitle =
     displayVariants[0]?.attributes?.[0]?.name ||
-    product.options?.[0]?.name ||
+    product?.options?.[0]?.name ||
     'Màu sắc / Phiên bản';
 
   const hasMultipleVariants =
     attributeGroups.length > 0 ||
     displayVariants.length > 1 ||
-    Boolean(product.options?.[0]?.values?.length > 1);
+    Boolean(product?.options?.[0]?.values?.length > 1);
 
   // Xử lý khi chọn một biến thể
   const handleSelectVariant = (v) => {
@@ -475,10 +474,12 @@ export const QuickViewModal = () => {
   };
 
   const handleCompareClick = () => {
-    addProduct(product);
+    if (product) addProduct(product);
   };
 
-  const compared = isCompared(product._id || product.id);
+  const compared = isCompared(product?._id || product?.id);
+
+  if (!isRendered || !product) return null;
 
   return (
     <div

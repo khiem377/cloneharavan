@@ -610,7 +610,7 @@ const addToCart = async (cartOwner, payload) => {
 
     // Kiểm tra item đã tồn tại trong giỏ chưa (hoặc đã thêm ở vòng lặp trước đó trong cùng batch)
     const existingItemIndex = cart.items.findIndex(
-      (cartItem) => cartItem.variantId.toString() === variant._id.toString()
+      (cartItem) => cartItem.variantId?.toString() === variant._id.toString()
     );
 
     const currentPrice = getSellingPrice(variant);
@@ -1024,7 +1024,7 @@ const addComboToCart = async (cartOwner, { comboId, quantity = 1 }) => {
 
     const existingIndex = cart.items.findIndex(
       (cItem) =>
-        cItem.variantId.toString() === variant._id.toString() &&
+        cItem.variantId?.toString() === variant._id.toString() &&
         cItem.comboId?.toString() === combo._id.toString()
     );
 

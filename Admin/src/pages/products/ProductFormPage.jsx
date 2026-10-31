@@ -53,6 +53,12 @@ const DEFAULT_FORM = {
   keywords: [],
   weight: 0,
   dimensions: { length: 0, width: 0, height: 0 },
+  productWeight: 0,
+  productDimensions: { length: 0, width: 0, height: 0 },
+  packageWeight: 0,
+  packageDimensions: { length: 0, width: 0, height: 0 },
+  shippingDataStatus: 'missing',
+  shippingDataSource: '',
   warehouseId: 'all',
 };
 
@@ -203,8 +209,14 @@ export default function ProductFormPage() {
         weightBasedPricing: Boolean(p.weightBasedPricing),
         lowStockThreshold: p.lowStockThreshold ?? 5,
         keywords: p.keywords || [],
-        weight: p.weight ?? 0,
-        dimensions: p.dimensions || { length: 0, width: 0, height: 0 },
+        weight: p.packageWeight ?? p.weight ?? 0,
+        dimensions: p.packageDimensions || p.dimensions || { length: 0, width: 0, height: 0 },
+        productWeight: p.productWeight ?? p.weight ?? 0,
+        productDimensions: p.productDimensions || p.dimensions || { length: 0, width: 0, height: 0 },
+        packageWeight: p.packageWeight ?? p.weight ?? 0,
+        packageDimensions: p.packageDimensions || p.dimensions || { length: 0, width: 0, height: 0 },
+        shippingDataStatus: p.shippingDataStatus || 'missing',
+        shippingDataSource: p.shippingDataSource || '',
         warehouseId: p.warehouseId?._id || p.warehouseId || 'all',
       });
     }
@@ -282,6 +294,78 @@ export default function ProductFormPage() {
     }
   };
 
+  const handleApplyAiData = ({
+    weight,
+    dimensions,
+    productWeight,
+    productDimensions,
+    packageWeight,
+    packageDimensions,
+    shippingDataStatus,
+    shippingDataSource,
+    specifications,
+    description,
+    price,
+    sku,
+    options: aiOptions,
+  }) => {
+    // 1. Logistics: Cân nặng & Kích thước (Phân tách Sản phẩm trần vs Kiện hàng bưu điện)
+    if (weight !== undefined) setField('weight', weight);
+    if (dimensions) setField('dimensions', dimensions);
+    if (productWeight !== undefined) setField('productWeight', productWeight);
+    if (productDimensions) setField('productDimensions', productDimensions);
+    if (packageWeight !== undefined) setField('packageWeight', packageWeight);
+    if (packageDimensions) setField('packageDimensions', packageDimensions);
+    if (shippingDataStatus) setField('shippingDataStatus', shippingDataStatus);
+    if (shippingDataSource) setField('shippingDataSource', shippingDataSource);
+
+    // 2. Mô tả sản phẩm chuẩn SEO HTML
+    if (description && typeof description === 'string' && description.trim()) {
+      setField('description', description);
+    }
+
+    // 3. Thông số kỹ thuật
+    if (specifications && Array.isArray(specifications) && specifications.length > 0) {
+      const existingSpecs = Array.isArray(form.specifications) ? form.specifications : [];
+      const merged = [...existingSpecs];
+      specifications.forEach((newSpec) => {
+        const found = merged.find((s) => s.key?.toLowerCase() === newSpec.key?.toLowerCase());
+        if (!found) {
+          merged.push(newSpec);
+        }
+      });
+      setField('specifications', merged);
+    }
+
+    // 4. Giá bán
+    if (price && Number(price) > 0) {
+      setField('price', Number(price));
+    }
+
+    // 5. Mã SKU
+    if (sku && typeof sku === 'string' && sku.trim()) {
+      if (!form.sku || form.sku.trim() === '') {
+        setField('sku', sku.trim());
+      }
+    }
+
+    // 6. Tự động sinh phân loại biến thể nếu tạo mới
+    if (aiOptions && Array.isArray(aiOptions) && aiOptions.length > 0 && !isEdit) {
+      setHasVariants(true);
+      setOptions(aiOptions);
+      const effectiveSku = sku || form.sku || 'SKU';
+      const effectivePrice = price || form.price || 0;
+      const generated = generateCartesianVariants(
+        aiOptions,
+        effectiveSku,
+        effectivePrice,
+        form.salePrice || 0,
+        form.stock || 0
+      );
+      setGeneratedVariants(generated);
+    }
+  };
+
   const handleSubmit = () => {
     if (!form.name.trim()) return toast.error('Vui lòng nhập tên sản phẩm');
     if (!form.sku.trim()) return toast.error('Vui lòng nhập mã SKU');
@@ -321,8 +405,14 @@ export default function ProductFormPage() {
       weightBasedPricing: Boolean(form.weightBasedPricing),
       lowStockThreshold: Number(form.lowStockThreshold) || 5,
       keywords: form.keywords || [],
-      weight: Number(form.weight) || 0,
-      dimensions: form.dimensions || { length: 0, width: 0, height: 0 },
+      weight: Number(form.packageWeight || form.weight) || 0,
+      dimensions: form.packageDimensions || form.dimensions || { length: 0, width: 0, height: 0 },
+      productWeight: Number(form.productWeight) || 0,
+      productDimensions: form.productDimensions || { length: 0, width: 0, height: 0 },
+      packageWeight: Number(form.packageWeight || form.weight) || 0,
+      packageDimensions: form.packageDimensions || form.dimensions || { length: 0, width: 0, height: 0 },
+      shippingDataStatus: form.shippingDataStatus || 'missing',
+      shippingDataSource: form.shippingDataSource || '',
       warehouseId: form.warehouseId || 'all',
     };
 
@@ -425,6 +515,8 @@ export default function ProductFormPage() {
           <ProductRetailOperationsCard
             form={form}
             setField={setField}
+            brands={brands}
+            onApplyAiData={handleApplyAiData}
           />
 
           {!isEdit && (

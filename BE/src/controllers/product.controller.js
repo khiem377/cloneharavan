@@ -1,4 +1,5 @@
 const productService = require('../services/product.service');
+const productAiSpecsService = require('../services/productAiSpecs.service');
 const { createProductSchema, updateProductSchema } = require('../validators/product.validator');
 
 const createProduct = async (req, res, next) => {
@@ -197,6 +198,25 @@ const updateBatchExpiry = async (req, res, next) => {
   }
 };
 
+const aiExtractSpecs = async (req, res, next) => {
+  try {
+    const { productName, brand, modelCode, productUrl } = req.body;
+    const data = await productAiSpecsService.extractProductSpecs({
+      productName,
+      brand,
+      modelCode,
+      productUrl,
+    });
+    res.status(200).json({
+      status: 'success',
+      message: 'Trích xuất thông số kỹ thuật thành công',
+      data,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createProduct,
   getProducts,
@@ -213,4 +233,5 @@ module.exports = {
   updateWholesaleTiers,
   updateCompositeBom,
   updateBatchExpiry,
+  aiExtractSpecs,
 };

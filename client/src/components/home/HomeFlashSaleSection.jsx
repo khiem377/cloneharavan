@@ -104,6 +104,7 @@ export default function HomeFlashSaleSection({ initialData = null }) {
 
   const handleMouseDown = (e) => {
     if (!sliderRef.current) return;
+    if (e.target.closest('button, a, input, select, textarea, [data-no-drag]')) return;
     setIsDown(true);
     setIsDragging(false);
     setStartX(e.pageX - sliderRef.current.offsetLeft);
@@ -122,11 +123,13 @@ export default function HomeFlashSaleSection({ initialData = null }) {
 
   const handleMouseMove = (e) => {
     if (!isDown || !sliderRef.current) return;
-    e.preventDefault();
     const x = e.pageX - sliderRef.current.offsetLeft;
     const walk = (x - startX) * 1.5;
-    if (Math.abs(walk) > 5) setIsDragging(true);
-    sliderRef.current.scrollLeft = scrollLeftState - walk;
+    if (Math.abs(walk) > 5) {
+      setIsDragging(true);
+      e.preventDefault();
+      sliderRef.current.scrollLeft = scrollLeftState - walk;
+    }
   };
 
   const handleScroll = (direction) => {

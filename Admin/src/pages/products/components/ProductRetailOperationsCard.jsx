@@ -1,18 +1,52 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Package, ShieldAlert, EyeOff, Printer, Scale, Gift } from 'lucide-react';
+import { Package, ShieldAlert, EyeOff, Printer, Scale, Gift, Sparkles } from 'lucide-react';
+import ProductAiSpecsModal from './ProductAiSpecsModal';
 
 /**
  * ProductRetailOperationsCard
  * Quản lý các công tắc vận hành bán lẻ, in ấn, từ khóa và kích thước đóng gói theo chuẩn Pancake POS
  */
-export default function ProductRetailOperationsCard({ form, setField }) {
+export default function ProductRetailOperationsCard({ form, setField, brands = [], onApplyAiData }) {
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+
   const handleKeywordChange = (e) => {
     const val = e.target.value;
     const list = val.split(',').map((k) => k.trim()).filter(Boolean);
     setField('keywords', list);
+  };
+
+  const selectedBrand = brands?.find((b) => b._id === form.brand || b.name === form.brand);
+  const brandName = selectedBrand?.name || (typeof form.brand === 'string' ? form.brand : '');
+
+  const handleApplyAiSpecs = (aiData) => {
+    if (typeof onApplyAiData === 'function') {
+      onApplyAiData(aiData);
+      return;
+    }
+
+    const { weight, dimensions, specifications, description, price, sku } = aiData;
+    if (weight !== undefined) setField('weight', weight);
+    if (dimensions) setField('dimensions', dimensions);
+    if (description && typeof description === 'string' && description.trim()) {
+      setField('description', description);
+    }
+    if (price && Number(price) > 0) setField('price', Number(price));
+    if (sku && typeof sku === 'string' && sku.trim() && !form.sku) setField('sku', sku.trim());
+    if (specifications && Array.isArray(specifications) && specifications.length > 0) {
+      const existingSpecs = Array.isArray(form.specifications) ? form.specifications : [];
+      const merged = [...existingSpecs];
+      specifications.forEach((newSpec) => {
+        const found = merged.find((s) => s.key?.toLowerCase() === newSpec.key?.toLowerCase());
+        if (!found) {
+          merged.push(newSpec);
+        }
+      });
+      setField('specifications', merged);
+    }
   };
 
   const keywordsString = Array.isArray(form.keywords) ? form.keywords.join(', ') : '';
@@ -131,20 +165,53 @@ export default function ProductRetailOperationsCard({ form, setField }) {
         </div>
 
         {/* Trọng lượng & Kích thước đóng gói */}
-        <div className="pt-2 border-t border-border">
-          <p className="text-xs font-semibold text-foreground mb-2.5">
-            Thông số đóng gói phục vụ tính cước giao vận
-          </p>
+        <div className="pt-2 border-t border-border space-y-2.5">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
+            <div className="space-y-0.5">
+              <div className="flex items-center gap-2">
+                <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                  <Scale className="size-3.5 text-primary" /> Kiện hàng đóng gói phục vụ tính cước GHN / GHTK
+                </p>
+                {form.shippingDataStatus === 'verified' && (
+                  <span className="text-[10px] font-medium text-emerald-600 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/30">
+                    ✓ Đã xác minh từ hãng
+                  </span>
+                )}
+                {form.shippingDataStatus === 'estimated' && (
+                  <span className="text-[10px] font-medium text-amber-600 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/30">
+                    ⚡ Quy đổi đóng gói E-commerce
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Dùng độc quyền để tính phí ship bưu điện (Quần áo được tính theo kích thước gập túi ni-lông niêm phong).
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setIsAiModalOpen(true)}
+              className="h-7 px-2.5 rounded-[6px] text-xs font-medium border-primary/30 text-primary hover:bg-primary/5 active:scale-[0.98] transition-all cursor-pointer shadow-2xs gap-1.5"
+            >
+              <Sparkles className="size-3 text-amber-500" />
+              <span>AI Tra cứu thông số</span>
+            </Button>
+          </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="flex flex-col gap-1">
-              <label className="text-[11px] font-medium text-muted-foreground">Khối lượng (gram)</label>
+              <label className="text-[11px] font-medium text-muted-foreground">Cả gói (gram)</label>
               <Input
                 type="number"
                 min="0"
-                value={form.weight ?? 0}
-                onChange={(e) => setField('weight', Number(e.target.value))}
+                value={form.packageWeight || form.weight || 0}
+                onChange={(e) => {
+                  const val = Number(e.target.value);
+                  setField('packageWeight', val);
+                  setField('weight', val);
+                }}
                 className="h-8 rounded-[6px] text-xs font-mono tabular-nums"
-                placeholder="500"
+                placeholder="250"
               />
             </div>
 
@@ -153,15 +220,15 @@ export default function ProductRetailOperationsCard({ form, setField }) {
               <Input
                 type="number"
                 min="0"
-                value={form.dimensions?.length ?? 0}
-                onChange={(e) =>
-                  setField('dimensions', {
-                    ...form.dimensions,
-                    length: Number(e.target.value),
-                  })
-                }
+                value={form.packageDimensions?.length || form.dimensions?.length || 0}
+                onChange={(e) => {
+                  const val = Number(e.target.value);
+                  const updated = { ...(form.packageDimensions || form.dimensions || {}), length: val };
+                  setField('packageDimensions', updated);
+                  setField('dimensions', updated);
+                }}
                 className="h-8 rounded-[6px] text-xs font-mono tabular-nums"
-                placeholder="20"
+                placeholder="25"
               />
             </div>
 
@@ -170,15 +237,15 @@ export default function ProductRetailOperationsCard({ form, setField }) {
               <Input
                 type="number"
                 min="0"
-                value={form.dimensions?.width ?? 0}
-                onChange={(e) =>
-                  setField('dimensions', {
-                    ...form.dimensions,
-                    width: Number(e.target.value),
-                  })
-                }
+                value={form.packageDimensions?.width || form.dimensions?.width || 0}
+                onChange={(e) => {
+                  const val = Number(e.target.value);
+                  const updated = { ...(form.packageDimensions || form.dimensions || {}), width: val };
+                  setField('packageDimensions', updated);
+                  setField('dimensions', updated);
+                }}
                 className="h-8 rounded-[6px] text-xs font-mono tabular-nums"
-                placeholder="15"
+                placeholder="18"
               />
             </div>
 
@@ -187,20 +254,28 @@ export default function ProductRetailOperationsCard({ form, setField }) {
               <Input
                 type="number"
                 min="0"
-                value={form.dimensions?.height ?? 0}
-                onChange={(e) =>
-                  setField('dimensions', {
-                    ...form.dimensions,
-                    height: Number(e.target.value),
-                  })
-                }
+                value={form.packageDimensions?.height || form.dimensions?.height || 0}
+                onChange={(e) => {
+                  const val = Number(e.target.value);
+                  const updated = { ...(form.packageDimensions || form.dimensions || {}), height: val };
+                  setField('packageDimensions', updated);
+                  setField('dimensions', updated);
+                }}
                 className="h-8 rounded-[6px] text-xs font-mono tabular-nums"
-                placeholder="10"
+                placeholder="3"
               />
             </div>
           </div>
         </div>
       </CardContent>
+
+      <ProductAiSpecsModal
+        isOpen={isAiModalOpen}
+        onClose={() => setIsAiModalOpen(false)}
+        productName={form.name}
+        brandName={brandName}
+        onApply={handleApplyAiSpecs}
+      />
     </Card>
   );
 }

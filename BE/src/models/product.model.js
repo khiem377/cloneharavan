@@ -165,6 +165,7 @@ const productSchema = new mongoose.Schema(
       type: String,
       trim: true,
     }],
+    // Trọng lượng & Kích thước tương thích ngược (đồng bộ với package)
     weight: {
       type: Number,
       default: 0,
@@ -174,6 +175,43 @@ const productSchema = new mongoose.Schema(
       length: { type: Number, default: 0, min: 0 },
       width: { type: Number, default: 0, min: 0 },
       height: { type: Number, default: 0, min: 0 },
+    },
+    // 1. Thông số sản phẩm trần (kích thước & cân nặng thật của sản phẩm, hiển thị cho khách xem)
+    productWeight: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    productDimensions: {
+      length: { type: Number, default: 0, min: 0 },
+      width: { type: Number, default: 0, min: 0 },
+      height: { type: Number, default: 0, min: 0 },
+    },
+    // 2. Thông số kiện hàng đóng gói (kích thước sau đóng hộp / gập túi, chuyên biệt tính cước GHN)
+    packageWeight: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    packageDimensions: {
+      length: { type: Number, default: 0, min: 0 },
+      width: { type: Number, default: 0, min: 0 },
+      height: { type: Number, default: 0, min: 0 },
+    },
+    // Trạng thái dữ liệu vận chuyển
+    shippingDataStatus: {
+      type: String,
+      enum: ['verified', 'estimated', 'missing'],
+      default: 'missing',
+    },
+    shippingDataSource: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+    shippingDataUpdatedAt: {
+      type: Date,
+      default: null,
     },
     giftProduct: {
       productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', default: null },

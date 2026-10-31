@@ -102,6 +102,34 @@ const createProductSchema = z.object({
   batchNumber: z.string().optional(),
   manufacturingDate: z.string().nullable().optional(),
   expiryDate: z.string().nullable().optional(),
+
+  // Vận chuyển & Kích thước đóng gói
+  weight: z.number().min(0).optional(),
+  dimensions: z.object({
+    length: z.number().min(0).default(0),
+    width: z.number().min(0).default(0),
+    height: z.number().min(0).default(0),
+  }).optional(),
+  productWeight: z.number().min(0).optional(),
+  productDimensions: z.object({
+    length: z.number().min(0).default(0),
+    width: z.number().min(0).default(0),
+    height: z.number().min(0).default(0),
+  }).optional(),
+  packageWeight: z.number().min(0).optional(),
+  packageDimensions: z.object({
+    length: z.number().min(0).default(0),
+    width: z.number().min(0).default(0),
+    height: z.number().min(0).default(0),
+  }).optional(),
+  shippingDataStatus: z.enum(['verified', 'estimated', 'missing']).optional(),
+  shippingDataSource: z.string().optional(),
+  allowNegativeStock: z.boolean().optional(),
+  hideNameOnPrint: z.boolean().optional(),
+  hideOnInvoice: z.boolean().optional(),
+  weightBasedPricing: z.boolean().optional(),
+  lowStockThreshold: z.number().min(0).optional(),
+  keywords: z.array(z.string()).optional(),
 });
 
 const updateProductSchema = createProductSchema.partial();

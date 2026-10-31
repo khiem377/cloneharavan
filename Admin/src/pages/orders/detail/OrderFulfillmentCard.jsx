@@ -167,45 +167,60 @@ export default function OrderFulfillmentCard({ order, shipment }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {order.items?.map((item, idx) => (
-              <TableRow key={item._id || idx} className="text-xs">
-                <TableCell>
-                  <div className="flex items-center gap-3">
-                    <div className="size-11 rounded-[4px] border border-border overflow-hidden bg-secondary/40 shrink-0">
-                      {item.thumbnail ? (
-                        <img
-                          src={item.thumbnail}
-                          alt={item.productName}
-                          className="size-full object-cover"
-                        />
-                      ) : (
-                        <div className="size-full flex items-center justify-center text-muted-foreground">
-                          <Package className="size-4" />
-                        </div>
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <h4 className="font-semibold text-foreground truncate text-xs">
-                        {item.productName}
-                      </h4>
-                      <div className="flex items-center gap-2 mt-0.5 text-[11px] text-muted-foreground">
-                        {item.variantName && <span>Phân loại: {item.variantName}</span>}
-                        {item.sku && <span className="font-mono">SKU: {item.sku}</span>}
-                      </div>
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell className="text-center font-mono tabular-nums text-foreground">
-                  {item.quantity}
-                </TableCell>
-                <TableCell className="text-right font-mono tabular-nums text-muted-foreground">
-                  {formatCurrency(item.unitPrice)}
-                </TableCell>
-                <TableCell className="text-right font-mono tabular-nums font-bold text-foreground">
-                  {formatCurrency(item.lineTotal || item.subtotal)}
+            {(!order.items || order.items.length === 0) ? (
+              <TableRow>
+                <TableCell colSpan={4} className="text-center py-8 text-xs text-muted-foreground">
+                  Đơn hàng chưa có thông tin sản phẩm
                 </TableCell>
               </TableRow>
-            ))}
+            ) : (
+              order.items.map((item, idx) => {
+                const thumbUrl = typeof item.thumbnail === 'string' ? item.thumbnail : (item.thumbnail?.url || '');
+                const pName = item.productName || item.name || 'Sản phẩm';
+                const uPrice = item.unitPrice ?? item.price ?? 0;
+                const total = item.lineTotal ?? item.subtotal ?? (uPrice * (item.quantity || 1));
+
+                return (
+                  <TableRow key={item._id || idx} className="text-xs">
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <div className="size-11 rounded-[4px] border border-border overflow-hidden bg-secondary/40 shrink-0">
+                          {thumbUrl ? (
+                            <img
+                              src={thumbUrl}
+                              alt={pName}
+                              className="size-full object-cover"
+                            />
+                          ) : (
+                            <div className="size-full flex items-center justify-center text-muted-foreground">
+                              <Package className="size-4" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h4 className="font-semibold text-foreground truncate text-xs">
+                            {pName}
+                          </h4>
+                          <div className="flex items-center gap-2 mt-0.5 text-[11px] text-muted-foreground">
+                            {item.variantName && <span>Phân loại: {item.variantName}</span>}
+                            {item.sku && <span className="font-mono">SKU: {item.sku}</span>}
+                          </div>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center font-mono tabular-nums text-foreground">
+                      {item.quantity}
+                    </TableCell>
+                    <TableCell className="text-right font-mono tabular-nums text-muted-foreground">
+                      {formatCurrency(uPrice)}
+                    </TableCell>
+                    <TableCell className="text-right font-mono tabular-nums font-bold text-foreground">
+                      {formatCurrency(total)}
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            )}
           </TableBody>
         </Table>
       </CardContent>

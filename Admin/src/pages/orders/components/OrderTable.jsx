@@ -215,10 +215,10 @@ export default function OrderTable({
                     <TableCell>
                       <div className="flex flex-col gap-0.5">
                         <span className="text-xs font-semibold text-foreground">
-                          {order.shippingAddress?.fullName || 'Khách vãng lai'}
+                          {order.customerName || order.shippingAddress?.fullName || order.userId?.fullName || order.userId?.name || 'Khách vãng lai'}
                         </span>
                         <span className="text-[11px] font-mono text-muted-foreground">
-                          {order.shippingAddress?.phone || '—'}
+                          {order.customerPhone || order.shippingAddress?.phone || order.userId?.phone || '—'}
                         </span>
                       </div>
                     </TableCell>
@@ -229,7 +229,7 @@ export default function OrderTable({
                     <TableCell className="max-w-[200px]">
                       <div className="flex flex-col gap-0.5">
                         <span className="text-xs text-foreground truncate font-medium">
-                          {firstItem?.productName || 'Không có tên SP'}
+                          {firstItem?.productName || firstItem?.name || 'Không có tên SP'}
                         </span>
                         <span className="text-[11px] text-muted-foreground">
                           {order.items?.length > 1

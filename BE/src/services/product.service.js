@@ -374,8 +374,15 @@ const createProduct = async (data) => {
     weightBasedPricing: data.weightBasedPricing === true,
     lowStockThreshold: data.lowStockThreshold !== undefined ? Number(data.lowStockThreshold) : 5,
     keywords: Array.isArray(data.keywords) ? data.keywords : (data.keyword ? [data.keyword] : []),
-    weight: data.weight !== undefined ? Number(data.weight) : 0,
-    dimensions: data.dimensions || { length: 0, width: 0, height: 0 },
+    weight: data.packageWeight !== undefined ? Number(data.packageWeight) : (data.weight !== undefined ? Number(data.weight) : 0),
+    dimensions: data.packageDimensions || data.dimensions || { length: 0, width: 0, height: 0 },
+    productWeight: data.productWeight !== undefined ? Number(data.productWeight) : (data.weight !== undefined ? Number(data.weight) : 0),
+    productDimensions: data.productDimensions || data.dimensions || { length: 0, width: 0, height: 0 },
+    packageWeight: data.packageWeight !== undefined ? Number(data.packageWeight) : (data.weight !== undefined ? Number(data.weight) : 0),
+    packageDimensions: data.packageDimensions || data.dimensions || { length: 0, width: 0, height: 0 },
+    shippingDataStatus: data.shippingDataStatus || 'missing',
+    shippingDataSource: data.shippingDataSource || '',
+    shippingDataUpdatedAt: data.shippingDataStatus && data.shippingDataStatus !== 'missing' ? new Date() : null,
     giftProduct: data.giftProduct || null,
   });
 
@@ -832,6 +839,15 @@ const updateProduct = async (id, data) => {
     const { thumbnailMediaId, imageMediaIds, price, salePrice, stock, warehouseId, ...rest } = data;
   if (warehouseId !== undefined) {
     product.warehouseId = warehouseId && warehouseId !== 'all' ? warehouseId : null;
+  }
+  if (data.packageWeight !== undefined) {
+    product.weight = Number(data.packageWeight);
+  }
+  if (data.packageDimensions) {
+    product.dimensions = data.packageDimensions;
+  }
+  if (data.shippingDataStatus && data.shippingDataStatus !== 'missing') {
+    product.shippingDataUpdatedAt = new Date();
   }
   Object.assign(product, rest);
   await product.save();

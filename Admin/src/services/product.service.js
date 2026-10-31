@@ -25,4 +25,5 @@ export const productService = {
   updateWholesaleTiers: (id, tiers) => api.patch(`/products/${id}/wholesale-tiers`, { tiers }),
   updateCompositeBom: (id, data) => api.patch(`/products/${id}/composite-bom`, data),
   updateBatchExpiry: (id, data) => api.patch(`/products/${id}/batch-expiry`, data),
+  aiExtractSpecs: (data) => api.post('/products/ai-extract-specs', data),
 };

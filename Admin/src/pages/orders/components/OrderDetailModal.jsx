@@ -227,59 +227,66 @@ export default function OrderDetailModal({
             </div>
 
             <div className="divide-y divide-border">
-              {order.items?.map((item, idx) => (
-                <div key={item._id || idx} className="p-3.5 flex items-center gap-3">
-                  <div className="size-14 rounded-[4px] border border-border overflow-hidden bg-secondary/50 shrink-0">
-                    {item.thumbnail ? (
-                      <img
-                        src={item.thumbnail}
-                        alt={item.productName}
-                        className="size-full object-cover"
-                      />
-                    ) : (
-                      <div className="size-full flex items-center justify-center text-muted-foreground">
-                        <Package className="size-5" />
-                      </div>
-                    )}
-                  </div>
+              {order.items?.map((item, idx) => {
+                const thumbUrl = typeof item.thumbnail === 'string' ? item.thumbnail : (item.thumbnail?.url || '');
+                const pName = item.productName || item.name || 'Sản phẩm';
+                const uPrice = item.unitPrice ?? item.price ?? 0;
+                const total = item.lineTotal ?? item.subtotal ?? (uPrice * (item.quantity || 1));
 
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h4 className="text-xs font-semibold text-foreground truncate">
-                        {item.productName}
-                      </h4>
-                      {item.isGift && (
-                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[3px] bg-amber-500/10 text-amber-600 text-[10px] font-medium border border-amber-500/20 shrink-0">
-                          <Gift className="size-2.5" />
-                          Quà tặng
-                        </span>
+                return (
+                  <div key={item._id || idx} className="p-3.5 flex items-center gap-3">
+                    <div className="size-14 rounded-[4px] border border-border overflow-hidden bg-secondary/50 shrink-0">
+                      {thumbUrl ? (
+                        <img
+                          src={thumbUrl}
+                          alt={pName}
+                          className="size-full object-cover"
+                        />
+                      ) : (
+                        <div className="size-full flex items-center justify-center text-muted-foreground">
+                          <Package className="size-5" />
+                        </div>
                       )}
                     </div>
-                    {item.variantName && (
-                      <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
-                        Phân loại: {item.variantName}
-                      </p>
-                    )}
-                    {item.sku && (
-                      <p className="text-[10px] font-mono text-muted-foreground/80">
-                        SKU: {item.sku}
-                      </p>
-                    )}
-                  </div>
 
-                  <div className="text-right shrink-0">
-                    <div className="text-xs font-bold font-mono text-foreground">
-                      {formatCurrency(item.unitPrice)}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-xs font-semibold text-foreground truncate">
+                          {pName}
+                        </h4>
+                        {item.isGift && (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[3px] bg-amber-500/10 text-amber-600 text-[10px] font-medium border border-amber-500/20 shrink-0">
+                            <Gift className="size-2.5" />
+                            Quà tặng
+                          </span>
+                        )}
+                      </div>
+                      {item.variantName && (
+                        <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
+                          Phân loại: {item.variantName}
+                        </p>
+                      )}
+                      {item.sku && (
+                        <p className="text-[10px] font-mono text-muted-foreground/80">
+                          SKU: {item.sku}
+                        </p>
+                      )}
                     </div>
-                    <div className="text-[11px] text-muted-foreground font-mono">
-                      x {item.quantity}
-                    </div>
-                    <div className="text-xs font-bold font-mono text-primary mt-1">
-                      {formatCurrency(item.lineTotal || item.subtotal)}
+
+                    <div className="text-right shrink-0">
+                      <div className="text-xs font-bold font-mono text-foreground">
+                        {formatCurrency(uPrice)}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground font-mono">
+                        x {item.quantity}
+                      </div>
+                      <div className="text-xs font-bold font-mono text-primary mt-1">
+                        {formatCurrency(total)}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Bảng tính tiền Pricing Breakdown */}
