@@ -30,7 +30,7 @@ function StatusBadge({ status }) {
   if (status === 'active') {
     return (
       <span className="inline-flex items-center gap-1.5 rounded-[4px] px-2 py-0.5 text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
-        <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+        <span className="size-1.5 rounded-full bg-emerald-500" />
         Đang diễn ra
       </span>
     );

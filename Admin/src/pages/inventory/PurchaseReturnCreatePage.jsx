@@ -273,7 +273,7 @@ export default function PurchaseReturnCreatePage() {
                 />
 
                 {productSearch && products.length > 0 && (
-                  <div className="absolute z-20 top-full left-0 right-0 mt-1 rounded-[6px] border border-border bg-card shadow-md max-h-48 overflow-auto p-1.5 space-y-1">
+                  <div className="absolute z-20 top-full left-0 right-0 mt-1 rounded-[6px] border border-border bg-card shadow-xs max-h-48 overflow-auto p-1.5 space-y-1">
                     {products.map((p) => (
                       <div
                         key={p._id}

@@ -109,13 +109,12 @@ function SpecsEditor({ specs, onChange }) {
   );
 }
 
-/* ─── Image thumbnail picker ─── */
 function ThumbnailPicker({ url, media, onPick }) {
   return (
     <div className="flex flex-col gap-1.5">
       <label className="text-xs font-medium text-foreground">Anh dai dien</label>
       {url ? (
-        <div className="relative group w-full aspect-square max-w-[200px] rounded-lg overflow-hidden border border-border bg-muted">
+        <div className="relative group w-full aspect-square max-w-[200px] rounded-[6px] overflow-hidden border border-border bg-muted">
           <MediaThumbnailHover media={media} className="size-full">
             <img src={url} alt="thumb" className="size-full object-cover" />
           </MediaThumbnailHover>
@@ -129,7 +128,7 @@ function ThumbnailPicker({ url, media, onPick }) {
         </div>
       ) : (
         <div
-          className="w-full max-w-[200px] aspect-square rounded-lg border-2 border-dashed border-border flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors"
+          className="w-full max-w-[200px] aspect-square rounded-[6px] border-2 border-dashed border-border flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors"
           onClick={onPick}
         >
           <Image size={24} className="text-muted-foreground" />
@@ -173,11 +172,10 @@ function GalleryPicker({ urls, ids, mediaObjects = {}, onPick, onRemove }) {
   );
 }
 
-/* ─── Collapsible section ─── */
 function Section({ title, defaultOpen = true, badge, children }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="rounded-xl border border-border bg-card overflow-hidden">
+    <div className="rounded-[6px] border border-border bg-card overflow-hidden">
       <button
         type="button"
         className="flex items-center justify-between w-full px-4 py-3 cursor-pointer"
@@ -185,7 +183,7 @@ function Section({ title, defaultOpen = true, badge, children }) {
       >
         <div className="flex items-center gap-2">
           <span className="text-sm font-semibold text-foreground">{title}</span>
-          {badge && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 font-semibold">{badge}</span>}
+          {badge && <span className="text-[10px] px-1.5 py-0.5 rounded-[6px] bg-primary/10 text-primary border border-primary/20 font-semibold">{badge}</span>}
         </div>
         {open ? <ChevronUp size={14} className="text-muted-foreground" /> : <ChevronDown size={14} className="text-muted-foreground" />}
       </button>
@@ -287,12 +285,9 @@ export default function VariantDetailDrawer({ variant, product, onClose }) {
 
   return (
     <>
-      {/* Overlay */}
-      <div className="fixed inset-0 z-40 bg-black/30" onClick={onClose} />
+      <div className="fixed inset-0 z-40 bg-black/40" onClick={onClose} />
 
-      {/* Drawer */}
-      <div className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-2xl bg-background border-l border-border shadow-2xl flex flex-col overflow-hidden">
-        {/* Header */}
+      <div className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-2xl bg-background border-l border-border shadow-sm flex flex-col overflow-hidden">
         <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-card shrink-0">
           <div className="flex flex-col">
             <span className="text-xs text-muted-foreground">Chỉnh sửa biến thể</span>
@@ -301,7 +296,7 @@ export default function VariantDetailDrawer({ variant, product, onClose }) {
           <div className="flex items-center gap-2">
             <button
               type="button"
-              className="inline-flex items-center gap-1.5 h-8 px-4 rounded-md bg-primary text-primary-foreground text-xs font-semibold cursor-pointer hover:bg-primary/90 transition-colors disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 h-8 px-4 rounded-[6px] bg-primary text-primary-foreground text-xs font-semibold cursor-pointer hover:bg-primary/90 shadow-xs active:scale-[0.98] transition-all disabled:opacity-50"
               onClick={handleSave}
               disabled={saving}
             >
@@ -310,7 +305,7 @@ export default function VariantDetailDrawer({ variant, product, onClose }) {
             </button>
             <button
               type="button"
-              className="size-8 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent cursor-pointer transition-colors"
+              className="size-8 flex items-center justify-center rounded-[6px] text-muted-foreground hover:text-foreground hover:bg-accent active:scale-[0.98] cursor-pointer transition-all"
               onClick={onClose}
             >
               <X size={16} />
@@ -330,18 +325,16 @@ export default function VariantDetailDrawer({ variant, product, onClose }) {
             <InheritedRow label="Thông số" value={product?.specifications?.length ? `${product.specifications.length} thông số (kế thừa)` : 'Không có'} />
           </Section>
 
-          {/* Variant identity */}
           <Section title="Thuộc tính biến thể" defaultOpen={true}>
             <div className="flex flex-wrap gap-2">
               {(variant.attributes || []).map((attr, i) => (
-                <div key={i} className="inline-flex items-center gap-1.5 rounded-lg bg-primary/8 border border-primary/20 px-3 py-1.5">
+                <div key={i} className="inline-flex items-center gap-1.5 rounded-[6px] bg-primary/8 border border-primary/20 px-3 py-1.5">
                   <span className="text-xs text-muted-foreground font-medium">{attr.name}:</span>
                   <span className="text-sm font-semibold text-primary">{attr.value}</span>
                 </div>
               ))}
             </div>
 
-            {/* Name override */}
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium text-foreground">
                 Tên riêng <span className="text-muted-foreground font-normal">(để trống = dùng tên sản phẩm cha)</span>

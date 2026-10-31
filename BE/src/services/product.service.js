@@ -493,8 +493,11 @@ const getAllProducts = async (query = {}) => {
   const {
     keyword, category, brand, minPrice, maxPrice,
     status = 'published', isFeatured, isHot,
-    sortBy = 'createdAt', sortOrder = 'desc', page = 1, limit = 20,
+    sortBy: rawSortBy, sortOrder = 'desc', page = 1, limit = 20,
+    sort: aliasSort,
   } = query;
+
+  const sortBy = rawSortBy || aliasSort || 'createdAt';
 
   const filter = { isActive: true, status };
 

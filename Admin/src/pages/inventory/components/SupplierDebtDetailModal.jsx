@@ -45,9 +45,8 @@ export default function SupplierDebtDetailModal({
   const canPay = remaining > 0 && debt.status !== 'cancelled';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
-      <div className="bg-card text-card-foreground border border-border rounded-[8px] shadow-xl max-w-md w-full overflow-hidden flex flex-col">
-        {/* Header */}
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-in fade-in duration-200">
+      <div className="bg-card text-card-foreground border border-border rounded-[6px] shadow-sm max-w-md w-full overflow-hidden flex flex-col">
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-border">
           <div className="flex items-center gap-2">
             <h2 className="text-sm font-bold text-foreground">
@@ -57,7 +56,7 @@ export default function SupplierDebtDetailModal({
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-[6px] hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            className="p-1 rounded-[6px] hover:bg-muted text-muted-foreground hover:text-foreground active:scale-[0.98] transition-all cursor-pointer"
           >
             <X size={16} />
           </button>

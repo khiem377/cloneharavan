@@ -1,8 +1,5 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight, Loader2, Gift, X, Search } from '@/components/ui/Icons';
-import PriceInput from '@/components/ui/PriceInput';
-import DateTimePicker from '@/components/ui/DateTimePicker';
 import { toast } from '@/providers/ToastProvider';
 import {
   useGiftPrograms,
@@ -12,210 +9,13 @@ import {
   useDeleteGiftProgram,
   useDeleteBulkGiftPrograms,
 } from '@/hooks/useGiftPrograms';
-import { useProducts, useAllProductsSelect } from '@/hooks/useProducts';
+import { useAllProductsSelect } from '@/hooks/useProducts';
 import { useCategories } from '@/hooks/useCategories';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
-import DataTablePagination from '@/components/ui/DataTablePagination';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardContent } from '@/components/ui/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
-
-function formatDate(d) {
-  if (!d) return '—';
-  return new Date(d).toLocaleDateString('vi-VN', {
-    day: '2-digit', month: '2-digit', year: 'numeric',
-    hour: '2-digit', minute: '2-digit',
-  });
-}
-
-function TagPicker({ tags, onRemove, placeholder, allItems, searchFn, labelKey = 'name', thumbKey = null, onAdd }) {
-  const [search, setSearch] = useState('');
-  const [open, setOpen] = useState(false);
-  const results = searchFn
-    ? searchFn(search)
-    : allItems?.filter((i) => !search || (i[labelKey] || '').toLowerCase().includes(search.toLowerCase())) ?? [];
-
-  return (
-    <div className="flex flex-col gap-2">
-      {tags.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {tags.map((t) => {
-            const itemObj = allItems?.find((x) => x._id === t.id);
-            const displayLabel = (itemObj ? itemObj[labelKey] : null) || (t.label && t.label !== t.id ? t.label : null) || 'Sản phẩm';
-            const rawThumb = (itemObj && thumbKey) ? itemObj[thumbKey] : t.thumbnail;
-            const thumbSrc = typeof rawThumb === 'string' ? rawThumb : rawThumb?.url;
-
-            return (
-              <span key={t.id} className="inline-flex items-center gap-1.5 rounded-[6px] bg-muted border border-border px-2.5 py-1 text-xs font-medium text-foreground">
-                {thumbSrc && (
-                  <img src={thumbSrc} alt="" className="size-4 rounded-[2px] object-cover shrink-0" />
-                )}
-                <span className="max-w-[220px] truncate" title={displayLabel}>{displayLabel}</span>
-                <button type="button" className="text-muted-foreground hover:text-destructive transition-colors cursor-pointer" onClick={() => onRemove(t.id)}>
-                  <X size={11} />
-                </button>
-              </span>
-            );
-          })}
-        </div>
-      )}
-      <div className="relative">
-        <Input
-          className="h-9 w-full rounded-[6px]"
-          placeholder={placeholder}
-          value={search}
-          onChange={(e) => { setSearch(e.target.value); setOpen(true); }}
-          onFocus={() => setOpen(true)}
-          onBlur={() => setTimeout(() => setOpen(false), 200)}
-        />
-        {open && results.filter((r) => !tags.some((t) => t.id === r._id)).length > 0 && (
-          <div className="absolute top-full left-0 z-50 mt-1 w-full rounded-[6px] border border-border bg-popover shadow-md overflow-hidden max-h-48 overflow-y-auto">
-            {results.filter((r) => !tags.some((t) => t.id === r._id)).map((r) => {
-              const rThumb = thumbKey ? (typeof r[thumbKey] === 'string' ? r[thumbKey] : r[thumbKey]?.url) : null;
-              return (
-                <button
-                  key={r._id}
-                  type="button"
-                  className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left text-foreground hover:bg-muted transition-colors cursor-pointer"
-                  onMouseDown={() => {
-                    onAdd({ id: r._id, label: r[labelKey], thumbnail: r[thumbKey] });
-                    setSearch('');
-                    setOpen(false);
-                  }}
-                >
-                  {rThumb ? (
-                    <img src={rThumb} alt="" className="size-7 rounded-[4px] object-cover border border-border bg-muted shrink-0" />
-                  ) : (
-                    <div className="size-7 rounded-[4px] border border-border bg-muted flex items-center justify-center text-[10px] text-muted-foreground shrink-0 font-bold">
-                      {(r[labelKey] || 'SP').charAt(0).toUpperCase()}
-                    </div>
-                  )}
-                  <div className="flex flex-col min-w-0 flex-1">
-                    <span className="truncate text-xs font-medium text-foreground">{r[labelKey]}</span>
-                    {r.sku && <span className="text-[10px] text-muted-foreground font-mono">SKU: {r.sku}</span>}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function GiftProductList({ selected, onAdd, onRemove, onQtyChange, allProducts }) {
-  const [search, setSearch] = useState('');
-  const [open, setOpen] = useState(false);
-  const results = allProducts?.filter((p) => !search || (p.name || '').toLowerCase().includes(search.toLowerCase())) ?? [];
-
-  return (
-    <div className="flex flex-col gap-2">
-      {selected.length > 0 && (
-        <div className="flex flex-col gap-2">
-          {selected.map((g) => {
-            const prod = allProducts?.find((p) => p._id === g.productId);
-            const displayName = g.name && g.name !== 'Sản phẩm' && g.name !== g.productId ? g.name : (prod?.name || 'Sản phẩm');
-            const rawThumb = prod?.thumbnail || g.thumbnail;
-            const thumbSrc = typeof rawThumb === 'string' ? rawThumb : rawThumb?.url;
-
-            return (
-              <div key={g.productId} className="flex items-center gap-3 rounded-[6px] border border-border bg-background px-3 py-2">
-                {thumbSrc ? (
-                  <img src={thumbSrc} alt="" className="size-8 rounded-[4px] object-cover border border-border bg-muted shrink-0" />
-                ) : (
-                  <div className="size-8 rounded-[4px] border border-border bg-muted flex items-center justify-center text-xs text-muted-foreground shrink-0 font-bold">
-                    {(displayName || 'SP').charAt(0).toUpperCase()}
-                  </div>
-                )}
-                <div className="flex flex-col min-w-0 flex-1">
-                  <span className="text-sm font-medium text-foreground truncate">{displayName}</span>
-                  {prod?.sku && <span className="text-[10px] text-muted-foreground font-mono">SKU: {prod.sku}</span>}
-                </div>
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <span className="text-xs text-muted-foreground">SL:</span>
-                  <Input
-                    type="number"
-                    min={1}
-                    className="h-7 w-14 rounded-[4px] font-mono text-xs text-center"
-                    value={g.qty}
-                    onChange={(e) => onQtyChange(g.productId, e.target.value)}
-                  />
-                </div>
-                <button type="button" className="text-muted-foreground hover:text-destructive transition-colors cursor-pointer" onClick={() => onRemove(g.productId)}>
-                  <X size={14} />
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      )}
-      <div className="relative">
-        <Input
-          className="h-9 w-full rounded-[6px]"
-          placeholder="Tìm sản phẩm tặng để thêm..."
-          value={search}
-          onChange={(e) => { setSearch(e.target.value); setOpen(true); }}
-          onFocus={() => setOpen(true)}
-          onBlur={() => setTimeout(() => setOpen(false), 200)}
-        />
-        {open && results.filter((p) => !selected.some((s) => s.productId === p._id)).length > 0 && (
-          <div className="absolute top-full left-0 z-50 mt-1 w-full rounded-[6px] border border-border bg-popover shadow-md overflow-hidden max-h-48 overflow-y-auto">
-            {results.filter((p) => !selected.some((s) => s.productId === p._id)).map((p) => {
-              const thumbSrc = typeof p.thumbnail === 'string' ? p.thumbnail : p.thumbnail?.url;
-              return (
-                <button
-                  key={p._id}
-                  type="button"
-                  className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left text-foreground hover:bg-muted transition-colors cursor-pointer"
-                  onMouseDown={() => {
-                    onAdd({
-                      _id: p._id,
-                      name: p.name,
-                      thumbnail: p.thumbnail,
-                    });
-                    setSearch('');
-                    setOpen(false);
-                  }}
-                >
-                  {thumbSrc ? (
-                    <img src={thumbSrc} alt="" className="size-7 rounded-[4px] object-cover border border-border bg-muted shrink-0" />
-                  ) : (
-                    <div className="size-7 rounded-[4px] border border-border bg-muted flex items-center justify-center text-[10px] text-muted-foreground shrink-0 font-bold">
-                      {(p.name || 'SP').charAt(0).toUpperCase()}
-                    </div>
-                  )}
-                  <div className="flex flex-col min-w-0 flex-1">
-                    <span className="truncate text-xs font-medium text-foreground">{p.name}</span>
-                    {p.sku && <span className="text-[10px] text-muted-foreground font-mono">SKU: {p.sku}</span>}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
+import GiftProgramHeader from './components/gift-program/GiftProgramHeader';
+import GiftProgramFilterBar from './components/gift-program/GiftProgramFilterBar';
+import GiftProgramTable from './components/gift-program/GiftProgramTable';
+import GiftProgramFormModal from './components/gift-program/GiftProgramFormModal';
 
 const DEFAULT_FORM = {
   name: '',
@@ -235,9 +35,7 @@ const DEFAULT_FORM = {
 
 export default function GiftProgramPage() {
   const [searchParams] = useSearchParams();
-  const initialSearch = searchParams.get('search') || '';
-
-  const [keyword, setKeyword] = useState(initialSearch);
+  const [keyword, setKeyword] = useState(searchParams.get('search') || '');
   const [filterStatus, setFilterStatus] = useState('');
   const [filterType, setFilterType] = useState('');
   const [page, setPage] = useState(1);
@@ -249,8 +47,7 @@ export default function GiftProgramPage() {
   const [selectedIds, setSelectedIds] = useState([]);
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
 
-  const params = { keyword, isActive: filterStatus || undefined, giftType: filterType || undefined, page, limit };
-  const res = useGiftPrograms(params);
+  const res = useGiftPrograms({ keyword, isActive: filterStatus || undefined, giftType: filterType || undefined, page, limit });
   const programs = res.data?.data ?? [];
   const pagination = res.data?.pagination;
   const isLoading = res.isLoading;
@@ -279,32 +76,19 @@ export default function GiftProgramPage() {
       giftType: item.giftType,
       scopeType: item.scope?.type ?? 'all',
       scopeProducts: (item.scope?.productIds ?? []).map((p) => {
-        if (p && typeof p === 'object' && p._id) {
-          return { id: p._id, label: p.name, thumbnail: p.thumbnail };
-        }
+        if (p && typeof p === 'object' && p._id) return { id: p._id, label: p.name, thumbnail: p.thumbnail };
         const found = allProducts.find((prod) => prod._id === p);
-        return {
-          id: p,
-          label: found ? found.name : p,
-          thumbnail: found ? found.thumbnail : null,
-        };
+        return { id: p, label: found ? found.name : p, thumbnail: found ? found.thumbnail : null };
       }),
       scopeCategories: (item.scope?.categoryIds ?? []).map((c) => {
-        if (c && typeof c === 'object' && c._id) {
-          return { id: c._id, label: c.name };
-        }
+        if (c && typeof c === 'object' && c._id) return { id: c._id, label: c.name };
         const found = allCategories.find((cat) => cat._id === c);
-        return {
-          id: c,
-          label: found ? found.name : c,
-        };
+        return { id: c, label: found ? found.name : c };
       }),
       triggerQty: item.triggerQty,
       giftQty: item.giftQty ?? 1,
       giftProducts: (item.giftProducts ?? []).map((g) => {
-        const prodObj = (g.productId && typeof g.productId === 'object')
-          ? g.productId
-          : allProducts.find((p) => p._id === g.productId);
+        const prodObj = (g.productId && typeof g.productId === 'object') ? g.productId : allProducts.find((p) => p._id === g.productId);
         return {
           productId: (g.productId && typeof g.productId === 'object') ? g.productId._id : g.productId,
           name: prodObj?.name || 'Sản phẩm',
@@ -387,467 +171,68 @@ export default function GiftProgramPage() {
   const toggleSelect = (id) => setSelectedIds((p) => p.includes(id) ? p.filter((x) => x !== id) : [...p, id]);
   const toggleSelectAll = () => setSelectedIds(selectedIds.length === programs.length ? [] : programs.map((p) => p._id));
 
-  const isMutating = createMut.isPending || updateMut.isPending;
-
-  const scopeLabel = (item) => {
-    if (item.scope?.type === 'all') return 'Tất cả SP';
-    if (item.scope?.type === 'products') {
-      const pList = item.scope.productIds || [];
-      if (pList.length === 1) {
-        const p0 = pList[0];
-        const name = typeof p0 === 'object' ? p0.name : allProducts.find((x) => x._id === p0)?.name || '1 sản phẩm';
-        return <span className="line-clamp-1 max-w-[150px] font-medium" title={name}>{name}</span>;
-      }
-      return `${pList.length} sản phẩm`;
-    }
-    if (item.scope?.type === 'categories') {
-      const cList = item.scope.categoryIds || [];
-      if (cList.length === 1) {
-        const c0 = cList[0];
-        const name = typeof c0 === 'object' ? c0.name : allCategories.find((x) => x._id === c0)?.name || '1 danh mục';
-        return <span className="line-clamp-1 max-w-[150px] font-medium" title={name}>{name}</span>;
-      }
-      return `${cList.length} danh mục`;
-    }
-    return '—';
-  };
-
   return (
     <div className="p-3 sm:p-6 flex flex-col gap-4 sm:gap-6 w-full max-w-full overflow-x-hidden min-h-full bg-background text-foreground">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
-            <Gift className="size-5 text-primary" />
-            Chương trình tặng kèm
-          </h1>
-          <p className="text-xs text-muted-foreground mt-0.5">Tạo và quản lý các chương trình tặng sản phẩm kèm theo đơn hàng</p>
-        </div>
-        <Button onClick={openCreate} className="h-9 px-4 rounded-[6px] active:scale-[0.98] transition-transform">
-          <Plus size={16} className="mr-1.5" /> Thêm chương trình
-        </Button>
-      </div>
+      <GiftProgramHeader openCreate={openCreate} />
 
-      <Card className="rounded-[6px] border border-border shadow-none">
-        <CardContent className="p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-3 flex-1">
-            <div className="relative w-full sm:w-64">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-              <Input
-                className="h-9 pl-8 rounded-[6px]"
-                placeholder="Tìm theo tên..."
-                value={keyword}
-                onChange={(e) => { setKeyword(e.target.value); setPage(1); }}
-              />
-            </div>
-            <select
-              className="h-9 rounded-[6px] border border-input bg-background px-3 text-xs font-medium text-foreground outline-none focus:border-ring cursor-pointer"
-              value={filterType}
-              onChange={(e) => { setFilterType(e.target.value); setPage(1); }}
-            >
-              <option value="">Tất cả loại</option>
-              <option value="same_product">Tặng cùng sản phẩm</option>
-              <option value="different_product">Tặng khác sản phẩm</option>
-            </select>
-            <select
-              className="h-9 rounded-[6px] border border-input bg-background px-3 text-xs font-medium text-foreground outline-none focus:border-ring cursor-pointer"
-              value={filterStatus}
-              onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }}
-            >
-              <option value="">Tất cả trạng thái</option>
-              <option value="true">Đang hoạt động</option>
-              <option value="false">Tắt</option>
-            </select>
-          </div>
-          {selectedIds.length > 0 && (
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={() => setBulkDeleteConfirm(true)}
-              className="h-9 rounded-[6px] active:scale-[0.98] transition-transform"
-            >
-              <Trash2 size={14} className="mr-1.5" /> Xóa {selectedIds.length} mục
-            </Button>
-          )}
-        </CardContent>
-      </Card>
+      <GiftProgramFilterBar
+        keyword={keyword}
+        setKeyword={setKeyword}
+        filterType={filterType}
+        setFilterType={setFilterType}
+        filterStatus={filterStatus}
+        setFilterStatus={setFilterStatus}
+        setPage={setPage}
+        selectedIds={selectedIds}
+        setBulkDeleteConfirm={setBulkDeleteConfirm}
+      />
 
-      <Card className="rounded-[6px] border border-border shadow-none overflow-hidden">
-        {isLoading ? (
-          <Table>
-            <TableBody>
-              {Array.from({ length: 5 }).map((_, i) => (
-                <TableRow key={`gift-skel-${i}`}>
-                  <TableCell className="w-10 px-3"><Skeleton className="size-4 mx-auto" /></TableCell>
-                  <TableCell className="px-4"><Skeleton className="h-4 w-40" /></TableCell>
-                  <TableCell className="px-4"><Skeleton className="h-4 w-20" /></TableCell>
-                  <TableCell className="px-4"><Skeleton className="h-4 w-24" /></TableCell>
-                  <TableCell className="px-4"><Skeleton className="h-4 w-20" /></TableCell>
-                  <TableCell className="px-4"><Skeleton className="h-4 w-24" /></TableCell>
-                  <TableCell className="px-4"><Skeleton className="h-4 w-16" /></TableCell>
-                  <TableCell className="px-4"><Skeleton className="h-4 w-24" /></TableCell>
-                  <TableCell className="px-4"><Skeleton className="h-5 w-20" /></TableCell>
-                  <TableCell className="px-4 text-right"><Skeleton className="h-7 w-16 ml-auto" /></TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        ) : programs.length === 0 ? (
-          <div className="flex h-64 flex-col items-center justify-center text-muted-foreground gap-2">
-            <Gift className="size-10 text-muted-foreground/40" />
-            <p className="text-sm">Chưa có chương trình tặng kèm nào</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader className="bg-muted/50">
-                <TableRow className="border-b border-border">
-                  <TableHead className="w-10 px-3">
-                    <div className="flex items-center justify-center">
-                      <Checkbox
-                        checked={
-                          programs.length > 0 && selectedIds.length === programs.length
-                            ? true
-                            : selectedIds.length > 0
-                            ? 'indeterminate'
-                            : false
-                        }
-                        onCheckedChange={toggleSelectAll}
-                        aria-label="Chọn tất cả chương trình tặng quà"
-                      />
-                    </div>
-                  </TableHead>
-                  <TableHead className="px-4">Tên chương trình</TableHead>
-                  <TableHead className="px-4">Loại tặng</TableHead>
-                  <TableHead className="px-4">SP kích hoạt</TableHead>
-                  <TableHead className="px-4">Điều kiện</TableHead>
-                  <TableHead className="px-4">Quà tặng</TableHead>
-                  <TableHead className="px-4">Đã tặng / Giới hạn</TableHead>
-                  <TableHead className="px-4">Thời gian</TableHead>
-                  <TableHead className="px-4">Trạng thái</TableHead>
-                  <TableHead className="px-4 text-right">Thao tác</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody className="divide-y divide-border/60">
-                {programs.map((item) => {
-                  const now = new Date();
-                  const isExpired = new Date(item.endDate) < now;
-                  const isNotStarted = new Date(item.startDate) > now;
-                  const isQuotaReached = item.giftLimit !== null && item.giftLimit !== undefined && item.giftLimit > 0 && (item.giftUsedCount || 0) >= item.giftLimit;
+      <GiftProgramTable
+        programs={programs}
+        isLoading={isLoading}
+        selectedIds={selectedIds}
+        toggleSelect={toggleSelect}
+        toggleSelectAll={toggleSelectAll}
+        openEdit={openEdit}
+        handleToggle={handleToggle}
+        setDeleteTarget={setDeleteTarget}
+        allProducts={allProducts}
+        allCategories={allCategories}
+        page={page}
+        limit={limit}
+        pagination={pagination}
+        setPage={setPage}
+        setLimit={setLimit}
+      />
 
-                  return (
-                    <TableRow key={item._id} className={selectedIds.includes(item._id) ? 'bg-muted/60' : ''}>
-                      <TableCell className="px-3 py-3 align-middle">
-                        <div className="flex items-center justify-center">
-                          <Checkbox
-                            checked={selectedIds.includes(item._id)}
-                            onCheckedChange={() => toggleSelect(item._id)}
-                            aria-label={`Chọn chương trình ${item.name}`}
-                          />
-                        </div>
-                      </TableCell>
-                      <TableCell className="px-4 py-3 align-middle">
-                        <div className="flex flex-col">
-                          <span className="font-semibold text-foreground text-sm">{item.name}</span>
-                          {item.description && <span className="text-xs text-muted-foreground line-clamp-1">{item.description}</span>}
-                        </div>
-                      </TableCell>
-                      <TableCell className="px-4 py-3 align-middle">
-                        <Badge
-                          variant="outline"
-                          className={`rounded-[6px] text-xs font-medium ${item.giftType === 'same_product' ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20' : 'bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20'}`}
-                        >
-                          {item.giftType === 'same_product' ? 'Cùng sản phẩm' : 'Khác sản phẩm'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="px-4 py-3 align-middle text-xs text-muted-foreground">
-                        {scopeLabel(item)}
-                      </TableCell>
-                      <TableCell className="px-4 py-3 align-middle text-xs text-foreground font-mono tabular-nums">
-                        Mua từ {item.triggerQty} SP
-                      </TableCell>
-                      <TableCell className="px-4 py-3 align-middle text-xs text-foreground font-mono tabular-nums">
-                        {item.giftType === 'same_product'
-                          ? <span>Tặng {item.giftQty} SP cùng loại</span>
-                          : <span>{item.giftProducts?.length || 0} sản phẩm tặng</span>
-                        }
-                      </TableCell>
-                      <TableCell className="px-4 py-3 align-middle">
-                        {item.giftLimit !== null && item.giftLimit !== undefined && item.giftLimit > 0 ? (
-                          <div className="flex flex-col gap-1 min-w-[120px]">
-                            <div className="flex items-center justify-between text-xs font-mono tabular-nums">
-                              <span className="font-semibold text-foreground">{item.giftUsedCount || 0}</span>
-                              <span className="text-muted-foreground">/ {item.giftLimit} suất</span>
-                            </div>
-                            <div className="h-1.5 w-full bg-muted rounded-[2px] overflow-hidden border border-border/40">
-                              <div
-                                className={`h-full transition-all ${
-                                  isQuotaReached ? 'bg-destructive' : 'bg-primary'
-                                }`}
-                                style={{
-                                  width: `${Math.min(100, Math.round(((item.giftUsedCount || 0) / item.giftLimit) * 100))}%`,
-                                }}
-                              />
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="flex flex-col text-xs">
-                            <span className="font-mono tabular-nums text-foreground font-medium">Đã tặng: {item.giftUsedCount || 0}</span>
-                            <span className="text-[11px] text-muted-foreground font-mono">Không giới hạn</span>
-                          </div>
-                        )}
-                      </TableCell>
-                      <TableCell className="px-4 py-3 align-middle text-xs text-muted-foreground font-mono tabular-nums whitespace-nowrap">
-                        <div>{formatDate(item.startDate)}</div>
-                        <div className="text-[11px] text-muted-foreground/80">đến {formatDate(item.endDate)}</div>
-                      </TableCell>
-                      <TableCell className="px-4 py-3 align-middle">
-                        {isQuotaReached ? (
-                          <Badge variant="destructive" className="rounded-[6px] text-xs font-normal">Hết suất quà</Badge>
-                        ) : isExpired ? (
-                          <Badge variant="destructive" className="rounded-[6px] text-xs font-normal">Hết hạn</Badge>
-                        ) : isNotStarted ? (
-                          <Badge variant="outline" className="rounded-[6px] text-xs font-normal border-amber-500/30 text-amber-600 dark:text-amber-400 bg-amber-500/10">Chưa diễn ra</Badge>
-                        ) : (
-                          <Badge variant="outline" className={`rounded-[6px] text-xs font-normal ${item.isActive ? 'border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10' : 'border-border text-muted-foreground bg-muted'}`}>
-                            {item.isActive ? 'Hoạt động' : 'Tắt'}
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="px-4 py-3 align-middle text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button variant="ghost" size="icon" className="size-8 rounded-[6px]" onClick={() => openEdit(item)}>
-                            <Pencil size={15} />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="size-8 rounded-[6px]" onClick={() => handleToggle(item)}>
-                            {item.isActive ? <ToggleRight size={16} className="text-emerald-600 dark:text-emerald-400" /> : <ToggleLeft size={16} />}
-                          </Button>
-                          <Button variant="ghost" size="icon" className="size-8 rounded-[6px] text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => setDeleteTarget(item)}>
-                            <Trash2 size={15} />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-        <DataTablePagination page={page} pageSize={limit} total={pagination?.total ?? 0} totalPages={pagination?.totalPages ?? 1} onPageChange={setPage} onPageSizeChange={setLimit} />
-      </Card>
+      <GiftProgramFormModal
+        showForm={showForm}
+        setShowForm={setShowForm}
+        editTarget={editTarget}
+        form={form}
+        setForm={setForm}
+        allProducts={allProducts}
+        allCategories={allCategories}
+        handleSubmit={handleSubmit}
+        isMutating={createMut.isPending || updateMut.isPending}
+      />
 
-      <Dialog open={showForm} onOpenChange={setShowForm}>
-        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0 rounded-[6px] border border-border">
-          <DialogHeader className="px-6 py-4 border-b border-border">
-            <DialogTitle className="text-base font-semibold">
-              {editTarget ? 'Cập nhật chương trình' : 'Tạo chương trình tặng kèm'}
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="flex-1 overflow-y-auto p-6 space-y-4">
-            {/* Thông tin cơ bản */}
-            <div className="flex flex-col gap-3 rounded-[6px] border border-border p-4 bg-card">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Thông tin cơ bản</h3>
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-foreground">Tên chương trình <span className="text-destructive">*</span></label>
-                <Input
-                  className="h-9 rounded-[6px]"
-                  placeholder="VD: Mua 3 tặng 1 cùng loại"
-                  value={form.name}
-                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-foreground">Mô tả</label>
-                <textarea
-                  className="w-full rounded-[6px] border border-input bg-background p-2.5 text-xs text-foreground outline-none focus:border-ring resize-none placeholder:text-muted-foreground"
-                  rows={2}
-                  placeholder="Mô tả ngắn về chương trình..."
-                  value={form.description}
-                  onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                />
-              </div>
-            </div>
-
-            {/* Cấu hình tặng kèm */}
-            <div className="flex flex-col gap-3 rounded-[6px] border border-border p-4 bg-card">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Cấu hình tặng kèm</h3>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-foreground">Loại tặng kèm <span className="text-destructive">*</span></label>
-                <select
-                  disabled={!!editTarget}
-                  className="h-9 w-full rounded-[6px] border border-input bg-background px-3 text-xs text-foreground outline-none focus:border-ring cursor-pointer disabled:opacity-60"
-                  value={form.giftType}
-                  onChange={(e) => setForm((f) => ({ ...f, giftType: e.target.value, giftProducts: [], scopeProducts: [], scopeCategories: [], scopeType: 'all' }))}
-                >
-                  <option value="same_product">Tặng cùng loại sản phẩm</option>
-                  <option value="different_product">Tặng khác loại sản phẩm</option>
-                </select>
-              </div>
-
-              {/* Sản phẩm kích hoạt (mua) */}
-              <div className="flex flex-col gap-2 rounded-[6px] border border-dashed border-border p-3 bg-muted/20">
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex size-5 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold shrink-0">1</span>
-                  <label className="text-xs font-semibold text-foreground">
-                    Sản phẩm kích hoạt (sản phẩm mua)
-                  </label>
-                </div>
-                <select
-                  className="h-9 w-full rounded-[6px] border border-input bg-background px-3 text-xs text-foreground outline-none focus:border-ring cursor-pointer"
-                  value={form.scopeType}
-                  onChange={(e) => setForm((f) => ({ ...f, scopeType: e.target.value, scopeProducts: [], scopeCategories: [] }))}
-                >
-                  <option value="all">Tất cả sản phẩm trong giỏ</option>
-                  <option value="categories">Danh mục cụ thể</option>
-                  <option value="products">Sản phẩm cụ thể</option>
-                </select>
-                {form.scopeType === 'products' && (
-                  <TagPicker
-                    tags={form.scopeProducts}
-                    onAdd={(p) => setForm((f) => ({ ...f, scopeProducts: [...f.scopeProducts, p] }))}
-                    onRemove={(id) => setForm((f) => ({ ...f, scopeProducts: f.scopeProducts.filter((p) => p.id !== id) }))}
-                    placeholder="Tìm sản phẩm kích hoạt..."
-                    allItems={allProducts}
-                    thumbKey="thumbnail"
-                  />
-                )}
-                {form.scopeType === 'categories' && (
-                  <TagPicker
-                    tags={form.scopeCategories}
-                    onAdd={(c) => setForm((f) => ({ ...f, scopeCategories: [...f.scopeCategories, c] }))}
-                    onRemove={(id) => setForm((f) => ({ ...f, scopeCategories: f.scopeCategories.filter((c) => c.id !== id) }))}
-                    placeholder="Tìm danh mục kích hoạt..."
-                    allItems={allCategories}
-                  />
-                )}
-                <p className="text-[11px] text-muted-foreground">
-                  {form.scopeType === 'all'
-                    ? 'Bất kỳ sản phẩm nào trong giỏ đều tính vào điều kiện mua.'
-                    : form.scopeType === 'products'
-                    ? 'Chỉ các sản phẩm được chọn mới tính vào điều kiện.'
-                    : 'Chỉ sản phẩm thuộc danh mục được chọn mới tính vào điều kiện.'}
-                </p>
-              </div>
-
-              {/* Điều kiện số lượng */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-medium text-foreground">Số lượng mua tối thiểu <span className="text-destructive">*</span></label>
-                  <Input
-                    type="number"
-                    min={1}
-                    className="h-9 rounded-[6px] font-mono"
-                    placeholder="VD: 3"
-                    value={form.triggerQty}
-                    onChange={(e) => setForm((f) => ({ ...f, triggerQty: e.target.value }))}
-                  />
-                </div>
-                {form.giftType === 'same_product' && (
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-medium text-foreground">Số lượng tặng <span className="text-destructive">*</span></label>
-                    <Input
-                      type="number"
-                      min={1}
-                      className="h-9 rounded-[6px] font-mono"
-                      placeholder="VD: 1"
-                      value={form.giftQty}
-                      onChange={(e) => setForm((f) => ({ ...f, giftQty: e.target.value }))}
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* Sản phẩm được tặng — chỉ cho different_product */}
-              {form.giftType === 'different_product' && (
-                <div className="flex flex-col gap-2 rounded-[6px] border border-dashed border-border p-3 bg-muted/20">
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex size-5 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-bold shrink-0">2</span>
-                    <label className="text-xs font-semibold text-foreground">Sản phẩm được tặng <span className="text-destructive">*</span></label>
-                  </div>
-                  <GiftProductList
-                    selected={form.giftProducts}
-                    allProducts={allProducts}
-                    onAdd={(p) => setForm((f) => ({ ...f, giftProducts: [...f.giftProducts, { productId: p._id, name: p.name, qty: 1 }] }))}
-                    onRemove={(id) => setForm((f) => ({ ...f, giftProducts: f.giftProducts.filter((g) => g.productId !== id) }))}
-                    onQtyChange={(id, qty) => setForm((f) => ({ ...f, giftProducts: f.giftProducts.map((g) => g.productId === id ? { ...g, qty: Number(qty) } : g) }))}
-                  />
-                  <p className="text-[11px] text-muted-foreground">Các sản phẩm này sẽ được thêm miễn phí vào đơn hàng khi điều kiện được thỏa mãn.</p>
-                </div>
-              )}
-
-              {/* Note cho same_product */}
-              {form.giftType === 'same_product' && (
-                <p className="text-xs text-muted-foreground bg-blue-500/5 border border-blue-500/20 rounded-[6px] px-3 py-2">
-                  Sản phẩm tặng = sản phẩm mua (cùng loại). Hệ thống tự động thêm <strong>số lượng tặng</strong> của chính sản phẩm đó vào đơn.
-                </p>
-              )}
-            </div>
-
-            {/* Giới hạn & Thời gian */}
-            <div className="flex flex-col gap-3 rounded-[6px] border border-border p-4 bg-card">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Giới hạn &amp; Thời gian</h3>
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-foreground">Giới hạn số suất quà tặng <span className="text-muted-foreground font-normal">(Để trống = không giới hạn)</span></label>
-                <Input
-                  type="number"
-                  min={1}
-                  className="h-9 rounded-[6px] font-mono"
-                  placeholder="Không giới hạn số suất (chỉ phụ thuộc tồn kho)"
-                  value={form.giftLimit}
-                  onChange={(e) => setForm((f) => ({ ...f, giftLimit: e.target.value }))}
-                />
-                <p className="text-[11px] text-muted-foreground">
-                  Hệ thống luôn tự động kiểm tra tồn kho thực tế của sản phẩm quà tặng trước khi đính kèm vào đơn.
-                </p>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-medium text-foreground">Ngày bắt đầu <span className="text-destructive">*</span></label>
-                  <DateTimePicker
-                    value={form.startDate}
-                    onChange={(val) => setForm((f) => ({ ...f, startDate: val }))}
-                    placeholder="Chọn ngày bắt đầu..."
-                  />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-medium text-foreground">Ngày kết thúc <span className="text-destructive">*</span></label>
-                  <DateTimePicker
-                    value={form.endDate}
-                    onChange={(val) => setForm((f) => ({ ...f, endDate: val }))}
-                    placeholder="Chọn ngày kết thúc..."
-                    align="right"
-                  />
-                </div>
-              </div>
-              <div className="flex items-center gap-2 pt-1">
-                <Checkbox
-                  id="giftIsActive"
-                  checked={form.isActive}
-                  onCheckedChange={(checked) => setForm((f) => ({ ...f, isActive: checked }))}
-                />
-                <label htmlFor="giftIsActive" className="text-xs font-medium text-foreground cursor-pointer select-none">
-                  Kích hoạt ngay sau khi tạo
-                </label>
-              </div>
-            </div>
-          </div>
-
-          <DialogFooter className="border-t border-border px-6 py-4 bg-muted/20 flex items-center justify-end gap-2">
-            <Button variant="outline" size="sm" className="h-9 rounded-[6px]" onClick={() => setShowForm(false)}>
-              Hủy
-            </Button>
-            <Button size="sm" disabled={isMutating} onClick={handleSubmit} className="h-9 rounded-[6px] active:scale-[0.98] transition-transform">
-              {isMutating && <Loader2 size={14} className="mr-1.5 animate-spin" />}
-              {editTarget ? 'Lưu thay đổi' : 'Tạo chương trình'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <ConfirmDialog open={!!deleteTarget} title="Xóa chương trình tặng kèm" description={`Bạn có chắc muốn xóa "${deleteTarget?.name}" không? Hành động này không thể hoàn tác.`} onConfirm={confirmDelete} onCancel={() => setDeleteTarget(null)} loading={deleteMut.isPending} />
-      <ConfirmDialog open={bulkDeleteConfirm} title={`Xóa ${selectedIds.length} chương trình`} description="Hành động này không thể hoàn tác." onConfirm={confirmBulkDelete} onCancel={() => setBulkDeleteConfirm(false)} loading={bulkDeleteMut.isPending} />
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Xóa chương trình tặng kèm"
+        description={`Bạn có chắc muốn xóa "${deleteTarget?.name}" không? Hành động này không thể hoàn tác.`}
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+        loading={deleteMut.isPending}
+      />
+      <ConfirmDialog
+        open={bulkDeleteConfirm}
+        title={`Xóa ${selectedIds.length} chương trình`}
+        description="Hành động này không thể hoàn tác."
+        onConfirm={confirmBulkDelete}
+        onCancel={() => setBulkDeleteConfirm(false)}
+        loading={bulkDeleteMut.isPending}
+      />
     </div>
   );
 }

@@ -35,7 +35,7 @@ export default function SortableGalleryItem({ id, url, idx, onRemove, size = 'md
         style={style}
         {...attributes}
         {...listeners}
-        className="relative size-20 rounded-lg overflow-hidden border border-border group bg-muted select-none cursor-grab active:cursor-grabbing hover:ring-2 hover:ring-primary/40 transition-all"
+        className="relative size-20 rounded-[6px] overflow-hidden border border-border group bg-muted select-none cursor-grab active:cursor-grabbing hover:ring-1 hover:ring-primary/40 transition-all"
       >
         <MediaThumbnailHover media={media} className="size-full">
           <img src={displayUrl} alt="" className="size-full object-cover pointer-events-none" />
@@ -45,7 +45,7 @@ export default function SortableGalleryItem({ id, url, idx, onRemove, size = 'md
             type="button"
             onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => { e.stopPropagation(); onRemove(idx); }}
-            className="size-6 rounded-full bg-destructive/90 text-destructive-foreground flex items-center justify-center text-xs hover:scale-105 cursor-pointer font-bold shadow-xs"
+            className="size-6 rounded-[6px] bg-destructive/90 text-destructive-foreground flex items-center justify-center text-xs active:scale-[0.98] cursor-pointer font-bold shadow-xs"
             title="Xoa anh"
           >
             x
@@ -55,14 +55,13 @@ export default function SortableGalleryItem({ id, url, idx, onRemove, size = 'md
     );
   }
 
-  // size === 'md'
   return (
     <div
       ref={setNodeRef}
       style={style}
       {...attributes}
       {...listeners}
-      className="relative aspect-square rounded-md border border-border overflow-hidden bg-muted group select-none hover:ring-2 hover:ring-primary/40 transition-all cursor-grab active:cursor-grabbing"
+      className="relative aspect-square rounded-[6px] border border-border overflow-hidden bg-muted group select-none hover:ring-1 hover:ring-primary/40 transition-all cursor-grab active:cursor-grabbing"
     >
       <MediaThumbnailHover media={media} className="size-full">
         <img src={displayUrl} alt={`gallery-${idx}`} className="size-full object-cover pointer-events-none" />
@@ -71,7 +70,7 @@ export default function SortableGalleryItem({ id, url, idx, onRemove, size = 'md
         type="button"
         onPointerDown={(e) => e.stopPropagation()}
         onClick={(e) => { e.stopPropagation(); onRemove(idx); }}
-        className="absolute top-1 right-1 size-6 rounded-full bg-destructive/90 hover:bg-destructive text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-xs cursor-pointer shadow-xs z-10 font-bold"
+        className="absolute top-1 right-1 size-6 rounded-[6px] bg-destructive/90 hover:bg-destructive text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-xs cursor-pointer shadow-xs z-10 font-bold active:scale-[0.98]"
         title="Xoa anh"
       >
         x

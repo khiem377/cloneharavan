@@ -48,7 +48,7 @@ export default function WarehouseSidebarList({
                 className={cn(
                   'p-3.5 cursor-pointer transition-colors relative',
                   isSelected
-                    ? 'bg-primary/5 border-l-4 border-l-primary'
+                    ? 'bg-primary/10 border-l border-primary'
                     : 'hover:bg-muted/40'
                 )}
               >

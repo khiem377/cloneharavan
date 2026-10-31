@@ -119,9 +119,8 @@ export default function WholesalePricingModal({ isOpen, onClose, product, onSucc
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 overflow-y-auto animate-in fade-in duration-150">
-      <div className="w-full max-w-2xl rounded-[6px] border border-border bg-card text-card-foreground shadow-xl flex flex-col max-h-[90vh] overflow-hidden my-auto">
-        {/* Header */}
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 overflow-y-auto animate-in fade-in duration-150">
+      <div className="w-full max-w-2xl rounded-[6px] border border-border bg-card text-card-foreground shadow-sm flex flex-col max-h-[90vh] overflow-hidden my-auto">
         <div className="flex items-center justify-between border-b border-border px-6 py-4 bg-muted/30">
           <div className="flex items-center gap-2.5">
             <div className="size-8 rounded-[6px] bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
@@ -140,7 +139,7 @@ export default function WholesalePricingModal({ isOpen, onClose, product, onSucc
           <button
             type="button"
             onClick={onClose}
-            className="rounded-[6px] p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer transition-colors"
+            className="rounded-[6px] p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground active:scale-[0.98] transition-all cursor-pointer"
           >
             <X size={18} />
           </button>

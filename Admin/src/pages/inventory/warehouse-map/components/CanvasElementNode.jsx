@@ -23,7 +23,7 @@ export default function CanvasElementNode({
     return (
       <div
         onClick={(e) => e.stopPropagation()}
-        className="absolute -top-11 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 bg-card border border-border rounded-[6px] px-1.5 py-1 shadow-md text-xs whitespace-nowrap"
+        className="absolute -top-11 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 bg-card border border-border rounded-[6px] px-1.5 py-1 shadow-xs text-xs whitespace-nowrap"
       >
         {(el.type === 'rack' || el.type === 'room') && (
           <button
@@ -73,7 +73,7 @@ export default function CanvasElementNode({
         }}
         className={cn(
           "absolute rounded-[6px] border-2 flex flex-col items-center justify-center p-2 text-center transition-shadow cursor-pointer select-none",
-          isSelected && "ring-2 ring-amber-500 ring-offset-2 shadow-md",
+          isSelected && "ring-2 ring-amber-500 ring-offset-2 shadow-xs",
           mode === 'edit' && "cursor-move"
         )}
       >

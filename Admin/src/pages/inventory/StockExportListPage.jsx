@@ -294,10 +294,9 @@ export default function StockExportListPage() {
         />
       </Card>
 
-      {/* DETAIL & TIMELINE SIDEBAR DRAWER (Matching AMIS Screenshot 1) */}
       {detailOpen && selectedExport && (
         <div className="fixed inset-0 z-50 flex bg-black/40 justify-end">
-          <div className="w-full max-w-4xl bg-background border-l border-border shadow-2xl flex flex-col h-full overflow-hidden">
+          <div className="w-full max-w-4xl bg-background border-l border-border shadow-sm flex flex-col h-full overflow-hidden">
             <div className="flex items-center justify-between border-b border-border bg-muted/40 p-4">
               <div>
                 <h2 className="text-base font-bold text-foreground">
@@ -305,13 +304,12 @@ export default function StockExportListPage() {
                 </h2>
                 <p className="text-xs text-muted-foreground">Chi tiết mặt hàng xuất và Lịch sử tiến trình hoạt động</p>
               </div>
-              <button onClick={() => setDetailOpen(false)} className="rounded-[4px] p-1.5 hover:bg-muted cursor-pointer">
+              <button onClick={() => setDetailOpen(false)} className="rounded-[6px] p-1.5 hover:bg-muted active:scale-[0.98] cursor-pointer">
                 <X className="size-4" />
               </button>
             </div>
 
             <div className="flex flex-1 overflow-hidden">
-              {/* Left Content Area */}
               <div className="flex-1 p-6 space-y-4 overflow-y-auto border-r border-border">
                 <div className="grid grid-cols-2 gap-4 rounded-[6px] border border-border bg-card p-4 text-xs shadow-2xs">
                   <div>

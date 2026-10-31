@@ -188,7 +188,7 @@ export default function CategoryTreeMultiPicker({ categories = [], value = [], o
 
       {/* Dropdown */}
       {open && (
-        <div className="absolute top-full left-0 right-0 z-50 mt-1 rounded-[6px] border border-border bg-background shadow-md flex flex-col overflow-hidden">
+        <div className="absolute top-full left-0 right-0 z-50 mt-1 rounded-[6px] border border-border bg-background shadow-xs flex flex-col overflow-hidden">
           {/* Search */}
           <div className="p-2 border-b border-border">
             <div className="relative flex items-center">

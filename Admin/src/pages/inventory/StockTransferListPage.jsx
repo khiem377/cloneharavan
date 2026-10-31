@@ -352,7 +352,7 @@ export default function StockTransferListPage() {
       {/* Modal Tạo Phiếu Chuyển Kho */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-2xl bg-card border border-border rounded-[6px] shadow-lg overflow-hidden flex flex-col max-h-[90vh]">
+          <div className="w-full max-w-2xl bg-card border border-border rounded-[6px] shadow-sm overflow-hidden flex flex-col max-h-[90vh]">
             <div className="p-4 border-b border-border flex items-center justify-between bg-muted/20">
               <h2 className="text-sm font-bold text-foreground flex items-center gap-2">
                 <ArrowRightLeft className="size-4 text-primary" />

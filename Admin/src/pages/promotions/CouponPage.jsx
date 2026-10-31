@@ -45,7 +45,11 @@ export default function CouponPage() {
     category: filterCategory || undefined,
   });
 
-  const coupons = couponData?.coupons || [];
+  const coupons = Array.isArray(couponData?.data)
+    ? couponData.data
+    : Array.isArray(couponData?.coupons)
+    ? couponData.coupons
+    : [];
   const pagination = couponData?.pagination || {};
 
   const createMut = useCreateCoupon();

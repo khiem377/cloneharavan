@@ -101,9 +101,8 @@ export default function WarehouseMapCanvas({
             transformOrigin: 'center center',
             transition: draggingId ? 'none' : 'transform 0.15s ease-out',
           }}
-          className="relative rounded-[8px] border-2 border-primary/50 bg-background shadow-xs select-none"
+          className="relative rounded-[6px] border border-primary/50 bg-background shadow-xs select-none"
         >
-          {/* Warehouse Inner Floor Tint */}
           <div className="absolute inset-2 rounded-[6px] bg-blue-50/20 dark:bg-blue-950/10 pointer-events-none" />
 
           {/* RENDER ALL ELEMENTS ON CANVAS */}

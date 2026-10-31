@@ -25,9 +25,9 @@ export default function CouponUsageHistoryModal({
   const historyList = coupon.usageHistory || [];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
       <Card
-        className="flex w-full max-w-lg flex-col overflow-hidden rounded-[6px] border border-border bg-card shadow-xl text-foreground"
+        className="flex w-full max-w-lg flex-col overflow-hidden rounded-[6px] border border-border bg-card shadow-sm text-foreground"
         onClick={(e) => e.stopPropagation()}
       >
         <CardHeader className="p-4 border-b border-border flex flex-row items-center justify-between space-y-0">
@@ -37,7 +37,7 @@ export default function CouponUsageHistoryModal({
               Lịch sử sử dụng: <span className="font-mono text-primary font-bold">{coupon.code}</span>
             </CardTitle>
           </div>
-          <Button variant="ghost" size="icon" className="h-7 w-7 rounded-[4px]" onClick={onClose}>
+          <Button variant="ghost" size="icon" className="h-7 w-7 rounded-[6px] active:scale-[0.98]" onClick={onClose}>
             ×
           </Button>
         </CardHeader>

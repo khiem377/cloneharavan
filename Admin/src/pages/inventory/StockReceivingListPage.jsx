@@ -304,11 +304,9 @@ export default function StockReceivingListPage() {
         />
       </Card>
 
-      {/* PO DETAIL DRAWER MODAL */}
       {detailModalOpen && selectedPoDetail && (
         <div className="fixed inset-0 z-50 flex bg-black/40 justify-end">
-          <div className="w-full max-w-4xl bg-background border-l border-border shadow-2xl flex flex-col h-full overflow-hidden">
-            {/* Header */}
+          <div className="w-full max-w-4xl bg-background border-l border-border shadow-sm flex flex-col h-full overflow-hidden">
             <div className="flex items-center justify-between border-b border-border bg-muted/40 p-4">
               <div>
                 <h2 className="text-base font-bold text-foreground flex items-center gap-2">
@@ -316,7 +314,7 @@ export default function StockReceivingListPage() {
                 </h2>
                 <p className="text-xs text-muted-foreground">Chi tiết Đơn mua hàng đã ký kết với Nhà cung cấp</p>
               </div>
-              <button onClick={() => setDetailModalOpen(false)} className="rounded-[4px] p-1.5 hover:bg-muted cursor-pointer">
+              <button onClick={() => setDetailModalOpen(false)} className="rounded-[6px] p-1.5 hover:bg-muted active:scale-[0.98] cursor-pointer">
                 <X className="size-4" />
               </button>
             </div>

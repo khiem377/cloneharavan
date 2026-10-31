@@ -37,7 +37,7 @@ export default function SpecsEditor({ specs = [], onChange, showGroup = true }) 
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="rounded-lg border border-border overflow-hidden">
+      <div className="rounded-[6px] border border-border overflow-hidden">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-muted/40 border-b border-border">

@@ -23,7 +23,7 @@ function HelpTooltip({ title, content }) {
     >
       <HelpCircle className="h-4 w-4 text-muted-foreground hover:text-primary transition-colors shrink-0" />
       {show && (
-        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-64 rounded-[6px] bg-slate-900 border border-slate-700 p-2.5 text-[11px] font-medium text-slate-100 shadow-md z-[99999] leading-relaxed text-left pointer-events-none">
+        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-64 rounded-[6px] bg-slate-900 border border-slate-700 p-2.5 text-[11px] font-medium text-slate-100 shadow-xs z-[99999] leading-relaxed text-left pointer-events-none">
           <p className="font-bold text-amber-400 mb-1">{title}:</p>
           <div>{content}</div>
         </div>

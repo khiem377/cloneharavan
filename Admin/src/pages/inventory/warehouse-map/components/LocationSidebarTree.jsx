@@ -50,7 +50,7 @@ export default function LocationSidebarTree({
                 className={cn(
                   "p-3 cursor-pointer transition-colors flex items-center justify-between gap-2",
                   isSelected
-                    ? "bg-primary/10 border-l-4 border-l-primary"
+                    ? "bg-primary/10 border-l border-primary"
                     : "hover:bg-muted/40"
                 )}
               >

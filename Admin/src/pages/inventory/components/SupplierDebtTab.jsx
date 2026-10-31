@@ -58,7 +58,7 @@ export default function SupplierDebtTab({
           </Button>
 
           {dropdownOpen && (
-            <div className="absolute right-0 mt-1 w-36 bg-card border border-border rounded-[6px] shadow-md py-1 z-30 animate-in fade-in zoom-in-95">
+            <div className="absolute right-0 mt-1 w-36 bg-card border border-border rounded-[6px] shadow-xs py-1 z-30 animate-in fade-in zoom-in-95">
               <button
                 onClick={() => {
                   setDropdownOpen(false);

@@ -265,12 +265,12 @@ export default function StockExportCreateModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 overflow-y-auto">
-      <div className="w-full max-w-4xl rounded-[6px] border border-border bg-card p-6 shadow-xl space-y-4 my-8 max-h-[90vh] overflow-y-auto">
+      <div className="w-full max-w-4xl rounded-[6px] border border-border bg-card p-6 shadow-sm space-y-4 my-8 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between border-b border-border pb-3">
           <h2 className="text-base font-bold text-foreground flex items-center gap-2">
             <FileText className="size-4 text-primary" /> Tạo Lệnh Xuất Kho Mới
           </h2>
-          <button onClick={onClose} className="rounded-[4px] p-1 text-muted-foreground hover:bg-muted cursor-pointer">
+          <button onClick={onClose} className="rounded-[6px] p-1 text-muted-foreground hover:bg-muted active:scale-[0.98] transition-all cursor-pointer">
             <X className="size-4" />
           </button>
         </div>
@@ -450,7 +450,7 @@ export default function StockExportCreateModal({
             </div>
 
             {productSearch.trim() && (
-              <div className="absolute z-20 mt-1 max-h-48 w-full overflow-y-auto rounded-[6px] border border-border bg-card shadow-md divide-y divide-border/60">
+              <div className="absolute z-20 mt-1 max-h-48 w-full overflow-y-auto rounded-[6px] border border-border bg-card shadow-xs divide-y divide-border/60">
                 {searchProducts.map((prod, idx) => (
                   <div
                     key={idx}

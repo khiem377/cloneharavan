@@ -412,7 +412,7 @@ export default function StockAuditListPage() {
                   </div>
 
                   {productSearch.trim() && (
-                    <div className="absolute z-30 mt-1 max-h-60 w-full overflow-y-auto rounded-[6px] border border-border bg-card shadow-md divide-y divide-border/60">
+                    <div className="absolute z-30 mt-1 max-h-60 w-full overflow-y-auto rounded-[6px] border border-border bg-card shadow-xs divide-y divide-border/60">
                       {searchProducts.map((prod, idx) => (
                         <div
                           key={idx}

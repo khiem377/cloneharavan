@@ -2,6 +2,13 @@ import React from 'react';
 import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import ColumnToggleDropdown from '@/components/ui/ColumnToggleDropdown';
 
 export default function SupplierFilterBar({
@@ -13,10 +20,10 @@ export default function SupplierFilterBar({
   columnVisibility,
 }) {
   return (
-    <Card className="rounded-[6px] border border-border p-3 shadow-xs bg-card">
+    <Card className="rounded-[6px] border border-border p-3 shadow-none bg-card">
       <div className="flex flex-col sm:flex-row items-center justify-between gap-2.5">
         <div className="relative flex-1 w-full">
-          <Search className="absolute left-2.5 top-2.5 size-3.5 text-muted-foreground" />
+          <Search className="absolute left-2.5 top-2.5 size-3.5 text-muted-foreground z-10" />
           <Input
             type="text"
             placeholder="Tìm theo tên nhà cung cấp, mã NCC, SĐT, email..."
@@ -30,19 +37,23 @@ export default function SupplierFilterBar({
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto">
-          <select
+          <Select
             value={supplierTypeFilter}
-            onChange={(e) => {
-              setSupplierTypeFilter(e.target.value);
+            onValueChange={(val) => {
+              setSupplierTypeFilter(val);
               setPage(1);
             }}
-            className="h-8 px-2.5 text-xs rounded-[6px] border border-input bg-background font-medium cursor-pointer w-full sm:w-48"
           >
-            <option value="all">Tất cả loại NCC</option>
-            <option value="Sản phẩm / Nguyên vật liệu">Sản phẩm / Nguyên vật liệu</option>
-            <option value="Sản phẩm">Sản phẩm</option>
-            <option value="Nguyên phụ liệu">Nguyên phụ liệu</option>
-          </select>
+            <SelectTrigger className="h-8 w-full sm:w-48 rounded-[6px] text-xs">
+              <SelectValue placeholder="Loại NCC" />
+            </SelectTrigger>
+            <SelectContent className="rounded-[6px]">
+              <SelectItem value="all">Tất cả loại NCC</SelectItem>
+              <SelectItem value="Sản phẩm / Nguyên vật liệu">Sản phẩm / Nguyên vật liệu</SelectItem>
+              <SelectItem value="Sản phẩm">Sản phẩm</SelectItem>
+              <SelectItem value="Nguyên phụ liệu">Nguyên phụ liệu</SelectItem>
+            </SelectContent>
+          </Select>
 
           <ColumnToggleDropdown columnVisibility={columnVisibility} />
         </div>

@@ -101,22 +101,21 @@ export default function CouponFormModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
       <Card
-        className="flex w-full max-w-xl flex-col overflow-hidden rounded-[6px] border border-border bg-card shadow-xl text-foreground"
+        className="flex w-full max-w-xl flex-col overflow-hidden rounded-[6px] border border-border bg-card shadow-sm text-foreground"
         onClick={(e) => e.stopPropagation()}
       >
         <CardHeader className="p-4 border-b border-border flex flex-row items-center justify-between space-y-0">
           <CardTitle className="text-sm font-semibold text-foreground">
             {editTarget ? 'Cập nhật mã giảm giá' : 'Thêm mã giảm giá'}
           </CardTitle>
-          <Button variant="ghost" size="icon" className="h-7 w-7 rounded-[4px]" onClick={onClose}>
+          <Button variant="ghost" size="icon" className="h-7 w-7 rounded-[6px] active:scale-[0.98]" onClick={onClose}>
             ×
           </Button>
         </CardHeader>
 
         <CardContent className="p-4 flex flex-col gap-4 overflow-y-auto max-h-[75vh]">
-          {/* Thông tin cơ bản */}
           <div className="flex flex-col gap-3 rounded-[6px] border border-border p-3.5 bg-muted/20">
             <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Thông tin cơ bản</h3>
             <div className="flex flex-col gap-1.5">

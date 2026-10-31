@@ -82,14 +82,13 @@ export default function SupplierPaymentModal({ supplier, debt, open, onClose }) 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
-      <div className="bg-card text-card-foreground border border-border rounded-[8px] shadow-2xl max-w-2xl w-full overflow-hidden flex flex-col">
-        {/* Header matching Pancake Screenshot 2 */}
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-in fade-in duration-200">
+      <div className="bg-card text-card-foreground border border-border rounded-[6px] shadow-sm max-w-2xl w-full overflow-hidden flex flex-col">
         <div className="flex items-center justify-between px-6 py-3.5 border-b border-border">
           <h2 className="text-sm font-bold text-foreground">Tạo mới</h2>
           <button
             onClick={onClose}
-            className="p-1 rounded-[6px] hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            className="p-1 rounded-[6px] hover:bg-muted text-muted-foreground hover:text-foreground active:scale-[0.98] transition-all cursor-pointer"
           >
             <X size={16} />
           </button>
@@ -335,12 +334,11 @@ export default function SupplierPaymentModal({ supplier, debt, open, onClose }) 
               </div>
             </div>
 
-            {/* Blue Button "Tạo" matching Pancake */}
             <Button
               type="submit"
               size="sm"
               disabled={payMut.isPending}
-              className="rounded-[4px] h-8 px-5 text-xs font-bold bg-[#1877F2] hover:bg-[#166fe5] text-white shadow-2xs active:scale-[0.98] transition-transform cursor-pointer"
+              className="rounded-[6px] h-8 px-5 text-xs font-bold bg-[#1877F2] hover:bg-[#166fe5] text-white shadow-xs active:scale-[0.98] transition-transform cursor-pointer"
             >
               {payMut.isPending ? <Loader2 className="size-3.5 animate-spin mr-1" /> : null}
               Tạo

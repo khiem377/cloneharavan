@@ -1,33 +1,15 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import {
-  FileCheck, Plus, SearchIcon as Search, Download, CheckCircle2, Clock,
-  Send, XCircle, Eye, Building2, Truck, PackageCheck, ClipboardCheck,
-  ShieldCheck, FileSpreadsheet, RotateCcw, ArrowUpDown, ArrowUp, ArrowDown, X,
-  CreditCard,
-} from '@/components/ui/Icons';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import {
-  usePurchaseOrders,
-  useUpdatePurchaseOrderStatus,
-} from '@/hooks/useInventory';
-import { inventoryService } from '@/services/inventory.service';
-import { warehouseService } from '@/services/warehouse.service';
-import DataTablePagination from '@/components/ui/DataTablePagination';
-import Can from '@/components/auth/Can';
-import SearchableSelect from '@/components/ui/SearchableSelect';
-import { toast } from '@/providers/ToastProvider';
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import useColumnVisibility from '@/hooks/useColumnVisibility';
 import ExcelPreviewModal from '@/components/common/ExcelPreviewModal';
 import SendPOModal from '@/components/inventory/SendPOModal';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import PurchaseOrderPaymentModal from './components/PurchaseOrderPaymentModal';
-import { useQueryClient } from '@tanstack/react-query';
-import { useModalSet } from '@/hooks/useModalSet';
-
-import useColumnVisibility from '@/hooks/useColumnVisibility';
-import ColumnToggleDropdown from '@/components/ui/ColumnToggleDropdown';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card } from '@/components/ui/card';
+import { usePurchaseOrderList } from './components/purchase-order/usePurchaseOrderList';
+import POHeader from './components/purchase-order/POHeader';
+import POFilterBar from './components/purchase-order/POFilterBar';
+import POTable from './components/purchase-order/POTable';
+import PODetailDrawer from './components/purchase-order/PODetailDrawer';
 
 const PO_COLUMNS = [
   { id: 'stt', label: 'STT', defaultVisible: true },
@@ -45,890 +27,100 @@ const PO_COLUMNS = [
 
 export default function PurchaseOrderListPage() {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const [keyword, setKeyword] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [warehouseFilter, setWarehouseFilter] = useState('');
-  const [warehouses, setWarehouses] = useState([]);
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-  const [downloadingId, setDownloadingId] = useState(null);
-
-  // Sorting state
-  const [sortField, setSortField] = useState('createdAt');
-  const [sortOrder, setSortOrder] = useState('desc');
-
-  // Modal state — managed by useModalSet
-  const modal = useModalSet(['detail', 'excelPreview', 'sendPO', 'confirm', 'payment']);
-
-  // Convenience shorthands
-  const detailModalOpen   = modal.isOpen('detail');
-  const selectedPoDetail  = modal.data('detail');
-  const excelPreviewOpen  = modal.isOpen('excelPreview');
-  const previewData       = modal.data('excelPreview') || {};
-  const previewDownloadUrl = previewData.url || '';
-  const previewTitle      = previewData.title || '';
-  const sendPOModalOpen   = modal.isOpen('sendPO');
-  const selectedPOToSend  = modal.data('sendPO');
-  const paymentModalOpen  = modal.isOpen('payment');
-  const selectedPOToPay   = modal.data('payment');
-  const confirmModal      = {
-    open: modal.isOpen('confirm'),
-    ...(modal.data('confirm') || {}),
-  };
-
-  const handleOpenPoDetail = (po) => modal.open('detail', po);
-  const handleOpenPayment  = (po) => modal.open('payment', po);
-
   const columnVisibility = useColumnVisibility('admin_po_columns', PO_COLUMNS);
-  const { isColumnVisible } = columnVisibility;
+  const po = usePurchaseOrderList();
 
-  useEffect(() => {
-    const loadWh = async () => {
-      try {
-        const res = await warehouseService.getWarehouses();
-        setWarehouses(res.data?.data?.data || []);
-      } catch (e) {
-        console.warn('Lỗi tải danh sách kho:', e);
-      }
-    };
-    loadWh();
-  }, []);
-
-  const { data: res = {}, isLoading } = usePurchaseOrders({
-    page,
-    limit: pageSize,
-    keyword,
-    status: statusFilter,
-    warehouseId: warehouseFilter || undefined,
-  });
-
-  const orders = res.data || [];
-  const pagination = res.pagination || { page: 1, limit: 10, total: 0, totalPages: 1 };
-  const updateStatusMutation = useUpdatePurchaseOrderStatus();
-
-  const [searchParams] = useSearchParams();
-  const poIdFromUrl = searchParams.get('poId');
-
-  useEffect(() => {
-    if (poIdFromUrl && orders.length > 0) {
-      const found = orders.find((o) => o._id === poIdFromUrl || o.poNumber === poIdFromUrl);
-      if (found) modal.open('detail', found);
-    }
-  }, [poIdFromUrl, orders]);
-
-  const handleSort = (field) => {
-    if (sortField === field) {
-      setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
-    } else {
-      setSortField(field);
-      setSortOrder('asc');
-    }
-  };
-
-  const sortedOrders = useMemo(() => {
-    if (!orders || orders.length === 0) return [];
-    return [...orders].sort((a, b) => {
-      let valA = a[sortField];
-      let valB = b[sortField];
-
-      if (sortField === 'supplierId') {
-        valA = a.supplierId?.name || '';
-        valB = b.supplierId?.name || '';
-      } else if (sortField === 'itemCount') {
-        valA = a.items?.length || 0;
-        valB = b.items?.length || 0;
-      }
-
-      if (typeof valA === 'string') {
-        const cmp = String(valA || '').localeCompare(String(valB || ''), 'vi', { sensitivity: 'base' });
-        return sortOrder === 'asc' ? cmp : -cmp;
-      }
-
-      if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
-      if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
-      return 0;
-    });
-  }, [orders, sortField, sortOrder]);
-
-  const renderSortHeader = (field, label, align = 'left', extraClass = '') => {
-    const isSorted = sortField === field;
-    const alignClass = align === 'center' ? 'justify-center text-center' : align === 'right' ? 'justify-end text-right' : 'justify-start text-left';
-
-    return (
-      <th
-        onClick={() => handleSort(field)}
-        className={`px-4 py-3.5 whitespace-nowrap cursor-pointer select-none hover:bg-muted/80 transition-colors ${extraClass}`}
-      >
-        <div className={`flex items-center gap-1.5 ${alignClass}`}>
-          <span>{label}</span>
-          {isSorted ? (
-            sortOrder === 'asc' ? (
-              <ArrowUp className="h-3.5 w-3.5 text-primary shrink-0" />
-            ) : (
-              <ArrowDown className="h-3.5 w-3.5 text-primary shrink-0" />
-            )
-          ) : (
-            <ArrowUpDown className="h-3 w-3 text-muted-foreground/50 shrink-0" />
-          )}
-        </div>
-      </th>
-    );
-  };
-
-  const handleDownloadExcel = async (order) => {
-    try {
-      setDownloadingId(order._id);
-      const resp = await inventoryService.downloadPOExcel(order._id);
-      const url = window.URL.createObjectURL(new Blob([resp.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `Don_Dat_Hang_${order.poNumber}.xlsx`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      toast.success('Đã tải Đơn Đặt Hàng Excel mẫu thành công!');
-    } catch (err) {
-      toast.error('Lỗi tải file Excel Đơn Đặt Hàng: ' + (err.message || 'Thao tác thất bại'));
-    } finally {
-      setDownloadingId(null);
-    }
-  };
-
-  const handlePreviewExcelOnWeb = (order) => {
-    // Dung relative path de axios interceptor tu dong gan Bearer token
-    const url = `/purchase-orders/${order._id}/download-excel`;
-    modal.open('excelPreview', { url, title: `Don Dat Hang Excel (${order.poNumber})` });
-  };
-
-  const handleOpenSendPOModal = (po) => modal.open('sendPO', po);
-
-  const doAdvanceStatus = async (id, status, poNumber) => {
-    try {
-      await updateStatusMutation.mutateAsync({ id, status });
-      toast.success(`Đã chuyển đơn ${poNumber} sang trạng thái mới thành công!`);
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Không thể cập nhật trạng thái');
-    }
-  };
-
-  const handleAdvanceStatus = (po, nextStatus) => {
-    if (po.status === 'completed') {
-      toast.error('Đơn hàng đã hoàn tất nhập kho, không thể thay đổi trạng thái!');
-      return;
-    }
-
-    if (nextStatus === 'completed') {
-      modal.open('confirm', {
-        po,
-        nextStatus: 'completed',
-        title: `Xác Nhận Nghiệm Thu & Nhập Kho (${po.poNumber})`,
-        message: `Xác nhận nghiệm thu đơn ${po.poNumber}? Hệ thống sẽ chính thức cộng số lượng vào tồn kho thực tế và lưu trữ chứng từ lên Đám Mây.`,
-        confirmText: 'Xác Nhận Nhập Kho',
-        variant: 'primary',
-      });
-      return;
-    }
-
-    doAdvanceStatus(po._id, nextStatus, po.poNumber);
-  };
-
-  const renderStatusBadge = (st) => {
-    switch (st) {
-      case 'completed':
-        return (
-          <span className="inline-flex items-center gap-1.5 rounded-[6px] border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
-            <CheckCircle2 className="h-3.5 w-3.5" /> 6. Đã Nhập Kho (Hoàn Tất)
-          </span>
-        );
-      case 'inspecting':
-        return (
-          <span className="inline-flex items-center gap-1.5 rounded-[6px] border border-purple-500/20 bg-purple-500/10 px-2.5 py-1 text-xs font-semibold text-purple-600 dark:text-purple-400 whitespace-nowrap">
-            <ClipboardCheck className="h-3.5 w-3.5" /> 5. Đang Kiểm Hàng
-          </span>
-        );
-      case 'arrived':
-        return (
-          <span className="inline-flex items-center gap-1.5 rounded-[6px] border border-cyan-500/20 bg-cyan-500/10 px-2.5 py-1 text-xs font-semibold text-cyan-600 dark:text-cyan-400 whitespace-nowrap">
-            <PackageCheck className="h-3.5 w-3.5" /> 4. Đã Đến Kho
-          </span>
-        );
-      case 'in_transit':
-        return (
-          <span className="inline-flex items-center gap-1.5 rounded-[6px] border border-indigo-500/20 bg-indigo-500/10 px-2.5 py-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400 whitespace-nowrap">
-            <Truck className="h-3.5 w-3.5" /> 3. Đang Vận Chuyển
-          </span>
-        );
-      case 'sent':
-        return (
-          <span className="inline-flex items-center gap-1.5 rounded-[6px] border border-blue-500/20 bg-blue-500/10 px-2.5 py-1 text-xs font-semibold text-blue-600 dark:text-blue-400 whitespace-nowrap">
-            <Send className="h-3.5 w-3.5" /> 2. Đã Gửi NCC
-          </span>
-        );
-      case 'cancelled':
-        return (
-          <span className="inline-flex items-center gap-1.5 rounded-[6px] border border-red-500/20 bg-red-500/10 px-2.5 py-1 text-xs font-semibold text-red-600 dark:text-red-400 whitespace-nowrap">
-            <XCircle className="h-3.5 w-3.5" /> Đã Hủy
-          </span>
-        );
-      default:
-        return (
-          <span className="inline-flex items-center gap-1.5 rounded-[6px] border border-amber-500/20 bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-600 dark:text-amber-400 whitespace-nowrap">
-            <Clock className="h-3.5 w-3.5" /> 1. Bản Nháp (Đã Tạo)
-          </span>
-        );
-    }
-  };
-
-  const renderPaymentBadge = (po) => {
-    const total = Number(po.totalAmount || 0);
-    const paid = Number(po.paidAmount || 0);
-    const rem = Math.max(0, total - paid);
-    const st = po.paymentStatus || (rem === 0 && total > 0 ? 'paid' : (paid > 0 ? 'partially_paid' : 'unpaid'));
-
-    switch (st) {
-      case 'paid':
-        return (
-          <span className="inline-flex items-center gap-1 rounded-[6px] border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
-            <CheckCircle2 className="size-3" /> Đã thanh toán
-          </span>
-        );
-      case 'partially_paid':
-        return (
-          <div className="inline-flex flex-col items-center">
-            <span className="inline-flex items-center gap-1 rounded-[6px] border border-blue-500/20 bg-blue-500/10 px-2 py-0.5 text-[11px] font-semibold text-blue-600 dark:text-blue-400 whitespace-nowrap">
-              Trả 1 phần
-            </span>
-            <span className="text-[10px] font-mono text-muted-foreground tabular-nums">
-              Còn {rem.toLocaleString('vi-VN')} đ
-            </span>
-          </div>
-        );
-      default:
-        return (
-          <span className="inline-flex items-center gap-1 rounded-[6px] border border-amber-500/20 bg-amber-500/10 px-2.5 py-0.5 text-xs font-semibold text-amber-600 dark:text-amber-400 whitespace-nowrap">
-            <Clock className="size-3" /> Chưa thanh toán
-          </span>
-        );
-    }
-  };
-
-  const renderActionStepperButton = (po) => {
-    switch (po.status) {
-      case 'draft':
-        return (
-          <button
-            onClick={() => handleOpenSendPOModal(po)}
-            className="inline-flex items-center gap-1.5 rounded-[6px] bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 shadow-xs transition-transform active:scale-[0.98] whitespace-nowrap cursor-pointer"
-          >
-            <Send className="size-3.5" /> Gửi PO Cho NCC
-          </button>
-        );
-      case 'sent':
-        return (
-          <div className="flex items-center gap-1.5 justify-center">
-            <button
-              onClick={() => navigate(`/stock-receivings/create?poId=${po._id}`)}
-              className="inline-flex items-center gap-1 rounded-[6px] bg-emerald-600 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 shadow-xs transition-transform active:scale-[0.98] whitespace-nowrap cursor-pointer"
-              title="Lập phiếu nhập kho trực tiếp"
-            >
-              <FileCheck className="size-3.5" /> Nhập Kho
-            </button>
-            <button
-              onClick={() => handleAdvanceStatus(po, 'in_transit')}
-              className="inline-flex items-center gap-1 rounded-[6px] border border-input bg-background px-2 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted transition-transform active:scale-[0.98] whitespace-nowrap cursor-pointer"
-              title="Chuyển trạng thái sang Vận chuyển"
-            >
-              <Truck className="size-3.5 text-indigo-500" />
-            </button>
-          </div>
-        );
-      case 'in_transit':
-        return (
-          <div className="flex items-center gap-1.5 justify-center">
-            <button
-              onClick={() => navigate(`/stock-receivings/create?poId=${po._id}`)}
-              className="inline-flex items-center gap-1 rounded-[6px] bg-emerald-600 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 shadow-xs transition-transform active:scale-[0.98] whitespace-nowrap cursor-pointer"
-              title="Lập phiếu nhập kho trực tiếp"
-            >
-              <FileCheck className="size-3.5" /> Nhập Kho
-            </button>
-            <button
-              onClick={() => handleAdvanceStatus(po, 'arrived')}
-              className="inline-flex items-center gap-1 rounded-[6px] border border-input bg-background px-2 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted transition-transform active:scale-[0.98] whitespace-nowrap cursor-pointer"
-              title="Đã đến kho"
-            >
-              <PackageCheck className="size-3.5 text-cyan-500" />
-            </button>
-          </div>
-        );
-      case 'arrived':
-        return (
-          <div className="flex items-center gap-1.5 justify-center">
-            <button
-              onClick={() => navigate(`/stock-receivings/create?poId=${po._id}`)}
-              className="inline-flex items-center gap-1 rounded-[6px] bg-emerald-600 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 shadow-xs transition-transform active:scale-[0.98] whitespace-nowrap cursor-pointer"
-              title="Lập phiếu nhập kho trực tiếp"
-            >
-              <FileCheck className="size-3.5" /> Nhập Kho
-            </button>
-            <button
-              onClick={() => handleAdvanceStatus(po, 'inspecting')}
-              className="inline-flex items-center gap-1 rounded-[6px] border border-input bg-background px-2 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted transition-transform active:scale-[0.98] whitespace-nowrap cursor-pointer"
-              title="Bắt đầu kiểm hàng"
-            >
-              <ClipboardCheck className="size-3.5 text-purple-500" />
-            </button>
-          </div>
-        );
-      case 'inspecting':
-        return (
-          <div className="flex items-center gap-1.5 justify-center">
-            <button
-              onClick={() => navigate(`/stock-receivings/create?poId=${po._id}`)}
-              className="inline-flex items-center gap-1 rounded-[6px] bg-emerald-600 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 shadow-xs transition-transform active:scale-[0.98] whitespace-nowrap cursor-pointer"
-              title="Lập phiếu nhập kho trực tiếp"
-            >
-              <FileCheck className="size-3.5" /> Lập PNK
-            </button>
-            <button
-              onClick={() => handleAdvanceStatus(po, 'completed')}
-              className="inline-flex items-center gap-1 rounded-[6px] border border-emerald-500/30 bg-emerald-500/10 px-2 py-1.5 text-xs font-bold text-emerald-600 hover:bg-emerald-500/20 transition-transform active:scale-[0.98] whitespace-nowrap cursor-pointer"
-              title="Nghiệm thu toàn bộ & Nhập kho ngay"
-            >
-              <CheckCircle2 className="size-3.5" /> Hoàn tất
-            </button>
-          </div>
-        );
-      case 'partial_received':
-        return (
-          <button
-            onClick={() => navigate(`/stock-receivings/create?poId=${po._id}`)}
-            className="inline-flex items-center gap-1.5 rounded-[6px] bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 shadow-xs transition-transform active:scale-[0.98] whitespace-nowrap cursor-pointer"
-          >
-            <FileCheck className="size-3.5" /> Lập PNK Đợt Tiếp
-          </button>
-        );
-      case 'completed':
-        return (
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 inline-flex items-center gap-1 whitespace-nowrap">
-              <CheckCircle2 className="size-3.5" /> Đã Khóa Tồn Kho
-            </span>
-            <button
-              onClick={() => navigate(`/purchase-returns/create?poId=${po._id}`)}
-              className="inline-flex items-center gap-1 rounded-[6px] border border-destructive/30 bg-destructive/10 px-2.5 py-1 text-xs font-bold text-destructive hover:bg-destructive/20 transition-transform active:scale-[0.98] whitespace-nowrap cursor-pointer"
-            >
-              <RotateCcw className="size-3.5" /> Trả Hàng
-            </button>
-          </div>
-        );
-      default:
-        return <span className="text-xs text-muted-foreground">-</span>;
-    }
-  };
+  const previewData = po.modal.data('excelPreview') || {};
+  const confirmData = po.modal.data('confirm') || {};
 
   return (
     <div className="space-y-6 p-6">
-      {/* Top Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-4">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
-            <FileCheck className="h-6 w-6 text-primary" />
-            Đơn Mua Hàng & Nhập Kho (Inbound Management)
-          </h1>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Quản lý Đơn Mua Hàng với Nhà Cung Cấp và các đợt Phiếu Nhập Kho thực tế
-          </p>
-        </div>
-        <Button
-          onClick={() => navigate('/purchase-orders/create')}
-          className="rounded-[6px] text-xs font-semibold shadow-xs active:scale-[0.98]"
-        >
-          <Plus className="h-4 w-4 mr-1.5" />
-          Tạo Đơn Mua Hàng Mới (PO)
-        </Button>
-      </div>
+      <POHeader navigate={navigate} />
 
-      {/* QUICK SWITCH HEADER TABS (PO vs PNK) */}
-      <div className="flex items-center gap-2 border-b border-border pb-2">
-        <Button
-          size="sm"
-          onClick={() => navigate('/purchase-orders')}
-          className="rounded-[6px] text-xs font-bold shadow-xs active:scale-[0.98]"
-        >
-          <Building2 className="h-4 w-4 mr-1.5" /> Đơn Mua Hàng (PO)
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => navigate('/stock-receivings')}
-          className="rounded-[6px] text-xs font-semibold text-muted-foreground hover:bg-muted"
-        >
-          <FileCheck className="h-4 w-4 mr-1.5" /> Phiếu Nhập Kho (PNK)
-        </Button>
-      </div>
+      <POFilterBar
+        keyword={po.keyword}
+        setKeyword={po.setKeyword}
+        warehouseFilter={po.warehouseFilter}
+        setWarehouseFilter={po.setWarehouseFilter}
+        warehouses={po.warehouses}
+        statusFilter={po.statusFilter}
+        setStatusFilter={po.setStatusFilter}
+        setPage={po.setPage}
+        columnVisibility={columnVisibility}
+      />
 
-      {/* Toolbar & Filter */}
-      <Card className="rounded-[6px] border border-border p-4 shadow-xs">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center justify-between">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder="Tìm mã đơn nhập PO, ghi chú..."
-              value={keyword}
-              onChange={(e) => {
-                setKeyword(e.target.value);
-                setPage(1);
-              }}
-              className="pl-9 h-9 text-xs rounded-[6px]"
-            />
-          </div>
+      <POTable
+        orders={po.sortedOrders}
+        isLoading={po.isLoading}
+        page={po.page}
+        pageSize={po.pageSize}
+        pagination={po.pagination}
+        setPage={po.setPage}
+        setPageSize={po.setPageSize}
+        columnVisibility={columnVisibility}
+        sortField={po.sortField}
+        sortOrder={po.sortOrder}
+        handleSort={po.handleSort}
+        handleOpenPoDetail={(item) => po.modal.open('detail', item)}
+        handleOpenPayment={(item) => po.modal.open('payment', item)}
+        handleOpenSendPOModal={(item) => po.modal.open('sendPO', item)}
+        handleAdvanceStatus={po.handleAdvanceStatus}
+        handlePreviewExcelOnWeb={po.handlePreviewExcelOnWeb}
+        handleDownloadExcel={po.handleDownloadExcel}
+        downloadingId={po.downloadingId}
+        navigate={navigate}
+      />
 
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="w-56">
-              <select
-                value={warehouseFilter}
-                onChange={(e) => {
-                  setWarehouseFilter(e.target.value);
-                  setPage(1);
-                }}
-                className="w-full h-9 px-3 text-xs bg-background rounded-[6px] border border-input focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
-              >
-                <option value="">Tất cả kho nhận hàng</option>
-                {warehouses.map((w) => (
-                  <option key={w._id} value={w._id}>
-                    {w.name} {w.isDefault ? '(Kho mặc định)' : ''}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="w-64">
-              <SearchableSelect
-                options={[
-                  { label: 'Tất cả trạng thái quy trình', value: '' },
-                  { label: 'Bản nháp (Đã tạo đơn)', value: 'draft' },
-                  { label: 'Đã gửi NCC', value: 'sent' },
-                  { label: 'Đang vận chuyển', value: 'in_transit' },
-                  { label: 'Đã đến kho thành phẩm', value: 'arrived' },
-                  { label: 'Đang kiểm tra hàng hóa', value: 'inspecting' },
-                  { label: 'Đã xác nhận & Nhập kho', value: 'completed' },
-                  { label: 'Đã hủy đơn', value: 'cancelled' },
-                ]}
-                value={statusFilter}
-                onChange={(val) => {
-                  setStatusFilter(val);
-                  setPage(1);
-                }}
-                creatable={false}
-                placeholder="Tất cả trạng thái quy trình"
-              />
-            </div>
-            <ColumnToggleDropdown columnVisibility={columnVisibility} />
-          </div>
-        </div>
-      </Card>
-
-      {/* Table */}
-      <Card className="rounded-[6px] border border-border shadow-xs overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm border-collapse">
-            <thead className="bg-muted/50 text-xs font-semibold uppercase text-muted-foreground border-b border-border">
-              <tr>
-                {isColumnVisible('stt') && <th className="px-4 py-3.5 text-center w-12 whitespace-nowrap">STT</th>}
-                {isColumnVisible('poNumber') && renderSortHeader('poNumber', 'Mã Đơn PO', 'left', 'w-36')}
-                {isColumnVisible('warehouse') && <th className="px-4 py-3.5 whitespace-nowrap text-left text-xs uppercase text-muted-foreground font-semibold">Kho Nhập</th>}
-                {isColumnVisible('supplier') && renderSortHeader('supplierId', 'Nhà Cung Cấp', 'left', 'min-w-[220px]')}
-                {isColumnVisible('itemCount') && renderSortHeader('itemCount', 'Số Loại SP', 'center', 'w-24')}
-                {isColumnVisible('totalQuantity') && renderSortHeader('totalQuantity', 'Tổng SL', 'center', 'w-24')}
-                {isColumnVisible('totalAmount') && renderSortHeader('totalAmount', 'Tổng Giá Nhập', 'right', 'w-36')}
-                {isColumnVisible('paymentStatus') && <th className="px-4 py-3.5 whitespace-nowrap w-40 text-center">Thanh Toán</th>}
-                {isColumnVisible('status') && renderSortHeader('status', 'Trạng Thái Kho', 'center', 'w-48')}
-                {isColumnVisible('stepper') && <th className="px-4 py-3.5 whitespace-nowrap w-48 text-center">Nấc Tiến Quy Trình</th>}
-                {isColumnVisible('actions') && <th className="px-4 py-3.5 whitespace-nowrap w-56 text-right">Xem & Tải Excel</th>}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/60">
-              {isLoading ? (
-                <tr>
-                  <td colSpan={columnVisibility.visibleCount} className="py-8 text-center text-sm text-muted-foreground">
-                    Đang tải danh sách đơn nhập kho...
-                  </td>
-                </tr>
-              ) : sortedOrders.length === 0 ? (
-                <tr>
-                  <td colSpan={columnVisibility.visibleCount} className="py-8 text-center text-sm text-muted-foreground">
-                    Chưa có đơn nhập kho nào
-                  </td>
-                </tr>
-              ) : (
-                sortedOrders.map((po, idx) => (
-                  <tr key={po._id} className="hover:bg-muted/30 transition-colors align-middle">
-                    {isColumnVisible('stt') && (
-                      <td className="px-4 py-3.5 text-center font-mono text-xs font-semibold text-muted-foreground whitespace-nowrap">
-                        {(page - 1) * pageSize + idx + 1}
-                      </td>
-                    )}
-                    {isColumnVisible('poNumber') && (
-                      <td className="px-4 py-3.5 whitespace-nowrap">
-                        <button
-                          onClick={() => handleOpenPoDetail(po)}
-                          className="font-extrabold text-primary hover:underline font-mono"
-                          title="Click xem chi tiết Đơn mua hàng"
-                        >
-                          {po.poNumber}
-                        </button>
-                      </td>
-                    )}
-                    {isColumnVisible('warehouse') && (
-                      <td className="px-4 py-3.5 whitespace-nowrap text-xs font-medium text-foreground">
-                        {po.warehouseId?.name || 'Kho Tổng Bình Tân'}
-                      </td>
-                    )}
-                    {isColumnVisible('supplier') && (
-                      <td className="px-4 py-3.5 font-medium text-foreground">
-                        <div className="flex items-center gap-2">
-                          <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
-                          <span className="truncate max-w-[260px]" title={po.supplierId?.name}>
-                            {po.supplierId?.name || 'Nhà cung cấp'}
-                          </span>
-                        </div>
-                      </td>
-                    )}
-                    {isColumnVisible('itemCount') && (
-                      <td className="px-4 py-3.5 font-mono text-muted-foreground text-center whitespace-nowrap">
-                        {po.items?.length || 0} mặt hàng
-                      </td>
-                    )}
-                    {isColumnVisible('totalQuantity') && (
-                      <td className="px-4 py-3.5 font-semibold text-foreground text-center whitespace-nowrap">
-                        {po.totalQuantity || 0}
-                      </td>
-                    )}
-                    {isColumnVisible('totalAmount') && (
-                      <td className="px-4 py-3.5 font-semibold text-emerald-600 dark:text-emerald-400 font-mono text-right whitespace-nowrap">
-                        {(po.totalAmount || 0).toLocaleString('vi-VN')} đ
-                      </td>
-                    )}
-
-                    {/* Payment Status Column */}
-                    {isColumnVisible('paymentStatus') && (
-                      <td className="px-4 py-3.5 text-center whitespace-nowrap">
-                        <div className="flex items-center justify-center gap-1.5">
-                          {renderPaymentBadge(po)}
-                          {po.status !== 'cancelled' && (po.totalAmount - (po.paidAmount || 0)) > 0 && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleOpenPayment(po);
-                              }}
-                              className="p-1 rounded-[4px] border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 transition-colors cursor-pointer"
-                              title="Xác nhận thanh toán ngay"
-                            >
-                              <CreditCard className="size-3" />
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    )}
-
-                    {/* Current Status Badge */}
-                    {isColumnVisible('status') && (
-                      <td className="px-4 py-3.5 text-center whitespace-nowrap">{renderStatusBadge(po.status)}</td>
-                    )}
-
-                    {/* ACTION STEPPER BUTTON COLUMN */}
-                    {isColumnVisible('stepper') && (
-                      <td className="px-4 py-3.5 text-center whitespace-nowrap">
-                        {renderActionStepperButton(po)}
-                      </td>
-                    )}
-
-                    {isColumnVisible('actions') && (
-                      <td className="px-4 py-3.5 text-right whitespace-nowrap">
-                        <div className="flex items-center justify-end gap-1.5">
-                          {['sent', 'in_transit', 'arrived', 'inspecting', 'partial_received'].includes(po.status) && (
-                            <button
-                              onClick={() => navigate(`/stock-receivings/create?poId=${po._id}`)}
-                              className="inline-flex items-center gap-1 rounded-[6px] bg-emerald-600 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 transition-transform active:scale-[0.98] shadow-xs cursor-pointer"
-                              title="Tạo phiếu nhập kho ngay từ đơn mua hàng này"
-                            >
-                              <FileCheck className="size-3.5" /> Lập PNK
-                            </button>
-                          )}
-
-                          <button
-                            onClick={() => handlePreviewExcelOnWeb(po)}
-                            className="inline-flex items-center gap-1 rounded-[6px] border border-primary/30 bg-primary/10 px-2.5 py-1.5 text-xs font-semibold text-primary hover:bg-primary/20 transition-transform active:scale-[0.98] cursor-pointer"
-                            title="Xem trước file Excel (.xlsx) trực tiếp trên Web"
-                          >
-                            <FileSpreadsheet className="size-3.5" /> Preview Excel
-                          </button>
-
-                          <button
-                            onClick={() => handleDownloadExcel(po)}
-                            disabled={downloadingId === po._id}
-                            className="inline-flex items-center gap-1.5 rounded-[6px] border border-input bg-background px-3 py-1.5 text-xs font-semibold text-foreground shadow-2xs hover:bg-muted transition-transform active:scale-[0.98] disabled:opacity-50 cursor-pointer"
-                            title="Tải phiếu nhập kho điền sẵn dữ liệu theo Mẫu Excel"
-                          >
-                            <Download className="size-3.5 text-primary" />
-                            {downloadingId === po._id ? 'Đang xuất...' : 'Tải Excel'}
-                          </button>
-                        </div>
-                      </td>
-                    )}
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        <DataTablePagination
-          page={page}
-          pageSize={pageSize}
-          totalItems={pagination.total}
-          totalPages={pagination.totalPages}
-          onPageChange={setPage}
-          onPageSizeChange={(size) => {
-            setPageSize(size);
-            setPage(1);
-          }}
-        />
-      </Card>
-
-      {/* Real Web XLSX Preview Modal */}
       <ExcelPreviewModal
-        isOpen={excelPreviewOpen}
-        onClose={() => modal.close('excelPreview')}
-        title={previewTitle}
-        downloadUrl={previewDownloadUrl}
+        isOpen={po.modal.isOpen('excelPreview')}
+        onClose={() => po.modal.close('excelPreview')}
+        title={previewData.title || ''}
+        downloadUrl={previewData.url || ''}
       />
 
-      {/* Send PO to Supplier Modal (Flexible Dispatch) */}
       <SendPOModal
-        isOpen={sendPOModalOpen}
-        onClose={() => modal.close('sendPO')}
-        po={selectedPOToSend}
+        isOpen={po.modal.isOpen('sendPO')}
+        onClose={() => po.modal.close('sendPO')}
+        po={po.modal.data('sendPO')}
         onSuccess={() => {
-          queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
+          po.queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
         }}
       />
 
-      {/* Custom Confirm Dialog (Replaces native browser window.confirm popup) */}
       <ConfirmDialog
-        open={confirmModal.open}
-        title={confirmModal.title}
-        message={confirmModal.message}
-        confirmText={confirmModal.confirmText}
-        variant={confirmModal.variant}
-        loading={updateStatusMutation.isPending}
-        onCancel={() => modal.close('confirm')}
+        open={po.modal.isOpen('confirm')}
+        title={confirmData.title}
+        message={confirmData.message}
+        confirmText={confirmData.confirmText}
+        variant={confirmData.variant}
+        loading={po.updateStatusMutation.isPending}
+        onCancel={() => po.modal.close('confirm')}
         onConfirm={async () => {
-          if (confirmModal.po && confirmModal.nextStatus) {
-            await doAdvanceStatus(confirmModal.po._id, confirmModal.nextStatus, confirmModal.po.poNumber);
-            modal.close('confirm');
+          if (confirmData.po && confirmData.nextStatus) {
+            await po.doAdvanceStatus(confirmData.po._id, confirmData.nextStatus, confirmData.po.poNumber);
+            po.modal.close('confirm');
           }
         }}
       />
 
-      {/* AMIS STYLE PO DETAIL DRAWER (Matching AMIS Screenshot 3) */}
-      {detailModalOpen && selectedPoDetail && (
-        <div className="fixed inset-0 z-50 flex bg-black/40 justify-end">
-          <div className="w-full max-w-4xl bg-background border-l border-border shadow-2xl flex flex-col h-full overflow-hidden">
-            {/* Header */}
-            <div className="flex items-center justify-between border-b border-border bg-muted/40 p-4">
-              <div>
-                <h2 className="text-base font-bold text-foreground flex items-center gap-2">
-                  Đơn Mua Hàng: <span className="text-primary font-mono">{selectedPoDetail.poNumber}</span>
-                </h2>
-                <p className="text-xs text-muted-foreground">Chi tiết thỏa thuận mua hàng với Nhà cung cấp & Đối soát nhập thực tế</p>
-              </div>
-              <button onClick={() => modal.close('detail')} className="rounded-[4px] p-1.5 hover:bg-muted cursor-pointer">
-                <X className="size-4" />
-              </button>
-            </div>
+      <PODetailDrawer
+        isOpen={po.modal.isOpen('detail')}
+        selectedPoDetail={po.modal.data('detail')}
+        onClose={() => po.modal.close('detail')}
+        renderStatusBadge={(st) => st}
+        renderPaymentBadge={(item) => item}
+        handlePreviewExcelOnWeb={po.handlePreviewExcelOnWeb}
+        handleOpenSendPOModal={(item) => po.modal.open('sendPO', item)}
+        handleOpenPayment={(item) => po.modal.open('payment', item)}
+        navigate={navigate}
+      />
 
-            {/* Content */}
-            <div className="p-6 space-y-6 overflow-y-auto flex-1">
-              {/* Info Grid */}
-              <div className="grid grid-cols-2 gap-4 rounded-[6px] border border-border bg-card p-4 text-xs sm:grid-cols-5 shadow-2xs">
-                <div>
-                  <span className="text-muted-foreground">Kho nhận hàng:</span>
-                  <p className="font-bold text-primary truncate">{selectedPoDetail.warehouseId?.name || 'Kho Tổng Bình Tân'}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Mã nhà cung cấp:</span>
-                  <p className="font-mono font-bold text-foreground">{selectedPoDetail.supplierId?.code || 'NCC-01'}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Tên nhà cung cấp:</span>
-                  <p className="font-bold text-foreground truncate">{selectedPoDetail.supplierId?.name || 'NCC'}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Ngày đơn hàng:</span>
-                  <p className="font-mono font-semibold tabular-nums">{new Date(selectedPoDetail.createdAt).toLocaleDateString('vi-VN')}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Trạng thái:</span>
-                  <div>{renderStatusBadge(selectedPoDetail.status)}</div>
-                </div>
-              </div>
-
-              {/* Items Table (Matching AMIS Screenshot 3 columns) */}
-              <div className="space-y-3">
-                <h3 className="text-xs font-bold text-foreground">Danh Sách Hàng Hóa Mua</h3>
-                <div className="rounded-[6px] border border-border bg-card overflow-hidden shadow-2xs">
-                  <table className="w-full text-left text-xs border-collapse">
-                    <thead className="bg-muted/50 font-bold border-b border-border text-muted-foreground">
-                      <tr>
-                        <th className="p-3 w-10">#</th>
-                        <th className="p-3">Mã hàng</th>
-                        <th className="p-3">Tên hàng</th>
-                        <th className="p-3 text-center">ĐVT</th>
-                        <th className="p-3 text-center">SL Yêu Cầu</th>
-                        <th className="p-3 text-center">SL Đã Nhận</th>
-                        <th className="p-3 text-right">Đơn giá</th>
-                        <th className="p-3 text-right">Thành tiền</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border/60">
-                      {selectedPoDetail.items?.map((it, idx) => (
-                        <tr key={idx} className="hover:bg-muted/30">
-                          <td className="p-3 text-muted-foreground font-mono tabular-nums">{idx + 1}</td>
-                          <td className="p-3 font-mono font-bold text-primary">{it.sku || 'SKU-001'}</td>
-                          <td className="p-3 font-medium text-foreground">{it.productName}</td>
-                          <td className="p-3 text-center text-muted-foreground">{it.unit || 'Cái'}</td>
-                          <td className="p-3 text-center font-bold text-foreground font-mono tabular-nums">{it.expectedQty}</td>
-                          <td className="p-3 text-center font-bold text-emerald-600 font-mono tabular-nums">{it.receivedQty || 0}</td>
-                          <td className="p-3 text-right font-mono tabular-nums">{(it.importPrice || 0).toLocaleString('vi-VN')} đ</td>
-                          <td className="p-3 text-right font-mono font-bold tabular-nums text-primary">{(it.subtotal || 0).toLocaleString('vi-VN')} đ</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* TRẠNG THÁI THANH TOÁN (SAPO STYLE PAYMENT CARD) */}
-              <div className="space-y-3">
-                <div className="rounded-[6px] border border-border bg-card p-4 space-y-3 shadow-2xs">
-                  <div className="flex items-center justify-between border-b border-border pb-2.5">
-                    <div className="flex items-center gap-2">
-                      <CreditCard className="size-4 text-primary" />
-                      <h3 className="text-xs font-bold text-foreground">Trạng Thái Thanh Toán Cho Nhà Cung Cấp</h3>
-                    </div>
-                    {renderPaymentBadge(selectedPoDetail)}
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                    <div className="rounded-[4px] bg-muted/40 p-2.5 border border-border/50">
-                      <span className="text-muted-foreground block text-[11px]">Tổng giá trị đơn:</span>
-                      <span className="font-mono font-bold text-foreground text-sm tabular-nums">
-                        {(selectedPoDetail.totalAmount || 0).toLocaleString('vi-VN')} đ
-                      </span>
-                    </div>
-
-                    <div className="rounded-[4px] bg-muted/40 p-2.5 border border-border/50">
-                      <span className="text-muted-foreground block text-[11px]">Đã thanh toán:</span>
-                      <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-sm tabular-nums">
-                        {(selectedPoDetail.paidAmount || 0).toLocaleString('vi-VN')} đ
-                      </span>
-                    </div>
-
-                    <div className="rounded-[4px] bg-primary/5 p-2.5 border border-primary/20">
-                      <span className="text-muted-foreground block text-[11px]">Tiền còn cần trả NCC:</span>
-                      <span className="font-mono font-bold text-primary text-sm tabular-nums">
-                        {Math.max(0, (selectedPoDetail.totalAmount || 0) - (selectedPoDetail.paidAmount || 0)).toLocaleString('vi-VN')} đ
-                      </span>
-                    </div>
-                  </div>
-
-                  {selectedPoDetail.status !== 'cancelled' && (selectedPoDetail.totalAmount - (selectedPoDetail.paidAmount || 0)) > 0 && (
-                    <div className="flex justify-end pt-1">
-                      <button
-                        onClick={() => handleOpenPayment(selectedPoDetail)}
-                        className="inline-flex items-center gap-1.5 rounded-[6px] bg-primary px-3.5 py-1.5 text-xs font-bold text-primary-foreground shadow-xs hover:bg-primary/90 active:scale-[0.98] transition-transform cursor-pointer"
-                      >
-                        <CreditCard className="size-3.5" /> Xác Nhận Thanh Toán
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Bottom Actions */}
-            <div className="border-t border-border bg-muted/40 p-4 flex items-center justify-between">
-              <div className="text-xs">
-                <span className="text-muted-foreground">Tổng cộng: </span>
-                <span className="font-extrabold text-sm text-primary font-mono tabular-nums">
-                  {(selectedPoDetail.totalAmount || 0).toLocaleString('vi-VN')} đ
-                </span>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => handlePreviewExcelOnWeb(selectedPoDetail)}
-                  className="inline-flex items-center gap-1.5 rounded-[6px] border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary/20 active:scale-[0.98] cursor-pointer"
-                >
-                  <FileSpreadsheet className="size-3.5" /> Preview Mẫu Đơn Đặt Hàng Excel
-                </button>
-
-                {selectedPoDetail.status === 'draft' && (
-                  <button
-                    onClick={() => {
-                      modal.close('detail');
-                      handleOpenSendPOModal(selectedPoDetail);
-                    }}
-                    className="inline-flex items-center gap-1.5 rounded-[6px] bg-blue-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-blue-700 active:scale-[0.98] cursor-pointer"
-                  >
-                    <Send className="size-3.5" /> Gửi PO Cho NCC
-                  </button>
-                )}
-
-                {['sent', 'in_transit', 'arrived', 'inspecting', 'partial_received'].includes(selectedPoDetail.status) && (
-                  <button
-                    onClick={() => navigate(`/stock-receivings/create?poId=${selectedPoDetail._id}`)}
-                    className="inline-flex items-center gap-1.5 rounded-[6px] bg-emerald-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-emerald-700 active:scale-[0.98] cursor-pointer"
-                  >
-                    <FileCheck className="size-3.5" /> Lập Phiếu Nhập Kho (PNK)
-                  </button>
-                )}
-
-                {selectedPoDetail.status !== 'cancelled' && (selectedPoDetail.totalAmount - (selectedPoDetail.paidAmount || 0)) > 0 && (
-                  <button
-                    onClick={() => handleOpenPayment(selectedPoDetail)}
-                    className="inline-flex items-center gap-1.5 rounded-[6px] border border-primary/30 bg-primary/10 px-3.5 py-1.5 text-xs font-bold text-primary hover:bg-primary/20 active:scale-[0.98] cursor-pointer"
-                  >
-                    <CreditCard className="size-3.5" /> Thanh Toán
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Quick Payment Modal for PO */}
       <PurchaseOrderPaymentModal
-        po={selectedPOToPay}
-        open={paymentModalOpen}
-        onClose={() => modal.close('payment')}
+        po={po.modal.data('payment')}
+        open={po.modal.isOpen('payment')}
+        onClose={() => po.modal.close('payment')}
         onSuccess={async () => {
-          queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
-          if (selectedPoDetail && selectedPOToPay && selectedPoDetail._id === selectedPOToPay._id) {
-            try {
-              const refreshed = await inventoryService.getPurchaseOrderById(selectedPoDetail._id);
-              if (refreshed.data?.data) {
-                modal.open('detail', refreshed.data.data);
-              }
-            } catch (e) {
-              console.warn('Refetch PO detail error:', e);
-            }
-          }
+          po.queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
         }}
       />
     </div>

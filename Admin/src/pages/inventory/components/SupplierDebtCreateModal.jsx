@@ -11,7 +11,7 @@ import { toast } from '@/providers/ToastProvider';
 
 export default function SupplierDebtCreateModal({ supplier, open, onClose }) {
   const [name, setName] = useState('');
-  const [debtType, setDebtType] = useState('payable'); // 'payable' | 'receivable'
+  const [debtType, setDebtType] = useState('payable');
   const [warehouseId, setWarehouseId] = useState('');
   const [amount, setAmount] = useState('');
   const [dueDate, setDueDate] = useState('');
@@ -44,22 +44,19 @@ export default function SupplierDebtCreateModal({ supplier, open, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
-      <div className="bg-card text-card-foreground border border-border rounded-[6px] shadow-lg max-w-lg w-full overflow-hidden flex flex-col">
-        {/* Header */}
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-in fade-in duration-200">
+      <div className="bg-card text-card-foreground border border-border rounded-[6px] shadow-sm max-w-lg w-full overflow-hidden flex flex-col">
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <h2 className="text-sm font-bold text-foreground">Tạo công nợ</h2>
           <button
             onClick={onClose}
-            className="p-1 rounded-[6px] hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+            className="p-1 rounded-[6px] hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
           >
             <X size={16} />
           </button>
         </div>
 
-        {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-5 space-y-4 text-xs">
-          {/* Tên công nợ */}
           <div className="space-y-1.5">
             <label className="font-semibold text-foreground flex items-center gap-1">
               <span>Tên công nợ</span>
@@ -74,14 +71,13 @@ export default function SupplierDebtCreateModal({ supplier, open, onClose }) {
             />
           </div>
 
-          {/* Loại công nợ */}
           <div className="space-y-1.5">
             <label className="font-semibold text-foreground">Loại công nợ</label>
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
                 onClick={() => setDebtType('payable')}
-                className={`py-2 px-3 text-xs font-semibold rounded-[6px] border transition-colors ${
+                className={`py-2 px-3 text-xs font-semibold rounded-[6px] border transition-colors cursor-pointer ${
                   debtType === 'payable'
                     ? 'bg-primary text-primary-foreground border-primary'
                     : 'bg-background hover:bg-muted text-foreground border-border'
@@ -92,7 +88,7 @@ export default function SupplierDebtCreateModal({ supplier, open, onClose }) {
               <button
                 type="button"
                 onClick={() => setDebtType('receivable')}
-                className={`py-2 px-3 text-xs font-semibold rounded-[6px] border transition-colors ${
+                className={`py-2 px-3 text-xs font-semibold rounded-[6px] border transition-colors cursor-pointer ${
                   debtType === 'receivable'
                     ? 'bg-primary text-primary-foreground border-primary'
                     : 'bg-background hover:bg-muted text-foreground border-border'
@@ -103,7 +99,6 @@ export default function SupplierDebtCreateModal({ supplier, open, onClose }) {
             </div>
           </div>
 
-          {/* Nhà cung cấp & Kho hàng */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <label className="font-semibold text-muted-foreground">Tên nhà cung cấp</label>
@@ -129,7 +124,6 @@ export default function SupplierDebtCreateModal({ supplier, open, onClose }) {
             </div>
           </div>
 
-          {/* Số tiền & Hạn đáo hạn */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <label className="font-semibold text-foreground flex items-center gap-1">
@@ -155,7 +149,6 @@ export default function SupplierDebtCreateModal({ supplier, open, onClose }) {
             </div>
           </div>
 
-          {/* Mô tả */}
           <div className="space-y-1.5">
             <label className="font-semibold text-foreground">Mô tả / Ghi chú</label>
             <Textarea
@@ -167,7 +160,6 @@ export default function SupplierDebtCreateModal({ supplier, open, onClose }) {
             />
           </div>
 
-          {/* Footer buttons */}
           <div className="pt-3 border-t border-border flex items-center justify-end gap-2">
             <Button
               type="button"
@@ -175,7 +167,7 @@ export default function SupplierDebtCreateModal({ supplier, open, onClose }) {
               size="sm"
               onClick={onClose}
               disabled={createMut.isPending}
-              className="rounded-[6px] h-8 text-xs"
+              className="rounded-[6px] h-8 text-xs cursor-pointer"
             >
               Hủy
             </Button>
@@ -183,7 +175,7 @@ export default function SupplierDebtCreateModal({ supplier, open, onClose }) {
               type="submit"
               size="sm"
               disabled={createMut.isPending}
-              className="rounded-[6px] h-8 text-xs font-semibold"
+              className="rounded-[6px] h-8 text-xs font-semibold cursor-pointer active:scale-[0.98]"
             >
               {createMut.isPending ? <Loader2 className="size-3.5 animate-spin mr-1" /> : null}
               Tạo

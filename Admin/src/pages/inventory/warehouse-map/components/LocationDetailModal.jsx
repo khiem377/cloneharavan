@@ -14,8 +14,7 @@ export default function LocationDetailModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-lg rounded-[6px] border border-border bg-card p-5 shadow-xl space-y-4 animate-in fade-in zoom-in-95">
-        {/* Header */}
+      <div className="w-full max-w-lg rounded-[6px] border border-border bg-card p-5 shadow-sm space-y-4 animate-in fade-in zoom-in-95">
         <div className="flex items-center justify-between border-b border-border pb-3">
           <div>
             <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
@@ -34,7 +33,7 @@ export default function LocationDetailModal({
           <button
             type="button"
             onClick={() => setInspectModalOpen(false)}
-            className="rounded-[4px] p-1 text-muted-foreground hover:bg-muted cursor-pointer active:scale-[0.98]"
+            className="rounded-[6px] p-1 text-muted-foreground hover:bg-muted active:scale-[0.98] transition-all cursor-pointer"
           >
             <X className="size-4" />
           </button>

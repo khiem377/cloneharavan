@@ -1,43 +1,31 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight, Loader2, LayoutList, LayoutGrid, Eye, Layers, RefreshCw, CheckSquare, Globe, FileText } from '@/components/ui/Icons';
-import { Barcode, Printer, Coins, Cpu } from 'lucide-react';
 import { toast } from '@/providers/ToastProvider';
-import { useProducts, useToggleProductStatus, useDeleteProduct, useDeleteBulkProducts, useBulkUpdateProductStatus } from '@/hooks/useProducts';
+import {
+  useProducts,
+  useToggleProductStatus,
+  useDeleteProduct,
+  useDeleteBulkProducts,
+  useBulkUpdateProductStatus,
+} from '@/hooks/useProducts';
+import { productService } from '@/services/product.service';
 import { useMediaByIds } from '@/hooks/useMedia';
-import { MediaThumbnailHover } from '@/components/ui/MediaFolderBadge';
 import { useCategories } from '@/hooks/useCategories';
-import { useBrands, useAllBrands } from '@/hooks/useBrands';
+import { useAllBrands } from '@/hooks/useBrands';
+import useColumnVisibility from '@/hooks/useColumnVisibility';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import DataTablePagination from '@/components/ui/DataTablePagination';
-import Can from '@/components/auth/Can';
-import SearchableSelect from '@/components/ui/SearchableSelect';
-import useColumnVisibility from '@/hooks/useColumnVisibility';
-import ColumnToggleDropdown from '@/components/ui/ColumnToggleDropdown';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
+
+import ProductHeader from './components/ProductHeader';
+import ProductFilterBar from './components/ProductFilterBar';
+import ProductBulkActionBar from './components/ProductBulkActionBar';
+import ProductTable from './components/ProductTable';
+import ProductGrid from './components/ProductGrid';
 import BarcodePrintModal from './components/BarcodePrintModal';
 import WholesalePricingModal from './components/WholesalePricingModal';
 import CompositeBomModal from './components/CompositeBomModal';
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableHead,
-  TableRow,
-  TableCell,
-} from '@/components/ui/table';
-
-const STATUS_LABELS = { published: 'Công khai', draft: 'Nháp', out_of_stock: 'Hết hàng' };
-const STATUS_BADGE = {
-  published: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
-  draft: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
-  out_of_stock: 'bg-destructive/10 text-destructive border-destructive/20',
-};
 
 const PRODUCT_COLUMNS = [
   { id: 'product', label: 'Sản phẩm', defaultVisible: true, alwaysVisible: true },
@@ -52,11 +40,6 @@ const PRODUCT_COLUMNS = [
 ];
 
 const CLIENT_STORE_URL = import.meta.env.VITE_STORE_FRONTEND_URL || import.meta.env.VITE_CLIENT_URL || 'http://localhost:3000';
-
-function formatPrice(n) {
-  if (!n) return '0đ';
-  return n.toLocaleString('vi-VN') + 'đ';
-}
 
 export default function ProductListPage() {
   const navigate = useNavigate();
@@ -73,9 +56,9 @@ export default function ProductListPage() {
   const [selected, setSelected] = useState([]);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
-  const [bulkStatusConfirm, setBulkStatusConfirm] = useState(null); // 'published' | 'draft'
+  const [bulkStatusConfirm, setBulkStatusConfirm] = useState(null);
 
-  // Pancake POS Feature Modals
+  // Modals
   const [barcodeModalOpen, setBarcodeModalOpen] = useState(false);
   const [barcodeProducts, setBarcodeProducts] = useState([]);
   const [wholesaleModalOpen, setWholesaleModalOpen] = useState(false);
@@ -84,28 +67,18 @@ export default function ProductListPage() {
   const [bomProduct, setBomProduct] = useState(null);
 
   const columnVisibility = useColumnVisibility('admin_products_columns', PRODUCT_COLUMNS);
-  const { isColumnVisible } = columnVisibility;
+  const { isColumnVisible, visibleCount } = columnVisibility;
 
   useEffect(() => {
-    const catParam = searchParams.get('category');
-    if (catParam !== null && catParam !== filterCategory) {
-      setFilterCategory(catParam);
-      setPage(1);
-    }
-    const brandParam = searchParams.get('brand');
-    if (brandParam !== null && brandParam !== filterBrand) {
-      setFilterBrand(brandParam);
-      setPage(1);
-    }
-    const statusParam = searchParams.get('status');
-    if (statusParam !== null && statusParam !== filterStatus) {
-      setFilterStatus(statusParam);
-      setPage(1);
-    }
+    const cat = searchParams.get('category') || '';
+    const br = searchParams.get('brand') || '';
+    const st = searchParams.get('status') || '';
+    if (cat !== filterCategory) setFilterCategory(cat);
+    if (br !== filterBrand) setFilterBrand(br);
+    if (st !== filterStatus) setFilterStatus(st);
   }, [searchParams]);
 
   const highlightId = searchParams.get('highlight');
-
   const params = { keyword, category: filterCategory, brand: filterBrand, status: filterStatus || undefined, page, limit };
   const { data, isLoading, refetch } = useProducts(params);
   const products = data?.data ?? [];
@@ -114,28 +87,28 @@ export default function ProductListPage() {
   useEffect(() => {
     if (!highlightId) return;
     productService.locate(highlightId, limit)
-      .then((res) => { setPage(res.data?.data?.page || 1); })
+      .then((res) => setPage(res.data?.data?.page || 1))
       .catch(() => {});
-  }, [highlightId]);
+  }, [highlightId, limit]);
+
   useEffect(() => {
     if (!highlightId || !products.length) return;
     const found = products.find((p) => p._id === highlightId);
     if (!found) return;
-    setSelected((prev) => prev.includes(highlightId) ? prev : [...prev, highlightId]);
+    setSelected((prev) => (prev.includes(highlightId) ? prev : [...prev, highlightId]));
     setTimeout(() => {
       const el = rowRefs.current[highlightId];
       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 100);
     setSearchParams((p) => { p.delete('highlight'); return p; }, { replace: true });
-  }, [highlightId, products]);
+  }, [highlightId, products, setSearchParams]);
 
-  // Batch-fetch media objects de lay folder info cho thumbnail hover
   const resolveId = (v) => (v && typeof v === 'object' ? v._id : v);
   const allThumbIds = products.map((p) => resolveId(p.thumbnail?.mediaId || p.thumbnail?._id)).filter(Boolean);
   const { data: mediaMap = {} } = useMediaByIds(allThumbIds);
-
   const { data: categories = [] } = useCategories({ tree: 'false' });
   const { data: brands = [] } = useAllBrands();
+
   const toggleMut = useToggleProductStatus();
   const deleteMut = useDeleteProduct();
   const bulkDeleteMut = useDeleteBulkProducts();
@@ -150,10 +123,6 @@ export default function ProductListPage() {
       },
       onError: (e) => toast.error(e.response?.data?.message || 'Lỗi cập nhật'),
     });
-  };
-
-  const handleViewFrontend = (slug) => {
-    window.open(`${CLIENT_STORE_URL}/products/${slug}`, '_blank');
   };
 
   const handleToggle = (p) => {
@@ -178,7 +147,7 @@ export default function ProductListPage() {
   };
 
   const toggleSelect = (id) =>
-    setSelected((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
+    setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
 
   const toggleSelectAll = () => {
     if (selected.length === products.length) setSelected([]);
@@ -187,220 +156,48 @@ export default function ProductListPage() {
 
   return (
     <div className="p-3 sm:p-6 flex flex-col gap-4 sm:gap-6 w-full max-w-full overflow-x-hidden min-h-full bg-background text-foreground antialiased">
-      <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-border">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-foreground">Sản phẩm</h1>
-          <p className="text-xs text-muted-foreground mt-0.5 font-mono tabular-nums">{pagination?.total ?? 0} sản phẩm</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => refetch()}
-            className="rounded-[6px] text-xs font-semibold"
-            title="Làm mới dữ liệu"
-          >
-            <RefreshCw size={14} className={`mr-1.5 ${isLoading ? 'animate-spin' : ''}`} />
-            Làm mới
-          </Button>
+      <ProductHeader
+        total={pagination?.total ?? 0}
+        isLoading={isLoading}
+        onRefresh={() => refetch()}
+        onOpenBarcodeModal={() => { setBarcodeProducts(products); setBarcodeModalOpen(true); }}
+        onNavigateNew={() => navigate('/products/new')}
+      />
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              setBarcodeProducts(products);
-              setBarcodeModalOpen(true);
-            }}
-            className="rounded-[6px] text-xs font-semibold"
-            title="In tem mã vạch cho các sản phẩm"
-          >
-            <Barcode size={15} className="mr-1.5 text-primary" />
-            In tem mã vạch
-          </Button>
+      <ProductFilterBar
+        keyword={keyword}
+        onKeywordChange={(val) => { setKeyword(val); setPage(1); }}
+        filterCategory={filterCategory}
+        onCategoryChange={(val) => { setFilterCategory(val); setPage(1); }}
+        categories={categories}
+        filterBrand={filterBrand}
+        onBrandChange={(val) => { setFilterBrand(val); setPage(1); }}
+        brands={brands}
+        filterStatus={filterStatus}
+        onStatusChange={(val) => { setFilterStatus(val); setPage(1); }}
+        columnVisibility={columnVisibility}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        selectedCount={selected.length}
+        onBulkDelete={() => setBulkDeleteConfirm(true)}
+      />
 
-          <Can do="product.create">
-            <Button
-              size="sm"
-              className="rounded-[6px] text-xs font-semibold shadow-xs active:scale-[0.98]"
-              onClick={() => navigate('/products/new')}
-            >
-              <Plus size={15} className="mr-1.5" /> Thêm sản phẩm
-            </Button>
-          </Can>
-        </div>
-      </div>
-
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
-          <Input
-            className="h-9 w-full sm:w-64 rounded-[6px] text-xs"
-            placeholder="Tìm sản phẩm, mã SKU..."
-            value={keyword}
-            onChange={(e) => { setKeyword(e.target.value); setPage(1); }}
-          />
-
-          <SearchableSelect
-            className="w-44 shrink-0"
-            options={[
-              { label: 'Tất cả danh mục', value: '' },
-              ...(Array.isArray(categories) ? categories : []).map((c) => ({ label: c.name, value: c._id })),
-            ]}
-            value={filterCategory}
-            onChange={(val) => { setFilterCategory(val); setPage(1); }}
-            creatable={false}
-            placeholder="Tất cả danh mục"
-          />
-
-          <SearchableSelect
-            className="w-44 shrink-0"
-            options={[
-              { label: 'Tất cả thương hiệu', value: '' },
-              ...(Array.isArray(brands) ? brands : []).map((b) => ({ label: b.name, value: b._id })),
-            ]}
-            value={filterBrand}
-            onChange={(val) => { setFilterBrand(val); setPage(1); }}
-            creatable={false}
-            placeholder="Tất cả thương hiệu"
-          />
-
-          <SearchableSelect
-            className="w-40 shrink-0"
-            options={[
-              { label: 'Tất cả trạng thái', value: '' },
-              { label: 'Công khai', value: 'published' },
-              { label: 'Nháp', value: 'draft' },
-              { label: 'Hết hàng', value: 'out_of_stock' },
-            ]}
-            value={filterStatus}
-            onChange={(val) => { setFilterStatus(val); setPage(1); }}
-            creatable={false}
-            placeholder="Tất cả trạng thái"
-          />
-        </div>
-
-        <div className="flex items-center gap-2">
-          <ColumnToggleDropdown columnVisibility={columnVisibility} />
-          <div className="flex items-center rounded-[6px] border border-border bg-muted p-0.5">
-            <button
-              className={`p-1.5 rounded-[4px] transition-colors cursor-pointer ${viewMode === 'table' ? 'bg-background text-foreground font-semibold shadow-xs' : 'text-muted-foreground hover:text-foreground'}`}
-              onClick={() => setViewMode('table')}
-              title="Bảng"
-            >
-              <LayoutList size={15} />
-            </button>
-            <button
-              className={`p-1.5 rounded-[4px] transition-colors cursor-pointer ${viewMode === 'grid' ? 'bg-background text-foreground font-semibold shadow-xs' : 'text-muted-foreground hover:text-foreground'}`}
-              onClick={() => setViewMode('grid')}
-              title="Lưới"
-            >
-              <LayoutGrid size={15} />
-            </button>
-          </div>
-
-          {selected.length > 0 && (
-            <Button
-              variant="destructive"
-              size="sm"
-              className="rounded-[6px] text-xs font-semibold h-9"
-              onClick={() => setBulkDeleteConfirm(true)}
-            >
-              <Trash2 size={14} className="mr-1.5" /> Xóa {selected.length}
-            </Button>
-          )}
-        </div>
-      </div>
-
-      {/* Quick Status Chips */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
-        <span className="text-muted-foreground font-medium shrink-0">Lọc nhanh:</span>
-        {[
-          { label: 'Tất cả', value: '' },
-          { label: 'Công khai', value: 'published' },
-          { label: 'Bản nháp', value: 'draft' },
-          { label: 'Hết hàng', value: 'out_of_stock' },
-        ].map((chip) => {
-          const isActive = filterStatus === chip.value;
-          return (
-            <button
-              key={chip.value}
-              type="button"
-              onClick={() => {
-                setFilterStatus(chip.value);
-                setPage(1);
-              }}
-              className={`px-3 py-1 rounded-[6px] text-xs font-medium border transition-colors cursor-pointer active:scale-[0.98] ${
-                isActive
-                  ? 'bg-primary text-primary-foreground border-primary font-semibold shadow-xs'
-                  : 'bg-card text-muted-foreground border-border hover:bg-muted/60 hover:text-foreground'
-              }`}
-            >
-              {chip.label}
-            </button>
-          );
-        })}
-      </div>
-
-      {selected.length > 0 && (
-        <div className="flex items-center flex-wrap gap-2 px-3.5 py-2.5 rounded-[6px] border border-primary/30 bg-primary/5">
-          <CheckSquare size={14} className="text-primary shrink-0" />
-          <span className="text-xs font-medium text-foreground">Đã chọn <span className="text-primary font-bold">{selected.length}</span> sản phẩm</span>
-          <div className="ml-auto flex items-center gap-2">
-            <Can do="product.edit">
-              <Button
-                variant="outline"
-                size="xs"
-                className="rounded-[6px] text-xs font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-300 hover:bg-emerald-500/20 h-7"
-                onClick={() => setBulkStatusConfirm('published')}
-                disabled={bulkStatusMut.isPending}
-              >
-                <Globe size={13} className="mr-1" /> Xuất bản
-              </Button>
-              <Button
-                variant="outline"
-                size="xs"
-                className="rounded-[6px] text-xs font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-300 hover:bg-amber-500/20 h-7"
-                onClick={() => setBulkStatusConfirm('draft')}
-                disabled={bulkStatusMut.isPending}
-              >
-                <FileText size={13} className="mr-1" /> Chuyển Nháp
-              </Button>
-            </Can>
-            <Can do="product.delete">
-              <Button
-                variant="outline"
-                size="xs"
-                className="rounded-[6px] text-xs font-medium bg-destructive/10 text-destructive border-destructive/30 hover:bg-destructive/20 h-7"
-                onClick={() => setBulkDeleteConfirm(true)}
-              >
-                <Trash2 size={13} className="mr-1" /> Xóa
-              </Button>
-            </Can>
-            <Button
-              variant="outline"
-              size="xs"
-              className="rounded-[6px] text-xs font-medium bg-primary/10 text-primary border-primary/30 hover:bg-primary/20 h-7"
-              onClick={() => {
-                const selectedProds = products.filter((p) => selected.includes(p._id));
-                setBarcodeProducts(selectedProds);
-                setBarcodeModalOpen(true);
-              }}
-            >
-              <Printer size={13} className="mr-1" /> In {selected.length} tem
-            </Button>
-            <Button
-              variant="ghost"
-              size="xs"
-              className="text-xs text-muted-foreground hover:text-foreground h-7 rounded-[6px]"
-              onClick={() => setSelected([])}
-            >
-              Bỏ chọn
-            </Button>
-          </div>
-        </div>
-      )}
+      <ProductBulkActionBar
+        selectedCount={selected.length}
+        onPublish={() => setBulkStatusConfirm('published')}
+        onDraft={() => setBulkStatusConfirm('draft')}
+        onDelete={() => setBulkDeleteConfirm(true)}
+        onPrintBarcodes={() => {
+          setBarcodeProducts(products.filter((p) => selected.includes(p._id)));
+          setBarcodeModalOpen(true);
+        }}
+        onClearSelection={() => setSelected([])}
+        isStatusPending={bulkStatusMut.isPending}
+        variant="inline"
+      />
 
       {isLoading ? (
-        <Card className="rounded-[6px] border border-border shadow-xs overflow-hidden p-6 space-y-3">
+        <Card className="rounded-[6px] border border-border p-6 space-y-3">
           {Array.from({ length: 5 }).map((_, idx) => (
             <div key={idx} className="flex items-center gap-4 py-2 border-b border-border/40 last:border-0">
               <Skeleton className="size-4 rounded-[4px]" />
@@ -409,257 +206,39 @@ export default function ProductListPage() {
                 <Skeleton className="h-4 w-48" />
                 <Skeleton className="h-3 w-28" />
               </div>
-              <Skeleton className="h-5 w-20 rounded-full" />
+              <Skeleton className="h-5 w-20 rounded-[6px]" />
               <Skeleton className="h-4 w-24" />
               <Skeleton className="h-4 w-20" />
             </div>
           ))}
         </Card>
       ) : viewMode === 'table' ? (
-        <Card className="rounded-[6px] border border-border shadow-xs overflow-hidden">
-          <Table>
-            <TableHeader className="bg-muted/60">
-              <TableRow className="border-b border-border text-[11px] font-bold text-foreground">
-                <TableHead className="px-3.5 py-3 w-10">
-                  <div className="flex items-center">
-                    <Checkbox
-                      checked={selected.length === products.length && products.length > 0}
-                      onCheckedChange={toggleSelectAll}
-                      aria-label="Chọn tất cả sản phẩm"
-                    />
-                  </div>
-                </TableHead>
-                {isColumnVisible('product') && <TableHead className="px-3.5 py-3.5 whitespace-nowrap">Sản phẩm</TableHead>}
-                {isColumnVisible('sku') && <TableHead className="px-3.5 py-3.5 whitespace-nowrap">SKU</TableHead>}
-                {isColumnVisible('status') && <TableHead className="px-3.5 py-3.5 whitespace-nowrap">Trạng thái</TableHead>}
-                {isColumnVisible('category') && <TableHead className="px-3.5 py-3.5 whitespace-nowrap">Danh mục</TableHead>}
-                {isColumnVisible('brand') && <TableHead className="px-3.5 py-3.5 whitespace-nowrap">Thương hiệu</TableHead>}
-                {isColumnVisible('price') && <TableHead className="px-3.5 py-3.5 whitespace-nowrap">Giá bán</TableHead>}
-                {isColumnVisible('variants') && <TableHead className="px-3.5 py-3.5 text-center whitespace-nowrap">Biến thể</TableHead>}
-                {isColumnVisible('stock') && <TableHead className="px-3.5 py-3.5 whitespace-nowrap">Tồn kho</TableHead>}
-                {isColumnVisible('actions') && <TableHead className="px-3.5 py-3.5 whitespace-nowrap text-right">Thao tác</TableHead>}
-              </TableRow>
-            </TableHeader>
-            <TableBody className="divide-y divide-border">
-              {products.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={columnVisibility.visibleCount + 1} className="py-12 text-center text-xs text-muted-foreground">
-                    Chưa có sản phẩm nào
-                  </TableCell>
-                </TableRow>
-              ) : products.map((p) => (
-                <TableRow
-                  key={p._id}
-                  ref={(el) => { rowRefs.current[p._id] = el; }}
-                  className={`transition-colors hover:bg-muted/40 align-middle ${selected.includes(p._id) || p._id === highlightId ? 'bg-primary/8 ring-1 ring-inset ring-primary/30' : ''}`}
-                >
-                  <TableCell className="px-3.5 py-3 align-middle" onClick={(e) => e.stopPropagation()}>
-                    <Checkbox
-                      checked={selected.includes(p._id)}
-                      onCheckedChange={() => toggleSelect(p._id)}
-                      aria-label={`Chọn sản phẩm ${p.name}`}
-                    />
-                  </TableCell>
-                  {isColumnVisible('product') && (
-                    <TableCell className="px-3.5 py-3 align-middle whitespace-nowrap">
-                      <div className="flex items-center gap-2.5">
-                        {(() => {
-                          const mid = resolveId(p.thumbnail?.mediaId || p.thumbnail?._id);
-                          const thumbSrc = (typeof p.thumbnail === 'string' ? p.thumbnail : p.thumbnail?.url) || 'https://placehold.co/40x40/1e293b/fff?text=?';
-                          return (
-                            <MediaThumbnailHover media={mid ? mediaMap[mid] : null} className="size-9 shrink-0 rounded-[4px] overflow-hidden border border-border bg-muted">
-                              <img src={thumbSrc} alt={p.name} className="size-full object-cover" />
-                            </MediaThumbnailHover>
-                          );
-                        })()}
-                        <div className="flex items-center gap-1.5 flex-wrap min-w-0">
-                          <span className="font-semibold text-foreground text-xs line-clamp-1 max-w-xs">{p.name}</span>
-                          {p.itemType === 'combo' && (
-                            <Badge variant="outline" className="text-[10px] bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20 px-1 py-0 rounded-[4px]">
-                              Combo
-                            </Badge>
-                          )}
-                          {p.allowNegativeStock && (
-                            <Badge variant="outline" className="text-[10px] bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20 px-1 py-0 rounded-[4px]" title="Cho phép bán tồn kho âm">
-                              Bán âm
-                            </Badge>
-                          )}
-                          {p.isComposite && (
-                            <Badge variant="outline" className="text-[10px] bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20 px-1 py-0 rounded-[4px]">
-                              BOM
-                            </Badge>
-                          )}
-                          {p.wholesaleTiers?.length > 0 && (
-                            <Badge variant="outline" className="text-[10px] bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 px-1 py-0 rounded-[4px]">
-                              Sỉ ({p.wholesaleTiers.length})
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    </TableCell>
-                  )}
-                  {isColumnVisible('sku') && (
-                    <TableCell className="px-3.5 py-3 align-middle">
-                      <code className="inline-flex items-center rounded bg-muted px-2 py-0.5 font-mono text-xs text-muted-foreground border border-border/50">{p.sku}</code>
-                    </TableCell>
-                  )}
-                  {isColumnVisible('status') && (
-                    <TableCell className="px-3.5 py-3 align-middle">
-                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border ${STATUS_BADGE[p.status]}`}>
-                        {STATUS_LABELS[p.status]}
-                      </span>
-                    </TableCell>
-                  )}
-                  {isColumnVisible('category') && (
-                    <TableCell className="px-3.5 py-3 align-middle text-muted-foreground">
-                      {p.category?.name || (Array.isArray(p.categories) && p.categories[0]?.name) || '—'}
-                    </TableCell>
-                  )}
-                  {isColumnVisible('brand') && (
-                    <TableCell className="px-3.5 py-3 align-middle text-muted-foreground">
-                      {p.brand?.name || '—'}
-                    </TableCell>
-                  )}
-                  {isColumnVisible('price') && (
-                    <TableCell className="px-3.5 py-3 align-middle">
-                      {p.salePrice > 0 && p.salePrice < p.price ? (
-                        <div className="flex items-center gap-1">
-                          <span className="font-semibold text-foreground text-sm font-mono tabular-nums">{formatPrice(p.salePrice)}</span>
-                          <span className="text-xs text-muted-foreground line-through font-mono tabular-nums">{formatPrice(p.price)}</span>
-                        </div>
-                      ) : (
-                        <span className="font-medium text-foreground font-mono tabular-nums">{formatPrice(p.price)}</span>
-                      )}
-                    </TableCell>
-                  )}
-                  {isColumnVisible('variants') && (
-                    <TableCell className="px-3.5 py-3 align-middle text-center">
-                      {p.variantCount > 0 ? (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="xs"
-                          className="inline-flex items-center gap-1 rounded-[4px] bg-violet-500/10 border border-violet-500/20 px-2.5 py-0.5 text-xs font-semibold text-violet-600 dark:text-violet-400 hover:bg-violet-500/20 h-6"
-                          title="Quản lý biến thể"
-                          onClick={() => navigate(`/products/${p._id}/variants`)}
-                        >
-                          <Layers size={11} />
-                          <span>{p.variantCount}</span>
-                        </Button>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                  )}
-                  {isColumnVisible('stock') && (
-                    <TableCell className="px-3.5 py-3 align-middle font-mono text-xs tabular-nums">
-                      <div className="flex flex-col gap-0.5">
-                        <div className="flex items-center gap-1.5">
-                          <span className={`font-bold text-xs ${
-                            (p.availableStock !== undefined ? p.availableStock : (p.stock || 0) - (p.allocated || 0)) > 0
-                              ? 'text-foreground'
-                              : 'text-destructive font-semibold'
-                          }`}>
-                            {p.availableStock !== undefined ? p.availableStock : Math.max(0, (p.stock || 0) - (p.allocated || 0))}
-                          </span>
-                          <span className="text-[10px] text-muted-foreground font-sans font-normal">có thể bán</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-sans">
-                          <span>Tổng tồn: <strong className="font-mono font-medium text-foreground">{p.stock || 0}</strong></span>
-                          {(p.allocated || 0) > 0 && (
-                            <span className="text-amber-600 dark:text-amber-400 font-semibold" title="Đang nằm trong đơn hàng chờ xuất">
-                              • Giữ: {p.allocated}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </TableCell>
-                  )}
-                  {isColumnVisible('actions') && (
-                    <TableCell className="px-3.5 py-3 align-middle">
-                      <div className="flex items-center gap-1">
-                        <button className="inline-flex size-7 items-center justify-center rounded-[4px] text-muted-foreground hover:bg-accent hover:text-foreground transition-transform active:scale-[0.98] cursor-pointer" title="Xem trên Cửa hàng" onClick={() => handleViewFrontend(p.slug)}><Eye size={14} /></button>
-                        <Can do="product.edit">
-                          <button className="inline-flex size-7 items-center justify-center rounded-[4px] text-muted-foreground hover:bg-accent hover:text-foreground transition-transform active:scale-[0.98] cursor-pointer" title="Sửa" onClick={() => navigate(`/products/${p._id}/edit`)}><Pencil size={14} /></button>
-                        </Can>
-                        <Can do="product_variant.create">
-                          <button className="inline-flex size-7 items-center justify-center rounded-[4px] text-muted-foreground hover:bg-violet-500/10 hover:text-violet-500 transition-transform active:scale-[0.98] cursor-pointer" title="Quản lý biến thể" onClick={() => navigate(`/products/${p._id}/variants`)}><Layers size={14} /></button>
-                        </Can>
-                        <button
-                          className="inline-flex size-7 items-center justify-center rounded-[4px] text-muted-foreground hover:bg-amber-500/10 hover:text-amber-600 transition-transform active:scale-[0.98] cursor-pointer"
-                          title="Bảng giá bán sỉ theo số lượng"
-                          onClick={() => { setWholesaleProduct(p); setWholesaleModalOpen(true); }}
-                        >
-                          <Coins size={14} />
-                        </button>
-                        <button
-                          className="inline-flex size-7 items-center justify-center rounded-[4px] text-muted-foreground hover:bg-blue-500/10 hover:text-blue-600 transition-transform active:scale-[0.98] cursor-pointer"
-                          title="Sản phẩm cấu thành (BOM linh kiện)"
-                          onClick={() => { setBomProduct(p); setBomModalOpen(true); }}
-                        >
-                          <Cpu size={14} />
-                        </button>
-                        <button
-                          className="inline-flex size-7 items-center justify-center rounded-[4px] text-muted-foreground hover:bg-slate-500/10 hover:text-foreground transition-transform active:scale-[0.98] cursor-pointer"
-                          title="In tem mã vạch sản phẩm này"
-                          onClick={() => { setBarcodeProducts([p]); setBarcodeModalOpen(true); }}
-                        >
-                          <Barcode size={14} />
-                        </button>
-                        <Can do="product.edit">
-                          <button className="inline-flex size-7 items-center justify-center rounded-[4px] text-muted-foreground hover:bg-accent hover:text-foreground transition-transform active:scale-[0.98] cursor-pointer" title={p.isActive ? 'Ẩn' : 'Hiện'} onClick={() => handleToggle(p)}>
-                            {p.isActive ? <ToggleRight size={14} className="text-emerald-600 dark:text-emerald-400" /> : <ToggleLeft size={14} />}
-                          </button>
-                        </Can>
-                        <Can do="product.delete">
-                          <button className="inline-flex size-7 items-center justify-center rounded-[4px] text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-transform active:scale-[0.98] cursor-pointer" title="Xóa" onClick={() => setDeleteTarget(p)}><Trash2 size={14} /></button>
-                        </Can>
-                      </div>
-                    </TableCell>
-                  )}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Card>
-    ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {products.map((p) => (
-            <div key={p._id} className={`rounded-[6px] border border-border bg-card text-card-foreground shadow-2xs overflow-hidden transition-all hover:border-primary/50 relative ${selected.includes(p._id) ? 'border-primary ring-2 ring-primary/30' : ''}`}>
-              <div className="absolute top-2 left-2 z-10 bg-background/80 rounded-[4px] p-0.5">
-                <Checkbox
-                  checked={selected.includes(p._id)}
-                  onCheckedChange={() => toggleSelect(p._id)}
-                  aria-label={`Chọn sản phẩm ${p.name}`}
-                />
-              </div>
-              <img src={(typeof p.thumbnail === 'string' ? p.thumbnail : p.thumbnail?.url) || 'https://placehold.co/200x200/1e293b/fff?text=?'} alt={p.name} className="aspect-square w-full object-cover bg-muted" />
-              <div className="p-3 flex flex-col gap-1.5">
-                <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border w-fit ${STATUS_BADGE[p.status]}`}>{STATUS_LABELS[p.status]}</span>
-                <p className="font-semibold text-sm text-foreground line-clamp-1">{p.name}</p>
-                <p className="text-xs text-muted-foreground font-mono tabular-nums">{p.sku}</p>
-                <p className="font-bold text-sm text-foreground font-mono tabular-nums">{formatPrice(p.salePrice > 0 && p.salePrice < p.price ? p.salePrice : p.price)}</p>
-              </div>
-              <div className="flex items-center justify-end gap-1 p-2 border-t border-border bg-muted/30">
-                <button className="inline-flex size-7 items-center justify-center rounded-[4px] text-muted-foreground hover:bg-accent hover:text-foreground transition-transform active:scale-[0.98] cursor-pointer" title="Xem trên Cửa hàng" onClick={() => handleViewFrontend(p.slug)}><Eye size={14} /></button>
-                <Can do="product.edit">
-                  <button className="inline-flex size-7 items-center justify-center rounded-[4px] text-muted-foreground hover:bg-accent hover:text-foreground transition-transform active:scale-[0.98] cursor-pointer" title="Sửa" onClick={() => navigate(`/products/${p._id}/edit`)}><Pencil size={14} /></button>
-                </Can>
-                <Can do="product_variant.create">
-                  <button className="inline-flex size-7 items-center justify-center rounded-[4px] text-muted-foreground hover:bg-violet-500/10 hover:text-violet-500 transition-transform active:scale-[0.98] cursor-pointer" title="Biến thể" onClick={() => navigate(`/products/${p._id}/variants`)}><Layers size={14} /></button>
-                </Can>
-                <Can do="product.edit">
-                  <button className="inline-flex size-7 items-center justify-center rounded-[4px] text-muted-foreground hover:bg-accent hover:text-foreground transition-transform active:scale-[0.98] cursor-pointer" title={p.isActive ? 'Ẩn' : 'Hiện'} onClick={() => handleToggle(p)}>
-                    {p.isActive ? <ToggleRight size={14} className="text-emerald-600 dark:text-emerald-400" /> : <ToggleLeft size={14} />}
-                  </button>
-                </Can>
-                <Can do="product.delete">
-                  <button className="inline-flex size-7 items-center justify-center rounded-[4px] text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-transform active:scale-[0.98] cursor-pointer" title="Xóa" onClick={() => setDeleteTarget(p)}><Trash2 size={14} /></button>
-                </Can>
-              </div>
-            </div>
-          ))}
-        </div>
+        <ProductTable
+          products={products}
+          selected={selected}
+          highlightId={highlightId}
+          mediaMap={mediaMap}
+          isColumnVisible={isColumnVisible}
+          visibleColumnCount={visibleCount}
+          rowRefs={rowRefs}
+          onToggleSelect={toggleSelect}
+          onToggleSelectAll={toggleSelectAll}
+          onViewFrontend={(slug) => window.open(`${CLIENT_STORE_URL}/products/${slug}`, '_blank')}
+          onToggleStatus={handleToggle}
+          onDeleteProduct={setDeleteTarget}
+          onOpenBarcodeModal={(p) => { setBarcodeProducts([p]); setBarcodeModalOpen(true); }}
+          onOpenWholesaleModal={(p) => { setWholesaleProduct(p); setWholesaleModalOpen(true); }}
+          onOpenBomModal={(p) => { setBomProduct(p); setBomModalOpen(true); }}
+        />
+      ) : (
+        <ProductGrid
+          products={products}
+          selected={selected}
+          onToggleSelect={toggleSelect}
+          onViewFrontend={(slug) => window.open(`${CLIENT_STORE_URL}/products/${slug}`, '_blank')}
+          onToggleStatus={handleToggle}
+          onDeleteProduct={setDeleteTarget}
+        />
       )}
 
       <DataTablePagination
@@ -690,15 +269,12 @@ export default function ProductListPage() {
       <ConfirmDialog
         open={!!bulkStatusConfirm}
         title={bulkStatusConfirm === 'published' ? `Xuất bản ${selected.length} sản phẩm` : `Chuyển ${selected.length} sản phẩm về Nháp`}
-        description={bulkStatusConfirm === 'published'
-          ? `${selected.length} sản phẩm sẽ được công khai trên cửa hàng.`
-          : `${selected.length} sản phẩm sẽ bị ẩn khỏi cửa hàng.`}
+        description={bulkStatusConfirm === 'published' ? `${selected.length} sản phẩm sẽ được công khai.` : `${selected.length} sản phẩm sẽ bị ẩn.`}
         onConfirm={() => handleBulkUpdateStatus(bulkStatusConfirm)}
         onCancel={() => setBulkStatusConfirm(null)}
         loading={bulkStatusMut.isPending}
       />
 
-      {/* Pancake POS Feature Modals */}
       {barcodeModalOpen && (
         <BarcodePrintModal
           isOpen={barcodeModalOpen}
@@ -710,10 +286,7 @@ export default function ProductListPage() {
       {wholesaleModalOpen && wholesaleProduct && (
         <WholesalePricingModal
           isOpen={wholesaleModalOpen}
-          onClose={() => {
-            setWholesaleModalOpen(false);
-            setWholesaleProduct(null);
-          }}
+          onClose={() => { setWholesaleModalOpen(false); setWholesaleProduct(null); }}
           product={wholesaleProduct}
           onSuccess={() => refetch()}
         />
@@ -722,65 +295,21 @@ export default function ProductListPage() {
       {bomModalOpen && bomProduct && (
         <CompositeBomModal
           isOpen={bomModalOpen}
-          onClose={() => {
-            setBomModalOpen(false);
-            setBomProduct(null);
-          }}
+          onClose={() => { setBomModalOpen(false); setBomProduct(null); }}
           product={bomProduct}
           onSuccess={() => refetch()}
         />
       )}
 
-      {/* Floating Bottom Bulk Bar for scrolled users */}
-      {selected.length > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-card border border-border shadow-2xl rounded-[8px] px-4 py-2.5 flex items-center gap-3 animate-in slide-in-from-bottom-4 duration-200">
-          <div className="flex items-center gap-2 text-xs font-semibold text-foreground pr-2 border-r border-border">
-            <CheckSquare size={15} className="text-primary shrink-0" />
-            <span>Đã chọn <span className="text-primary font-mono font-bold">{selected.length}</span></span>
-          </div>
-
-          <Can do="product.edit">
-            <Button
-              variant="outline"
-              size="xs"
-              className="rounded-[6px] text-xs font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-300 hover:bg-emerald-500/20 h-8"
-              onClick={() => setBulkStatusConfirm('published')}
-              disabled={bulkStatusMut.isPending}
-            >
-              <Globe size={13} className="mr-1" /> Xuất bản
-            </Button>
-            <Button
-              variant="outline"
-              size="xs"
-              className="rounded-[6px] text-xs font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-300 hover:bg-amber-500/20 h-8"
-              onClick={() => setBulkStatusConfirm('draft')}
-              disabled={bulkStatusMut.isPending}
-            >
-              <FileText size={13} className="mr-1" /> Chuyển Nháp
-            </Button>
-          </Can>
-
-          <Can do="product.delete">
-            <Button
-              variant="destructive"
-              size="xs"
-              className="rounded-[6px] text-xs font-semibold h-8"
-              onClick={() => setBulkDeleteConfirm(true)}
-            >
-              <Trash2 size={13} className="mr-1" /> Xóa
-            </Button>
-          </Can>
-
-          <Button
-            variant="ghost"
-            size="xs"
-            className="text-xs text-muted-foreground hover:text-foreground h-8 rounded-[6px]"
-            onClick={() => setSelected([])}
-          >
-            Bỏ chọn
-          </Button>
-        </div>
-      )}
+      <ProductBulkActionBar
+        selectedCount={selected.length}
+        onPublish={() => setBulkStatusConfirm('published')}
+        onDraft={() => setBulkStatusConfirm('draft')}
+        onDelete={() => setBulkDeleteConfirm(true)}
+        onClearSelection={() => setSelected([])}
+        isStatusPending={bulkStatusMut.isPending}
+        variant="floating"
+      />
     </div>
   );
 }

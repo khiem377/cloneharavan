@@ -1,31 +1,39 @@
 import React, { useState, useEffect } from 'react';
 import {
-  AlertTriangle, Package, SearchIcon as Search, ShoppingCart, RefreshCw, Edit2,
-  Check, X, History, Boxes, Clock, CalendarX, TrendingDown, FileCheck, FileText,
-  Building2,
+  Boxes,
+  RefreshCw,
+  SearchIcon as Search,
+  ShoppingCart,
 } from '@/components/ui/Icons';
 import { useStockAlerts } from '@/hooks/useInventory';
 import { inventoryService } from '@/services/inventory.service';
 import { warehouseService } from '@/services/warehouse.service';
-import DataTablePagination from '@/components/ui/DataTablePagination';
 import ProductStockHistoryModal from '@/components/inventory/ProductStockHistoryModal';
 import { useNavigate } from 'react-router-dom';
 import { toast } from '@/providers/ToastProvider';
 import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table';
+import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+
+import StockAlertWidgets from './components/StockAlertWidgets';
+import StockAlertTable from './components/StockAlertTable';
 
 export default function StockAlertPage() {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
-  const [threshold, setThreshold] = useState(5);
+  const [threshold] = useState(5);
   const [viewMode, setViewMode] = useState('all'); // 'all' | 'low_stock'
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [warehouses, setWarehouses] = useState([]);
-  const [selectedWarehouseId, setSelectedWarehouseId] = useState('');
+  const [selectedWarehouseId, setSelectedWarehouseId] = useState('ALL');
 
   // History Modal
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
@@ -50,7 +58,7 @@ export default function StockAlertPage() {
     viewMode,
     page,
     limit: pageSize,
-    warehouseId: selectedWarehouseId,
+    warehouseId: selectedWarehouseId === 'ALL' ? '' : selectedWarehouseId,
   });
 
   const items = alertsData?.data || alertsData?.items || [];
@@ -79,7 +87,7 @@ export default function StockAlertPage() {
       toast.success('Cập nhật giá nhập vốn thành công');
       setEditingCostId(null);
       refetch();
-    } catch (err) {
+    } catch (_) {
       toast.error('Không thể cập nhật giá nhập vốn');
     }
   };
@@ -89,7 +97,7 @@ export default function StockAlertPage() {
   };
 
   return (
-    <div className="space-y-6 p-6 antialiased">
+    <div className="space-y-6 p-4 sm:p-6 antialiased bg-background text-foreground">
       {/* Top Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-4">
         <div className="flex items-center gap-3">
@@ -101,7 +109,7 @@ export default function StockAlertPage() {
               Bàn Làm Việc & Bảng Tổng Quan Quản Lý Kho
             </h1>
             <p className="text-xs text-muted-foreground">
-              Giám sát tồn kho thực tế, tiến trình đơn kho và cảnh báo định mức theo tiêu chuẩn MISA AMIS
+              Giám sát tồn kho thực tế, tiến trình đơn kho và cảnh báo định mức
             </p>
           </div>
         </div>
@@ -111,169 +119,32 @@ export default function StockAlertPage() {
             variant="outline"
             size="sm"
             onClick={() => refetch()}
-            className="rounded-[6px] text-xs font-semibold"
+            className="rounded-[6px] text-xs font-semibold h-8"
           >
-            <RefreshCw className="h-4 w-4 mr-1.5" /> Làm mới dữ liệu
+            <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${isLoading ? 'animate-spin' : ''}`} />
+            Làm mới dữ liệu
           </Button>
         </div>
       </div>
 
-      {/* 2 REAL-DATA STATUS WIDGETS */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        {/* Card 1: PO Inbound Status */}
-        <Card className="rounded-[6px] border border-border shadow-xs">
-          <CardHeader className="flex flex-row items-center justify-between border-b border-border pb-3 px-5 pt-4">
-            <CardTitle className="text-sm font-bold text-foreground flex items-center gap-2">
-              <FileCheck className="h-4 w-4 text-primary" /> Trạng Thái Đơn Nhập Kho (PO)
-            </CardTitle>
-            <span className="text-xs font-bold text-muted-foreground">
-              Đơn chưa xong:{' '}
-              <span className="text-primary font-mono text-sm font-extrabold tabular-nums">
-                {poStats.totalActive}
-              </span>
-            </span>
-          </CardHeader>
-
-          <CardContent className="p-5 pt-4">
-            <div className="grid grid-cols-3 gap-3 text-center">
-              <div className="rounded-[6px] border border-border bg-muted/30 p-3">
-                <span className="text-xs text-muted-foreground block mb-1">Bản nháp</span>
-                <span className="text-lg font-bold font-mono text-foreground tabular-nums">
-                  {poStats.draft}
-                </span>
-              </div>
-              <div className="rounded-[6px] border border-border bg-muted/30 p-3">
-                <span className="text-xs text-muted-foreground block mb-1">Chờ nhận hàng</span>
-                <span className="text-lg font-bold font-mono text-primary tabular-nums">
-                  {poStats.pending}
-                </span>
-              </div>
-              <div className="rounded-[6px] border border-border bg-muted/30 p-3">
-                <span className="text-xs text-muted-foreground block mb-1">Nhập 1 phần</span>
-                <span className="text-lg font-bold font-mono text-amber-600 tabular-nums">
-                  {poStats.partial}
-                </span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Card 2: EX Outbound Status */}
-        <Card className="rounded-[6px] border border-border shadow-xs">
-          <CardHeader className="flex flex-row items-center justify-between border-b border-border pb-3 px-5 pt-4">
-            <CardTitle className="text-sm font-bold text-foreground flex items-center gap-2">
-              <FileText className="h-4 w-4 text-primary" /> Lệnh Xuất Kho (EX)
-            </CardTitle>
-            <span className="text-xs font-bold text-muted-foreground">
-              Lệnh đang xử lý:{' '}
-              <span className="text-primary font-mono text-sm font-extrabold tabular-nums">
-                {exStats.totalActive}
-              </span>
-            </span>
-          </CardHeader>
-
-          <CardContent className="p-5 pt-4">
-            <div className="grid grid-cols-3 gap-3 text-center">
-              <div className="rounded-[6px] border border-border bg-muted/30 p-3">
-                <span className="text-xs text-muted-foreground block mb-1">Chờ soạn hàng</span>
-                <span className="text-lg font-bold font-mono text-amber-600 tabular-nums">
-                  {exStats.pending_pick}
-                </span>
-              </div>
-              <div className="rounded-[6px] border border-border bg-muted/30 p-3">
-                <span className="text-xs text-muted-foreground block mb-1">Đang lấy hàng</span>
-                <span className="text-lg font-bold font-mono text-primary tabular-nums">
-                  {exStats.picking}
-                </span>
-              </div>
-              <div className="rounded-[6px] border border-border bg-muted/30 p-3">
-                <span className="text-xs text-muted-foreground block mb-1">Đã đóng gói</span>
-                <span className="text-lg font-bold font-mono text-emerald-600 tabular-nums">
-                  {exStats.packed}
-                </span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* 4 MONITORING STAT CARDS */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card
-          onClick={() => setViewMode('low_stock')}
-          className={`rounded-[6px] border p-4 shadow-xs cursor-pointer transition-all active:scale-[0.98] ${
-            viewMode === 'low_stock' ? 'border-primary bg-primary/5 ring-1 ring-primary/30' : 'border-border bg-card hover:bg-muted/40'
-          }`}
-        >
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-[6px] bg-amber-500/10 text-amber-600">
-              <TrendingDown className="h-5 w-5" />
-            </div>
-            <div>
-              <span className="text-xs font-semibold text-muted-foreground">Tồn dưới mức tối thiểu</span>
-              <p className="text-xl font-bold text-amber-600 font-mono tracking-tight mt-0.5 tabular-nums">
-                {summary.lowStockCount + summary.outOfStockCount}{' '}
-                <span className="text-xs font-normal text-muted-foreground font-sans">mặt hàng</span>
-              </p>
-            </div>
-          </div>
-        </Card>
-
-        <Card
-          onClick={() => setViewMode('all')}
-          className={`rounded-[6px] border p-4 shadow-xs cursor-pointer transition-all active:scale-[0.98] ${
-            viewMode === 'all' ? 'border-primary bg-primary/5 ring-1 ring-primary/30' : 'border-border bg-card hover:bg-muted/40'
-          }`}
-        >
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-[6px] bg-emerald-500/10 text-emerald-600">
-              <Package className="h-5 w-5" />
-            </div>
-            <div>
-              <span className="text-xs font-semibold text-muted-foreground">Tồn kho an toàn</span>
-              <p className="text-xl font-bold text-foreground font-mono tracking-tight mt-0.5 tabular-nums">
-                {summary.safeStockCount}{' '}
-                <span className="text-xs font-normal text-muted-foreground font-sans">mặt hàng</span>
-              </p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="rounded-[6px] border border-border bg-card p-4 shadow-xs">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-[6px] bg-indigo-500/10 text-indigo-600">
-              <Clock className="h-5 w-5" />
-            </div>
-            <div>
-              <span className="text-xs font-semibold text-muted-foreground">Sắp hết hạn (30 ngày)</span>
-              <p className="text-xl font-bold text-indigo-600 font-mono tracking-tight mt-0.5 tabular-nums">
-                0 <span className="text-xs font-normal text-muted-foreground font-sans">mặt hàng</span>
-              </p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="rounded-[6px] border border-border bg-card p-4 shadow-xs">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-[6px] bg-rose-500/10 text-rose-600">
-              <CalendarX className="h-5 w-5" />
-            </div>
-            <div>
-              <span className="text-xs font-semibold text-muted-foreground">Quá hạn sử dụng</span>
-              <p className="text-xl font-bold text-rose-600 font-mono tracking-tight mt-0.5 tabular-nums">
-                0 <span className="text-xs font-normal text-muted-foreground font-sans">mặt hàng</span>
-              </p>
-            </div>
-          </div>
-        </Card>
-      </div>
+      {/* Widgets & Metric Cards */}
+      <StockAlertWidgets
+        poStats={poStats}
+        exStats={exStats}
+        summary={summary}
+        viewMode={viewMode}
+        onViewModeChange={(mode) => {
+          setViewMode(mode);
+          setPage(1);
+        }}
+      />
 
       {/* Filter Toolbar */}
-      <Card className="rounded-[6px] border border-border p-4 shadow-xs">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3 flex-1 flex-wrap">
+      <Card className="rounded-[6px] border border-border p-3 shadow-none bg-card">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2 flex-1 flex-wrap">
             <div className="relative flex-1 min-w-[240px] max-w-md">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground z-10" />
               <Input
                 type="text"
                 placeholder="Tìm theo tên sản phẩm hoặc mã SKU..."
@@ -282,252 +153,73 @@ export default function StockAlertPage() {
                   setSearch(e.target.value);
                   setPage(1);
                 }}
-                className="pl-9 h-9 text-xs rounded-[6px]"
+                className="pl-8 h-8 text-xs rounded-[6px]"
               />
             </div>
 
             {/* Warehouse Filter */}
-            <div className="min-w-[220px]">
-              <select
-                value={selectedWarehouseId}
-                onChange={(e) => {
-                  setSelectedWarehouseId(e.target.value);
-                  setPage(1);
-                }}
-                className="h-9 w-full rounded-[6px] border border-input bg-background px-3 text-xs font-medium text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
-              >
-                <option value="">🏢 Tất cả kho hàng (Toàn hệ thống)</option>
+            <Select
+              value={selectedWarehouseId}
+              onValueChange={(val) => {
+                setSelectedWarehouseId(val);
+                setPage(1);
+              }}
+            >
+              <SelectTrigger className="h-8 min-w-[220px] rounded-[6px] text-xs">
+                <SelectValue placeholder="Chọn kho hàng" />
+              </SelectTrigger>
+              <SelectContent className="rounded-[6px]">
+                <SelectItem value="ALL">🏢 Tất cả kho hàng (Toàn hệ thống)</SelectItem>
                 {warehouses.map((wh) => (
-                  <option key={wh._id} value={wh._id}>
+                  <SelectItem key={wh._id} value={wh._id}>
                     📦 {wh.name} {wh.isDefault ? '(Mặc định)' : ''}
-                  </option>
+                  </SelectItem>
                 ))}
-              </select>
-            </div>
+              </SelectContent>
+            </Select>
           </div>
 
-          <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-2">
             <Button
               onClick={handleCreateBulkPO}
-              className="rounded-[6px] h-9 text-xs font-bold shadow-xs active:scale-[0.98]"
+              className="rounded-[6px] h-8 text-xs font-bold active:scale-[0.98]"
             >
-              <ShoppingCart className="h-4 w-4 mr-1.5" /> Đặt hàng bù kho (Tạo PO)
+              <ShoppingCart className="h-3.5 w-3.5 mr-1.5" /> Đặt hàng bù kho (Tạo PO)
             </Button>
           </div>
         </div>
       </Card>
 
       {/* Main Table */}
-      <Card className="rounded-[6px] border border-border shadow-xs overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow className="border-b border-border bg-muted/60 text-[11px] font-bold text-foreground">
-              <TableHead className="whitespace-nowrap">Sản phẩm</TableHead>
-              <TableHead className="whitespace-nowrap">Mã SKU</TableHead>
-              <TableHead className="whitespace-nowrap">Kho lưu trữ</TableHead>
-              <TableHead className="whitespace-nowrap">Thương hiệu</TableHead>
-              <TableHead className="whitespace-nowrap">Nhà Cung Cấp</TableHead>
-              <TableHead className="text-right whitespace-nowrap">Giá bán</TableHead>
-              <TableHead className="text-right whitespace-nowrap">Giá nhập vốn</TableHead>
-              <TableHead className="text-center whitespace-nowrap">Tồn kho</TableHead>
-              <TableHead className="text-center whitespace-nowrap">Tồn tối thiểu</TableHead>
-              <TableHead className="text-center whitespace-nowrap">Gợi ý nhập</TableHead>
-              <TableHead className="text-right whitespace-nowrap">Thao tác</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={11} className="py-12 text-center text-muted-foreground">
-                  Đang đối soát danh sách tồn kho toàn hệ thống...
-                </TableCell>
-              </TableRow>
-            ) : items.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={11} className="py-12 text-center text-muted-foreground">
-                  Không tìm thấy sản phẩm kho phù hợp.
-                </TableCell>
-              </TableRow>
-            ) : (
-              items.map((prod) => (
-                <TableRow key={prod.id} className="hover:bg-muted/30 transition-colors align-middle group">
-                  <TableCell className="whitespace-nowrap">
-                    <div className="flex items-center gap-3">
-                      {prod.thumbnail ? (
-                        <img
-                          src={prod.thumbnail}
-                          alt=""
-                          className="h-9 w-9 rounded-[4px] object-cover border border-border"
-                        />
-                      ) : (
-                        <div className="flex h-9 w-9 items-center justify-center rounded-[4px] bg-muted text-muted-foreground font-mono text-[10px]">
-                          SP
-                        </div>
-                      )}
-                      <span className="font-semibold text-foreground max-w-xs truncate text-xs">
-                        {prod.name}
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="font-mono font-bold text-muted-foreground whitespace-nowrap text-xs">
-                    {prod.productCode || '---'}
-                  </TableCell>
-
-                  {/* Kho lưu trữ */}
-                  <TableCell className="whitespace-nowrap text-xs">
-                    {selectedWarehouseId ? (
-                      <span className="inline-flex items-center gap-1 rounded-[4px] bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary border border-primary/20">
-                        <Building2 className="size-3" />
-                        {warehouses.find((w) => w._id === selectedWarehouseId)?.name || 'Kho đã chọn'}
-                      </span>
-                    ) : (
-                      <div className="flex flex-col gap-1">
-                        {(prod.warehouseStocks || []).filter((ws) => ws.stock > 0).length === 0 ? (
-                          <span className="text-[11px] text-muted-foreground italic">Chưa có tồn kho</span>
-                        ) : (
-                          (prod.warehouseStocks || [])
-                            .filter((ws) => ws.stock > 0)
-                            .map((ws, idx) => (
-                              <div
-                                key={idx}
-                                className="inline-flex items-center gap-1.5 text-[11px] text-foreground font-medium"
-                              >
-                                <span className="size-1.5 rounded-full bg-emerald-500 shrink-0" />
-                                <span className="truncate max-w-[130px]">{ws.warehouseName}:</span>
-                                <span className="font-mono font-bold tabular-nums text-primary">{ws.stock}</span>
-                              </div>
-                            ))
-                        )}
-                      </div>
-                    )}
-                  </TableCell>
-
-                  <TableCell className="text-muted-foreground whitespace-nowrap text-xs">
-                    {prod.brandName}
-                  </TableCell>
-                  <TableCell className="font-semibold text-foreground whitespace-nowrap text-xs">
-                    {prod.supplierName || '---'}
-                  </TableCell>
-                  <TableCell className="text-right font-mono font-semibold whitespace-nowrap text-xs tabular-nums">
-                    {(prod.price || 0).toLocaleString('vi-VN')} đ
-                  </TableCell>
-
-                  <TableCell className="text-right font-mono font-semibold whitespace-nowrap text-xs tabular-nums">
-                    {editingCostId === prod.id ? (
-                      <div className="flex items-center justify-end gap-1">
-                        <Input
-                          type="number"
-                          value={editingCostVal}
-                          onChange={(e) => setEditingCostVal(e.target.value)}
-                          className="w-24 h-7 text-xs text-right font-mono rounded-[4px]"
-                        />
-                        <Button
-                          variant="ghost"
-                          size="icon-xs"
-                          onClick={() => handleSaveCost(prod.id)}
-                          className="text-emerald-600 hover:bg-emerald-50 h-7 w-7"
-                        >
-                          <Check className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon-xs"
-                          onClick={() => setEditingCostId(null)}
-                          className="text-destructive hover:bg-destructive/10 h-7 w-7"
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <div
-                        className="flex items-center justify-end gap-1.5 group/edit cursor-pointer"
-                        onClick={() => handleStartEditCost(prod)}
-                      >
-                        <span className="text-primary font-bold">
-                          {(prod.costPrice || 0).toLocaleString('vi-VN')} đ
-                        </span>
-                        <Edit2 className="h-3 w-3 text-muted-foreground opacity-0 group-hover/edit:opacity-100 transition-opacity" />
-                      </div>
-                    )}
-                  </TableCell>
-
-                  <TableCell className="text-center whitespace-nowrap">
-                    <Badge
-                      variant={
-                        prod.stock === 0
-                          ? 'destructive'
-                          : prod.stock <= threshold
-                          ? 'outline'
-                          : 'secondary'
-                      }
-                      className={`font-mono tabular-nums font-bold text-xs ${
-                        prod.stock > 0 && prod.stock <= threshold
-                          ? 'bg-amber-500/10 text-amber-600 border-amber-300'
-                          : prod.stock > threshold
-                          ? 'bg-emerald-500/10 text-emerald-600 border-emerald-200'
-                          : ''
-                      }`}
-                    >
-                      {prod.stock}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-center font-semibold text-muted-foreground whitespace-nowrap font-mono tabular-nums text-xs">
-                    {prod.minThreshold}
-                  </TableCell>
-                  <TableCell className="text-center whitespace-nowrap text-xs">
-                    <span className="inline-flex items-center gap-1 font-semibold text-primary font-mono tabular-nums">
-                      +{prod.suggestedReorderQty} cái
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-right whitespace-nowrap">
-                    <div className="flex items-center justify-end gap-1.5">
-                      <Button
-                        variant="outline"
-                        size="xs"
-                        onClick={() => {
-                          setSelectedProductForHistory(prod);
-                          setHistoryModalOpen(true);
-                        }}
-                        className="rounded-[6px] text-xs font-semibold h-7"
-                      >
-                        <History className="h-3.5 w-3.5 mr-1 text-primary" /> Lịch Sử
-                      </Button>
-                      <Button
-                        size="xs"
-                        onClick={() =>
-                          navigate(
-                            `/purchase-orders/create?supplierId=${prod.supplierId}&productId=${
-                              prod.productId || prod.id
-                            }`
-                          )
-                        }
-                        className="rounded-[6px] text-xs font-semibold h-7"
-                      >
-                        <ShoppingCart className="h-3.5 w-3.5 mr-1" /> Tạo PO
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-
-        {pagination && (
-          <DataTablePagination
-            page={page}
-            pageSize={pageSize}
-            total={pagination.total}
-            totalPages={pagination.totalPages}
-            onPageChange={(newPage) => setPage(newPage)}
-            onPageSizeChange={(newPageSize) => {
-              setPageSize(newPageSize);
-              setPage(1);
-            }}
-            pageSizeOptions={[10, 20, 50, 100]}
-          />
-        )}
-      </Card>
+      <StockAlertTable
+        items={items}
+        isLoading={isLoading}
+        threshold={threshold}
+        selectedWarehouseId={selectedWarehouseId === 'ALL' ? '' : selectedWarehouseId}
+        warehouses={warehouses}
+        editingCostId={editingCostId}
+        editingCostVal={editingCostVal}
+        setEditingCostVal={setEditingCostVal}
+        onStartEditCost={handleStartEditCost}
+        onSaveCost={handleSaveCost}
+        onCancelEditCost={() => setEditingCostId(null)}
+        onViewHistory={(prod) => {
+          setSelectedProductForHistory(prod);
+          setHistoryModalOpen(true);
+        }}
+        onCreatePO={(prod) => {
+          navigate(
+            `/purchase-orders/create?supplierId=${prod.supplierId}&productId=${
+              prod.productId || prod.id
+            }`
+          );
+        }}
+        pagination={pagination}
+        page={page}
+        pageSize={pageSize}
+        setPage={setPage}
+        setPageSize={setPageSize}
+      />
 
       <ProductStockHistoryModal
         isOpen={historyModalOpen}
