@@ -229,21 +229,20 @@ export default function ExcelPreviewModal({
 
   return (
     <div
-      className={`fixed inset-0 z-[9999] flex items-center justify-center bg-black/75 transition-all ${
+      className={`fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 transition-all ${
         isFullscreen ? 'p-0' : 'p-4'
       }`}
     >
       <div
-        className={`flex flex-col border border-border bg-card shadow-2xl overflow-hidden transition-all ${
+        className={`flex flex-col border border-border bg-card shadow-sm overflow-hidden transition-all ${
           isFullscreen
             ? 'w-screen h-screen rounded-none border-none'
-            : 'w-full max-w-6xl h-[92vh] rounded-2xl'
+            : 'w-full max-w-6xl h-[92vh] rounded-[6px]'
         }`}
       >
-        {/* Header toolbar */}
         <div className="flex items-center justify-between border-b border-border px-6 py-3.5 bg-muted/40 shrink-0 flex-wrap gap-3">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shrink-0">
+            <div className="flex h-10 w-10 items-center justify-center rounded-[6px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shrink-0">
               <FileSpreadsheet className="h-6 w-6" />
             </div>
             <div>
@@ -255,21 +254,20 @@ export default function ExcelPreviewModal({
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Zoom Controls */}
-            <div className="flex items-center gap-1 bg-background border border-input rounded-lg p-1 mr-2 text-xs">
+            <div className="flex items-center gap-1 bg-background border border-input rounded-[6px] p-1 mr-2 text-xs">
               <button
                 onClick={handleZoomOut}
-                className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer"
+                className="p-1 rounded-[4px] hover:bg-muted text-muted-foreground hover:text-foreground active:scale-[0.98] transition-all cursor-pointer"
                 title="Thu nhỏ (-)"
               >
                 <ZoomOut className="h-3.5 w-3.5" />
               </button>
-              <span className="font-mono text-xs px-1.5 min-w-[42px] text-center font-bold text-foreground">
+              <span className="font-mono tabular-nums text-xs px-1.5 min-w-[42px] text-center font-bold text-foreground">
                 {Math.round(zoomScale * 100)}%
               </span>
               <button
                 onClick={handleZoomIn}
-                className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer"
+                className="p-1 rounded-[4px] hover:bg-muted text-muted-foreground hover:text-foreground active:scale-[0.98] transition-all cursor-pointer"
                 title="Phóng to (+)"
               >
                 <ZoomIn className="h-3.5 w-3.5" />
@@ -277,7 +275,7 @@ export default function ExcelPreviewModal({
               {zoomScale !== 1 && (
                 <button
                   onClick={handleResetZoom}
-                  className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer"
+                  className="p-1 rounded-[4px] hover:bg-muted text-muted-foreground hover:text-foreground active:scale-[0.98] transition-all cursor-pointer"
                   title="Đặt lại 100%"
                 >
                   <RotateCcw className="h-3.5 w-3.5" />
@@ -285,37 +283,33 @@ export default function ExcelPreviewModal({
               )}
             </div>
 
-            {/* Print button */}
             <button
               onClick={handlePrint}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-input bg-background px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 rounded-[6px] border border-input bg-background px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted active:scale-[0.98] transition-all cursor-pointer"
             >
               <Printer className="h-4 w-4" /> In Phiếu
             </button>
 
-            {/* Download raw Excel via authorized axios blob */}
             {downloadUrl && (
               <button
                 onClick={handleDownloadRaw}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3.5 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer shadow-sm"
+                className="inline-flex items-center gap-1.5 rounded-[6px] bg-primary px-3.5 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90 shadow-xs active:scale-[0.98] transition-all cursor-pointer"
               >
                 <Download className="h-4 w-4" /> Tải File Gốc
               </button>
             )}
 
-            {/* Fullscreen Toggle */}
             <button
               onClick={() => setIsFullscreen((prev) => !prev)}
-              className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
+              className="rounded-[6px] p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground active:scale-[0.98] transition-all cursor-pointer"
               title={isFullscreen ? 'Thoát toàn màn hình' : 'Xem toàn màn hình'}
             >
               {isFullscreen ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
             </button>
 
-            {/* Close */}
             <button
               onClick={onClose}
-              className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
+              className="rounded-[6px] p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground active:scale-[0.98] transition-all cursor-pointer"
             >
               <X className="h-5 w-5" />
             </button>
@@ -337,7 +331,7 @@ export default function ExcelPreviewModal({
                   transformOrigin: 'top center',
                   transition: 'transform 0.15s ease-out',
                 }}
-                className="excel-web-paper border border-slate-300 dark:border-slate-700 rounded-lg p-8 sm:p-10 bg-white text-slate-900 shadow-xl max-w-4xl w-full overflow-x-auto"
+                className="excel-web-paper border border-border rounded-[6px] p-8 sm:p-10 bg-white text-slate-900 shadow-sm max-w-4xl w-full overflow-x-auto"
                 dangerouslySetInnerHTML={{ __html: sanitizeHtml(htmlContent) }}
               />
             </div>

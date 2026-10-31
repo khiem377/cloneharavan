@@ -8,6 +8,13 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 
 function HandleBadge({ handle }) {
   return (
@@ -146,56 +153,58 @@ export default function MenuListPage() {
       )}
 
       {/* Modal tạo nhanh menu */}
-      {showCreateForm && (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-          <Card className="rounded-[6px] border border-border w-full max-w-md shadow-lg">
-            <CardHeader className="p-4 border-b border-border">
-              <CardTitle className="text-sm font-semibold text-foreground">Tạo menu mới</CardTitle>
-            </CardHeader>
-            <CardContent className="p-4 space-y-4">
-              <div>
-                <label className="text-xs font-medium text-muted-foreground block mb-1">Tên menu <span className="text-destructive">*</span></label>
-                <Input
-                  className="h-8 rounded-[6px] text-xs"
-                  placeholder="Ví dụ: Menu chính, Footer cột 1..."
-                  value={newForm.name}
-                  onChange={(e) => setNewForm({ ...newForm, name: e.target.value })}
-                />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-muted-foreground block mb-1">Handle (Mã định danh duy nhất)</label>
-                <Input
-                  className="h-8 rounded-[6px] text-xs font-mono"
-                  placeholder="Để trống sẽ tự sinh (VD: main-menu)"
-                  value={newForm.handle}
-                  onChange={(e) => setNewForm({ ...newForm, handle: e.target.value })}
-                />
-              </div>
-              <div className="flex justify-end gap-2 pt-2 border-t border-border">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowCreateForm(false)}
-                  className="h-8 rounded-[6px] text-xs"
-                >
-                  Hủy
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={handleCreate}
-                  disabled={createMut.isPending}
-                  className="h-8 rounded-[6px] text-xs font-semibold active:scale-[0.98]"
-                >
-                  {createMut.isPending ? <Loader2 size={13} className="animate-spin mr-1" /> : null}
-                  Tạo và chỉnh sửa
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+      <Dialog open={showCreateForm} onOpenChange={setShowCreateForm}>
+        <DialogContent className="rounded-[6px] border border-border sm:max-w-md p-0 overflow-hidden">
+          <DialogHeader className="p-4 border-b border-border bg-muted/20">
+            <DialogTitle className="text-sm font-semibold text-foreground">Tạo menu mới</DialogTitle>
+          </DialogHeader>
+          <div className="p-4 space-y-4">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground block mb-1">
+                Tên menu <span className="text-destructive">*</span>
+              </label>
+              <Input
+                className="h-8 rounded-[6px] text-xs"
+                placeholder="Ví dụ: Menu chính, Footer cột 1..."
+                value={newForm.name}
+                onChange={(e) => setNewForm({ ...newForm, name: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground block mb-1">
+                Handle (Mã định danh duy nhất)
+              </label>
+              <Input
+                className="h-8 rounded-[6px] text-xs font-mono"
+                placeholder="Để trống sẽ tự sinh (VD: main-menu)"
+                value={newForm.handle}
+                onChange={(e) => setNewForm({ ...newForm, handle: e.target.value })}
+              />
+            </div>
+          </div>
+          <DialogFooter className="p-3 border-t border-border bg-muted/20 flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setShowCreateForm(false)}
+              className="h-8 rounded-[6px] text-xs"
+            >
+              Hủy
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleCreate}
+              disabled={createMut.isPending}
+              className="h-8 rounded-[6px] text-xs font-semibold active:scale-[0.98]"
+            >
+              {createMut.isPending ? <Loader2 size={13} className="animate-spin mr-1" /> : null}
+              Tạo và chỉnh sửa
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Dialog xác nhận xóa */}
       {deleteTarget && (

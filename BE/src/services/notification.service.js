@@ -57,6 +57,8 @@ const getNotifications = async ({
   page = 1,
   limit = 20,
   unreadOnly = false,
+  isRead = undefined,
+  type = undefined,
   search = '',
 }) => {
   const query = { recipient };
@@ -69,7 +71,19 @@ const getNotifications = async ({
     ];
   }
 
-  if (unreadOnly) {
+  // Lọc theo loại thông báo
+  if (type && type !== 'all') {
+    query.type = type;
+  }
+
+  // Lọc theo trạng thái đọc
+  if (isRead === true || isRead === 'true') {
+    if (userId) {
+      query.readBy = userId;
+    } else {
+      query.isRead = true;
+    }
+  } else if (isRead === false || isRead === 'false' || unreadOnly) {
     if (userId) {
       query.readBy = { $ne: userId };
     } else {
@@ -81,12 +95,18 @@ const getNotifications = async ({
   const limitNum = Math.min(50, Math.max(1, parseInt(limit, 10) || 20));
   const skip = (pageNum - 1) * limitNum;
 
-  const [list, total, unreadCount] = await Promise.all([
+  const [list, total, totalAll, unreadCount, orderCount, alertCount] = await Promise.all([
     Notification.find(query).sort({ createdAt: -1 }).skip(skip).limit(limitNum).lean(),
     Notification.countDocuments(query),
+    Notification.countDocuments({ recipient }),
     userId
       ? Notification.countDocuments({ recipient, readBy: { $ne: userId } })
       : Notification.countDocuments({ recipient, isRead: false }),
+    Notification.countDocuments({
+      recipient,
+      type: { $in: ['ORDER_NEW', 'ORDER_CANCELLED', 'ORDER_STATUS'] },
+    }),
+    Notification.countDocuments({ recipient, type: 'STOCK_LOW' }),
   ]);
 
   // Format trường isRead theo góc nhìn của nhân viên đang xem
@@ -103,6 +123,12 @@ const getNotifications = async ({
   return {
     data: formattedList,
     unreadCount,
+    stats: {
+      totalAll,
+      unreadCount,
+      orderCount,
+      alertCount,
+    },
     pagination: {
       page: pageNum,
       limit: limitNum,
@@ -159,11 +185,23 @@ const getUnreadCount = async (recipient = 'admin', userId = null) => {
 /**
  * 6. Xóa 1 thông báo
  */
-const deleteNotification = async (notificationId) => {
-  const result = await Notification.findByIdAndDelete(notificationId);
-  if (!result) {
+const deleteNotification = async (notificationId, user = null) => {
+  const notification = await Notification.findById(notificationId);
+  if (!notification) {
     throw new AppError('Không tìm thấy thông báo cần xóa', 404);
   }
+
+  if (user) {
+    const userRole = String(user.role || '').toLowerCase();
+    const isStaffOrAdmin = userRole !== 'user' && userRole !== 'guest' && userRole !== '';
+    if (!isStaffOrAdmin) {
+      if (notification.recipient !== user._id.toString() && notification.recipient !== 'user') {
+        throw new AppError('Bạn không có quyền xóa thông báo này', 403);
+      }
+    }
+  }
+
+  await Notification.findByIdAndDelete(notificationId);
   return { success: true, message: 'Đã xóa thông báo thành công' };
 };
 
@@ -182,6 +220,49 @@ const deleteBulkNotifications = async (ids = []) => {
   };
 };
 
+/**
+ * 8. Khởi tạo dữ liệu mẫu thông báo nếu chưa có
+ */
+const seedSampleNotifications = async () => {
+  const samples = [
+    {
+      recipient: 'admin',
+      type: 'ORDER_NEW',
+      title: 'Đơn hàng mới #1002',
+      message: 'Admin đã khởi tạo đơn hàng #1002 trị giá 5.000.000đ cho Khách lẻ qua Admin tại chi nhánh Cửa hàng chính.',
+      link: '/orders',
+      isRead: false,
+    },
+    {
+      recipient: 'admin',
+      type: 'ORDER_STATUS',
+      title: 'Thanh toán thành công đơn #1001',
+      message: 'Đơn hàng #1001 được thanh toán 5.000.000 VNĐ thành công bằng phương thức Thu hộ (COD).',
+      link: '/orders',
+      isRead: false,
+    },
+    {
+      recipient: 'admin',
+      type: 'ORDER_STATUS',
+      title: 'Thanh toán thành công đơn #1000',
+      message: 'Đơn hàng #1000 được thanh toán 2.450.000 VNĐ thành công bằng phương thức Chuyển khoản VietQR.',
+      link: '/orders',
+      isRead: true,
+    },
+    {
+      recipient: 'admin',
+      type: 'STOCK_LOW',
+      title: 'Cảnh báo tồn kho thấp',
+      message: 'Sản phẩm Áo Polo Cotton Cao Cấp (Đen / L) sắp hết hàng trong kho chính (tồn kho: 2 sản phẩm).',
+      link: '/stock-alerts',
+      isRead: false,
+    },
+  ];
+
+  const created = await Notification.insertMany(samples);
+  return created;
+};
+
 module.exports = {
   createNotification,
   getNotifications,
@@ -190,4 +271,5 @@ module.exports = {
   getUnreadCount,
   deleteNotification,
   deleteBulkNotifications,
+  seedSampleNotifications,
 };

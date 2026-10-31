@@ -43,5 +43,4 @@ connectDB()
   .catch((err) => {
     console.error('Failed to connect to DB and start server:', err);
   });
-// reload nodemon 2026-10-28 08:13:00
 

@@ -81,11 +81,11 @@ Trả về DUY NHẤT một chuỗi JSON chuẩn (không dùng markdown codebloc
 }`;
 };
 
-// Resize xuống 600px — đủ để AI nhận diện, giảm payload
+// Resize xuống 480px — tốc độ xử lý sharp siêu nhanh, giảm kích thước payload gửi lên AI
 const compressImageForAI = async (buffer) => {
   return sharp(buffer)
-    .resize({ width: 600, height: 600, fit: 'inside', withoutEnlargement: true })
-    .jpeg({ quality: 70 })
+    .resize({ width: 480, height: 480, fit: 'inside', withoutEnlargement: true })
+    .jpeg({ quality: 65 })
     .toBuffer();
 };
 
@@ -103,20 +103,38 @@ const analyzeImageWithGemini = async (buffer) => {
   ]);
 
   const prompt = buildDynamicPrompt(catalogContext);
+  // Các model Flash chuẩn 2026 theo khuyến nghị chính thức từ Google Generative AI API
   const candidateModels = [
-    'gemini-3.5-flash',
-    'gemini-3.8-flash',
     'gemini-3.5-flash-lite',
-    'gemini-2.5-flash-lite',
+    'gemini-3.8-flash',
+    'gemini-3.5-flash',
+    'gemini-flash-lite-latest',
   ];
 
   let lastError = null;
   for (const modelName of candidateModels) {
     try {
-      const model = genAI.getGenerativeModel({ model: modelName });
-      const result = await model.generateContent([
-        prompt,
-        { inlineData: { data: compressed.toString('base64'), mimeType: 'image/jpeg' } },
+      const model = genAI.getGenerativeModel({
+        model: modelName,
+        generationConfig: {
+          responseMimeType: 'application/json',
+          temperature: 0.1,
+          maxOutputTokens: 250,
+        },
+      });
+
+      // Giới hạn timeout 4.5s cho mỗi model, tránh treo request
+      const timeoutMs = 4500;
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error(`Timeout sau ${timeoutMs}ms trên model ${modelName}`)), timeoutMs)
+      );
+
+      const result = await Promise.race([
+        model.generateContent([
+          prompt,
+          { inlineData: { data: compressed.toString('base64'), mimeType: 'image/jpeg' } },
+        ]),
+        timeoutPromise,
       ]);
 
       const responseText = result.response.text();
@@ -130,7 +148,17 @@ const analyzeImageWithGemini = async (buffer) => {
     }
   }
 
-  throw new Error(`AI Vision analysis failed: ${lastError?.message}`);
+  // Graceful fallback nếu toàn bộ AI model đều timeout hoặc lỗi mạng — tuyệt đối không để treo request người dùng
+  console.warn('All Gemini vision models failed, using graceful fallback:', lastError?.message);
+  return {
+    productType: 'Sản phẩm',
+    category: '',
+    brand: '',
+    model: '',
+    color: '',
+    detectedText: '',
+    searchKeywords: ['phụ kiện', 'công nghệ'],
+  };
 };
 
 const extractProductMetadataFromImage = async (buffer, mimeType) => {

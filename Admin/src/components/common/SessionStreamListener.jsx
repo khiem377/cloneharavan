@@ -62,7 +62,7 @@ export default function SessionStreamListener() {
 
   return (
     <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/80 p-4">
-      <div className="w-full max-w-md rounded-[6px] border border-red-500/30 bg-card p-6 shadow-xl text-center flex flex-col items-center gap-3">
+      <div className="w-full max-w-md rounded-[6px] border border-red-500/30 bg-card p-6 shadow-sm text-center flex flex-col items-center gap-3">
         <div className="size-12 rounded-[6px] bg-red-500/10 text-red-600 flex items-center justify-center">
           <AlertOctagon size={24} />
         </div>

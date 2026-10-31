@@ -1,28 +1,28 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  Bell,
-  SearchIcon as Search,
-  RotateCcw,
-  CheckCheck,
-  Loader2,
-} from '@/components/ui/Icons';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { toast } from '@/providers/ToastProvider';
 import notificationService from '@/services/notification.service';
+import { getSocket } from '@/services/socket.service';
+import { playNotificationSound } from '@/utils/notificationAudio';
 import DataTablePagination from '@/components/ui/DataTablePagination';
+import NotificationHeader from './components/NotificationHeader';
+import NotificationStats from './components/NotificationStats';
+import NotificationFilters from './components/NotificationFilters';
 import NotificationTable from './components/NotificationTable';
 import NotificationBatchBar from './components/NotificationBatchBar';
 
 export default function NotificationsPage() {
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState([]);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Search & Pagination State
+  // Filters
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [typeFilter, setTypeFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
@@ -36,14 +36,26 @@ export default function NotificationsPage() {
   const fetchNotifications = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await notificationService.getNotifications({
+      const params = {
         page,
         limit,
         search: search.trim() || undefined,
-      });
+      };
+
+      if (statusFilter === 'unread') params.isRead = false;
+      if (statusFilter === 'read') params.isRead = true;
+      if (typeFilter !== 'all') params.type = typeFilter;
+
+      const res = await notificationService.getNotifications(params);
 
       if (res?.success) {
         setNotifications(res.data || []);
+        if (typeof res.unreadCount === 'number') {
+          setUnreadCount(res.unreadCount);
+        }
+        if (res.stats) {
+          setStats(res.stats);
+        }
         if (res.pagination) {
           setPagination(res.pagination);
         }
@@ -55,13 +67,35 @@ export default function NotificationsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, limit, search]);
+  }, [page, limit, search, statusFilter, typeFilter]);
 
   useEffect(() => {
     fetchNotifications();
   }, [fetchNotifications]);
 
-  // Handle Selection
+  // Real-time Socket.io listener
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket) return;
+
+    const handleNew = (newNotif) => {
+      playNotificationSound();
+      toast.info(newNotif.message || newNotif.title, {
+        title: newNotif.title || 'Thông báo mới',
+        duration: 5000,
+      });
+      setNotifications((prev) => [newNotif, ...prev]);
+      setUnreadCount((c) => c + 1);
+      setStats((prev) =>
+        prev ? { ...prev, totalAll: prev.totalAll + 1, unreadCount: prev.unreadCount + 1 } : null
+      );
+    };
+
+    socket.on('notification:new', handleNew);
+    return () => socket.off('notification:new', handleNew);
+  }, []);
+
+  // Selection
   const handleToggleSelect = (id) => {
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
@@ -76,16 +110,14 @@ export default function NotificationsPage() {
     }
   };
 
-  const handleClearSelection = () => {
-    setSelectedIds([]);
-  };
-
-  // Handle Mark All Read
+  // Actions
   const handleMarkAllRead = async () => {
     try {
       setIsProcessing(true);
       await notificationService.markAllAsRead();
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      setUnreadCount(0);
+      setStats((prev) => (prev ? { ...prev, unreadCount: 0 } : null));
       toast.success('Đã đánh dấu tất cả thông báo là đã đọc');
     } catch (err) {
       toast.error('Lỗi khi đánh dấu đã đọc', { description: err.message });
@@ -94,19 +126,21 @@ export default function NotificationsPage() {
     }
   };
 
-  // Handle Mark Single Item Read
   const handleMarkReadItem = async (id) => {
     try {
       await notificationService.markAsRead(id);
       setNotifications((prev) =>
         prev.map((n) => (n._id === id ? { ...n, isRead: true } : n))
       );
+      setUnreadCount((c) => Math.max(0, c - 1));
+      setStats((prev) =>
+        prev ? { ...prev, unreadCount: Math.max(0, prev.unreadCount - 1) } : null
+      );
     } catch (err) {
       toast.error('Lỗi cập nhật trạng thái', { description: err.message });
     }
   };
 
-  // Handle Mark Selected Read
   const handleMarkReadSelected = async () => {
     if (selectedIds.length === 0) return;
     try {
@@ -115,6 +149,7 @@ export default function NotificationsPage() {
       setNotifications((prev) =>
         prev.map((n) => (selectedIds.includes(n._id) ? { ...n, isRead: true } : n))
       );
+      setUnreadCount((c) => Math.max(0, c - selectedIds.length));
       toast.success(`Đã đánh dấu ${selectedIds.length} thông báo là đã đọc`);
       setSelectedIds([]);
     } catch (err) {
@@ -124,7 +159,6 @@ export default function NotificationsPage() {
     }
   };
 
-  // Handle Delete Single Item
   const handleDeleteItem = async (id) => {
     if (!window.confirm('Bạn có chắc chắn muốn xóa thông báo này?')) return;
     try {
@@ -133,33 +167,40 @@ export default function NotificationsPage() {
       setSelectedIds((prev) => prev.filter((itemId) => itemId !== id));
       toast.success('Đã xóa thông báo');
       setPagination((prev) => ({ ...prev, total: Math.max(0, prev.total - 1) }));
+      setStats((prev) =>
+        prev ? { ...prev, totalAll: Math.max(0, prev.totalAll - 1) } : null
+      );
     } catch (err) {
       toast.error('Lỗi khi xóa thông báo', { description: err.message });
     }
   };
 
-  // Handle Delete Selected Items
   const handleDeleteSelected = async () => {
     if (selectedIds.length === 0) return;
     if (!window.confirm(`Bạn có chắc muốn xóa ${selectedIds.length} thông báo đã chọn?`)) {
       return;
     }
-
     try {
       setIsProcessing(true);
-      const res = await notificationService.deleteBulkNotifications(selectedIds);
-      toast.success(res?.message || 'Đã xóa các thông báo đã chọn');
+      await notificationService.deleteBulkNotifications(selectedIds);
+      setNotifications((prev) => prev.filter((n) => !selectedIds.includes(n._id)));
+      toast.success(`Đã xóa ${selectedIds.length} thông báo`);
       setSelectedIds([]);
-      fetchNotifications();
+      setPagination((prev) => ({
+        ...prev,
+        total: Math.max(0, prev.total - selectedIds.length),
+      }));
+      setStats((prev) =>
+        prev ? { ...prev, totalAll: Math.max(0, prev.totalAll - selectedIds.length) } : null
+      );
     } catch (err) {
-      toast.error('Lỗi khi xóa các thông báo đã chọn', { description: err.message });
+      toast.error('Lỗi khi xóa hàng loạt', { description: err.message });
     } finally {
       setIsProcessing(false);
     }
   };
 
-  // Handle Item Click (Redirect if link exists)
-  const handleItemClick = async (item) => {
+  const handleItemClick = (item) => {
     if (!item.isRead) {
       handleMarkReadItem(item._id);
     }
@@ -167,8 +208,7 @@ export default function NotificationsPage() {
     if (targetOrderId) {
       navigate(`/orders/${targetOrderId}`);
     } else if (item.link && item.link.includes('code=')) {
-      const code = item.link.split('code=')[1];
-      navigate(`/orders/${code}`);
+      navigate(`/orders/${item.link.split('code=')[1]}`);
     } else if (item.link) {
       navigate(item.link);
     } else {
@@ -177,112 +217,78 @@ export default function NotificationsPage() {
   };
 
   return (
-    <div className="space-y-4 max-w-7xl mx-auto pb-12">
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-lg font-bold text-foreground tracking-tight">
-            Thông báo hệ thống
-          </h1>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Quản lý và theo dõi toàn bộ thông báo đơn hàng, kho vận và hệ thống.
-          </p>
-        </div>
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-4">
+      {/* Header */}
+      <NotificationHeader
+        unreadCount={unreadCount}
+        onMarkAllRead={handleMarkAllRead}
+        onRefresh={fetchNotifications}
+        isProcessing={isProcessing || loading}
+      />
 
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={fetchNotifications}
-            disabled={loading}
-            className="h-8 text-xs rounded-[6px] border-border bg-card hover:bg-accent text-foreground cursor-pointer"
-          >
-            <RotateCcw className={`size-3.5 mr-1 ${loading ? 'animate-spin' : ''}`} />
-            Làm mới
-          </Button>
-
-          <Button
-            type="button"
-            variant="default"
-            size="sm"
-            onClick={handleMarkAllRead}
-            disabled={isProcessing || notifications.length === 0}
-            className="h-8 text-xs font-semibold rounded-[6px] bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer"
-          >
-            <CheckCheck className="size-3.5 mr-1" />
-            Đánh dấu tất cả là đã đọc
-          </Button>
-        </div>
-      </div>
-
-      {/* Filter / Search Bar */}
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
-          <Input
-            type="text"
-            placeholder="Tìm kiếm thông báo theo nội dung hoặc mã..."
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-            className="pl-9 h-9 text-xs rounded-[6px] border-border bg-card"
-          />
-        </div>
-      </div>
+      {/* Stats Summary Cards */}
+      <NotificationStats
+        notifications={notifications}
+        stats={stats}
+        totalItems={pagination.total}
+        unreadCount={unreadCount}
+      />
 
       {/* Batch Action Bar */}
       <NotificationBatchBar
         selectedCount={selectedIds.length}
-        onClearSelection={handleClearSelection}
+        onClearSelection={() => setSelectedIds([])}
         onMarkReadSelected={handleMarkReadSelected}
         onDeleteSelected={handleDeleteSelected}
         isProcessing={isProcessing}
       />
 
-      {/* Table Content */}
-      {loading && notifications.length === 0 ? (
-        <div className="rounded-[6px] border border-border bg-card p-12 flex flex-col items-center justify-center gap-2">
-          <Loader2 className="size-6 text-primary animate-spin" />
-          <span className="text-xs text-muted-foreground">Đang tải danh sách thông báo...</span>
-        </div>
-      ) : notifications.length === 0 ? (
-        <div className="rounded-[6px] border border-border bg-card p-12 flex flex-col items-center justify-center text-center">
-          <Bell className="size-10 text-muted-foreground/30 mb-3" />
-          <p className="text-sm font-semibold text-foreground">Không có thông báo nào</p>
-          <p className="text-xs text-muted-foreground mt-1 max-w-sm">
-            {search
-              ? 'Không tìm thấy kết quả phù hợp với từ khóa tìm kiếm.'
-              : 'Hiện tại hệ thống chưa có thông báo mới nào được ghi nhận.'}
-          </p>
-        </div>
-      ) : (
-        <>
-          <NotificationTable
-            notifications={notifications}
-            selectedIds={selectedIds}
-            onToggleSelect={handleToggleSelect}
-            onToggleSelectAll={handleToggleSelectAll}
-            onItemClick={handleItemClick}
-            onDeleteItem={handleDeleteItem}
-            onMarkReadItem={handleMarkReadItem}
-          />
+      {/* Filter Controls */}
+      <NotificationFilters
+        statusFilter={statusFilter}
+        onStatusChange={(newStatus) => {
+          setStatusFilter(newStatus);
+          setPage(1);
+        }}
+        typeFilter={typeFilter}
+        onTypeChange={(newType) => {
+          setTypeFilter(newType);
+          setPage(1);
+        }}
+        search={search}
+        onSearchChange={(newSearch) => {
+          setSearch(newSearch);
+          setPage(1);
+        }}
+      />
 
+      {/* Table / List */}
+      <NotificationTable
+        notifications={notifications}
+        selectedIds={selectedIds}
+        loading={loading}
+        onToggleSelect={handleToggleSelect}
+        onToggleSelectAll={handleToggleSelectAll}
+        onItemClick={handleItemClick}
+        onDeleteItem={handleDeleteItem}
+        onMarkReadItem={handleMarkReadItem}
+      />
+
+      {/* Pagination */}
+      {pagination.totalPages > 1 && (
+        <div className="pt-2">
           <DataTablePagination
-            page={pagination.page}
-            pageSize={pagination.limit}
-            total={pagination.total}
+            page={page}
             totalPages={pagination.totalPages}
-            onPageChange={(newPage) => setPage(newPage)}
-            onPageSizeChange={(newLimit) => {
-              setLimit(newLimit);
+            totalItems={pagination.total}
+            pageSize={limit}
+            onPageChange={setPage}
+            onPageSizeChange={(newSize) => {
+              setLimit(newSize);
               setPage(1);
             }}
-            pageSizeOptions={[10, 20, 50]}
           />
-        </>
+        </div>
       )}
     </div>
   );

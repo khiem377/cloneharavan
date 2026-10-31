@@ -2,6 +2,7 @@ const express    = require('express');
 const router     = express.Router();
 const controller = require('../controllers/search.controller');
 const { protect } = require('../middleware/auth.middleware');
+const { requirePermission } = require('../middleware/permission.middleware');
 const { upload }  = require('../middleware/upload.middleware');
 
 // ── Public: Client Frontend ────────────────────────────────────────────────
@@ -20,9 +21,6 @@ router.get('/suggest',  controller.getInstantSuggestions);
 // type: 'all' (default) | 'rising' (đang tăng nhanh)
 router.get('/trending', controller.getTrendingKeywords);
 
-// Export search data to CSV for Python analytics: GET /api/v1/search/export-csv
-router.get('/export-csv', controller.exportSearchCSV);
-
 // Record search click (tăng CTR): POST /api/search/click { keyword: "iphone" }
 // Gọi khi user click vào sản phẩm từ search results
 router.post('/click',    controller.recordSearchClick);
@@ -33,10 +31,13 @@ router.post('/purchase', controller.recordPurchaseKeyword);
 
 // ── Admin Only ─────────────────────────────────────────────────────────────
 
+// Export search data to CSV for Python analytics: GET /api/v1/search/export-csv
+router.get('/export-csv', protect, requirePermission(['product.view', 'setting.view']), controller.exportSearchCSV);
+
 // AI Search Auto-Training with Gemini: POST /api/v1/search/ai-train
-router.post('/ai-train', controller.trainSearchWithAI);
+router.post('/ai-train', protect, requirePermission(['product.edit', 'setting.manage']), controller.trainSearchWithAI);
 
 // Toggle pin keyword: PATCH /api/search/trending { keyword: "iphone", isTrending: true }
-router.patch('/trending', protect, controller.toggleKeywordTrending);
+router.patch('/trending', protect, requirePermission(['product.edit', 'setting.manage']), controller.toggleKeywordTrending);
 
 module.exports = router;

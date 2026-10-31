@@ -1,175 +1,124 @@
+const catchAsync = require('../utils/catchAsync');
 const notificationService = require('../services/notification.service');
 
 /**
  * GET /api/v1/notifications
- * Lấy danh sách thông báo
+ * Lấy danh sách thông báo phân trang (Khách hàng chỉ xem thông báo của mình, Admin/Staff xem toàn bộ theo recipient)
  */
-const getNotifications = async (req, res, next) => {
-  try {
-    const userId = req.user?._id || null;
-    const { page, limit, unreadOnly, recipient = 'admin', search } = req.query;
+const getNotifications = catchAsync(async (req, res) => {
+  const userId = req.user?._id || null;
+  const userRole = String(req.user?.role || '').toLowerCase();
+  const isStaffOrAdmin = userRole !== 'user' && userRole !== 'guest' && userRole !== '';
 
-    const result = await notificationService.getNotifications({
-      recipient,
-      userId,
-      page,
-      limit,
-      unreadOnly: unreadOnly === 'true',
-      search,
-    });
+  const { page, limit, unreadOnly, isRead, type, search } = req.query;
+  const recipient = isStaffOrAdmin ? (req.query.recipient || 'admin') : userId.toString();
 
-    res.json({
-      success: true,
-      data: result.data,
-      unreadCount: result.unreadCount,
-      pagination: result.pagination,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
+  const result = await notificationService.getNotifications({
+    recipient,
+    userId,
+    page,
+    limit,
+    unreadOnly: unreadOnly === 'true',
+    isRead,
+    type,
+    search,
+  });
+
+  res.status(200).json({
+    success: true,
+    data: result.data,
+    unreadCount: result.unreadCount,
+    stats: result.stats,
+    pagination: result.pagination,
+  });
+});
 
 /**
  * GET /api/v1/notifications/unread-count
  * Đếm nhanh số lượng thông báo chưa đọc
  */
-const getUnreadCount = async (req, res, next) => {
-  try {
-    const userId = req.user?._id || null;
-    const recipient = req.query.recipient || 'admin';
-    const result = await notificationService.getUnreadCount(recipient, userId);
-    res.json({
-      success: true,
-      data: result,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
+const getUnreadCount = catchAsync(async (req, res) => {
+  const userId = req.user?._id || null;
+  const userRole = String(req.user?.role || '').toLowerCase();
+  const isStaffOrAdmin = userRole !== 'user' && userRole !== 'guest' && userRole !== '';
+  const recipient = isStaffOrAdmin ? (req.query.recipient || 'admin') : userId.toString();
+
+  const result = await notificationService.getUnreadCount(recipient, userId);
+  res.status(200).json({
+    success: true,
+    data: result,
+  });
+});
 
 /**
  * PATCH /api/v1/notifications/:id/read
  * Đánh dấu một thông báo đã đọc
  */
-const markAsRead = async (req, res, next) => {
-  try {
-    const userId = req.user?._id || null;
-    const notification = await notificationService.markAsRead(req.params.id, userId);
-    res.json({
-      success: true,
-      message: 'Đã đánh dấu thông báo là đã đọc',
-      data: notification,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
+const markAsRead = catchAsync(async (req, res) => {
+  const userId = req.user?._id || null;
+  const notification = await notificationService.markAsRead(req.params.id, userId);
+  res.status(200).json({
+    success: true,
+    message: 'Đã đánh dấu thông báo là đã đọc',
+    data: notification,
+  });
+});
 
 /**
  * PATCH /api/v1/notifications/read-all
  * Đánh dấu tất cả thông báo là đã đọc
  */
-const markAllAsRead = async (req, res, next) => {
-  try {
-    const userId = req.user?._id || null;
-    const recipient = req.body.recipient || 'admin';
-    const result = await notificationService.markAllAsRead(recipient, userId);
-    res.json({
-      success: true,
-      message: result.message,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
+const markAllAsRead = catchAsync(async (req, res) => {
+  const userId = req.user?._id || null;
+  const userRole = String(req.user?.role || '').toLowerCase();
+  const isStaffOrAdmin = userRole !== 'user' && userRole !== 'guest' && userRole !== '';
+  const recipient = isStaffOrAdmin ? (req.body.recipient || 'admin') : userId.toString();
+
+  const result = await notificationService.markAllAsRead(recipient, userId);
+  res.status(200).json({
+    success: true,
+    message: result.message,
+  });
+});
 
 /**
  * DELETE /api/v1/notifications/:id
- * Xóa một thông báo
+ * Xóa một thông báo (Kiểm tra quyền sở hữu đối với người dùng thông thường)
  */
-const deleteNotification = async (req, res, next) => {
-  try {
-    const result = await notificationService.deleteNotification(req.params.id);
-    res.json({
-      success: true,
-      message: result.message,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
+const deleteNotification = catchAsync(async (req, res) => {
+  const result = await notificationService.deleteNotification(req.params.id, req.user);
+  res.status(200).json({
+    success: true,
+    message: result.message,
+  });
+});
 
 /**
  * POST /api/v1/notifications/bulk-delete
  * Xóa nhiều thông báo đã chọn
  */
-const deleteBulkNotifications = async (req, res, next) => {
-  try {
-    const { ids } = req.body;
-    const result = await notificationService.deleteBulkNotifications(ids);
-    res.json({
-      success: true,
-      deletedCount: result.deletedCount,
-      message: result.message,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
+const deleteBulkNotifications = catchAsync(async (req, res) => {
+  const { ids } = req.body;
+  const result = await notificationService.deleteBulkNotifications(ids);
+  res.status(200).json({
+    success: true,
+    deletedCount: result.deletedCount,
+    message: result.message,
+  });
+});
 
 /**
  * POST /api/v1/notifications/seed-sample
  * Khởi tạo dữ liệu mẫu nếu chưa có thông báo nào
  */
-const seedSampleNotifications = async (req, res, next) => {
-  try {
-    const samples = [
-      {
-        recipient: 'admin',
-        type: 'ORDER_NEW',
-        title: 'Đơn hàng mới #1002',
-        message: 'Admin đã khởi tạo đơn hàng #1002 trị giá 5.000.000đ cho Khách lẻ qua Admin tại chi nhánh Cửa hàng chính.',
-        link: '/orders',
-        isRead: false,
-      },
-      {
-        recipient: 'admin',
-        type: 'ORDER_STATUS',
-        title: 'Thanh toán thành công đơn #1001',
-        message: 'Đơn hàng #1001 được thanh toán 5.000.000 VNĐ thành công bằng phương thức Thu hộ (COD).',
-        link: '/orders',
-        isRead: false,
-      },
-      {
-        recipient: 'admin',
-        type: 'ORDER_STATUS',
-        title: 'Thanh toán thành công đơn #1000',
-        message: 'Đơn hàng #1000 được thanh toán 2.450.000 VNĐ thành công bằng phương thức Chuyển khoản VietQR.',
-        link: '/orders',
-        isRead: true,
-      },
-      {
-        recipient: 'admin',
-        type: 'STOCK_LOW',
-        title: 'Cảnh báo tồn kho thấp',
-        message: 'Sản phẩm Áo Polo Cotton Cao Cấp (Đen / L) sắp hết hàng trong kho chính (tồn kho: 2 sản phẩm).',
-        link: '/stock-alerts',
-        isRead: false,
-      },
-    ];
-
-    const Notification = require('../models/notification.model');
-    const created = await Notification.insertMany(samples);
-
-    res.json({
-      success: true,
-      message: `Đã khởi tạo thành công ${created.length} thông báo mẫu`,
-      data: created,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
+const seedSampleNotifications = catchAsync(async (req, res) => {
+  const created = await notificationService.seedSampleNotifications();
+  res.status(200).json({
+    success: true,
+    message: `Đã khởi tạo thành công ${created.length} thông báo mẫu`,
+    data: created,
+  });
+});
 
 module.exports = {
   getNotifications,

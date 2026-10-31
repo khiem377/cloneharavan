@@ -1,6 +1,7 @@
 const express = require('express');
 const router  = express.Router();
 const { handleChat, handleStream, handleGetHistory, clearSession } = require('../controllers/chatbot.controller');
+const { optionalAuth } = require('../middleware/auth.middleware');
 
 // ─── Inline Rate Limiter — 30 requests/phút/IP ─────────────────────────────
 const _rlStore = new Map();
@@ -33,9 +34,9 @@ const chatRateLimit = (max = 30) => (req, res, next) => {
 };
 
 // Public
-router.get('/history',    chatRateLimit(60), handleGetHistory);
-router.post('/',          chatRateLimit(30), handleChat);
-router.post('/stream',    chatRateLimit(30), handleStream);
+router.get('/history',    optionalAuth, chatRateLimit(60), handleGetHistory);
+router.post('/',          optionalAuth, chatRateLimit(30), handleChat);
+router.post('/stream',    optionalAuth, chatRateLimit(30), handleStream);
 router.delete('/session', clearSession);
 
 module.exports = router;

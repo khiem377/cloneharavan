@@ -29,11 +29,11 @@ const { buildUserProfile } = require('./recommendation.service');
 
 // ─── Gemini AI Init ───────────────────────────────────────────────────────────
 let _genAI = null;
-let _workingGeminiModel = 'gemini-3.5-flash';
+let _workingGeminiModel = 'gemini-flash-lite-latest';
 const GEMINI_MODELS = [
-  'gemini-3.5-flash',
-  'gemini-3.5-flash-lite',
-  'gemini-3.8-flash',
+  'gemini-flash-lite-latest',
+  'gemini-3.1-flash-lite',
+  'gemini-flash-latest',
 ];
 
 const getGeminiClient = () => {
@@ -147,6 +147,85 @@ const removeEmojis = (str = '') =>
   str.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{2300}-\u{23FF}]/gu, '');
 
 const escapeRegex = (str = '') => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+// ─── Vietnamese Conversational Stop Words for E-Commerce ─────────────────────
+const VIETNAMESE_STOP_WORDS = new Set([
+  'shop', 'có', 'co', 'bên', 'ben', 'mình', 'minh', 'không', 'khong', 'k', 'ko', 'nào', 'nao', 'gì', 'gi',
+  'ơi', 'oi', 'ạ', 'a', 'hỏi', 'tư', 'vấn', 'cho', 'em', 'anh', 'chị', 'chi', 'giá', 'gia', 'bao', 'nhiêu',
+  'nhieu', 'xem', 'bán', 'ban', 'được', 'duoc', 'cần', 'can', 'tìm', 'tim', 'với', 'voi', 'sản', 'san',
+  'phẩm', 'pham', 'liên', 'lien', 'quan', 'đến', 'den', 'về', 've', 'của', 'cua', 'những', 'nhung', 'các',
+  'cac', 'còn', 'con', 'hàng', 'hang', 'mẫu', 'mau', 'loại', 'loai', 'dòng', 'dong', 'nữa', 'nua', 'chứ',
+  'chu', 'nhe', 'nha', 'nhé', 'hả', 'ha', 'giúp', 'giup', 'biết', 'biet', 'phải', 'phai', 'mà', 'ma', 'là',
+  'la', 'đang', 'dang', 'sẵn', 'san', 'mua', 'muon', 'muốn', 'thì', 'thi', 'ở', 'o', 'đâu', 'dau',
+]);
+
+// ─── Extract Brands with Negation Guard (Chống nhận nhầm "không phải AULA") ──
+const extractBrandsWithNegation = (cleanText = '', allBrands = []) => {
+  const matchedBrands = [];
+  const excludedBrands = [];
+
+  for (const b of allBrands) {
+    const bName = (b.name || '').toLowerCase().trim();
+    const bSlug = (b.slug || '').toLowerCase().trim();
+    if (!bName && !bSlug) continue;
+
+    const pattern = `(?:^|\\s|[.,?!;])${escapeRegex(bName)}(?:$|\\s|[.,?!;])`;
+    const regex = new RegExp(pattern, 'i');
+    const slugRegex = bSlug ? new RegExp(`(?:^|\\s|[.,?!;])${escapeRegex(bSlug)}(?:$|\\s|[.,?!;])`, 'i') : null;
+
+    let matched = false;
+    let matchIdx = -1;
+
+    const nameMatch = cleanText.search(regex);
+    if (nameMatch !== -1) {
+      matched = true;
+      matchIdx = nameMatch;
+    } else if (slugRegex) {
+      const slugMatch = cleanText.search(slugRegex);
+      if (slugMatch !== -1) {
+        matched = true;
+        matchIdx = slugMatch;
+      }
+    }
+
+    if (matched) {
+      const prefix = cleanText.substring(Math.max(0, matchIdx - 40), matchIdx);
+      const isNegated = /(?:không phải|ko phải|chẳng phải|không thích|ko thích|trừ|bỏ|đừng lấy|không lấy|ko lấy|ngoại trừ|ngoài|chứ không|chứ ko)\s*[^\n\r]{0,25}$/iu.test(prefix);
+
+      if (isNegated) {
+        excludedBrands.push(b);
+      } else {
+        matchedBrands.push(b);
+      }
+    }
+  }
+
+  return { matchedBrands, excludedBrands };
+};
+
+// ─── Extract Clean Search Tokens (Bóc tách từ khóa đích danh, loại bỏ phủ định) ──
+const extractCleanTokens = (text = '', excludedBrands = []) => {
+  if (!text) return [];
+  let clean = text.toLowerCase();
+  // 1. Loại bỏ các cụm phủ định (ví dụ: "không phải aula guma", "ko phải samsung")
+  clean = clean.replace(/(?:không phải|ko phải|chẳng phải|không thích|ko thích|trừ|bỏ|đừng lấy|không lấy|ko lấy|ngoại trừ|ngoài|chứ không|chứ ko)\s+[^\s,;?!.]+(?:\s+[^\s,;?!.]+)?/gi, ' ');
+  // 2. Loại bỏ các từ trigger phủ định đứng rời
+  clean = clean.replace(/\b(?:không phải|ko phải|chẳng phải|không thích|ko thích|trừ|bỏ|đừng lấy|không lấy|ko lấy|ngoại trừ|ngoài|chứ không|chứ ko)\b/gi, ' ');
+  // 3. Loại bỏ thương hiệu bị loại trừ
+  if (Array.isArray(excludedBrands) && excludedBrands.length > 0) {
+    for (const eb of excludedBrands) {
+      const ebName = (typeof eb === 'string' ? eb : eb?.name || '').toLowerCase().trim();
+      if (ebName) {
+        clean = clean.replace(new RegExp(`(?:^|\\s|[.,?!;])${escapeRegex(ebName)}(?:$|\\s|[.,?!;])`, 'gi'), ' ');
+      }
+    }
+  }
+  // 4. Bóc tách từ và lọc stop words tiếng Việt
+  return clean
+    .replace(/[?!.,;:()\[\]"'/\\-]/g, ' ')
+    .split(/\s+/)
+    .filter((w) => w.length >= 2 && !VIETNAMESE_STOP_WORDS.has(w));
+};
 
 // ─── Fast In-Memory Cache for Campaigns & Taxonomy ───────────────────────────
 let _marketingCache = null;
@@ -298,6 +377,7 @@ const reasonCustomerIntent = async (message = '', { history = [], profile = {}, 
       isOrderInquiry: false,
       category: null,
       brand: null,
+      negatedBrands: [],
       targetPrice: null,
       minPrice: null,
       maxPrice: null,
@@ -314,6 +394,7 @@ const reasonCustomerIntent = async (message = '', { history = [], profile = {}, 
       isOrderInquiry: true,
       category: null,
       brand: null,
+      negatedBrands: [],
       targetPrice: null,
       minPrice: null,
       maxPrice: null,
@@ -346,13 +427,23 @@ Quy tắc suy luận:
 2. BẮT BUỘC: Đơn vị tiền tệ trong JSON phải là VNĐ đầy đủ dạng số nguyên (ví dụ: 20 củ = 20000000, 15 triệu = 15000000, 8tr = 8000000, 500k = 500000, tuyệt đối không trả về 20 hay 15).
 3. Nếu khách nói "tầm X" hoặc "khoảng X", hãy tự động suy luận khoảng giá minPrice = X * 0.85 và maxPrice = X * 1.2 tính theo VNĐ đầy đủ.
 4. Nếu khách nói "dưới X", minPrice = null, maxPrice = X (VNĐ đầy đủ). Nếu khách nói "trên X", minPrice = X (VNĐ đầy đủ), maxPrice = null.
-5. Chọn 1 "category" chuẩn duy nhất từ danh mục của cửa hàng (hoặc null nếu không xác định).
-6. Trả về DUY NHẤT một chuỗi JSON hợp lệ:
+5. NHẬN DIỆN PHỦ ĐỊNH (Negation Guard - Cực kỳ quan trọng):
+   - Nếu khách nói "không phải X", "ko phải X", "trừ X", "bỏ X", "không thích X", "đừng lấy X" (ví dụ: "không phải aula", "không lấy samsung"):
+     + "negatedBrands": mảng chứa tên thương hiệu bị phủ định (ví dụ ["AULA"]).
+     + "brand": TUYỆT ĐỐI KHÔNG để thương hiệu bị phủ định vào đây! Chỉ điền "brand" khi khách thực sự muốn tìm thương hiệu đó một cách chủ động.
+6. TRÍCH XUẤT TỪ KHÓA TÌM KIẾM CỐT LÕI ("searchKeywords"):
+   - Trích xuất tên model, dòng sản phẩm, phiên bản giới hạn, tên tuyển thủ/nhân vật, mã sản phẩm (ví dụ: "gumayusi", "guma", "vanguard", "s24", "f75", "115 inch").
+   - LOẠI BỎ hoàn toàn các từ giao tiếp như "không phải", "mà là", "có sản phẩm nào liên quan đến", "còn không", "bên shop có", "tư vấn", "cho mình hỏi".
+7. CHỌN DANH MỤC ("category"):
+   - Chọn 1 "category" chuẩn từ danh mục của cửa hàng nếu khách hỏi rõ một ngành hàng (ví dụ "chuột", "bàn phím cơ", "tivi", "điện thoại").
+   - NẾU khách hỏi tổng quát hoặc hỏi tìm mọi thứ liên quan đến một cái tên/từ khóa (ví dụ: "có sản phẩm nào liên quan đến gumayusi k", "bên mình có gì của ronaldo"): ĐẶT "category": null để hệ thống tìm kiếm trên TOÀN BỘ các ngành hàng (chuột, lót chuột, bàn phím, v.v.).
+8. Trả về DUY NHẤT một chuỗi JSON hợp lệ:
 {
   "isGreetingOnly": boolean,
-  "isOrderInquiry": boolean,
+  "isOrderInquiry": boolean, // CHỈ TRUE KHI KHÁCH HỎI TRA CỨU ĐƠN HÀNG ĐÃ ĐẶT (ví dụ "kiểm tra đơn hàng", "khi nào giao", "mã vận đơn"). TUYỆT ĐỐI FALSE KHI KHÁCH HỎI TÌM MUA SẢN PHẨM HOẶC HỎI HÀNG TRONG KHO.
   "category": string hoặc null,
   "brand": string hoặc null,
+  "negatedBrands": string[],
   "targetPrice": number hoặc null,
   "minPrice": number hoặc null,
   "maxPrice": number hoặc null,
@@ -362,7 +453,7 @@ Quy tắc suy luận:
 
   const genAI = getGeminiClient();
   if (genAI) {
-    const reasoningModels = ['gemini-3.5-flash-lite', 'gemini-3.5-flash', 'gemini-3.8-flash'];
+    const reasoningModels = ['gemini-flash-lite-latest', 'gemini-3.1-flash-lite', 'gemini-flash-latest'];
     for (const mName of reasoningModels) {
       try {
         const m = genAI.getGenerativeModel({
@@ -372,6 +463,7 @@ Quy tắc suy luận:
         const res = await m.generateContent(prompt);
         const parsed = JSON.parse(res.response.text());
         if (parsed) {
+          if (!Array.isArray(parsed.negatedBrands)) parsed.negatedBrands = [];
           return parsed;
         }
       } catch (err) {
@@ -394,14 +486,31 @@ const fallbackRegexIntent = (clean, { history = [], profile = {}, allCategories 
   else if (/(tủ lạnh|tu lanh)/i.test(clean)) category = 'Tủ lạnh';
   else if (/(máy giặt|máy giặc|may giat|may giac|máy sấy|may say)/i.test(clean)) category = 'Máy giặt';
   else if (/(điều hòa|dieu hoa|máy lạnh|may lanh)/i.test(clean)) category = 'Điều hòa';
+  else if (/(lót chuột|lot chuot|mouse pad|pad chuột)/i.test(clean)) category = 'Lót chuột Gaming';
+  else if (/(chuột|chuot|mouse)/i.test(clean)) category = 'Chuột Gaming';
+  else if (/(bàn phím|ban phim|keyboard|phím cơ|phim co)/i.test(clean)) category = 'Bàn phím cơ';
   else if (/(loa|soundbar|tai nghe)/i.test(clean)) category = 'Âm thanh';
   else if (/(đồng hồ|smartwatch)/i.test(clean)) category = 'Đồng hồ';
 
-  let brand = null;
-  for (const b of allBrands) {
-    if (clean.includes((b.name || '').toLowerCase())) {
-      brand = b.name;
-      break;
+  // Tách thương hiệu với cơ chế chống phủ định
+  const { matchedBrands: directMatched, excludedBrands: directExcluded } = extractBrandsWithNegation(clean, allBrands);
+  const brand = directMatched[0]?.name || null;
+  const negatedBrands = directExcluded.map((b) => b.name);
+
+  // Trích xuất từ khóa sạch (loại bỏ từ nối, từ phủ định)
+  const meaningfulWords = extractCleanTokens(clean, directExcluded);
+
+  // CHỈ kế thừa chủ đề từ hội thoại gần nhất nếu khách KHÔNG nhắc đến từ khóa riêng biệt nào
+  if (!category && meaningfulWords.length === 0 && clean.split(/\s+/).length <= 3) {
+    if (profile.lastTopic) {
+      category = profile.lastTopic;
+    } else {
+      const recentChat = (history || []).slice(-3).map((h) => h.content || '').join(' ').toLowerCase();
+      if (/(bàn phím|phím cơ|keyboard)/i.test(recentChat)) category = 'Bàn phím cơ';
+      else if (/(chuột|mouse)/i.test(recentChat)) category = 'Chuột Gaming';
+      else if (/(tivi|smart tv)/i.test(recentChat)) category = 'Tivi';
+      else if (/(điện thoại|smartphone|iphone)/i.test(recentChat)) category = 'Điện thoại';
+      else if (/(laptop|macbook)/i.test(recentChat)) category = 'Laptop';
     }
   }
 
@@ -410,11 +519,12 @@ const fallbackRegexIntent = (clean, { history = [], profile = {}, allCategories 
     isOrderInquiry: false,
     category,
     brand,
+    negatedBrands,
     targetPrice: null,
     minPrice,
     maxPrice,
-    searchKeywords: category || '',
-    reasoningNote: 'Fallback regex parsing',
+    searchKeywords: meaningfulWords.join(' ') || category || '',
+    reasoningNote: 'Fallback regex parsing with smart keywords and negation handling',
   };
 };
 
@@ -432,7 +542,11 @@ const scoreProductRelevance = (p, ctx = {}) => {
     isAcQuery = false,
     isAudioQuery = false,
     isWatchQuery = false,
+    isMouseQuery = false,
+    isKeyboardQuery = false,
+    isPadQuery = false,
     matchedBrands = [],
+    excludedBrands = [],
   } = ctx;
 
   const pName = (p.name || '').toLowerCase();
@@ -441,14 +555,25 @@ const scoreProductRelevance = (p, ctx = {}) => {
 
   let score = 0;
 
-  // 1. Khớp thương hiệu (Brand match)
+  // 1. Phạt nặng nếu thuộc thương hiệu khách đã từ chối (Negated Brands)
+  if (excludedBrands && excludedBrands.length > 0) {
+    const isExcluded = excludedBrands.some((b) => {
+      const bName = (b.name || '').toLowerCase().trim();
+      return bName && (brandName.includes(bName) || pName.includes(bName));
+    });
+    if (isExcluded) {
+      return -2500;
+    }
+  }
+
+  // 1b. Khớp thương hiệu (Brand match)
   if (matchedBrands && matchedBrands.length > 0) {
     const isBrand = matchedBrands.some((b) => {
       const bName = (b.name || '').toLowerCase();
       return brandName.includes(bName) || pName.includes(bName);
     });
     if (isBrand) {
-      score += 100;
+      score += 120;
     } else if (ctx.hasExplicitBrand) {
       score -= 300; // CHỈ phạt nặng nếu khách đích danh hỏi hãng này trong câu hiện tại mà sản phẩm thuộc hãng khác
     }
@@ -522,13 +647,44 @@ const scoreProductRelevance = (p, ctx = {}) => {
     if (/(tivi|tủ lạnh|máy giặt|điện thoại)/i.test(pName)) {
       score -= 1000;
     }
+  } else if (isMouseQuery) {
+    if (/(chuột|mouse)/i.test(pName) || /chuột/i.test(catNames)) {
+      score += 180;
+    }
+    if (/(tivi|tủ lạnh|máy giặt|điều hòa|máy tính bảng)/i.test(pName)) {
+      score -= 1000;
+    }
+  } else if (isKeyboardQuery) {
+    if (/(bàn phím|keyboard|phím cơ)/i.test(pName) || /bàn phím/i.test(catNames)) {
+      score += 180;
+    }
+    if (/(tivi|tủ lạnh|máy giặt|điều hòa|điện thoại)/i.test(pName)) {
+      score -= 1000;
+    }
+  } else if (isPadQuery) {
+    if (/(lót chuột|pad chuột|mouse pad)/i.test(pName) || /lót chuột/i.test(catNames)) {
+      score += 180;
+    }
+    if (/(tivi|tủ lạnh|máy giặt|điều hòa)/i.test(pName)) {
+      score -= 1000;
+    }
   }
 
-  // 3. Khớp các từ khóa dòng máy (Model keywords: ultra, fold, flip, s24, pro max, 5g, plus, v.v.)
+  // 3. Khớp các từ khóa dòng máy / model / edition / tuyển thủ (Gumayusi, Vanguard, F75, S24...)
   if (rawTokens && rawTokens.length > 0) {
     for (const token of rawTokens) {
-      if (token.length >= 2 && pName.includes(token)) {
-        score += 30;
+      if (token.length >= 2) {
+        if (pName.includes(token)) {
+          score += 350; // Ưu tiên hàng đầu cho sản phẩm khớp chính xác từ khóa khách hỏi!
+        } else if (p.slug && p.slug.includes(token)) {
+          score += 200;
+        } else if (p.productCode && p.productCode.toLowerCase().includes(token)) {
+          score += 200;
+        } else if (p.keywords && p.keywords.some((k) => (k || '').toLowerCase().includes(token))) {
+          score += 150;
+        } else if (p.specifications && p.specifications.some((s) => (s.value || '').toLowerCase().includes(token))) {
+          score += 120;
+        }
       }
     }
   }
@@ -569,7 +725,8 @@ const fetchProductContext = async (message = '', { history = [], profile = {}, s
       };
     }
 
-    if (intent.isOrderInquiry) {
+    const isRealOrderInquiry = intent.isOrderInquiry && /(đơn hàng|tra cứu đơn|kiểm tra đơn|xem đơn|tình trạng đơn|mã vận đơn|khi nào giao|ship hàng|vận chuyển)/i.test(clean);
+    if (isRealOrderInquiry) {
       return {
         text: '(Khách hàng đang hỏi về tra cứu hoặc kiểm tra đơn hàng. Hãy xưng "em" và gọi "anh/chị". Hướng dẫn lễ phép: Anh/chị có thể xem danh sách và trạng thái chi tiết tất cả đơn hàng đã đặt tại mục "Đơn hàng của tôi" trong trang Tài khoản (/tai-khoan?tab=orders). Hoặc anh/chị có thể cung cấp Mã đơn hàng và Số điện thoại đặt hàng ngay tại đây để em hỗ trợ kiểm tra trực tiếp giúp mình ạ.)',
         products: [],
@@ -639,17 +796,50 @@ const fetchProductContext = async (message = '', { history = [], profile = {}, s
     const isAcQuery      = normCategory.includes('điều hòa') || normCategory.includes('máy lạnh') || /(điều hòa|dieu hoa|máy lạnh|may lanh|1 ngựa|2 ngựa)/i.test(clean);
     const isAudioQuery   = normCategory.includes('âm thanh') || normCategory.includes('loa') || normCategory.includes('tai nghe') || /(loa\b|soundbar|tai nghe|headphone|earbuds|airpods|dàn âm thanh)/i.test(clean);
     const isWatchQuery   = normCategory.includes('đồng hồ') || normCategory.includes('watch') || /(đồng hồ|smartwatch|apple watch|galaxy watch)/i.test(clean);
+    const isMouseQuery   = normCategory.includes('chuột') || /(chuột|chuot|mouse)/i.test(clean);
+    const isKeyboardQuery = normCategory.includes('bàn phím') || /(bàn phím|ban phim|keyboard|phím cơ|phim co)/i.test(clean);
+    const isPadQuery     = normCategory.includes('lót chuột') || /(lót chuột|lot chuot|mouse pad|pad chuột)/i.test(clean);
 
-    // Nhận diện thương hiệu
+    // Nhận diện thương hiệu & loại trừ thương hiệu bị phủ định
+    const { matchedBrands: directMatched, excludedBrands: directExcluded } = extractBrandsWithNegation(clean, allBrands);
+    const negatedBrandsFromIntent = Array.isArray(intent.negatedBrands) ? intent.negatedBrands : [];
+
+    const allExcludedNames = new Set([
+      ...negatedBrandsFromIntent.map((b) => b.toLowerCase().trim()),
+      ...directExcluded.map((b) => (b.name || '').toLowerCase().trim()),
+    ]);
+
+    const excludedBrands = allBrands.filter((b) => allExcludedNames.has((b.name || '').toLowerCase().trim()));
+    const excludedBrandIds = excludedBrands.map((b) => b._id);
+
     let matchedBrands = [];
-    if (resolvedBrand) {
+    if (resolvedBrand && !allExcludedNames.has(resolvedBrand.toLowerCase().trim())) {
       matchedBrands = allBrands.filter((b) => {
         const bName = (b.name || '').toLowerCase();
         return bName === resolvedBrand.toLowerCase() || bName.includes(resolvedBrand.toLowerCase()) || resolvedBrand.toLowerCase().includes(bName);
       });
     }
-    if (matchedBrands.length === 0 && profile.preferredBrands?.length > 0 && clean.split(/\s+/).length <= 3) {
-      matchedBrands = allBrands.filter((b) => profile.preferredBrands.includes(b.name));
+
+    if (matchedBrands.length === 0) {
+      matchedBrands = directMatched.filter((b) => !allExcludedNames.has((b.name || '').toLowerCase().trim()));
+    }
+
+    // Từ khóa sạch: Lấy từ intent hoặc tự trích xuất qua extractCleanTokens
+    let rawTokens = [];
+    if (intent.searchKeywords && typeof intent.searchKeywords === 'string' && intent.searchKeywords.trim()) {
+      rawTokens = intent.searchKeywords
+        .toLowerCase()
+        .replace(/[?!.,;:()\[\]"'/\\-]/g, ' ')
+        .split(/\s+/)
+        .filter((w) => w.length >= 2 && !VIETNAMESE_STOP_WORDS.has(w));
+    }
+    if (rawTokens.length === 0) {
+      rawTokens = extractCleanTokens(clean, excludedBrands);
+    }
+
+    // CHỈ kế thừa preferredBrands từ profile nếu câu ngắn VÀ khách KHÔNG nhắc từ khóa sản phẩm cụ thể
+    if (matchedBrands.length === 0 && profile.preferredBrands?.length > 0 && clean.split(/\s+/).length <= 2 && rawTokens.length === 0) {
+      matchedBrands = allBrands.filter((b) => profile.preferredBrands.includes(b.name) && !allExcludedNames.has((b.name || '').toLowerCase().trim()));
     }
     const matchedBrandIds = matchedBrands.map((b) => b._id);
 
@@ -663,14 +853,12 @@ const fetchProductContext = async (message = '', { history = [], profile = {}, s
     }
     const matchedCategoryIds = matchedCategories.map((c) => c._id);
 
-    // Từ khóa sạch đã được AI chuẩn hóa (loại bỏ tiếng lóng tiền tệ/đời sống như "khoai", "cành")
-    const rawTokens = (intent.searchKeywords || '')
-      .toLowerCase()
-      .replace(/[?!.,;:()\[\]"']/g, ' ')
-      .split(/\s+/)
-      .filter((w) => w.length >= 2);
-
     const updatedProfile = { ...profile };
+    // Nếu khách phủ định thương hiệu, xóa ngay khỏi preferredBrands để tránh lây nhiễm các lượt chat sau
+    if (excludedBrands.length > 0 && updatedProfile.preferredBrands?.length > 0) {
+      const excludedNames = new Set(excludedBrands.map((b) => (b.name || '').toLowerCase()));
+      updatedProfile.preferredBrands = updatedProfile.preferredBrands.filter((b) => !excludedNames.has(b.toLowerCase()));
+    }
     if (matchedBrands.length > 0) {
       updatedProfile.preferredBrands = matchedBrands.map((b) => b.name);
     }
@@ -682,8 +870,47 @@ const fetchProductContext = async (message = '', { history = [], profile = {}, s
     if (maxPrice !== null) updatedProfile.budgetMax = maxPrice;
     updatedProfile.inquiryCount = (updatedProfile.inquiryCount || 0) + 1;
 
-    // 7. Xây dựng câu truy vấn MongoDB chính xác tuyệt đối (AND logic)
+    // 7. MULTI-STRATEGY RETRIEVAL
+    // CHIẾN LƯỢC 1: Tìm kiếm trực tiếp theo từ khóa đích danh (Model / Tuyển thủ / Edition: Gumayusi, F75, Vanguard, S24...)
+    let keywordProducts = [];
+    if (rawTokens.length > 0) {
+      const kwQueries = rawTokens.map((t) => {
+        const reg = new RegExp(escapeRegex(t), 'i');
+        return {
+          $or: [
+            { name: reg },
+            { slug: reg },
+            { keywords: reg },
+            { productCode: reg },
+            { sku: reg },
+            { searchTokens: reg },
+            { description: reg },
+            { 'specifications.value': reg },
+          ],
+        };
+      });
+
+      const kwFilter = {
+        isActive: true,
+        status: 'published',
+        ...(excludedBrandIds.length > 0 ? { brand: { $nin: excludedBrandIds } } : {}),
+        $or: kwQueries,
+      };
+
+      keywordProducts = await Product.find(kwFilter)
+        .select('name slug brand categories price salePrice stock status productCode specifications isFeatured isHot thumbnail images cachedPrice cachedSalePrice keywords')
+        .populate('brand', 'name')
+        .populate('categories', 'name')
+        .limit(15)
+        .lean();
+    }
+
+    // CHIẾN LƯỢC 2: Xây dựng câu truy vấn theo Danh mục & Thương hiệu có cấu trúc
     const queryAnd = [{ isActive: true }, { status: 'published' }];
+
+    if (excludedBrandIds.length > 0) {
+      queryAnd.push({ brand: { $nin: excludedBrandIds } });
+    }
 
     if (matchedBrands.length > 0) {
       const brandRegexes = matchedBrands.map((b) => new RegExp(escapeRegex(b.name), 'i'));
@@ -809,18 +1036,96 @@ const fetchProductContext = async (message = '', { history = [], profile = {}, s
           { name: { $not: /(tivi|smart tv|tủ lạnh|máy giặt|điều hòa)/i } },
         ],
       });
-    } else if (rawTokens.length > 0) {
+    } else if (isMouseQuery) {
       queryAnd.push({
-        $or: rawTokens.map((t) => ({ name: new RegExp(escapeRegex(t), 'i') })),
+        $and: [
+          {
+            $or: [
+              { name: /(chuột|mouse)/i },
+              ...(matchedCategoryIds.length > 0 ? [{ categories: { $in: matchedCategoryIds } }] : []),
+            ],
+          },
+          { name: { $not: /(lót chuột|pad chuột|tivi|tủ lạnh|máy giặt|điều hòa)/i } },
+        ],
+      });
+    } else if (isKeyboardQuery) {
+      queryAnd.push({
+        $and: [
+          {
+            $or: [
+              { name: /(bàn phím|keyboard|phím cơ)/i },
+              ...(matchedCategoryIds.length > 0 ? [{ categories: { $in: matchedCategoryIds } }] : []),
+            ],
+          },
+          { name: { $not: /(tivi|tủ lạnh|máy giặt|điều hòa)/i } },
+        ],
+      });
+    } else if (isPadQuery) {
+      queryAnd.push({
+        $and: [
+          {
+            $or: [
+              { name: /(lót chuột|pad chuột|mouse pad)/i },
+              ...(matchedCategoryIds.length > 0 ? [{ categories: { $in: matchedCategoryIds } }] : []),
+            ],
+          },
+        ],
       });
     }
 
-    let rawProducts = await Product.find({ $and: queryAnd })
-      .select('name slug brand categories price salePrice stock status productCode specifications isFeatured isHot thumbnail images cachedPrice cachedSalePrice')
-      .populate('brand', 'name')
-      .populate('categories', 'name')
-      .limit(15)
-      .lean();
+    let structuredProducts = [];
+    const minConditions = excludedBrandIds.length > 0 ? 3 : 2;
+    if (queryAnd.length > minConditions) {
+      structuredProducts = await Product.find({ $and: queryAnd })
+        .select('name slug brand categories price salePrice stock status productCode specifications isFeatured isHot thumbnail images cachedPrice cachedSalePrice keywords')
+        .populate('brand', 'name')
+        .populate('categories', 'name')
+        .limit(15)
+        .lean();
+    }
+
+    // Hợp nhất 2 chiến lược: Ưu tiên hàng đầu cho sản phẩm khớp chính xác từ khóa!
+    const productMap = new Map();
+    keywordProducts.forEach((p) => productMap.set(p._id.toString(), p));
+    structuredProducts.forEach((p) => {
+      if (!productMap.has(p._id.toString())) {
+        productMap.set(p._id.toString(), p);
+      }
+    });
+
+    let rawProducts = Array.from(productMap.values());
+
+    // 7b. TỰ ĐỘNG TÌM KIẾM THEO TỪ KHÓA THÔNG MINH NẾU VẪN CHƯA CÓ SẢN PHẨM NÀO
+    if (rawProducts.length === 0) {
+      const smartTokens = extractCleanTokens(clean, excludedBrands);
+
+      if (smartTokens.length > 0) {
+        const tokenRegexes = smartTokens.map((t) => new RegExp(escapeRegex(t), 'i'));
+        const orConditions = [];
+        tokenRegexes.forEach((rgx) => {
+          orConditions.push(
+            { name: rgx },
+            { slug: rgx },
+            { keywords: rgx },
+            { sku: rgx },
+            { productCode: rgx },
+            { searchTokens: rgx }
+          );
+        });
+
+        rawProducts = await Product.find({
+          isActive: true,
+          status: 'published',
+          ...(excludedBrandIds.length > 0 ? { brand: { $nin: excludedBrandIds } } : {}),
+          $or: orConditions,
+        })
+          .select('name slug brand categories price salePrice stock status productCode specifications isFeatured isHot thumbnail images cachedPrice cachedSalePrice keywords')
+          .populate('brand', 'name')
+          .populate('categories', 'name')
+          .limit(15)
+          .lean();
+      }
+    }
 
     // Đưa sản phẩm đang xem vào danh sách nếu khách đang hỏi về trang đó hoặc cùng thương hiệu
     if (currentViewedProduct) {
@@ -843,15 +1148,18 @@ const fetchProductContext = async (message = '', { history = [], profile = {}, s
       (isFridgeQuery ? 'Tủ lạnh' :
       (isWashingQuery ? 'Máy giặt' :
       (isAcQuery ? 'Điều hòa' :
+      (isMouseQuery ? 'Chuột máy tính' :
+      (isKeyboardQuery ? 'Bàn phím cơ' :
+      (isPadQuery ? 'Lót chuột' :
       (isAudioQuery ? 'Thiết bị âm thanh' :
-      (isWatchQuery ? 'Đồng hồ thông minh' : 'sản phẩm'))))))));
+      (isWatchQuery ? 'Đồng hồ thông minh' : 'sản phẩm')))))))))));
 
     if (rawProducts.length === 0) {
       const requestedBrandName = matchedBrands[0]?.name || '';
 
       let notFoundMessage = requestedBrandName
-        ? `(KHO HÀNG CỦA SHOP HIỆN CHƯA CÓ sản phẩm ${topicName} của thương hiệu ${requestedBrandName}. Hãy giải thích lịch sự rằng dòng ${topicName} ${requestedBrandName} bên em tạm thời chưa về hàng hoặc đã hết hàng. Lịch sự hỏi xem anh/chị có muốn tham khảo các mẫu ${topicName} đang có sẵn từ các thương hiệu khác trong cửa hàng không. TUYỆT ĐỐI KHÔNG tự ý hiển thị thẻ sản phẩm hay thông số của hãng khác khi khách chưa đồng ý.)`
-        : `(Kho hàng của shop hiện chưa có sản phẩm khớp với tiêu chí tìm kiếm này. Hãy lịch sự thông báo và hỏi khách cần tìm sản phẩm nào khác để em hỗ trợ tư vấn.)`;
+        ? `(KHO HÀNG CỦA SHOP HIỆN CHƯA CÓ sản phẩm ${topicName} của thương hiệu ${requestedBrandName}. Hãy giải thích lịch sự rằng dòng ${topicName} ${requestedBrandName} bên em tạm thời chưa về hàng hoặc đã hết hàng. TUYỆT ĐỐI KHÔNG tự ý bịa đặt hay nêu các sản phẩm/hãng khác khi không có trong dữ liệu.)`
+        : `(Kho hàng của shop hiện chưa có sản phẩm khớp với tiêu chí tìm kiếm này. Hãy lịch sự thông báo và hỏi khách cần tìm dòng sản phẩm nào khác để em hỗ trợ tư vấn. TUYỆT ĐỐI KHÔNG tự bịa ra bất kỳ sản phẩm nào ngoài kho hàng.)`;
 
       return {
         text: notFoundMessage,
@@ -1119,9 +1427,11 @@ const fetchProductContext = async (message = '', { history = [], profile = {}, s
     });
 
     let candidatePool = processedProducts;
+    const keywordProductIds = new Set(keywordProducts.map((p) => p._id.toString()));
 
     if (isPhoneQuery) {
       candidatePool = candidatePool.filter((p) => {
+        if (keywordProductIds.has(p._id.toString())) return true;
         const n = (p.name || '').toLowerCase();
         if (/(đồng hồ|watch|smartwatch|tai nghe|headphone|earbuds|airpods|buds|\btab\b|galaxy tab|tab s|tablet|ipad|máy tính bảng|tivi|smart tv|tủ lạnh|máy giặt|điều hòa|loa thanh|soundbar|máy hút bụi|dyson)/i.test(n)) return false;
         return /(điện thoại|smartphone|iphone|z flip|z fold|s24|s23|s22|s21|redmi|xiaomi 14)/i.test(n) ||
@@ -1129,6 +1439,7 @@ const fetchProductContext = async (message = '', { history = [], profile = {}, s
       });
     } else if (isLaptopQuery) {
       candidatePool = candidatePool.filter((p) => {
+        if (keywordProductIds.has(p._id.toString())) return true;
         const n = (p.name || '').toLowerCase();
         if (/(tivi|smart tv|tủ lạnh|máy giặt|điều hòa|loa\b|soundbar)/i.test(n)) return false;
         return /(laptop|macbook|thinkpad|zenbook|vivobook|legion|ideapad|pavilion|spectre|gram)/i.test(n) ||
@@ -1136,6 +1447,7 @@ const fetchProductContext = async (message = '', { history = [], profile = {}, s
       });
     } else if (isTabletQuery) {
       candidatePool = candidatePool.filter((p) => {
+        if (keywordProductIds.has(p._id.toString())) return true;
         const n = (p.name || '').toLowerCase();
         if (/(tivi|smart tv|tủ lạnh|máy giặt|điều hòa)/i.test(n)) return false;
         return /(máy tính bảng|tablet|ipad|galaxy tab|tab s)/i.test(n) ||
@@ -1143,6 +1455,7 @@ const fetchProductContext = async (message = '', { history = [], profile = {}, s
       });
     } else if (isTvQuery) {
       candidatePool = candidatePool.filter((p) => {
+        if (keywordProductIds.has(p._id.toString())) return true;
         const n = (p.name || '').toLowerCase();
         if (notTvRegex.test(n)) return false;
         return /(\btv\b|tivi|ti vi|smart tv|qled|oled|4k tv|tivi led|google tivi|android tivi)/i.test(n) ||
@@ -1150,32 +1463,50 @@ const fetchProductContext = async (message = '', { history = [], profile = {}, s
       });
     } else if (isFridgeQuery) {
       candidatePool = candidatePool.filter((p) => {
+        if (keywordProductIds.has(p._id.toString())) return true;
         const n = (p.name || '').toLowerCase();
         if (n.includes('tivi') || n.includes('tv') || n.includes('máy giặt') || n.includes('máy sấy') || n.includes('máy lạnh') || n.includes('tablet')) return false;
         return /(tủ lạnh|tủ đông|tủ mát|side by side)/i.test(n) || p.categories?.some((c) => /tủ lạnh|tu lanh/i.test(c.name || ''));
       });
     } else if (isWashingQuery) {
       candidatePool = candidatePool.filter((p) => {
+        if (keywordProductIds.has(p._id.toString())) return true;
         const n = (p.name || '').toLowerCase();
         if (n.includes('tivi') || n.includes('tv') || n.includes('tủ lạnh') || n.includes('máy lạnh')) return false;
         return /(máy giặt|máy giặc|máy sấy)/i.test(n) || p.categories?.some((c) => /máy giặt|may giat|giặt|sấy/i.test(c.name || ''));
       });
     } else if (isAudioQuery) {
       candidatePool = candidatePool.filter((p) => {
+        if (keywordProductIds.has(p._id.toString())) return true;
         const n = (p.name || '').toLowerCase();
         if (n.includes('tủ lạnh') || n.includes('máy giặt') || n.includes('máy lạnh')) return false;
         return /(loa|soundbar|tai nghe|âm thanh)/i.test(n) || p.categories?.some((c) => /loa|âm thanh/i.test(c.name || ''));
       });
     } else if (isWatchQuery) {
       candidatePool = candidatePool.filter((p) => {
+        if (keywordProductIds.has(p._id.toString())) return true;
         const n = (p.name || '').toLowerCase();
         return /(đồng hồ|smartwatch|apple watch|galaxy watch)/i.test(n) || p.categories?.some((c) => /(đồng hồ|smartwatch)/i.test(c.name || ''));
       });
     }
 
-    // BẮT BUỘC: Khi khách đã hỏi đích danh thương hiệu (Samsung, Sony, LG, Aqua, Apple...),
-    // CHỈ giữ lại sản phẩm của thương hiệu đó.
-    if (matchedBrands.length > 0) {
+    // Lọc bỏ triệt để sản phẩm thuộc thương hiệu bị phủ định
+    if (excludedBrandIds.length > 0 || excludedBrands.length > 0) {
+      candidatePool = candidatePool.filter((p) => {
+        const pBrandId = (p.brand?._id || p.brand)?.toString();
+        const pBrandName = (p.brand?.name || p.brand || '').toString().toLowerCase().trim();
+        const pName = (p.name || '').toLowerCase();
+        const isExcluded = excludedBrandIds.some((id) => id.toString() === pBrandId) ||
+          excludedBrands.some((b) => {
+            const bName = (b.name || '').toLowerCase().trim();
+            return bName && (pBrandName.includes(bName) || pName.includes(bName));
+          });
+        return !isExcluded;
+      });
+    }
+
+    // CHỈ lọc theo thương hiệu khi khách đích danh yêu cầu brand VÀ không có sản phẩm khớp từ khóa đích danh từ hãng khác
+    if (matchedBrands.length > 0 && keywordProducts.length === 0) {
       const brandMatched = candidatePool.filter((p) => {
         const pBrand = (p.brand?.name || p.brand || '').toString().toLowerCase();
         const pName = (p.name || '').toLowerCase();
@@ -1202,7 +1533,11 @@ const fetchProductContext = async (message = '', { history = [], profile = {}, s
       isAcQuery,
       isAudioQuery,
       isWatchQuery,
+      isMouseQuery,
+      isKeyboardQuery,
+      isPadQuery,
       matchedBrands,
+      excludedBrands,
     };
 
     // Sắp xếp toàn bộ candidatePool theo độ tương thích thực tế cao nhất
@@ -1226,10 +1561,16 @@ const fetchProductContext = async (message = '', { history = [], profile = {}, s
 
     if (candidatePool.length === 0) {
       const requestedBrandName = matchedBrands[0]?.name || '';
+      const searchKW = rawTokens.join(' ');
 
-      let notFoundMessage = requestedBrandName
-        ? `(KHO HÀNG CỦA SHOP HIỆN CHƯA CÓ sản phẩm ${topicName} của thương hiệu ${requestedBrandName}. Hãy giải thích lịch sự rằng dòng ${topicName} ${requestedBrandName} bên em tạm thời chưa về hàng hoặc đã hết hàng. Lịch sự hỏi xem anh/chị có muốn tham khảo các mẫu ${topicName} đang có sẵn từ các thương hiệu khác trong cửa hàng không. TUYỆT ĐỐI KHÔNG tự ý hiển thị thẻ sản phẩm hay thông số của hãng khác khi khách chưa đồng ý.)`
-        : `(Kho hàng của shop hiện chưa có sản phẩm khớp với tiêu chí tìm kiếm này. Hãy lịch sự thông báo và hỏi khách cần tìm sản phẩm nào khác để em hỗ trợ tư vấn.)`;
+      let notFoundMessage = '';
+      if (searchKW) {
+        notFoundMessage = `(KHO HÀNG CỦA SHOP HIỆN CHƯA CÓ sản phẩm khớp với từ khóa "${searchKW}". Hãy giải thích lịch sự rằng dòng sản phẩm này bên em tạm thời chưa về hàng hoặc đã hết hàng. Lịch sự hỏi xem anh/chị có muốn tham khảo các mẫu ${topicName} đang có sẵn khác trong cửa hàng không. TUYỆT ĐỐI KHÔNG tự bịa ra sản phẩm ngoài kho hàng.)`;
+      } else if (requestedBrandName) {
+        notFoundMessage = `(KHO HÀNG CỦA SHOP HIỆN CHƯA CÓ sản phẩm ${topicName} của thương hiệu ${requestedBrandName}. Hãy giải thích lịch sự rằng dòng ${topicName} ${requestedBrandName} bên em tạm thời chưa về hàng hoặc đã hết hàng. Lịch sự hỏi xem anh/chị có muốn tham khảo các mẫu ${topicName} đang có sẵn từ các thương hiệu khác trong cửa hàng không. TUYỆT ĐỐI KHÔNG tự ý hiển thị thẻ sản phẩm hay thông số của hãng khác khi khách chưa đồng ý.)`;
+      } else {
+        notFoundMessage = `(Kho hàng của shop hiện chưa có sản phẩm khớp với tiêu chí tìm kiếm này. Hãy lịch sự thông báo và hỏi khách cần tìm sản phẩm nào khác để em hỗ trợ tư vấn.)`;
+      }
 
       return {
         text: notFoundMessage,
@@ -1402,10 +1743,14 @@ Hãy trả lời khách hàng một cách ngắn gọn, nhanh chóng, lễ phép
 
 QUY TẮC BẮT BUỘC:
 1. Xưng hô: Luôn xưng "em" và gọi khách hàng là "anh/chị". Tuyệt đối không xưng "mình", "tôi", "shop".
-2. Tốc độ & Độ súc tích: Đi thẳng vào sản phẩm phù hợp nhất với yêu cầu của khách. Nêu rõ tên sản phẩm, giá bán thực tế và các phiên bản kích thước/màu sắc đang sẵn hàng. Trả lời súc tích trong 2-3 đoạn ngắn, không viết dông dài.
-3. Định dạng: Dùng gạch đầu dòng (-) rõ ràng, dễ nhìn. Tuyệt đối KHÔNG dùng bảng biểu Markdown (|...|), KHÔNG dùng emoji.
-4. Trung thực với kho hàng: Chỉ tư vấn thông tin dựa trên dữ liệu kho hàng thực tế bên dưới.
+2. TUYỆT ĐỐI CẤM TỰ BỊA ĐẶT SẢN PHẨM (ZERO HALLUCINATION):
+   - Chỉ được tư vấn và giới thiệu các sản phẩm CÓ TÊN, CÓ GIÁ xuất hiện trong mục "DỮ LIỆU KHO HÀNG THỰC TẾ" bên dưới.
+   - TUYỆT ĐỐI KHÔNG TỰ BỊA RA bất kỳ dòng sản phẩm, thương hiệu hoặc mức giá nào ngoài danh sách kho hàng (CẤM nhắc đến các hãng như AKKO, Razer DeathAdder, Logitech M331 nếu chúng không có trong DỮ LIỆU KHO HÀNG THỰC TẾ).
+   - Nếu trong mục DỮ LIỆU KHO HÀNG thông báo không có sản phẩm phù hợp hoặc chưa về hàng, hãy giải thích lịch sự, ngắn gọn rằng sản phẩm đó bên em hiện tạm thời chưa về hàng hoặc đã hết hàng. Lịch sự hỏi khách xem có muốn tham khảo các dòng sản phẩm khác không. Tuyệt đối không tự bịa ra thông số hoặc giá bán của hãng ngoài.
+3. Tốc độ & Độ súc tích: Đi thẳng vào sản phẩm phù hợp nhất với yêu cầu của khách. Nêu rõ tên sản phẩm, giá bán thực tế và các phiên bản kích thước/màu sắc đang sẵn hàng. Trả lời súc tích trong 2-3 đoạn ngắn, không viết dông dài.
+4. Định dạng: Dùng gạch đầu dòng (-) rõ ràng, dễ nhìn. Tuyệt đối KHÔNG dùng bảng biểu Markdown (|...|), KHÔNG dùng emoji.
 5. Thấu hiểu tiếng lóng & ngôn ngữ tự nhiên: Khách có thể dùng từ ngữ đời thường, tiếng lóng Việt Nam (như "củ khoai", "cành", "chai" chỉ triệu đồng; "lít", "xị" chỉ trăm nghìn; "dế", "dế gập" chỉ điện thoại; "máy cỏ" chỉ máy phím bấm; "1 ngựa" chỉ điều hòa 1 HP...). Hãy trò chuyện một cách cởi mở, tự nhiên, chuẩn xác theo đúng ý của khách mà không bao giờ bắt bẻ từ ngữ.
+6. Khi khách hỏi tìm sản phẩm liên quan đến một cái tên, bộ sưu tập, phiên bản giới hạn hoặc tuyển thủ (ví dụ: Gumayusi): Hãy nhiệt tình giới thiệu TẤT CẢ các sản phẩm thuộc bộ sưu tập/tuyển thủ đó đang có trong danh sách kho hàng bên dưới (ví dụ cả bàn phím cơ, lót chuột, chuột không dây...) kèm mức giá bán thực tế của từng món.
 
 DỮ LIỆU KHO HÀNG THỰC TẾ:
 ${dbDataContext || '(Chưa có dữ liệu kho)'}`;
@@ -1626,27 +1971,14 @@ const chatStream = async ({ sessionId, message, userId = null, currentProductSlu
         for (const geminiModel of orderedModels) {
           try {
             const geminiHistory = cleanHistoryForGemini(history);
-            let model;
-            try {
-              model = genAI.getGenerativeModel({
-                model: geminiModel,
-                systemInstruction: systemPrompt,
-                generationConfig: {
-                  temperature: 0.3,
-                  maxOutputTokens: 600,
-                  thinkingConfig: { thinkingBudget: 0 },
-                },
-              });
-            } catch (e) {
-              model = genAI.getGenerativeModel({
-                model: geminiModel,
-                systemInstruction: systemPrompt,
-                generationConfig: {
-                  temperature: 0.3,
-                  maxOutputTokens: 600,
-                },
-              });
-            }
+            const model = genAI.getGenerativeModel({
+              model: geminiModel,
+              systemInstruction: systemPrompt,
+              generationConfig: {
+                temperature: 0.3,
+                maxOutputTokens: 600,
+              },
+            });
 
             const chatSession = model.startChat({ history: geminiHistory });
             const result = await chatSession.sendMessageStream(message);
@@ -1722,27 +2054,14 @@ const chat = async ({ sessionId, message, userId = null, currentProductSlug = nu
     for (const geminiModel of orderedModels) {
       try {
         const geminiHistory = cleanHistoryForGemini(history);
-        let model;
-        try {
-          model = genAI.getGenerativeModel({
-            model: geminiModel,
-            systemInstruction: systemPrompt,
-            generationConfig: {
-              temperature: 0.3,
-              maxOutputTokens: 600,
-              thinkingConfig: { thinkingBudget: 0 },
-            },
-          });
-        } catch (e) {
-          model = genAI.getGenerativeModel({
-            model: geminiModel,
-            systemInstruction: systemPrompt,
-            generationConfig: {
-              temperature: 0.3,
-              maxOutputTokens: 600,
-            },
-          });
-        }
+        const model = genAI.getGenerativeModel({
+          model: geminiModel,
+          systemInstruction: systemPrompt,
+          generationConfig: {
+            temperature: 0.3,
+            maxOutputTokens: 600,
+          },
+        });
 
         const chatSession = model.startChat({ history: geminiHistory });
         const result = await chatSession.sendMessage(message);

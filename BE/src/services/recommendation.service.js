@@ -1143,12 +1143,26 @@ const getTrendingRecommendations = async (limit = 10) => {
 
   if (products.length === 0) return getFallbackFeaturedProducts(limit);
 
+  const targetLimit = parseInt(limit, 10) || 10;
   const sorted = products
     .map((p) => ({ ...p, trendingScore: trendScoreMap[p._id?.toString()] || 0 }))
     .sort((a, b) => b.trendingScore - a.trendingScore)
-    .slice(0, parseInt(limit, 10));
+    .slice(0, targetLimit);
 
-  return enrichWithVariants(sorted);
+  let finalProducts = sorted;
+  if (finalProducts.length < targetLimit) {
+    const existingIds = new Set(finalProducts.map((p) => p._id.toString()));
+    const fallbacks = await getFallbackFeaturedProducts(targetLimit * 2);
+    for (const fb of fallbacks) {
+      if (!existingIds.has(fb._id.toString())) {
+        existingIds.add(fb._id.toString());
+        finalProducts.push(fb);
+        if (finalProducts.length >= targetLimit) break;
+      }
+    }
+  }
+
+  return enrichWithVariants(finalProducts);
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════

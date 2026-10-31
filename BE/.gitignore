@@ -20,6 +20,9 @@ seed*
 # Scratch & test scripts
 scratch_*
 test_*
+check_*
+debug_*
+*.jpg
 update_postman_collection.js
 
 # Python

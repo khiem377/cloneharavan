@@ -161,7 +161,7 @@ const recordSearchKeyword = async (rawKeyword, resultsCount = 1, clientIp = '', 
             count6hResetAt:  now,
           },
         },
-        { upsert: true, new: true }
+        { upsert: true, returnDocument: 'after' }
       );
     } else if (shouldRotate6h) {
       await SearchLog.findOneAndUpdate(
@@ -170,7 +170,7 @@ const recordSearchKeyword = async (rawKeyword, resultsCount = 1, clientIp = '', 
           $inc: { count: 1, count24h: 1, count7d: 1 },
           $set: { ...baseSet, count6h: 1, count6hResetAt: now },
         },
-        { upsert: true, new: true }
+        { upsert: true, returnDocument: 'after' }
       );
     } else {
       await SearchLog.findOneAndUpdate(
@@ -179,7 +179,7 @@ const recordSearchKeyword = async (rawKeyword, resultsCount = 1, clientIp = '', 
           $inc: { count: 1, count24h: 1, count7d: 1, count6h: 1 },
           $set: baseSet,
         },
-        { upsert: true, new: true }
+        { upsert: true, returnDocument: 'after' }
       );
     }
   } catch (err) {

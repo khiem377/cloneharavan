@@ -335,7 +335,8 @@ const deleteComment = async (commentId, user) => {
   if (!comment) throw new AppError('Bình luận không tồn tại.', 404);
 
   const role = user.role?.name || user.role || 'customer';
-  const isAdminOrStaff = ['admin', 'superadmin', 'manager', 'staff'].includes(String(role).toLowerCase());
+  const roleLower = String(role).toLowerCase();
+  const isAdminOrStaff = ['admin', 'administrator', 'superadmin', 'manager', 'staff'].includes(roleLower);
   const isAuthor = String(comment.authorId) === String(user._id);
 
   if (!isAuthor && !isAdminOrStaff) {

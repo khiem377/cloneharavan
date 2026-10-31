@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCheck, Trash2, X } from '@/components/ui/Icons';
+import { CheckCheck, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export default function NotificationBatchBar({
@@ -26,10 +26,10 @@ export default function NotificationBatchBar({
           size="sm"
           onClick={onMarkReadSelected}
           disabled={isProcessing}
-          className="h-8 text-xs font-medium rounded-[6px] border-border bg-card hover:bg-accent text-foreground cursor-pointer"
+          className="h-8 text-xs font-medium rounded-[6px] border-border bg-card hover:bg-accent text-foreground active:scale-[0.98] cursor-pointer"
         >
-          <CheckCheck className="size-3.5 mr-1 text-primary" />
-          Đánh dấu đã đọc
+          <CheckCheck size={14} className="mr-1 text-primary" />
+          <span>Đánh dấu đã đọc</span>
         </Button>
 
         <Button
@@ -38,10 +38,10 @@ export default function NotificationBatchBar({
           size="sm"
           onClick={onDeleteSelected}
           disabled={isProcessing}
-          className="h-8 text-xs font-medium rounded-[6px] border-rose-200 dark:border-rose-900/50 bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 cursor-pointer"
+          className="h-8 text-xs font-medium rounded-[6px] border-rose-200 dark:border-rose-900/50 bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 active:scale-[0.98] cursor-pointer"
         >
-          <Trash2 className="size-3.5 mr-1" />
-          Xóa thông báo
+          <Trash2 size={14} className="mr-1" />
+          <span>Xóa thông báo</span>
         </Button>
 
         <Button
@@ -49,10 +49,10 @@ export default function NotificationBatchBar({
           variant="ghost"
           size="sm"
           onClick={onClearSelection}
-          className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground rounded-[6px] cursor-pointer"
+          className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground rounded-[6px] active:scale-[0.98] cursor-pointer"
           title="Bỏ chọn"
         >
-          <X className="size-3.5" />
+          <X size={14} />
         </Button>
       </div>
     </div>
