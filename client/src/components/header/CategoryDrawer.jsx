@@ -57,7 +57,7 @@ export const CategoryDrawer = ({ isOpen, onClose }) => {
       />
 
       <div
-        className="relative flex h-full max-h-screen z-10"
+        className="relative flex h-full max-h-[100dvh] z-10"
         onMouseLeave={() => setActiveCategoryId(null)}
       >
         <div className="w-72 sm:w-80 bg-white h-full shadow-md flex flex-col overflow-y-auto border-r border-slate-200">

@@ -20,9 +20,20 @@ const BreadcrumbItem = React.forwardRef(({ className, ...props }, ref) => (
 ));
 BreadcrumbItem.displayName = 'BreadcrumbItem';
 
-const BreadcrumbLink = React.forwardRef(({ className, ...props }, ref) => (
-  <span ref={ref} className={cn('transition-colors hover:text-red-600 cursor-pointer', className)} {...props} />
-));
+const BreadcrumbLink = React.forwardRef(({ className, asChild, children, ...props }, ref) => {
+  if (asChild && React.isValidElement(children)) {
+    return React.cloneElement(children, {
+      ref,
+      className: cn('transition-colors hover:text-red-600 cursor-pointer', className, children.props?.className),
+      ...props,
+    });
+  }
+  return (
+    <span ref={ref} className={cn('transition-colors hover:text-red-600 cursor-pointer', className)} {...props}>
+      {children}
+    </span>
+  );
+});
 BreadcrumbLink.displayName = 'BreadcrumbLink';
 
 const BreadcrumbPage = React.forwardRef(({ className, ...props }, ref) => (

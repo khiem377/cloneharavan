@@ -12,6 +12,7 @@ import SearchPagination from '@/app/search/components/SearchPagination';
 import CollectionSeoSection from '@/components/collection/CollectionSeoSection';
 import CollectionCategoryShowcase from '@/components/collection/CollectionCategoryShowcase';
 import CollectionCommitments from '@/components/collection/CollectionCommitments';
+import CollectionQuickPills from '@/components/collection/CollectionQuickPills';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -136,7 +137,9 @@ export default async function CollectionPage({ params, searchParams }) {
         {/* Main Content Layout: 3-4 Columns Products (Left) + 1 Column Filter Sidebar (Right) matching EGA layout */}
         <div className="grid grid-cols-1 lg:grid-cols-4 2xl:grid-cols-5 gap-5 2xl:gap-6 items-start">
           {/* Main Product Grid (Left Columns) */}
-          <div className="lg:col-span-3 2xl:col-span-4 space-y-5">
+          <div className="lg:col-span-3 2xl:col-span-4 space-y-4">
+            {/* Quick Filter Pills */}
+            <CollectionQuickPills handle={handle} />
             {products.length === 0 ? (
               <div className="bg-white rounded-[6px] border border-gray-200/80 p-12 text-center shadow-2xs">
                 <div className="w-14 h-14 rounded-full bg-red-50 text-[#e30019] flex items-center justify-center mx-auto mb-3">

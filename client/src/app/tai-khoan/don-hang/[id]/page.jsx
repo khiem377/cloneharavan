@@ -108,8 +108,8 @@ export default function OrderDetailPage() {
 
   if (mounted && !isAuthenticated) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="bg-white border border-slate-200 rounded-[8px] p-6 max-w-sm w-full text-center shadow-xs space-y-3">
+      <div className="min-h-[100dvh] bg-slate-50 flex items-center justify-center p-4">
+        <div className="bg-white border border-slate-200 rounded-[6px] p-6 max-w-sm w-full text-center shadow-xs space-y-3">
           <Loader2 size={28} className="animate-spin text-[#e30019] mx-auto" />
           <h3 className="text-sm font-bold text-slate-900">Yêu cầu đăng nhập</h3>
           <p className="text-xs text-slate-500 leading-relaxed">
@@ -130,7 +130,7 @@ export default function OrderDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50/60 pb-16">
+    <div className="min-h-[100dvh] bg-slate-50/60 pb-16">
       {/* Breadcrumb Header */}
       <div className="bg-white border-b border-slate-200">
         <div className="max-w-6xl mx-auto px-4 py-3 text-xs text-slate-500 flex items-center gap-1.5 flex-wrap">

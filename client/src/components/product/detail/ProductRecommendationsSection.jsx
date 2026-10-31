@@ -74,7 +74,6 @@ function RecommendationBlock({ title, items = [], isGift = false }) {
 
   return (
     <section className="flex flex-col gap-3.5">
-      {/* Header phẳng phân tách bằng Shadcn Separator */}
       <div className="flex flex-col gap-2.5">
         <div className="flex items-center justify-between">
           <div className="flex items-baseline gap-2">
@@ -86,7 +85,6 @@ function RecommendationBlock({ title, items = [], isGift = false }) {
             </span>
           </div>
 
-          {/* Nút kéo / cuộn qua lại */}
           <div className="flex items-center gap-1.5">
             <Button
               type="button"
@@ -115,7 +113,6 @@ function RecommendationBlock({ title, items = [], isGift = false }) {
         <Separator className="bg-slate-200" />
       </div>
 
-      {/* Danh sách cuộn ngang với width và height chuẩn đều 100% */}
       <div
         ref={sliderRef}
         onMouseDown={handleMouseDown}

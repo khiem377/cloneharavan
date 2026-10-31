@@ -13,6 +13,7 @@ export default function VisualSearchBanner({ visualInfo = null, onClear }) {
   if (!visualInfo) return null;
 
   const info = visualInfo?.detected || visualInfo?.metadata || {};
+  const imageUrl = visualInfo?.imageUrl || null;
   const category = info.category || info.productType;
   const brand = info.brand;
   const color = info.color;

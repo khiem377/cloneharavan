@@ -17,7 +17,7 @@ export default function CommentContentRenderer({ content = '', className = '' })
       return (
         <blockquote
           key={lineIdx}
-          className="border-l-2 border-[#284ea1] pl-2.5 my-1 text-slate-600 italic text-xs sm:text-sm bg-blue-50/30 py-0.5 rounded-r-[4px]"
+          className="border-l border-[#284ea1] pl-2.5 my-1 text-slate-600 italic text-xs sm:text-sm bg-blue-50/30 py-0.5 rounded-r-[4px]"
         >
           {renderInlineElements(line.slice(2))}
         </blockquote>

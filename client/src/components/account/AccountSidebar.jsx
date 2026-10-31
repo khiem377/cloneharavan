@@ -1,23 +1,23 @@
 'use client';
 
 import React from 'react';
+import { Camera, Loader2 } from 'lucide-react';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { getDisplayAccountIdentifier } from '@/utils/userUtils';
 import {
-  LayoutDashboard,
-  ShoppingBag,
-  ShieldCheck,
-  User,
-  MapPin,
-  KeyRound,
-  LogOut,
-  Camera,
-  Loader2,
-  Shield,
-} from 'lucide-react';
-import { Card } from '../ui/card';
-import { Button } from '../ui/button';
-import { Badge } from '../ui/badge';
-import { Separator } from '../ui/separator';
-import { isSyntheticEmail, getDisplayAccountIdentifier } from '../../utils/userUtils';
+  NavOverviewIcon,
+  NavOrdersIcon,
+  NavAddressIcon,
+  NavWarrantyIcon,
+  NavProfileIcon,
+  NavSecurityIcon,
+  NavLogoutIcon,
+  ShopMemberInsignia,
+} from './AccountIcons';
 
 export default function AccountSidebar({
   user,
@@ -31,15 +31,15 @@ export default function AccountSidebar({
   handleLogout,
 }) {
   const accountNav = [
-    { id: 'profile', label: 'Thông tin cá nhân', icon: User },
-    { id: 'security', label: 'Mật khẩu và bảo mật', icon: KeyRound, alias: ['change-password'] },
+    { id: 'profile', label: 'Thông tin cá nhân', icon: NavProfileIcon },
+    { id: 'security', label: 'Mật khẩu và bảo mật', icon: NavSecurityIcon, alias: ['change-password'] },
   ];
 
   const shoppingNav = [
-    { id: 'overview', label: 'Tổng quan', icon: LayoutDashboard },
-    { id: 'orders', label: 'Đơn hàng của tôi', icon: ShoppingBag },
-    { id: 'addresses', label: 'Địa chỉ nhận hàng', icon: MapPin },
-    { id: 'warranty', label: 'Bảo hành & Thiết bị', icon: ShieldCheck },
+    { id: 'overview', label: 'Tổng quan', icon: NavOverviewIcon },
+    { id: 'orders', label: 'Đơn hàng của tôi', icon: NavOrdersIcon },
+    { id: 'addresses', label: 'Địa chỉ nhận hàng', icon: NavAddressIcon },
+    { id: 'warranty', label: 'Bảo hành & Thiết bị', icon: NavWarrantyIcon },
   ];
 
   const renderNavGroup = (items, title) => (
@@ -62,14 +62,15 @@ export default function AccountSidebar({
             onClick={() => handleTabChange(item.id)}
             className={`w-full justify-between px-3 py-2 h-auto text-xs font-medium rounded-[6px] transition active:scale-[0.98] ${
               isActive
-                ? 'bg-slate-900 text-white font-semibold shadow-2xs hover:bg-slate-800'
+                ? 'bg-slate-900 text-white font-semibold hover:bg-slate-800'
                 : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900'
             }`}
           >
             <div className="flex items-center gap-2.5">
               <IconComp
-                size={14}
-                className={isActive ? 'text-white' : 'text-slate-400'}
+                size={15}
+                active={isActive}
+                className={isActive ? 'text-white' : 'text-slate-500'}
               />
               <span>{item.label}</span>
             </div>
@@ -93,34 +94,29 @@ export default function AccountSidebar({
 
   return (
     <Card className="p-4 space-y-4 rounded-[6px] border border-slate-200 bg-white shadow-none">
-      {/* User Profile Mini Block */}
       <div className="flex items-center gap-3 pb-3.5 border-b border-slate-100">
         <div className="relative shrink-0">
-          {user?.avatar?.url ? (
-            <img
-              src={user.avatar.url}
-              alt={displayName}
-              referrerPolicy="no-referrer"
-              className="w-11 h-11 rounded-full object-cover border border-slate-200"
-            />
-          ) : (
-            <div className="w-11 h-11 rounded-full bg-slate-900 text-white font-bold text-sm flex items-center justify-center uppercase">
+          <Avatar className="size-11 border border-slate-200">
+            <AvatarImage src={user?.avatar?.url} alt={displayName} referrerPolicy="no-referrer" />
+            <AvatarFallback className="bg-slate-900 text-white font-bold text-sm uppercase">
               {initial}
-            </div>
-          )}
-          <button
+            </AvatarFallback>
+          </Avatar>
+          <Button
             type="button"
+            variant="outline"
+            size="icon-xs"
             onClick={() => avatarInputRef.current?.click()}
             disabled={avatarUploading}
-            className="absolute -bottom-1 -right-1 size-4.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-full shadow-2xs flex items-center justify-center cursor-pointer transition-transform active:scale-95 text-slate-600 hover:text-slate-900"
+            className="absolute -bottom-1 -right-1 size-5 bg-white hover:bg-slate-50 border border-slate-200 rounded-full p-0 flex items-center justify-center text-slate-600 hover:text-slate-900"
             title="Đổi ảnh đại diện"
           >
             {avatarUploading ? (
-              <Loader2 size={9} className="animate-spin text-slate-900" />
+              <Loader2 size={10} className="animate-spin text-slate-900" />
             ) : (
-              <Camera size={9} />
+              <Camera size={10} />
             )}
-          </button>
+          </Button>
         </div>
 
         <div className="min-w-0 flex-1 space-y-0.5">
@@ -133,16 +129,15 @@ export default function AccountSidebar({
           <div className="pt-0.5">
             <Badge
               variant="secondary"
-              className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0 rounded-[4px] bg-slate-100 text-slate-600 border border-slate-200"
+              className="inline-flex items-center gap-1.5 text-[10px] font-semibold px-2 py-0.5 rounded-[4px] bg-amber-50 text-amber-800 border border-amber-200/90 shadow-2xs"
             >
-              <Shield size={9} className="text-slate-500" />
+              <ShopMemberInsignia size={12} className="text-amber-600" />
               <span>Thành viên SHOP</span>
             </Badge>
           </div>
         </div>
       </div>
 
-      {/* Navigation Groups */}
       <nav className="space-y-4">
         {renderNavGroup(accountNav, 'Tài khoản')}
         <Separator className="bg-slate-100" />
@@ -156,7 +151,7 @@ export default function AccountSidebar({
           onClick={handleLogout}
           className="w-full justify-start gap-2.5 px-3 py-2 h-auto text-xs font-medium text-rose-600 hover:bg-rose-50 hover:text-rose-700 rounded-[6px] active:scale-[0.98]"
         >
-          <LogOut size={14} className="text-rose-500" />
+          <NavLogoutIcon size={15} className="text-rose-500" />
           <span>Đăng xuất</span>
         </Button>
       </nav>

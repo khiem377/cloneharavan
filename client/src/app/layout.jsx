@@ -1,4 +1,5 @@
 import './globals.css';
+import { cookies } from 'next/headers';
 import { Be_Vietnam_Pro } from 'next/font/google';
 import { menuService } from '@/services/menu.service';
 import { categoryService } from '@/services/category.service';
@@ -96,12 +97,22 @@ export const metadata = {
 };
 
 export default async function RootLayout({ children }) {
-  const [initialMenu, initialFooterMenu, initialCategories, initialTrending] = await Promise.all([
-    menuService.getServerMenu('main-menu'),
-    menuService.getServerMenu('footer'),
-    categoryService.getServerCategoryTree(),
-    searchService.getServerTrending(10, 'all'),
-  ]);
+  const [cookieStore, initialMenu, initialFooterMenu, initialCategories, initialTrending] =
+    await Promise.all([
+      cookies(),
+      menuService.getServerMenu('main-menu'),
+      menuService.getServerMenu('footer'),
+      categoryService.getServerCategoryTree(),
+      searchService.getServerTrending(10, 'all'),
+    ]);
+
+  const userCookie = cookieStore.get('client_user')?.value;
+  let initialUser = null;
+  if (userCookie) {
+    try {
+      initialUser = JSON.parse(decodeURIComponent(userCookie));
+    } catch (_) {}
+  }
 
   return (
     <html lang="vi" className={`h-full ${beVietnamPro.variable}`}>
@@ -116,7 +127,10 @@ export default async function RootLayout({ children }) {
           initialCategories={initialCategories}
           initialTrending={initialTrending}
         >
-          <LayoutShell initialFooterMenu={initialFooterMenu}>
+          <LayoutShell
+            initialFooterMenu={initialFooterMenu}
+            initialUser={initialUser}
+          >
             {children}
           </LayoutShell>
         </StoreProvider>

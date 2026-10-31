@@ -26,7 +26,6 @@ export default function ProductDetailClient({
 }) {
   const [clientPersonalized, setClientPersonalized] = useState(personalizedProducts);
 
-  // Tự động tải gợi ý cá nhân hóa dựa trên Session ID & User ID thực tế của Client
   useEffect(() => {
     let isMounted = true;
     const fetchPersonalized = async () => {
@@ -39,18 +38,16 @@ export default function ProductDetailClient({
             setClientPersonalized(filtered);
           }
         }
-      } catch (err) {
-        // Fallback giữ nguyên SSR recommendations nếu có lỗi mạng
-      }
+      } catch (err) {}
     };
     fetchPersonalized();
     return () => {
       isMounted = false;
     };
   }, [product._id, product.id]);
+
   const initialVariant = useMemo(() => {
     if (!Array.isArray(variants) || variants.length === 0) return null;
-    // Ưu tiên variant thực có attributes hoặc displayName khác 'Mặc định'
     const realVariant = variants.find(
       (v) =>
         (Array.isArray(v.attributes) && v.attributes.length > 0) ||
@@ -62,7 +59,6 @@ export default function ProductDetailClient({
 
   const [selectedVariant, setSelectedVariant] = useState(initialVariant);
 
-  // Tên sản phẩm phản ứng động theo biến thể được chọn
   const dynamicProductName = useMemo(
     () => getDynamicProductName(product, selectedVariant, variants),
     [product, selectedVariant, variants]
@@ -90,17 +86,13 @@ export default function ProductDetailClient({
 
   const currentDisplayPrice = activeSalePrice > 0 ? activeSalePrice : activeRegularPrice;
 
-
   return (
     <div className="min-h-[100dvh] bg-slate-50/60 pb-16">
       <ProductViewTracker product={product} />
       <div className="max-w-[1536px] 2xl:max-w-[1600px] mx-auto px-3 sm:px-4 lg:px-6 2xl:px-8">
-        {/* BREADCRUMB */}
         <ProductBreadcrumbs product={product} dynamicProductName={dynamicProductName} />
 
-        {/* KHUNG CHÍNH (MAIN PRODUCT STAGE) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 2xl:gap-8 bg-white rounded-[6px] border border-slate-200 p-4 sm:p-6 mb-6">
-          {/* CỘT TRÁI (5/12): GALLERY HOVER ZOOM & TRUST BADGES */}
           <div className="lg:col-span-5 flex flex-col gap-4">
             <ProductGallery
               product={product}
@@ -114,7 +106,6 @@ export default function ProductDetailClient({
             <ProductTrustBadges />
           </div>
 
-          {/* CỘT PHẢI (7/12): THÔNG TIN GIÁ, BIẾN THỂ, UPSELL, ƯU ĐÃI & NÚT MUA */}
           <div className="lg:col-span-7 flex flex-col gap-4">
             <ProductInfo
               product={product}
@@ -125,7 +116,6 @@ export default function ProductDetailClient({
               deals={deals}
             />
 
-            {/* KHUYẾN MÃI THẬT & COUPONS THỰC TẾ CHO SẢN PHẨM NÀY */}
             <ProductPromotions
               deals={deals}
               product={product}
@@ -134,20 +124,16 @@ export default function ProductDetailClient({
           </div>
         </div>
 
-        {/* KHỐI NỘI DUNG DƯỚI (MÔ TẢ CHI TIẾT & SPECS) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-6">
-          {/* CỘT TRÁI (8/12): BÀI VIẾT ĐÁNH GIÁ CHI TIẾT & BÌNH LUẬN FEED FACEBOOK */}
           <div className="lg:col-span-8 flex flex-col gap-6">
             <ProductDescription product={product} />
 
-            {/* FEED ĐÁNH GIÁ & BÌNH LUẬN KIỂU FACEBOOK TRỰC TIẾP TRÊN TRANG (KHÔNG DÙNG DRAWER) */}
             <ProductReviewsAndComments
               productId={product._id || product.id}
               productName={dynamicProductName || product.name}
             />
           </div>
 
-          {/* CỘT PHẢI (4/12): THÔNG SỐ KỸ THUẬT */}
           <div className="lg:col-span-4 flex flex-col gap-4">
             <ProductSpecsSummary
               product={product}
@@ -156,7 +142,6 @@ export default function ProductDetailClient({
           </div>
         </div>
 
-        {/* CỤM GỢI Ý ĐA TẦNG (CÁ NHÂN HÓA SVD + CÙNG LOẠI + MUA KÈM) */}
         <ProductRecommendationsSection
           similarProducts={similarProducts}
           personalizedProducts={clientPersonalized}
@@ -164,7 +149,6 @@ export default function ProductDetailClient({
         />
       </div>
 
-      {/* THANH MUA HÀNG GHIM ĐÁY */}
       <StickyPurchaseBar
         product={product}
         dynamicProductName={dynamicProductName}

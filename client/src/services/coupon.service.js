@@ -4,7 +4,7 @@ const API_BASE = process.env.API_SERVER_URL || process.env.NEXT_PUBLIC_API_URL |
 
 export const couponService = {
   // Client-side helper (dùng instance api có interceptors)
-  async getActiveCoupons(limit = 10) {
+  async getActiveCoupons(limit = 50) {
     try {
       const response = await api.get('/coupons', {
         params: {
@@ -21,7 +21,7 @@ export const couponService = {
   },
 
   // Server-side helper cho SSR
-  async getServerActiveCoupons(limit = 10) {
+  async getServerActiveCoupons(limit = 50) {
     try {
       const res = await fetch(`${API_BASE}/coupons?availableOnly=true&limit=${limit}`, {
         cache: 'no-store',

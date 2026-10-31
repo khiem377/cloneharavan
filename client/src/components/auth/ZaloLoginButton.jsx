@@ -1,16 +1,19 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { toast } from '../ui/toast';
 import ZaloIcon from '../ui/ZaloIcon';
 import { authService } from '../../services/auth.service';
 import { openCenteredPopup, waitForOAuthMessage } from '../../utils/oauthPopup';
 import useAuthStore from '../../store/authStore';
+import useCartStore from '../../store/cartStore';
 
 export default function ZaloLoginButton({
   text = 'Tiếp tục với Zalo',
   redirectUrl = '/',
 }) {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const { setAuth } = useAuthStore();
 
@@ -111,8 +114,13 @@ export default function ZaloLoginButton({
               accessToken: authResult.payload.accessToken,
               refreshToken: authResult.payload.refreshToken,
             });
+            useCartStore.getState().fetchCart();
             toast.success('Đăng nhập Zalo thành công!');
-            window.location.href = redirectUrl;
+            if (typeof window !== 'undefined' && window.location.pathname === redirectUrl) {
+              router.refresh();
+            } else {
+              router.replace(redirectUrl || '/');
+            }
             return;
           }
         } catch (popupErr) {

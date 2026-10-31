@@ -1,11 +1,12 @@
 'use client';
 
 import React from 'react';
-import { Plus, MapPin, Edit3, Trash2, Loader2, Check } from 'lucide-react';
+import { Plus, Edit3, Trash2, Loader2, Check } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Separator } from '../ui/separator';
+import { StatAddressIcon } from './AccountIcons';
 
 export default function AccountAddressesTab({
   addresses = [],
@@ -49,7 +50,7 @@ export default function AccountAddressesTab({
         ) : addresses.length === 0 ? (
           <div className="py-12 text-center text-slate-400 space-y-3">
             <div className="w-12 h-12 rounded-[6px] bg-slate-50 border border-slate-200 flex items-center justify-center mx-auto text-slate-300">
-              <MapPin size={22} />
+              <StatAddressIcon size={24} className="text-slate-400" />
             </div>
             <p className="text-xs text-slate-500">
               Bạn chưa lưu địa chỉ nhận hàng nào.

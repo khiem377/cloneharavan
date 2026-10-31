@@ -7,7 +7,7 @@ import HeaderNav from './HeaderNav';
 import CategoryDrawer from './CategoryDrawer';
 import { settingService } from '@/services/setting.service';
 
-export const Header = () => {
+export const Header = ({ initialUser = null }) => {
   const pathname = usePathname();
   const [isCategoryDrawerOpen, setIsCategoryDrawerOpen] = useState(false);
   const [storeSetting, setStoreSetting] = useState(null);
@@ -30,6 +30,7 @@ export const Header = () => {
       <HeaderTop
         onOpenCategoryDrawer={() => setIsCategoryDrawerOpen(true)}
         storeSetting={storeSetting}
+        initialUser={initialUser}
       />
       <HeaderNav
         onOpenCategoryDrawer={() => setIsCategoryDrawerOpen(true)}

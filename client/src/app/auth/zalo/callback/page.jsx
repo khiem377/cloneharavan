@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from '../../../../components/ui/toast';
 import { authService } from '../../../../services/auth.service';
 import useAuthStore from '../../../../store/authStore';
@@ -33,6 +33,7 @@ const formatDisplayError = (rawError, provider = 'Zalo') => {
 };
 
 function ZaloCallbackContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const { setAuth, anonymousId, getOrCreateAnonymousId } = useAuthStore();
   const hasProcessedRef = useRef(false);
@@ -171,7 +172,7 @@ function ZaloCallbackContent() {
           }
 
           toast.success(res.message || 'Đăng nhập Zalo thành công!');
-          window.location.replace(targetRedirect);
+          router.replace(targetRedirect);
         } else {
           const errMsg = formatDisplayError(res.message || 'Xác thực tài khoản Zalo không thành công.', 'Zalo');
           redirectToError(errMsg);

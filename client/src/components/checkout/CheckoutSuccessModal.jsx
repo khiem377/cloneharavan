@@ -19,8 +19,8 @@ export default function CheckoutSuccessModal({ placedOrder, formatPrice }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-3 sm:p-4">
-      <div className="bg-white rounded-[6px] border border-slate-200 max-w-lg w-full p-5 sm:p-6 shadow-xl space-y-4 max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-3 sm:p-4">
+      <div className="bg-white rounded-[6px] border border-slate-200 max-w-lg w-full p-5 sm:p-6 shadow-sm space-y-4 max-h-[90vh] overflow-y-auto">
         <div className="text-center space-y-1.5">
           <div className="w-12 h-12 rounded-[6px] bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto border border-emerald-200">
             <CheckCircle2 size={24} />
@@ -33,7 +33,6 @@ export default function CheckoutSuccessModal({ placedOrder, formatPrice }) {
           </p>
         </div>
 
-        {/* Thông tin đơn hàng tóm tắt */}
         <div className="p-3.5 rounded-[6px] bg-slate-50 border border-slate-200 space-y-2 text-xs">
           <div className="flex justify-between items-center">
             <span className="text-slate-500">Mã đơn hàng:</span>

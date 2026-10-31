@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import blogService from '../../services/blog.service';
 import BlogSubNav from '../../components/blog/BlogSubNav';
 import BlogHeroFeatured from '../../components/blog/BlogHeroFeatured';
@@ -19,32 +19,31 @@ export default async function BlogPage({ searchParams }) {
   const tagSlug = resolvedParams?.tag || '';
   const sort = resolvedParams?.sort || 'newest';
 
-  // 1. Fetch categories & tags
-  const [categories, tags, trendingResult] = await Promise.all([
-    blogService.getServerBlogCategories(),
-    blogService.getServerBlogTags(),
-    blogService.getServerBlogPosts({ sort: 'views', limit: 5 }),
+  const [categoriesRaw, tagsRaw, trendingResult] = await Promise.all([
+    blogService.getServerBlogCategories().catch(() => []),
+    blogService.getServerBlogTags().catch(() => []),
+    blogService.getServerBlogPosts({ sort: 'views', limit: 5 }).catch(() => ({ data: [] })),
   ]);
 
-  // Find category ID if slug provided
+  const categories = Array.isArray(categoriesRaw) ? categoriesRaw : (categoriesRaw?.data || []);
+  const tags = Array.isArray(tagsRaw) ? tagsRaw : (tagsRaw?.data || []);
+
   let categoryId = undefined;
-  if (categorySlug) {
-    const matchedCategory = categories.find((c) => c.slug === categorySlug);
+  if (categorySlug && Array.isArray(categories)) {
+    const matchedCategory = categories.find((c) => c?.slug === categorySlug);
     if (matchedCategory) {
       categoryId = matchedCategory._id;
     }
   }
 
-  // Find tag ID if slug provided
   let tagId = undefined;
-  if (tagSlug) {
-    const matchedTag = tags.find((t) => t.slug === tagSlug);
+  if (tagSlug && Array.isArray(tags)) {
+    const matchedTag = tags.find((t) => t?.slug === tagSlug);
     if (matchedTag) {
       tagId = matchedTag._id;
     }
   }
 
-  // 2. Fetch posts with filters
   const postsResult = await blogService.getServerBlogPosts({
     page,
     limit: 10,
@@ -52,44 +51,42 @@ export default async function BlogPage({ searchParams }) {
     categoryId,
     tag: tagId || tagSlug || undefined,
     sort,
-  });
+  }).catch(() => ({ data: [], pagination: { page: 1, limit: 10, total: 0, totalPages: 1 } }));
 
   const posts = postsResult?.data || [];
   const pagination = postsResult?.pagination || { page: 1, limit: 10, total: 0, totalPages: 1 };
   const trendingPosts = trendingResult?.data || [];
 
-  // 3. Featured posts for hero on page 1 without active filters
   let featuredPosts = [];
   const isFirstPageDefault = page === 1 && !keyword && !categorySlug && !tagSlug;
   if (isFirstPageDefault) {
     const featuredResult = await blogService.getServerBlogPosts({
       isFeatured: true,
       limit: 5,
-    });
+    }).catch(() => null);
     featuredPosts = (featuredResult?.data && featuredResult.data.length > 0)
       ? featuredResult.data
       : posts.slice(0, 5);
   }
 
   return (
-    <div className="w-full bg-[#f8fafc] min-h-screen">
-      {/* Category SubNav Bar */}
-      <BlogSubNav categories={categories} />
+    <div className="w-full bg-[#f8fafc] min-h-[100dvh]">
+      <Suspense fallback={<div className="h-16 bg-white border-b border-slate-200" />}>
+        <BlogSubNav categories={categories} />
+      </Suspense>
 
       <main className="max-w-[1536px] 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 2xl:px-8 py-6 sm:py-8">
-        {/* Hero Featured Section (Page 1) */}
         {isFirstPageDefault && featuredPosts.length > 0 && (
           <BlogHeroFeatured posts={featuredPosts} />
         )}
 
-        {/* 2-Column Responsive Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
-          {/* Main Post Feed (65-70% width) */}
           <div className="lg:col-span-8">
-            <BlogListSection posts={posts} pagination={pagination} />
+            <Suspense fallback={<div className="h-40 bg-white rounded-[6px] border border-slate-200" />}>
+              <BlogListSection posts={posts} pagination={pagination} />
+            </Suspense>
           </div>
 
-          {/* Sticky Sidebar (30-35% width) */}
           <div className="lg:col-span-4 sticky top-28">
             <BlogSidebar
               trendingPosts={trendingPosts}
@@ -104,3 +101,4 @@ export default async function BlogPage({ searchParams }) {
     </div>
   );
 }
+

@@ -1,9 +1,5 @@
 import React from 'react';
-
-/**
- * ReactionIcons — Bộ Icon cảm xúc SVG vector tùy biến (Không dùng raw emoji hệ điều hành)
- * Chuẩn màu sắc và chi tiết sắc nét cho: like, love, haha, wow, sad, angry
- */
+import { Button } from '@/components/ui/button';
 
 export function LikeIcon({ size = 18, className = '' }) {
   return (
@@ -207,28 +203,26 @@ export const REACTION_SVG_MAP = {
   angry: { label: 'Phẫn nộ',   color: 'text-orange-600', Icon: AngryIcon },
 };
 
-/**
- * ReactionFlyoutBar — Thanh Popup cảm xúc Facebook gốc: gọn gàng, nhẹ, mượt mà
- */
 export function ReactionFlyoutBar({ onSelect }) {
   return (
     <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white border border-slate-200 rounded-full shadow-md animate-fadeIn select-none z-50">
       {Object.entries(REACTION_SVG_MAP).map(([type, cfg]) => {
         const IconComponent = cfg.Icon;
         return (
-          <button
+          <Button
             key={type}
             type="button"
+            variant="ghost"
+            size="icon"
             onClick={(e) => {
               e.stopPropagation();
               onSelect?.(type);
             }}
-            className="p-1 hover:scale-130 active:scale-95 transition-transform cursor-pointer origin-bottom"
-            title={cfg.label}
+            className="h-8 w-8 p-1 hover:scale-125 active:scale-95 transition-transform cursor-pointer origin-bottom rounded-full hover:bg-transparent"
             aria-label={cfg.label}
           >
             <IconComponent size={22} />
-          </button>
+          </Button>
         );
       })}
     </div>
@@ -240,3 +234,4 @@ export default function ReactionIcon({ type = 'like', size = 18, className = '' 
   const Component = item.Icon;
   return <Component size={size} className={className} />;
 }
+

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from '../ui/toast';
 import { authService } from '../../services/auth.service';
 import useAuthStore from '../../store/authStore';
+import useCartStore from '../../store/cartStore';
 
 export default function GoogleLoginButton({ text = 'signin_with', redirectUrl = '/' }) {
   const router = useRouter();
@@ -59,8 +60,13 @@ export default function GoogleLoginButton({ text = 'signin_with', redirectUrl = 
           accessToken: res.data.accessToken,
           refreshToken: res.data.refreshToken,
         });
+        useCartStore.getState().fetchCart();
         toast.success('Đăng nhập Google thành công!');
-        window.location.href = redirectUrl;
+        if (typeof window !== 'undefined' && window.location.pathname === redirectUrl) {
+          router.refresh();
+        } else {
+          router.replace(redirectUrl || '/');
+        }
       } else {
         toast.error(res.message || 'Đăng nhập Google không thành công');
       }

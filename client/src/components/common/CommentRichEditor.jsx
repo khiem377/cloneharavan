@@ -18,23 +18,15 @@ import {
   Edit3,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import CommentContentRenderer from './CommentContentRenderer';
 
-/**
- * CommentRichEditor — Bộ soạn thảo bình luận & phản hồi chuẩn Markdown kèm toolbar, Mention Pill và tab Xem trước
- * 
- * Hỗ trợ:
- * - Toolbar định dạng: Đậm, Nghiêng, Trích dẫn, Danh sách, Code, Block Code, Ảnh, Link, Gạch ngang
- * - Tab Xem trước (Live Preview): xem trực quan định dạng trước khi gửi
- * - Mention Pill badge: @Tên_người_được_trả_lời
- * - Phím tắt: Ctrl + Enter / Cmd + Enter để gửi nhanh
- */
 export default function CommentRichEditor({
   value = '',
   onChange,
   onSubmit,
   onCancel,
-  replyTo = null, // { name: 'Admin 1', _id?: string }
+  replyTo = null,
   onRemoveReplyTo,
   placeholder = 'Viết bình luận của bạn...',
   submitting = false,
@@ -46,7 +38,6 @@ export default function CommentRichEditor({
   const textareaRef = useRef(null);
   const [isPreview, setIsPreview] = useState(false);
 
-  // Helper chèn cú pháp Markdown quanh vùng chọn
   const insertFormat = (prefix, suffix = '', defaultText = '') => {
     if (isPreview) setIsPreview(false);
 
@@ -71,7 +62,6 @@ export default function CommentRichEditor({
     }, 0);
   };
 
-  // Xử lý phím tắt: Ctrl + Enter để gửi, Ctrl + B in đậm, Ctrl + I in nghiêng
   const handleKeyDown = (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
       e.preventDefault();
@@ -88,144 +78,87 @@ export default function CommentRichEditor({
   };
 
   const toolbarButtons = [
-    {
-      id: 'bold',
-      label: 'In đậm (Ctrl+B)',
-      icon: <Bold size={14} strokeWidth={2.5} />,
-      action: () => insertFormat('**', '**', 'văn bản đậm'),
-    },
-    {
-      id: 'italic',
-      label: 'In nghiêng (Ctrl+I)',
-      icon: <Italic size={14} strokeWidth={2.5} />,
-      action: () => insertFormat('*', '*', 'văn bản nghiêng'),
-    },
-    {
-      id: 'quote',
-      label: 'Trích dẫn',
-      icon: <Quote size={14} strokeWidth={2.5} />,
-      action: () => insertFormat('> ', '', 'trích dẫn'),
-    },
-    {
-      id: 'ul',
-      label: 'Danh sách',
-      icon: <List size={14} strokeWidth={2.5} />,
-      action: () => insertFormat('- ', '', 'mục danh sách'),
-    },
-    {
-      id: 'ol',
-      label: 'Danh sách số',
-      icon: <ListOrdered size={14} strokeWidth={2.5} />,
-      action: () => insertFormat('1. ', '', 'mục danh sách'),
-    },
-    {
-      id: 'code',
-      label: 'Code nội dòng',
-      icon: <Code size={14} strokeWidth={2.5} />,
-      action: () => insertFormat('`', '`', 'code'),
-    },
-    {
-      id: 'codeblock',
-      label: 'Khối Code',
-      icon: <SquareCode size={14} strokeWidth={2.5} />,
-      action: () => insertFormat('```\n', '\n```', 'đoạn code'),
-    },
-    {
-      id: 'image',
-      label: 'Chèn ảnh',
-      icon: <ImageIcon size={14} strokeWidth={2.5} />,
-      action: () => insertFormat('![', '](https://url-anh)', 'mô tả ảnh'),
-    },
-    {
-      id: 'link',
-      label: 'Chèn liên kết',
-      icon: <LinkIcon size={14} strokeWidth={2.5} />,
-      action: () => insertFormat('[', '](https://url)', 'tiêu đề liên kết'),
-    },
-    {
-      id: 'strikethrough',
-      label: 'Gạch ngang',
-      icon: <Strikethrough size={14} strokeWidth={2.5} />,
-      action: () => insertFormat('~~', '~~', 'văn bản gạch ngang'),
-    },
+    { id: 'bold', label: 'In đậm (Ctrl+B)', icon: <Bold size={13} strokeWidth={2.5} />, action: () => insertFormat('**', '**', 'văn bản đậm') },
+    { id: 'italic', label: 'In nghiêng (Ctrl+I)', icon: <Italic size={13} strokeWidth={2.5} />, action: () => insertFormat('*', '*', 'văn bản nghiêng') },
+    { id: 'quote', label: 'Trích dẫn', icon: <Quote size={13} strokeWidth={2.5} />, action: () => insertFormat('> ', '', 'trích dẫn') },
+    { id: 'ul', label: 'Danh sách', icon: <List size={13} strokeWidth={2.5} />, action: () => insertFormat('- ', '', 'mục danh sách') },
+    { id: 'ol', label: 'Danh sách số', icon: <ListOrdered size={13} strokeWidth={2.5} />, action: () => insertFormat('1. ', '', 'mục danh sách') },
+    { id: 'code', label: 'Code', icon: <Code size={13} strokeWidth={2.5} />, action: () => insertFormat('`', '`', 'code') },
+    { id: 'codeblock', label: 'Khối Code', icon: <SquareCode size={13} strokeWidth={2.5} />, action: () => insertFormat('```\n', '\n```', 'đoạn code') },
+    { id: 'image', label: 'Ảnh', icon: <ImageIcon size={13} strokeWidth={2.5} />, action: () => insertFormat('![', '](https://url-anh)', 'mô tả ảnh') },
+    { id: 'link', label: 'Link', icon: <LinkIcon size={13} strokeWidth={2.5} />, action: () => insertFormat('[', '](https://url)', 'tiêu đề liên kết') },
+    { id: 'strikethrough', label: 'Gạch ngang', icon: <Strikethrough size={13} strokeWidth={2.5} />, action: () => insertFormat('~~', '~~', 'văn bản gạch ngang') },
   ];
 
   return (
-    <div
-      className={`rounded-[6px] border border-slate-200 bg-white shadow-xs focus-within:border-[#284ea1] focus-within:ring-1 focus-within:ring-[#284ea1]/30 transition-all ${className}`}
-    >
-      {/* ── 1. Top Formatting Toolbar & Preview Switcher ──────────────────── */}
-      <div className="flex items-center justify-between flex-wrap gap-1 px-3 py-1.5 border-b border-slate-100 bg-slate-50/70 rounded-t-[6px] select-none">
-        {/* Nhóm nút format Markdown */}
+    <div className={`rounded-[6px] border border-slate-200 bg-white shadow-xs focus-within:border-[#284ea1] transition-all ${className}`}>
+      <div className="flex items-center justify-between flex-wrap gap-1 px-2.5 py-1.5 border-b border-slate-100 bg-slate-50/70 rounded-t-[6px] select-none">
         <div className="flex items-center flex-wrap gap-0.5">
           {toolbarButtons.map((btn) => (
-            <button
+            <Button
               key={btn.id}
               type="button"
-              title={btn.label}
+              variant="ghost"
+              size="icon"
               aria-label={btn.label}
               onClick={btn.action}
               disabled={isPreview}
-              className={`p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-200/70 active:scale-95 rounded-[4px] transition-all cursor-pointer ${
-                isPreview ? 'opacity-40 cursor-not-allowed' : ''
-              }`}
+              className="h-7 w-7 p-0 text-slate-500 hover:text-slate-900 hover:bg-slate-200/70 rounded-[4px]"
             >
               {btn.icon}
-            </button>
+            </Button>
           ))}
         </div>
 
-        {/* Tab chuyển đổi Soạn thảo / Xem trước */}
         <div className="flex items-center gap-1 bg-slate-200/60 p-0.5 rounded-[4px] text-[11px] font-medium ml-auto">
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="sm"
             onClick={() => setIsPreview(false)}
-            className={`px-2 py-0.5 rounded-[3px] transition-colors flex items-center gap-1 cursor-pointer ${
-              !isPreview
-                ? 'bg-white text-slate-900 font-bold shadow-2xs'
-                : 'text-slate-500 hover:text-slate-800'
+            className={`h-6 px-2 text-[11px] rounded-[3px] flex items-center gap-1 ${
+              !isPreview ? 'bg-white text-slate-900 font-bold shadow-2xs' : 'text-slate-500 hover:text-slate-800'
             }`}
           >
             <Edit3 size={11} />
             <span>Soạn thảo</span>
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            variant="ghost"
+            size="sm"
             onClick={() => setIsPreview(true)}
-            className={`px-2 py-0.5 rounded-[3px] transition-colors flex items-center gap-1 cursor-pointer ${
-              isPreview
-                ? 'bg-white text-blue-600 font-bold shadow-2xs'
-                : 'text-slate-500 hover:text-slate-800'
+            className={`h-6 px-2 text-[11px] rounded-[3px] flex items-center gap-1 ${
+              isPreview ? 'bg-white text-blue-600 font-bold shadow-2xs' : 'text-slate-500 hover:text-slate-800'
             }`}
           >
             <Eye size={11} />
             <span>Xem trước</span>
-          </button>
+          </Button>
         </div>
       </div>
 
-      {/* ── 2. Editor Body (Mention Badge + Textarea / Preview) ─────────────── */}
       <div className="p-3 flex flex-col gap-2">
-        {/* Mention Badge nếu đang ở chế độ Trả lời (chuẩn Image 2) */}
         {replyTo && (
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-600 border border-blue-100 shadow-xs select-none">
+            <Badge variant="outline" className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-600 border-blue-200">
               <span>@{typeof replyTo === 'string' ? replyTo : replyTo.name || 'Người dùng'}</span>
               {onRemoveReplyTo && (
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="icon"
                   onClick={onRemoveReplyTo}
-                  className="hover:bg-blue-200/60 rounded-full p-0.5 transition-colors cursor-pointer"
-                  title="Bỏ tag người này"
+                  className="h-4 w-4 p-0 hover:bg-blue-200/60 rounded-full"
+                  aria-label="Bỏ tag người này"
                 >
-                  <X size={12} />
-                </button>
+                  <X size={11} />
+                </Button>
               )}
-            </span>
+            </Badge>
           </div>
         )}
 
-        {/* Chế độ Xem trước hoặc Textarea */}
         {isPreview ? (
           <div className="w-full min-h-[64px] p-2 bg-slate-50/50 rounded-[4px] border border-dashed border-slate-200 text-xs sm:text-sm">
             {value.trim() ? (
@@ -243,12 +176,11 @@ export default function CommentRichEditor({
             onChange={(e) => onChange?.(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
-            className="w-full text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 bg-transparent border-0 outline-hidden resize-y min-h-[64px] leading-relaxed font-normal"
+            className="w-full text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 bg-transparent border-0 outline-hidden resize-y min-h-[64px] leading-relaxed font-normal p-0"
           />
         )}
       </div>
 
-      {/* ── 3. Bottom Footer (Gợi ý phím tắt & Nút gửi) ───────────────────── */}
       <div className="flex items-center justify-between px-3 py-2 border-t border-slate-100 bg-slate-50/40 rounded-b-[6px]">
         <span className="text-[11px] text-slate-400 hidden sm:inline select-none">
           Nhấn <kbd className="px-1.5 py-0.5 rounded-[4px] bg-slate-100 border border-slate-200 text-slate-600 font-mono text-[10px]">Ctrl</kbd> + <kbd className="px-1.5 py-0.5 rounded-[4px] bg-slate-100 border border-slate-200 text-slate-600 font-mono text-[10px]">Enter</kbd> để gửi
@@ -261,7 +193,7 @@ export default function CommentRichEditor({
               variant="outline"
               size="sm"
               onClick={onCancel}
-              className="h-8 text-xs font-semibold px-3 text-slate-600 hover:text-slate-900 rounded-[6px] border-slate-200 cursor-pointer active:scale-95"
+              className="h-8 text-xs font-semibold px-3 text-slate-600 hover:text-slate-900 rounded-[6px] border-slate-200 active:scale-95"
             >
               HỦY
             </Button>
@@ -273,7 +205,7 @@ export default function CommentRichEditor({
             size="sm"
             disabled={submitting || !value.trim()}
             onClick={onSubmit}
-            className="h-8 text-xs font-semibold px-4 bg-[#284ea1] hover:bg-[#1e3c7d] text-white rounded-[6px] shadow-xs cursor-pointer active:scale-[0.98] transition-all flex items-center gap-1.5"
+            className="h-8 text-xs font-semibold px-4 bg-[#284ea1] hover:bg-[#1e3c7d] text-white rounded-[6px] shadow-xs active:scale-[0.98] transition-all flex items-center gap-1.5"
           >
             {submitting ? (
               <span>ĐANG GỬI...</span>

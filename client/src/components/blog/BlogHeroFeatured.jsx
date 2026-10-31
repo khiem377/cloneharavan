@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { Badge } from '@/components/ui/badge';
 
 const formatDate = (dateStr) => {
   if (!dateStr) return '';
@@ -26,7 +27,6 @@ export const BlogHeroFeatured = ({ posts = [] }) => {
 
   return (
     <section className="w-full mb-10">
-      {/* Section Title */}
       <div className="flex items-center justify-between gap-3 mb-5 pb-2 border-b border-slate-200">
         <h2 className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight uppercase">
           Tin Nổi Bật Nhất
@@ -37,13 +37,11 @@ export const BlogHeroFeatured = ({ posts = [] }) => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* Main Large Hero Card */}
         <div className="lg:col-span-7 xl:col-span-8">
           <Link
             href={`/blogs/${mainPost.slug}`}
-            className="group relative block w-full aspect-[16/10] sm:aspect-[16/9] rounded-[6px] overflow-hidden shadow-xs hover:shadow-md transition-all duration-300 bg-slate-950 border border-slate-800/60 hover:border-slate-700"
+            className="group relative block w-full aspect-[16/10] sm:aspect-[16/9] rounded-[6px] overflow-hidden shadow-none transition-all duration-300 bg-slate-950 border border-slate-800/60 hover:border-slate-700"
           >
-            {/* Background Image with Hover Scale */}
             <img
               src={mainThumb}
               alt={mainPost.title}
@@ -51,20 +49,18 @@ export const BlogHeroFeatured = ({ posts = [] }) => {
               loading="eager"
             />
 
-            {/* Gradient Overlays */}
             <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/60 to-transparent" />
             <div className="absolute inset-0 bg-gradient-to-r from-slate-950/70 via-transparent to-transparent opacity-60" />
 
-            {/* Content overlay */}
             <div className="absolute inset-0 flex flex-col justify-end p-5 sm:p-7 text-white">
               <div className="flex items-center gap-2 mb-2.5">
-                <span className="inline-flex items-center px-3 py-1 rounded-[4px] text-xs font-bold bg-[#284ea1] text-white shadow-xs uppercase tracking-wide">
+                <Badge className="bg-[#284ea1] text-white text-xs font-bold rounded-[4px] uppercase tracking-wide">
                   {mainCategory}
-                </span>
+                </Badge>
                 {mainPost.isPinned && (
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-[4px] text-xs font-semibold bg-white/20 text-white">
+                  <Badge variant="outline" className="border-white/30 text-white bg-white/20 text-xs font-semibold rounded-[4px]">
                     Ghim đầu trang
-                  </span>
+                  </Badge>
                 )}
               </div>
 
@@ -97,7 +93,6 @@ export const BlogHeroFeatured = ({ posts = [] }) => {
           </Link>
         </div>
 
-        {/* 4 Secondary Sub-Cards Grid */}
         <div className="lg:col-span-5 xl:col-span-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-3.5">
           {subPosts.map((post) => {
             const catName = post.categories?.[0]?.name || 'Tin công nghệ';
@@ -109,9 +104,9 @@ export const BlogHeroFeatured = ({ posts = [] }) => {
               <Link
                 key={post._id || post.slug}
                 href={`/blogs/${post.slug}`}
-                className="group flex gap-3.5 p-3 rounded-[6px] border border-slate-200/90 bg-white hover:border-[#284ea1]/40 hover:shadow-md transition-all duration-300 items-center"
+                className="group flex gap-3.5 p-3 rounded-[6px] border border-slate-200 bg-white hover:border-[#284ea1]/40 transition-all duration-300 items-center shadow-none"
               >
-                <div className="relative w-28 sm:w-32 h-20 sm:h-22 shrink-0 rounded-[4px] overflow-hidden bg-slate-100 shadow-2xs">
+                <div className="relative w-28 sm:w-32 h-20 sm:h-22 shrink-0 rounded-[4px] overflow-hidden bg-slate-100">
                   <img
                     src={thumb}
                     alt={post.title}
@@ -121,9 +116,9 @@ export const BlogHeroFeatured = ({ posts = [] }) => {
                 </div>
                 <div className="flex flex-col justify-between flex-1 min-w-0 py-0.5">
                   <div>
-                    <span className="inline-block text-[10px] font-bold text-[#284ea1] bg-[#edf2fa] px-2 py-0.5 rounded-[4px] mb-1.5">
+                    <Badge variant="secondary" className="text-[10px] font-bold text-[#284ea1] bg-[#edf2fa] px-2 py-0.5 rounded-[4px] mb-1.5 border-none">
                       {catName}
-                    </span>
+                    </Badge>
                     <h4 className="text-xs sm:text-sm font-bold text-slate-800 line-clamp-2 group-hover:text-[#284ea1] transition-colors leading-snug">
                       {post.title}
                     </h4>

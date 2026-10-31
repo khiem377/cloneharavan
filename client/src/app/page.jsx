@@ -44,15 +44,15 @@ export default async function HomePage() {
     categoryService.getServerCategoryTree(),
     recommendationServerService.getPersonalized(10),
     recommendationServerService.getTrending(10),
-    productServerService.getProducts({ sort: 'createdAt', sortOrder: 'desc', limit: 10 }),
-    productServerService.getProducts({ isHot: true, limit: 10 }),
+    productServerService.getProducts({ sortBy: 'createdAt', sortOrder: 'desc', limit: 10 }),
+    productServerService.getProducts({ isFeatured: true, limit: 10 }),
     blogService.getServerBlogPosts({ sort: 'views', limit: 1 }),
     blogService.getServerBlogPosts({ sort: 'newest', limit: 5 }),
   ]);
 
-  const finalTrendingProds = Array.isArray(trendingProds) && trendingProds.length >= 5
+  const finalTrendingProds = Array.isArray(trendingProds) && trendingProds.length > 0
     ? trendingProds
-    : Array.isArray(hotProds) && hotProds.length > 0 ? hotProds : newArrivalProds;
+    : (Array.isArray(newArrivalProds) && newArrivalProds.length > 0 ? newArrivalProds : (hotProds || []));
 
   const featuredPost = Array.isArray(featuredBlogRes?.data) && featuredBlogRes.data.length > 0
     ? featuredBlogRes.data[0]
@@ -83,7 +83,7 @@ export default async function HomePage() {
   ]);
 
   return (
-    <div className="min-h-screen bg-[#f8f9fa] pb-12 overflow-x-hidden">
+    <div className="min-h-[100dvh] bg-[#f8f9fa] pb-12 overflow-x-hidden">
       {/* 1. Hero Banner Slider (Tỷ lệ vàng, 2 Banner Phụ) */}
       <HomeHeroBannerSlider />
 

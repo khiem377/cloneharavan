@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import Icon from '../common/Icon';
+import { AlertCircle, RefreshCw } from 'lucide-react';
 import {
   Dialog,
   DialogHeader,
@@ -10,65 +10,123 @@ import {
   DialogContent,
   DialogClose,
 } from '../ui/dialog';
+import { Button } from '@/components/ui/button';
 import { searchService } from '../../services/search.service';
+
+import ScannerBotMascot from './visual-search/ScannerBotMascot';
+import SampleImagesRow from './visual-search/SampleImagesRow';
+import ScanningPreview from './visual-search/ScanningPreview';
 
 export const VisualSearchModal = ({ isOpen, onClose }) => {
   const router = useRouter();
   const [dragActive, setDragActive] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
   const fileInputRef = useRef(null);
+  const abortControllerRef = useRef(null);
 
-  const handleFile = async (file) => {
-    if (!file || !file.type.startsWith('image/')) {
-      setError('Vui lòng chọn một tệp hình ảnh hợp lệ (PNG, JPG, WEBP)');
-      return;
-    }
-
+  const resetState = () => {
     setError(null);
-    setLoading(true);
-
-    try {
-      const data = await searchService.searchByImage(file);
-      const preview = typeof window !== 'undefined' ? URL.createObjectURL(file) : null;
-      const detectedInfo = data?.detected || data?.metadata || {};
-
-      if (typeof window !== 'undefined' && preview) {
-        sessionStorage.setItem(
-          'visual_search_data',
-          JSON.stringify({
-            imageUrl: preview,
-            metadata: detectedInfo,
-            detected: detectedInfo,
-          })
-        );
-      }
-
-      onClose();
-      const detectedQuery =
-        detectedInfo.category ||
-        detectedInfo.productType ||
-        detectedInfo.detectedText ||
-        detectedInfo.brand ||
-        detectedInfo.searchKeywords?.[0] ||
-        '';
-
-      if (detectedQuery) {
-        router.push(`/search?q=${encodeURIComponent(detectedQuery)}&visual=1`);
-      } else {
-        router.push(`/search?visual=1`);
-      }
-    } catch (err) {
-      console.error('Image search failed:', err);
-      setError(
-        err?.response?.data?.message ||
-          'Không thể nhận diện hình ảnh này. Vui lòng thử lại với ảnh khác.'
-      );
-    } finally {
-      setLoading(false);
-    }
+    setLoading(false);
+    setPreviewUrl(null);
+    setDragActive(false);
   };
 
+  const handleClose = () => {
+    resetState();
+    onClose();
+  };
+
+  const handleFile = useCallback(
+    async (file, presetInfo = null) => {
+      if (!file || !file.type.startsWith('image/')) {
+        setError('Vui lòng chọn hoặc kéo thả tệp hình ảnh hợp lệ (PNG, JPG, WEBP).');
+        return;
+      }
+
+      // Giới hạn 5MB
+      if (file.size > 5 * 1024 * 1024) {
+        setError('Dung lượng hình ảnh vượt quá 5MB. Vui lòng chọn ảnh nhỏ hơn.');
+        return;
+      }
+
+      setError(null);
+      setLoading(true);
+
+      const localPreview = URL.createObjectURL(file);
+      setPreviewUrl(localPreview);
+
+      try {
+        let detectedInfo = presetInfo;
+        if (!detectedInfo) {
+          const data = await searchService.searchByImage(file);
+          detectedInfo = data?.detected || data?.metadata || {};
+        }
+
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem(
+            'visual_search_data',
+            JSON.stringify({
+              imageUrl: localPreview,
+              metadata: detectedInfo,
+              detected: detectedInfo,
+            })
+          );
+        }
+
+        handleClose();
+
+        const detectedQuery =
+          detectedInfo.category ||
+          detectedInfo.productType ||
+          detectedInfo.detectedText ||
+          detectedInfo.brand ||
+          detectedInfo.searchKeywords?.[0] ||
+          '';
+
+        if (detectedQuery) {
+          router.push(`/search?q=${encodeURIComponent(detectedQuery)}&visual=1`);
+        } else {
+          router.push(`/search?visual=1`);
+        }
+      } catch (err) {
+        console.error('Lỗi tìm kiếm bằng hình ảnh:', err);
+        setError(
+          err?.response?.data?.message ||
+            'Không thể nhận diện sản phẩm trong ảnh này. Vui lòng thử lại với góc chụp rõ hơn hoặc ảnh khác.'
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [router, onClose]
+  );
+
+  // Lắng nghe sự kiện Paste (Ctrl + V / Cmd + V) khi modal đang mở
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handlePaste = (e) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf('image') !== -1) {
+          const file = items[i].getAsFile();
+          if (file) {
+            handleFile(file);
+            break;
+          }
+        }
+      }
+    };
+
+    window.addEventListener('paste', handlePaste);
+    return () => window.removeEventListener('paste', handlePaste);
+  }, [isOpen, handleFile]);
+
+  // Drag & drop handlers
   const handleDrop = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -91,70 +149,101 @@ export const VisualSearchModal = ({ isOpen, onClose }) => {
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
       <DialogHeader>
-        <div className="flex items-center gap-2">
-          <Icon name="camera" size={18} className="text-gray-700" />
+        <div>
           <DialogTitle>Tìm kiếm bằng hình ảnh</DialogTitle>
+          <p className="text-xs text-slate-500 font-normal mt-0.5">
+            Tìm kiếm nhanh sản phẩm tương tự từ ảnh chụp hoặc ảnh tải lên
+          </p>
         </div>
-        <DialogClose onClick={onClose} />
+        <DialogClose onClick={handleClose} />
       </DialogHeader>
 
-      <DialogContent>
+      <DialogContent className="p-4 sm:p-5 space-y-4">
         {loading ? (
-          <div className="py-12 flex flex-col items-center justify-center text-center space-y-3">
-            <div className="w-10 h-10 border-3 border-gray-200 border-t-red-600 rounded-full animate-spin" />
-            <p className="text-sm font-semibold text-gray-900">
-              Đang nhận diện sản phẩm...
-            </p>
-            <p className="text-xs text-gray-500">
-              Hệ thống đang tìm kiếm các sản phẩm tương đồng
-            </p>
-          </div>
+          <ScanningPreview
+            previewUrl={previewUrl}
+            onCancel={() => {
+              resetState();
+            }}
+          />
         ) : (
-          <div
-            onDrop={handleDrop}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onClick={() => fileInputRef.current?.click()}
-            className={`border-2 border-dashed rounded-[6px] py-10 px-4 text-center cursor-pointer transition flex flex-col items-center justify-center gap-3 ${
-              dragActive
-                ? 'border-red-600 bg-red-50/50'
-                : 'border-slate-200 hover:border-red-500 hover:bg-slate-50'
-            }`}
-          >
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => {
-                if (e.target.files && e.target.files[0]) {
-                  handleFile(e.target.files[0]);
-                }
-              }}
-            />
+          <>
+            {/* Dropzone Container */}
+            <div
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onClick={() => fileInputRef.current?.click()}
+              className={`relative border-2 border-dashed rounded-[6px] py-6 px-4 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2 select-none ${
+                dragActive
+                  ? 'border-red-500 bg-red-50/60 dark:bg-red-950/20 scale-[1.01]'
+                  : 'border-slate-200 dark:border-border bg-slate-50/50 dark:bg-card/50 hover:border-red-500/60 hover:bg-slate-50 dark:hover:bg-muted/40'
+              }`}
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files && e.target.files[0]) {
+                    handleFile(e.target.files[0]);
+                  }
+                }}
+              />
 
-            <div className="w-12 h-12 rounded-full bg-red-50 text-red-600 flex items-center justify-center">
-              <Icon name="cloud-upload" size={24} />
+              {/* Animated Computer on Desk with Mascot Reaching Into Screen to Toss Photo */}
+              <ScannerBotMascot state={dragActive ? 'drag' : 'idle'} size={290} />
+
+              {/* Upload Copy & CTA */}
+              <div className="space-y-1">
+                <p className="text-xs font-semibold text-slate-800 dark:text-slate-100">
+                  {dragActive ? (
+                    <span className="text-red-600 font-bold">Thả ảnh vào đây để nhận diện ngay!</span>
+                  ) : (
+                    <>
+                      Kéo thả ảnh vào đây hoặc{' '}
+                      <span className="text-red-600 hover:underline font-bold">tải ảnh từ máy</span>
+                    </>
+                  )}
+                </p>
+                <p className="text-[11px] text-slate-400">
+                  Hỗ trợ PNG, JPG, WEBP (tối đa 5MB) • Dán ảnh Ctrl + V
+                </p>
+              </div>
             </div>
 
-            <div>
-              <p className="text-xs font-semibold text-gray-800">
-                Kéo thả ảnh vào đây hoặc{' '}
-                <span className="text-red-600 underline">tải ảnh từ máy</span>
-              </p>
-              <p className="text-[11px] text-gray-400 mt-1">
-                Hỗ trợ định dạng PNG, JPG, WEBP (tối đa 5MB)
-              </p>
-            </div>
-
+            {/* Error Message with Retry */}
             {error && (
-              <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-red-600 text-xs">
-                {error}
+              <div className="p-3 rounded-[6px] bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/40 text-red-700 dark:text-red-400 text-xs flex items-start justify-between gap-2 animate-in fade-in">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="size-4 shrink-0 mt-0.5 text-red-500" />
+                  <span>{error}</span>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setError(null);
+                    fileInputRef.current?.click();
+                  }}
+                  className="h-6 px-2 text-[11px] rounded-[4px] border-red-200 hover:bg-red-100 text-red-700 active:scale-[0.98]"
+                >
+                  <RefreshCw className="size-3 mr-1" /> Thử lại
+                </Button>
               </div>
             )}
-          </div>
+
+            {/* Quick Test Sample Images */}
+            <SampleImagesRow
+              onSelectSample={(file, preset) => handleFile(file, preset)}
+              disabled={loading}
+            />
+          </>
         )}
       </DialogContent>
     </Dialog>

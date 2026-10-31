@@ -3,8 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Heart, MessageSquare, Share2, Check } from 'lucide-react';
-import { Badge } from '../ui/badge';
-import { Button } from '../ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Breadcrumb,
   BreadcrumbList,
@@ -12,8 +13,8 @@ import {
   BreadcrumbLink,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from '../ui/breadcrumb';
-import toast from '../ui/toast';
+} from '@/components/ui/breadcrumb';
+import toast from '@/components/ui/toast';
 import useAuthStore from '@/store/authStore';
 import blogService from '@/services/blog.service';
 
@@ -77,7 +78,6 @@ export const BlogDetailHeader = ({ post }) => {
     const previousLiked = isLiked;
     const previousCount = likesCount;
 
-    // Optimistic UI update
     const nextLiked = !previousLiked;
     const nextCount = nextLiked ? previousCount + 1 : Math.max(0, previousCount - 1);
     setIsLiked(nextLiked);
@@ -109,7 +109,6 @@ export const BlogDetailHeader = ({ post }) => {
         toast.info('Đã bỏ yêu thích bài viết.');
       }
     } catch (err) {
-      // Revert optimistic state on error
       setIsLiked(previousLiked);
       setLikesCount(previousCount);
       toast.error('Không thể cập nhật lượt thích. Vui lòng thử lại sau.');
@@ -127,7 +126,6 @@ export const BlogDetailHeader = ({ post }) => {
 
   return (
     <div className="w-full mb-6">
-      {/* Breadcrumb Navigation */}
       <Breadcrumb className="mb-4">
         <BreadcrumbList>
           <BreadcrumbItem>
@@ -156,44 +154,34 @@ export const BlogDetailHeader = ({ post }) => {
         </BreadcrumbList>
       </Breadcrumb>
 
-      {/* Category Pill */}
       {category && (
         <div className="mb-3">
           <Link href={`/blogs?category=${category.slug}`}>
-            <Badge className="bg-[#284ea1] hover:bg-[#1e3b82] text-white font-semibold text-xs px-3 py-1 rounded-[6px] shadow-xs cursor-pointer">
+            <Badge className="bg-[#284ea1] hover:bg-[#1e3b82] text-white font-semibold text-xs px-3 py-1 rounded-[6px]">
               {category.name}
             </Badge>
           </Link>
         </div>
       )}
 
-      {/* H1 Title */}
       <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-extrabold text-slate-900 leading-tight tracking-tight mb-4">
         {post.title}
       </h1>
 
-      {/* Excerpt / Lead */}
       {post.excerpt && (
-        <p className="text-sm sm:text-base text-slate-600 leading-relaxed font-medium mb-5 bg-[#edf2fa]/60 border-l-4 border-[#284ea1] p-4 rounded-r-[6px]">
+        <p className="text-sm sm:text-base text-slate-600 leading-relaxed font-medium mb-5 bg-[#edf2fa]/60 border-l border-[#284ea1] p-4 rounded-r-[6px]">
           {post.excerpt}
         </p>
       )}
 
-      {/* Author & Meta Row */}
       <div className="flex flex-wrap items-center justify-between gap-y-3 gap-x-4 py-3 border-y border-slate-200 text-xs sm:text-sm text-slate-500">
-        {/* Tác giả & Thông tin bài */}
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-[#edf2fa] text-[#284ea1] font-bold flex items-center justify-center shrink-0 uppercase shadow-2xs border border-[#284ea1]/20">
-            {authorAvatarUrl ? (
-              <img
-                src={authorAvatarUrl}
-                alt={authorName}
-                className="w-full h-full object-cover rounded-full"
-              />
-            ) : (
-              <span>{authorInitial}</span>
-            )}
-          </div>
+          <Avatar className="size-10 border border-[#284ea1]/20">
+            <AvatarImage src={authorAvatarUrl} alt={authorName} />
+            <AvatarFallback className="bg-[#edf2fa] text-[#284ea1] font-bold text-xs uppercase">
+              {authorInitial}
+            </AvatarFallback>
+          </Avatar>
           <div>
             <div className="font-semibold text-slate-900 text-xs sm:text-sm">
               {authorName}
@@ -210,53 +198,54 @@ export const BlogDetailHeader = ({ post }) => {
           </div>
         </div>
 
-        {/* Cụm hành động: Tim bài viết, Bình luận, Chia sẻ */}
         <div className="flex items-center gap-2">
-          {/* Nút Thả tim bài viết (F8 style) */}
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
             onClick={handleToggleLike}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-[6px] border transition-all cursor-pointer select-none active:scale-[0.96] ${
+            className={`h-8 px-3 text-xs font-semibold rounded-[6px] gap-1.5 ${
               isLiked
-                ? 'bg-rose-50 border-rose-200 text-rose-600 shadow-2xs'
-                : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300'
+                ? 'bg-rose-50 border-rose-200 text-rose-600 hover:bg-rose-100 hover:text-rose-700'
+                : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
             }`}
             title={isLiked ? 'Bỏ thích bài viết' : 'Thích bài viết'}
           >
             <Heart
-              className={`w-4 h-4 transition-transform ${
-                isLiked ? 'fill-rose-500 text-rose-500 scale-110' : 'text-slate-500 group-hover:text-rose-500'
+              className={`size-4 transition-transform ${
+                isLiked ? 'fill-rose-500 text-rose-500 scale-110' : 'text-slate-500'
               }`}
             />
-            <span className="font-bold">{likesCount}</span>
-          </button>
+            <span className="font-bold font-mono tabular-nums">{likesCount}</span>
+          </Button>
 
-          {/* Nút Đi đến bình luận */}
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
             onClick={scrollToComments}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-[6px] border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-all cursor-pointer active:scale-[0.96]"
+            className="h-8 px-3 text-xs font-semibold rounded-[6px] border-slate-200 bg-white text-slate-700 hover:bg-slate-50 gap-1.5"
             title="Xem bình luận"
           >
-            <MessageSquare className="w-4 h-4 text-slate-500" />
-            <span className="font-bold">{post.commentsCount || 0}</span>
-          </button>
+            <MessageSquare className="size-4 text-slate-500" />
+            <span className="font-bold font-mono tabular-nums">{post.commentsCount || 0}</span>
+          </Button>
 
-          {/* Nút Chia sẻ */}
           <Button
+            type="button"
             variant="outline"
             size="sm"
             onClick={handleCopyLink}
-            className="text-xs text-slate-700 bg-white hover:bg-slate-50 border-slate-200 rounded-[6px] shadow-2xs flex items-center gap-1.5 cursor-pointer active:scale-[0.96]"
+            className="h-8 px-3 text-xs text-slate-700 bg-white hover:bg-slate-50 border-slate-200 rounded-[6px] gap-1.5"
           >
             {copied ? (
               <>
-                <Check className="w-3.5 h-3.5 text-emerald-600" />
-                <span className="text-emerald-600 font-semibold">Đã sao chép</span>
+                <Check className="size-4 text-emerald-600" />
+                <span className="text-emerald-600 font-semibold">Đã chép link</span>
               </>
             ) : (
               <>
-                <Share2 className="w-3.5 h-3.5 text-slate-500" />
+                <Share2 className="size-4 text-slate-500" />
                 <span>Chia sẻ</span>
               </>
             )}
@@ -268,4 +257,3 @@ export const BlogDetailHeader = ({ post }) => {
 };
 
 export default BlogDetailHeader;
-

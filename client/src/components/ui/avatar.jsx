@@ -1,56 +1,35 @@
-'use client';
+"use client"
 
-import * as React from 'react';
-import { cn } from '@/lib/utils';
+import * as React from "react"
+import * as AvatarPrimitive from "@radix-ui/react-avatar"
+
+import { cn } from "@/lib/utils"
 
 const Avatar = React.forwardRef(({ className, ...props }, ref) => (
-  <div
+  <AvatarPrimitive.Root
+    ref={ref}
+    className={cn("relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full", className)}
+    {...props} />
+))
+Avatar.displayName = AvatarPrimitive.Root.displayName
+
+const AvatarImage = React.forwardRef(({ className, ...props }, ref) => (
+  <AvatarPrimitive.Image
+    ref={ref}
+    className={cn("aspect-square h-full w-full object-cover", className)}
+    {...props} />
+))
+AvatarImage.displayName = AvatarPrimitive.Image.displayName
+
+const AvatarFallback = React.forwardRef(({ className, ...props }, ref) => (
+  <AvatarPrimitive.Fallback
     ref={ref}
     className={cn(
-      'relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full border border-slate-200 bg-slate-100',
+      "flex h-full w-full items-center justify-center rounded-full bg-muted",
       className
     )}
-    {...props}
-  />
-));
-Avatar.displayName = 'Avatar';
+    {...props} />
+))
+AvatarFallback.displayName = AvatarPrimitive.Fallback.displayName
 
-const AvatarImage = React.forwardRef(({ className, src, alt = '', ...props }, ref) => {
-  const resolvedSrc = typeof src === 'string' ? src : (src?.url || '');
-  const [hasError, setHasError] = React.useState(!resolvedSrc);
-
-  React.useEffect(() => {
-    setHasError(!resolvedSrc);
-  }, [resolvedSrc]);
-
-  if (hasError || !resolvedSrc) return null;
-
-  return (
-    <img
-      ref={ref}
-      src={resolvedSrc}
-      alt={alt}
-      onError={() => setHasError(true)}
-      className={cn('aspect-square h-full w-full object-cover', className)}
-      {...props}
-    />
-  );
-});
-AvatarImage.displayName = 'AvatarImage';
-
-const AvatarFallback = React.forwardRef(({ className, children, ...props }, ref) => (
-  <div
-    ref={ref}
-    suppressHydrationWarning
-    className={cn(
-      'flex h-full w-full items-center justify-center rounded-full bg-slate-200 text-xs font-bold text-slate-700 select-none uppercase',
-      className
-    )}
-    {...props}
-  >
-    {children}
-  </div>
-));
-AvatarFallback.displayName = 'AvatarFallback';
-
-export { Avatar, AvatarImage, AvatarFallback };
+export { Avatar, AvatarImage, AvatarFallback }

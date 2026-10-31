@@ -48,8 +48,56 @@ export const searchService = {
   },
 
   searchByImage: async (imageFile) => {
+    let fileToUpload = imageFile;
+    // Nén ảnh phía client nếu file ảnh lớn hơn 150KB
+    if (typeof window !== 'undefined' && imageFile?.size > 150 * 1024) {
+      try {
+        fileToUpload = await new Promise((resolve) => {
+          const img = new Image();
+          const objectUrl = URL.createObjectURL(imageFile);
+          img.onload = () => {
+            URL.revokeObjectURL(objectUrl);
+            const maxDim = 800;
+            let { width, height } = img;
+            if (width > maxDim || height > maxDim) {
+              if (width > height) {
+                height = Math.round((height * maxDim) / width);
+                width = maxDim;
+              } else {
+                width = Math.round((width * maxDim) / height);
+                height = maxDim;
+              }
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            canvas.toBlob(
+              (blob) => {
+                if (blob && blob.size < imageFile.size) {
+                  resolve(new File([blob], imageFile.name || 'visual_search.jpg', { type: 'image/jpeg' }));
+                } else {
+                  resolve(imageFile);
+                }
+              },
+              'image/jpeg',
+              0.8
+            );
+          };
+          img.onerror = () => {
+            URL.revokeObjectURL(objectUrl);
+            resolve(imageFile);
+          };
+          img.src = objectUrl;
+        });
+      } catch {
+        fileToUpload = imageFile;
+      }
+    }
+
     const formData = new FormData();
-    formData.append('image', imageFile);
+    formData.append('image', fileToUpload);
     const res = await api.post('/search/image', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });

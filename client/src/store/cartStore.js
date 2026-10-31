@@ -65,22 +65,22 @@ export const useCartStore = create((set, get) => ({
   _setCartData: (data, overrideSelectedIds = null) => {
     const cart = data?.cart || INITIAL_CART;
     const items = cart.items || [];
-    const validIds = new Set(items.map((i) => i._id));
+    const validIds = new Set(items.map((i) => String(i._id)));
 
     let updatedSelected = [];
 
     if (Array.isArray(overrideSelectedIds)) {
       // Ưu tiên lựa chọn chỉ định (ví dụ Mua Ngay hoặc vừa thêm Combo)
-      updatedSelected = overrideSelectedIds.filter((id) => validIds.has(id));
+      updatedSelected = overrideSelectedIds.map(String).filter((id) => validIds.has(id));
     } else {
-      let currentSelected = get().selectedItemIds || [];
+      let currentSelected = (get().selectedItemIds || []).map(String);
       if (currentSelected.length === 0 && typeof window !== 'undefined') {
         try {
           const raw = localStorage.getItem('checkoutItemIds') || sessionStorage.getItem('checkoutItemIds');
           if (raw) {
             const parsed = JSON.parse(raw);
             if (Array.isArray(parsed) && parsed.length > 0) {
-              currentSelected = parsed;
+              currentSelected = parsed.map(String);
             }
           }
         } catch (_) {}
@@ -96,7 +96,7 @@ export const useCartStore = create((set, get) => ({
               !i.isOutOfStock &&
               (i.availableStock === undefined || i.availableStock > 0)
           )
-          .map((i) => i._id);
+          .map((i) => String(i._id));
       }
     }
 
@@ -112,17 +112,18 @@ export const useCartStore = create((set, get) => ({
     });
 
     comboMap.forEach((cItems) => {
-      const selectedCount = cItems.filter((it) => updatedSelected.includes(it._id)).length;
+      const selectedCount = cItems.filter((it) => updatedSelected.includes(String(it._id))).length;
       if (selectedCount > 0 && selectedCount < cItems.length) {
         const anyOos = cItems.some((it) => it.isOutOfStock || (it.availableStock !== undefined && it.availableStock <= 0));
         if (anyOos) {
           // Bỏ chọn tất cả nếu có món hết hàng
-          updatedSelected = updatedSelected.filter((id) => !cItems.some((it) => it._id === id));
+          updatedSelected = updatedSelected.filter((id) => !cItems.some((it) => String(it._id) === id));
         } else {
           // Tự động chọn trọn bộ combo
           cItems.forEach((it) => {
-            if (!updatedSelected.includes(it._id)) {
-              updatedSelected.push(it._id);
+            const strId = String(it._id);
+            if (!updatedSelected.includes(strId)) {
+              updatedSelected.push(strId);
             }
           });
         }
@@ -406,26 +407,34 @@ export const useCartStore = create((set, get) => ({
         const cart = res.data.cart;
         const items = cart?.items || [];
         const addedItem = items.find(
-          (it) =>
-            (payload.variantId && String(it.variantId) === String(payload.variantId)) ||
-            (payload.sku && it.sku === payload.sku) ||
-            (payload.productId && String(it.productId) === String(payload.productId))
+          (it) => {
+            const itVarId = it.variantId?._id ? String(it.variantId._id) : (it.variantId ? String(it.variantId) : '');
+            const itProdId = it.productId?._id ? String(it.productId._id) : (it.productId ? String(it.productId) : '');
+            return (
+              (payload.variantId && itVarId === String(payload.variantId)) ||
+              (payload.sku && it.sku === payload.sku) ||
+              (payload.productId && itProdId === String(payload.productId))
+            );
+          }
         ) || items[items.length - 1];
 
         if (isBuyNow && addedItem) {
-          let prevSelected = get().selectedItemIds || [];
-          if ((!prevSelected || prevSelected.length === 0) && typeof window !== 'undefined') {
+          let prevSelected = (get().selectedItemIds || []).map(String);
+          if (prevSelected.length === 0 && typeof window !== 'undefined') {
             try {
               const raw = localStorage.getItem('checkoutItemIds') || sessionStorage.getItem('checkoutItemIds');
               if (raw) {
                 const parsed = JSON.parse(raw);
-                if (Array.isArray(parsed) && parsed.length > 0) prevSelected = parsed;
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                  prevSelected = parsed.map(String);
+                }
               }
             } catch (_) {}
           }
           const validSet = new Set(items.map((it) => String(it._id)));
-          const validPrev = (prevSelected || []).filter((id) => validSet.has(String(id)));
-          const accumulatedSelected = Array.from(new Set([...validPrev, addedItem._id]));
+          const validPrev = prevSelected.filter((id) => validSet.has(id));
+          const addedId = String(addedItem._id);
+          const accumulatedSelected = Array.from(new Set([...validPrev, addedId]));
           get()._setCartData(res.data, accumulatedSelected);
         } else {
           get()._setCartData(res.data);

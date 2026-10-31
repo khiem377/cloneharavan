@@ -14,6 +14,24 @@ import trackingService from '@/services/tracking.service';
 const FALLBACK_IMAGE =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120' fill='none'%3E%3Crect width='120' height='120' rx='6' fill='%23f8fafc'/%3E%3Crect x='30' y='35' width='60' height='45' rx='4' stroke='%23cbd5e1' stroke-width='2' fill='none'/%3E%3Cpolyline points='48 80 40 90 80 90 72 80' stroke='%23cbd5e1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E";
 
+function extractProductTags(product) {
+  const tags = [];
+  const nameLower = (product.name || '').toLowerCase();
+  const screenSizes = product.extractedAttributes?.['Kích thước màn hình'] || [];
+  if (screenSizes.length > 0) {
+    screenSizes.slice(0, 2).forEach((s) => tags.push(s));
+  } else {
+    const match = product.name?.match(/\b(32|40|42|43|48|50|55|58|60|65|70|75|77|85|86|98)\s*(?:["”]|inch\b)/i);
+    if (match) tags.push(`${match[1]}"`);
+  }
+  if (nameLower.includes('8k')) tags.push('8K UHD');
+  else if (nameLower.includes('4k')) tags.push('4K UHD');
+  else if (nameLower.includes('full hd') || nameLower.includes('fhd')) tags.push('Full HD');
+  if (nameLower.includes('qled')) tags.push('QLED');
+  else if (nameLower.includes('oled')) tags.push('OLED');
+  return tags.slice(0, 2);
+}
+
 export default function ProductCard({ product, onProductClick }) {
   const router = useRouter();
   const { openQuickView } = useQuickViewStore();
@@ -64,46 +82,10 @@ export default function ProductCard({ product, onProductClick }) {
     ? Math.round(((regularPrice - salePrice) / regularPrice) * 100)
     : 0;
 
-  const extractTags = () => {
-    const tags = [];
-    const nameLower = (product.name || '').toLowerCase();
-
-    const screenSizes = product.extractedAttributes?.['Kích thước màn hình'] || [];
-    if (screenSizes.length > 0) {
-      screenSizes.slice(0, 2).forEach((s) => tags.push(s));
-    } else {
-      const match = product.name?.match(
-        /\b(32|40|42|43|48|50|55|58|60|65|70|75|77|85|86|98)\s*(?:["”]|inch\b)/i
-      );
-      if (match) {
-        tags.push(`${match[1]}"`);
-      } else {
-        const modelMatch = product.name?.match(
-          /\b(?:[A-Z]{1,4}|KD-|XR-)?(32|40|42|43|48|50|55|58|60|65|70|75|77|85|86|98)[A-Z0-9-]{3,}\b/i
-        );
-        if (modelMatch) {
-          tags.push(`${modelMatch[1]}"`);
-        }
-      }
-    }
-
-    if (nameLower.includes('8k')) tags.push('8K UHD');
-    else if (nameLower.includes('4k')) tags.push('4K UHD');
-    else if (nameLower.includes('full hd') || nameLower.includes('fhd')) tags.push('Full HD');
-
-    if (nameLower.includes('qled')) tags.push('QLED');
-    else if (nameLower.includes('oled')) tags.push('OLED');
-    else if (nameLower.includes('nanocell')) tags.push('NanoCell');
-
-    if (nameLower.includes('inverter')) tags.push('Inverter');
-    return tags.slice(0, 2);
-  };
-
-  const tags = extractTags();
+  const tags = extractProductTags(product);
   const compared = isCompared(product._id || product.id);
 
   const handleCardClick = () => {
-    // Không ghi 'view' ở đây: trang chi tiết (ProductViewTracker) đã ghi product_detail + dwell time
     onProductClick?.(product);
   };
 
@@ -147,42 +129,36 @@ export default function ProductCard({ product, onProductClick }) {
         className="flex flex-col flex-1 h-full"
         onClick={handleCardClick}
       >
-        <Card className="flex-1 flex flex-col hover:border-slate-400 transition-colors duration-150 p-2.5 sm:p-3 relative overflow-hidden bg-white rounded-[6px] border border-slate-200">
-          {/* Top Badge: Pure text flat badges */}
+        <Card className="flex-1 flex flex-col hover:border-slate-300 active:scale-[0.99] transition-all duration-150 p-2.5 sm:p-3 relative overflow-hidden bg-white rounded-[6px] border border-slate-200 shadow-none">
           <div className="w-full aspect-square bg-white rounded-[4px] overflow-hidden flex items-center justify-center p-2 mb-2 relative">
-            <div className="absolute top-1.5 left-1.5 z-10 flex flex-col gap-1 items-start">
-              {isFlashSale && (
-                <Badge variant="default" className="px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold bg-red-600 text-white uppercase tracking-wider">
+            {/* Huy hiệu duy nhất góc ảnh theo chuẩn Impeccable (Anti-Status-Chip-Soup) */}
+            <div className="absolute top-1.5 left-1.5 z-10 flex items-start">
+              {hasDiscount ? (
+                <Badge variant="default" className="px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold bg-[#e30019] text-white font-mono tabular-nums">
+                  -{discountPercent}%
+                </Badge>
+              ) : isFlashSale ? (
+                <Badge variant="default" className="px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold bg-[#e30019] text-white uppercase tracking-wider">
                   FLASH SALE
                 </Badge>
-              )}
-              {product.isHot && !isFlashSale && (
+              ) : product.isHot ? (
                 <Badge variant="default" className="px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold bg-amber-600 text-white uppercase">
                   HOT
                 </Badge>
-              )}
-              {product.isFeatured && !product.isHot && !isFlashSale && (
+              ) : product.isFeatured ? (
                 <Badge variant="default" className="px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold bg-slate-800 text-white uppercase">
                   NỔI BẬT
                 </Badge>
-              )}
-              {hasDiscount && (
-                <Badge variant="default" className="px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold bg-red-600 text-white font-mono">
-                  -{discountPercent}%
-                </Badge>
-              )}
+              ) : null}
             </div>
 
-            {/* Floating Action Icons on Hover */}
             <div className="absolute right-1.5 top-1.5 z-20 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
               <Button
                 type="button"
                 variant="outline"
                 size="icon"
-                data-no-progress="true"
                 onClick={handleQuickViewClick}
-                className="size-7 rounded-[4px] bg-white border border-slate-200 hover:bg-slate-900 hover:text-white text-slate-700 flex items-center justify-center transition-colors cursor-pointer p-0 shadow-none"
-                title="Xem nhanh"
+                className="size-7 rounded-[4px] bg-white border border-slate-200 hover:bg-slate-900 hover:text-white text-slate-700 flex items-center justify-center p-0 shadow-none active:scale-[0.92]"
                 aria-label={`Xem nhanh sản phẩm ${product.name || ''}`}
               >
                 <Eye size={13} />
@@ -192,38 +168,31 @@ export default function ProductCard({ product, onProductClick }) {
                 type="button"
                 variant="outline"
                 size="icon"
-                data-no-progress="true"
                 onClick={handleCompareClick}
-                className={`size-7 rounded-[4px] border flex items-center justify-center transition-colors cursor-pointer p-0 shadow-none ${
+                className={`size-7 rounded-[4px] border flex items-center justify-center p-0 shadow-none active:scale-[0.92] ${
                   compared
                     ? 'bg-slate-900 border-slate-900 text-white'
                     : 'bg-white border-slate-200 hover:bg-slate-900 hover:text-white text-slate-700'
                 }`}
-                title={compared ? 'Đã thêm so sánh' : 'So sánh'}
                 aria-label={compared ? `Đã thêm ${product.name || ''} vào so sánh` : `Thêm ${product.name || ''} vào so sánh`}
               >
                 {compared ? <Check size={13} /> : <ArrowLeftRight size={13} />}
               </Button>
             </div>
 
-            {/* Images */}
             {thumb2 ? (
               <>
                 <img
                   src={thumb1}
                   alt={product.name}
-                  onError={(e) => {
-                    e.currentTarget.src = FALLBACK_IMAGE;
-                  }}
+                  onError={(e) => { e.currentTarget.src = FALLBACK_IMAGE; }}
                   className="absolute inset-0 w-full h-full object-contain p-2 transition-opacity duration-200 group-hover:opacity-0"
                   loading="lazy"
                 />
                 <img
                   src={thumb2}
                   alt={product.name}
-                  onError={(e) => {
-                    e.currentTarget.src = FALLBACK_IMAGE;
-                  }}
+                  onError={(e) => { e.currentTarget.src = FALLBACK_IMAGE; }}
                   className="absolute inset-0 w-full h-full object-contain p-2 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
                   loading="lazy"
                 />
@@ -232,9 +201,7 @@ export default function ProductCard({ product, onProductClick }) {
               <img
                 src={thumb1}
                 alt={product.name}
-                onError={(e) => {
-                  e.currentTarget.src = FALLBACK_IMAGE;
-                }}
+                onError={(e) => { e.currentTarget.src = FALLBACK_IMAGE; }}
                 className="w-full h-full object-contain p-2"
                 loading="lazy"
               />

@@ -62,10 +62,8 @@ export default function ForgotPasswordPage() {
                 <CheckCircle2 size={18} />
               </div>
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-widest text-emerald-600 font-mono">
-                  Đã gửi
-                </p>
                 <h1 className="text-base font-bold text-slate-900 leading-tight">Kiểm tra hộp thư</h1>
+                <p className="text-xs text-emerald-600 font-medium mt-0.5">Đã gửi email xác nhận</p>
               </div>
             </div>
 
@@ -99,7 +97,7 @@ export default function ForgotPasswordPage() {
             <div className="flex flex-col gap-2 pt-2">
               <Button
                 asChild
-                className="w-full bg-[#e30019] hover:bg-[#c40015] text-white text-xs font-semibold rounded-[6px] h-9 shadow-xs active:scale-[0.98]"
+                className="w-full bg-brand hover:bg-brand-hover text-white text-xs font-semibold rounded-[6px] h-9 shadow-xs active:scale-[0.98] cursor-pointer"
               >
                 <Link href="/login">
                   Quay lại đăng nhập
@@ -109,7 +107,7 @@ export default function ForgotPasswordPage() {
                 type="button"
                 variant="outline"
                 onClick={() => setSubmitted(false)}
-                className="w-full text-xs font-medium text-slate-700 rounded-[6px] h-9 active:scale-[0.98]"
+                className="w-full text-xs font-medium text-slate-700 rounded-[6px] h-9 active:scale-[0.98] cursor-pointer"
               >
                 Gửi lại email khác
               </Button>
@@ -128,7 +126,7 @@ export default function ForgotPasswordPage() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-1.5">
                 <Label htmlFor="forgot-email">
-                  Email tài khoản <span className="text-[#e30019]">*</span>
+                  Email tài khoản <span className="text-accent">*</span>
                 </Label>
                 <div className="relative">
                   <Input
@@ -151,7 +149,7 @@ export default function ForgotPasswordPage() {
                 id="forgot-submit-btn"
                 type="submit"
                 disabled={loading}
-                className="w-full bg-[#e30019] hover:bg-[#c40015] text-white text-xs font-semibold rounded-[6px] h-9 shadow-xs active:scale-[0.98] disabled:opacity-50"
+                className="w-full bg-brand hover:bg-brand-hover text-white text-xs font-semibold rounded-[6px] h-9 shadow-xs active:scale-[0.98] cursor-pointer disabled:opacity-50"
               >
                 {loading ? (
                   <>
@@ -166,7 +164,7 @@ export default function ForgotPasswordPage() {
 
             <div className="text-center text-xs text-slate-500 pt-3 border-t border-slate-100">
               Nhớ mật khẩu?{' '}
-              <Link href="/login" className="font-semibold text-[#e30019] hover:underline">
+              <Link href="/login" className="font-semibold text-brand hover:underline">
                 Đăng nhập ngay
               </Link>
             </div>

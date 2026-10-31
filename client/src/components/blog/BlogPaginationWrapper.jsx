@@ -12,7 +12,7 @@ import {
   PaginationPrevious,
   PaginationNext,
   PaginationLast,
-} from '../ui/pagination';
+} from '@/components/ui/pagination';
 
 export const BlogPaginationWrapper = ({ currentPage = 1, totalPages = 1 }) => {
   const router = useRouter();
@@ -35,7 +35,6 @@ export const BlogPaginationWrapper = ({ currentPage = 1, totalPages = 1 }) => {
     }
   };
 
-  // Generate page numbers with ellipsis
   const getPageNumbers = () => {
     const delta = 2;
     const range = [];
@@ -68,7 +67,6 @@ export const BlogPaginationWrapper = ({ currentPage = 1, totalPages = 1 }) => {
     <div className="py-8 flex justify-center w-full">
       <Pagination>
         <PaginationContent>
-          {/* Jump to first page */}
           <PaginationItem>
             <PaginationFirst
               onClick={() => handlePageClick(1)}
@@ -76,7 +74,6 @@ export const BlogPaginationWrapper = ({ currentPage = 1, totalPages = 1 }) => {
             />
           </PaginationItem>
 
-          {/* Previous page */}
           <PaginationItem>
             <PaginationPrevious
               onClick={() => handlePageClick(currentPage - 1)}
@@ -84,7 +81,6 @@ export const BlogPaginationWrapper = ({ currentPage = 1, totalPages = 1 }) => {
             />
           </PaginationItem>
 
-          {/* Page numbers + Ellipsis */}
           {pages.map((p, idx) => {
             if (p === 'ellipsis-start' || p === 'ellipsis-end') {
               return (
@@ -109,7 +105,6 @@ export const BlogPaginationWrapper = ({ currentPage = 1, totalPages = 1 }) => {
             );
           })}
 
-          {/* Next page */}
           <PaginationItem>
             <PaginationNext
               onClick={() => handlePageClick(currentPage + 1)}
@@ -117,7 +112,6 @@ export const BlogPaginationWrapper = ({ currentPage = 1, totalPages = 1 }) => {
             />
           </PaginationItem>
 
-          {/* Jump to last page */}
           <PaginationItem>
             <PaginationLast
               onClick={() => handlePageClick(totalPages)}

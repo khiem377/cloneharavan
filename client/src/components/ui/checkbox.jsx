@@ -11,7 +11,7 @@ const Checkbox = React.forwardRef(({ className, checked, onChange, ...props }, r
       checked={checked}
       onChange={onChange}
       className={cn(
-        'h-3.5 w-3.5 rounded border-gray-300 text-red-600 accent-red-600 focus:ring-0 focus:ring-offset-0 cursor-pointer transition-colors',
+        'h-3.5 w-3.5 rounded-[3px] border-slate-300 text-brand accent-brand focus:ring-1 focus:ring-brand cursor-pointer transition-colors',
         className
       )}
       {...props}

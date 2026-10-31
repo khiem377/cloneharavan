@@ -4,12 +4,8 @@ import React from 'react';
 import {
   Edit3,
   X,
-  Camera,
-  Trash2,
-  Loader2,
   CheckCircle2,
   AlertCircle,
-  Shield,
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../ui/card';
 import { Button } from '../ui/button';
@@ -18,7 +14,8 @@ import { Label } from '../ui/label';
 import { Badge } from '../ui/badge';
 import { Separator } from '../ui/separator';
 import { Alert, AlertDescription } from '../ui/alert';
-import { isSyntheticEmail, getAuthProviderLabel } from '../../utils/userUtils';
+import { isSyntheticEmail, getAuthProviderLabel } from '@/utils/userUtils';
+import ProfileAvatarCard from './profile/ProfileAvatarCard';
 
 export default function AccountProfileTab({
   user,
@@ -37,7 +34,7 @@ export default function AccountProfileTab({
   handleDeleteAvatar,
 }) {
   return (
-    <Card className="animate-fadeIn">
+    <Card className="animate-fadeIn shadow-none border-slate-200">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
         <div>
           <CardTitle>Thông tin cá nhân</CardTitle>
@@ -51,7 +48,7 @@ export default function AccountProfileTab({
             variant="ghost"
             size="sm"
             onClick={handleCancelEdit}
-            className="text-xs text-slate-500 hover:text-slate-800 h-8 px-2.5 rounded-[6px] active:scale-[0.98]"
+            className="text-xs text-slate-500 hover:text-slate-800 h-8 px-2.5 rounded-[6px]"
           >
             <X size={13} className="mr-1" />
             <span>Hủy</span>
@@ -62,7 +59,7 @@ export default function AccountProfileTab({
             variant="ghost"
             size="sm"
             onClick={() => setIsEditing(true)}
-            className="text-xs text-[#e30019] hover:text-[#c40015] hover:bg-red-50/50 h-8 px-2.5 rounded-[6px] font-semibold active:scale-[0.98]"
+            className="text-xs text-[#e30019] hover:text-[#c40015] hover:bg-red-50/50 h-8 px-2.5 rounded-[6px] font-semibold"
           >
             <Edit3 size={13} className="mr-1" />
             <span>Chỉnh sửa hồ sơ</span>
@@ -72,64 +69,14 @@ export default function AccountProfileTab({
       <Separator className="mb-5" />
 
       <CardContent className="space-y-6">
-        {/* Avatar Management Card */}
-        <Card className="p-4 bg-slate-50/80 border-slate-200">
-          <div className="flex flex-col sm:flex-row items-center gap-4">
-            <div className="relative shrink-0">
-              {user?.avatar?.url ? (
-                <img
-                  src={user.avatar.url}
-                  alt={displayName}
-                  referrerPolicy="no-referrer"
-                  className="w-16 h-16 rounded-full object-cover border-2 border-white shadow-xs"
-                />
-              ) : (
-                <div className="w-16 h-16 rounded-full bg-slate-900 text-white font-bold text-xl flex items-center justify-center uppercase shadow-xs">
-                  {initial}
-                </div>
-              )}
-              {avatarUploading && (
-                <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center">
-                  <Loader2 size={16} className="animate-spin text-white" />
-                </div>
-              )}
-            </div>
-            <div className="flex-1 text-center sm:text-left space-y-1">
-              <h4 className="text-xs font-bold text-slate-900">
-                Ảnh đại diện tài khoản
-              </h4>
-              <p className="text-[11px] text-slate-500">
-                Định dạng hỗ trợ: PNG, JPG, WEBP. Dung lượng tối đa 5MB.
-              </p>
-              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 pt-1.5">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => avatarInputRef.current?.click()}
-                  disabled={avatarUploading}
-                  className="h-7 text-xs rounded-[6px] px-3 active:scale-[0.98]"
-                >
-                  <Camera size={13} className="mr-1.5" />
-                  <span>{user?.avatar?.url ? 'Đổi ảnh mới' : 'Tải ảnh lên'}</span>
-                </Button>
-                {user?.avatar?.url && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleDeleteAvatar}
-                    disabled={avatarUploading}
-                    className="h-7 text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-[6px] px-3 active:scale-[0.98]"
-                  >
-                    <Trash2 size={13} className="mr-1.5" />
-                    <span>Gỡ ảnh</span>
-                  </Button>
-                )}
-              </div>
-            </div>
-          </div>
-        </Card>
+        <ProfileAvatarCard
+          user={user}
+          displayName={displayName}
+          initial={initial}
+          avatarUploading={avatarUploading}
+          avatarInputRef={avatarInputRef}
+          handleDeleteAvatar={handleDeleteAvatar}
+        />
 
         {profileMessage && (
           <Alert variant={profileMessage.type === 'success' ? 'success' : 'destructive'}>
@@ -142,10 +89,8 @@ export default function AccountProfileTab({
           </Alert>
         )}
 
-        {/* Profile Form */}
         <form onSubmit={handleUpdateProfile} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Full Name */}
             <div className="space-y-1.5">
               <Label htmlFor="fullName">
                 Họ và tên <span className="text-[#e30019]">*</span>
@@ -168,7 +113,6 @@ export default function AccountProfileTab({
               />
             </div>
 
-            {/* Phone */}
             <div className="space-y-1.5">
               <Label htmlFor="phone">Số điện thoại</Label>
               <Input
@@ -192,7 +136,6 @@ export default function AccountProfileTab({
               />
             </div>
 
-            {/* Email */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <Label htmlFor="email">Email liên kết</Label>
@@ -221,7 +164,6 @@ export default function AccountProfileTab({
               />
             </div>
 
-            {/* Date of Birth */}
             <div className="space-y-1.5">
               <Label htmlFor="dateOfBirth">Ngày sinh</Label>
               <Input
@@ -241,7 +183,6 @@ export default function AccountProfileTab({
             </div>
           </div>
 
-          {/* Auth Provider Info */}
           <div className="pt-2">
             <Badge
               variant="outline"

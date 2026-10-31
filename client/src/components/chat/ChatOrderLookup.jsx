@@ -99,14 +99,16 @@ export default function ChatOrderLookup({ onSelect }) {
           </span>
         </div>
         {isAuthenticated && mode === 'guest' && (
-          <button
+          <Button
             type="button"
+            variant="link"
+            size="sm"
             onClick={() => { setMode('my_orders'); setError(''); setSearchedOrder(null); }}
-            className="text-[11px] text-[#284ea1] hover:underline flex items-center gap-1 font-semibold cursor-pointer"
+            className="h-auto p-0 text-[11px] text-[#284ea1] gap-1 font-semibold"
           >
             <ArrowLeft className="size-3" />
             <span>Đơn của tôi</span>
-          </button>
+          </Button>
         )}
       </div>
 
@@ -137,14 +139,12 @@ export default function ChatOrderLookup({ onSelect }) {
                     <div className="text-[11px] text-slate-600 truncate">{firstItemName} {totalItemsCount > 1 ? `(+${totalItemsCount - 1} món khác)` : ''}</div>
                     <div className="flex items-center justify-between pt-1 border-t border-slate-200/60 text-[11px]">
                       <span className="font-mono font-bold text-rose-600 tabular-nums">{formatPrice(item.pricing?.totalAmount)}</span>
-                      <Link
-                        href={`/tai-khoan?tab=orders&highlight=${item._id}`}
-                        onClick={onSelect}
-                        className="text-[#284ea1] font-semibold hover:underline inline-flex items-center gap-1"
-                      >
-                        <span>Chi tiết</span>
-                        <ExternalLink className="size-3" />
-                      </Link>
+                      <Button asChild variant="link" size="sm" className="h-auto p-0 text-[#284ea1] font-semibold gap-1">
+                        <Link href={`/tai-khoan?tab=orders&highlight=${item._id}`} onClick={onSelect}>
+                          <span>Chi tiết</span>
+                          <ExternalLink className="size-3" />
+                        </Link>
+                      </Button>
                     </div>
                   </div>
                 );
@@ -157,21 +157,21 @@ export default function ChatOrderLookup({ onSelect }) {
           )}
 
           <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px]">
-            <button
+            <Button
               type="button"
+              variant="link"
+              size="sm"
               onClick={() => { setMode('guest'); setError(''); setSearchedOrder(null); }}
-              className="text-slate-600 hover:text-slate-900 hover:underline cursor-pointer"
+              className="h-auto p-0 text-slate-600 hover:text-slate-900 text-[11px]"
             >
               Tra cứu mã đơn khác
-            </button>
-            <Link
-              href="/tai-khoan?tab=orders"
-              onClick={onSelect}
-              className="text-[#284ea1] font-semibold hover:underline inline-flex items-center gap-1"
-            >
-              <span>Tất cả đơn hàng</span>
-              <ExternalLink className="size-3" />
-            </Link>
+            </Button>
+            <Button asChild variant="link" size="sm" className="h-auto p-0 text-[#284ea1] font-semibold gap-1 text-[11px]">
+              <Link href="/tai-khoan?tab=orders" onClick={onSelect}>
+                <span>Tất cả đơn hàng</span>
+                <ExternalLink className="size-3" />
+              </Link>
+            </Button>
           </div>
         </div>
       ) : (
@@ -214,7 +214,7 @@ export default function ChatOrderLookup({ onSelect }) {
               <Button
                 type="submit"
                 disabled={isSearching}
-                className="w-full bg-[#284ea1] hover:bg-[#1e3b82] text-white text-xs font-semibold py-2 px-4 rounded-[6px] transition-colors active:scale-[0.98] inline-flex items-center justify-center gap-1.5 cursor-pointer shadow-xs h-9 mt-1"
+                className="w-full bg-[#284ea1] hover:bg-[#1e3b82] text-white text-xs font-semibold py-2 px-4 rounded-[6px] active:scale-[0.98] inline-flex items-center justify-center gap-1.5 shadow-xs h-9 mt-1"
               >
                 <Search className="size-3.5" />
                 <span>{isSearching ? 'Đang xác thực...' : 'Tra cứu đơn hàng'}</span>
@@ -224,9 +224,9 @@ export default function ChatOrderLookup({ onSelect }) {
             <div className="rounded-[6px] bg-slate-50 border border-slate-200 p-3 space-y-2 text-xs">
               <div className="flex items-center justify-between">
                 <span className="font-semibold text-slate-800 font-mono">#{searchedOrder.code}</span>
-                <span className="text-[10px] font-bold text-white bg-[#284ea1] px-2 py-0.5 rounded-[4px]">
+                <Badge className="text-[10px] font-bold text-white bg-[#284ea1]">
                   {searchedOrder.statusLabel}
-                </span>
+                </Badge>
               </div>
               <div className="p-2 rounded-[4px] bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] flex items-center gap-1.5">
                 <ShieldCheck className="size-3.5 shrink-0 text-emerald-600" />
@@ -240,13 +240,15 @@ export default function ChatOrderLookup({ onSelect }) {
                 <p className="leading-snug text-slate-700 pt-0.5">{searchedOrder.note}</p>
               </div>
               <div className="pt-2 border-t border-slate-200/80 flex justify-between items-center text-[11px]">
-                <button
+                <Button
                   type="button"
+                  variant="link"
+                  size="sm"
                   onClick={() => { setSearchedOrder(null); setOrderCode(''); setContactInfo(''); }}
-                  className="text-[#284ea1] hover:underline font-medium cursor-pointer"
+                  className="h-auto p-0 text-[#284ea1] font-medium text-[11px]"
                 >
                   Tra cứu mã khác
-                </button>
+                </Button>
                 <span className="text-[10px] text-slate-400">Dữ liệu cá nhân đã được bảo vệ</span>
               </div>
             </div>
@@ -256,3 +258,4 @@ export default function ChatOrderLookup({ onSelect }) {
     </div>
   );
 }
+

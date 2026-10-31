@@ -1,17 +1,15 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { X, SlidersHorizontal, ChevronRight } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { SlidersHorizontal } from 'lucide-react';
+import { Card } from '@/components/ui/card';
 import { Table, TableBody, TableRow, TableCell } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogHeader, DialogTitle, DialogContent, DialogClose } from '@/components/ui/dialog';
-import { Separator } from '@/components/ui/separator';
+import { Dialog, DialogHeader, DialogTitle, DialogContent } from '@/components/ui/dialog';
 
 export default function ProductSpecsSummary({ product, selectedVariant }) {
   const [isOpen, setIsOpen] = useState(false);
 
-  // Tổng hợp thông số kỹ thuật (ưu tiên từ variant nếu có, hoặc product cha)
   const specs = useMemo(() => {
     const rawSpecs = (selectedVariant?.specifications?.length > 0
       ? selectedVariant.specifications
@@ -48,7 +46,7 @@ export default function ProductSpecsSummary({ product, selectedVariant }) {
   const summarySpecs = specs.slice(0, 6);
 
   return (
-    <Card className="p-4 space-y-3 shadow-xs border-slate-200">
+    <Card className="p-4 space-y-3 shadow-none border-slate-200 rounded-[6px]">
       <div className="flex items-center justify-between pb-2 border-b border-slate-100">
         <h3 className="font-bold text-xs sm:text-sm text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
           <SlidersHorizontal size={14} className="text-[#e30019]" />
@@ -68,99 +66,91 @@ export default function ProductSpecsSummary({ product, selectedVariant }) {
         )}
       </div>
 
-      {/* Bảng tóm tắt thông số với Table component */}
-      <Table>
-        <TableBody>
-          {summarySpecs.map((spec, idx) => (
-            <TableRow
-              key={idx}
-              className={idx % 2 === 0 ? 'bg-slate-50/60' : 'bg-white'}
-            >
-              <TableCell className="w-2/5 p-2 font-medium text-slate-600 border-r border-slate-100 text-xs">
-                {spec.key}
-              </TableCell>
-              <TableCell className="w-3/5 p-2 text-slate-900 font-semibold break-words text-xs">
-                {typeof spec.value === 'object' && spec.value !== null ? JSON.stringify(spec.value) : String(spec.value ?? '')}
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+      <div className="overflow-hidden rounded-[4px] border border-slate-100">
+        <Table>
+          <TableBody>
+            {summarySpecs.map((item, idx) => (
+              <TableRow
+                key={idx}
+                className={idx % 2 === 0 ? 'bg-slate-50/60' : 'bg-white'}
+              >
+                <TableCell className="py-2 px-3 text-xs text-slate-500 font-medium w-2/5 border-r border-slate-100">
+                  {item.key}
+                </TableCell>
+                <TableCell className="py-2 px-3 text-xs text-slate-900 font-semibold w-3/5 font-mono tabular-nums">
+                  {item.value}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
 
-      {/* Nút xem chi tiết mở Dialog */}
       {specs.length > 6 && (
         <Button
           type="button"
           variant="outline"
           size="sm"
           onClick={() => setIsOpen(true)}
-          className="w-full h-8 text-xs font-semibold text-slate-700 rounded-[6px] hover:bg-slate-50 active:scale-[0.98]"
+          className="w-full h-8 text-xs font-semibold rounded-[6px] border-slate-200 text-slate-700 hover:border-slate-400"
         >
-          <span>Xem toàn bộ cấu hình chi tiết ({specs.length} mục)</span>
-          <ChevronRight size={13} className="ml-1 text-slate-400" />
+          Xem toàn bộ {specs.length} thông số
         </Button>
       )}
 
-      {/* DIALOG TOÀN BỘ CẤU HÌNH */}
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <div className="flex flex-col max-h-[85vh]">
-          {/* Header */}
-          <DialogHeader className="px-5 py-3.5 border-b border-slate-200 bg-slate-50/80 flex items-center justify-between">
-            <DialogTitle className="font-bold text-sm text-slate-900 uppercase tracking-wide">
-              Thông số kỹ thuật chi tiết
-            </DialogTitle>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              onClick={() => setIsOpen(false)}
-              className="h-7 w-7 text-slate-400 hover:text-slate-700 rounded-[4px]"
-            >
-              <X size={15} />
-            </Button>
-          </DialogHeader>
+      {isOpen && (
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+          <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col p-0 overflow-hidden rounded-[6px]">
+            <DialogHeader className="p-4 sm:p-5 border-b border-slate-200 bg-slate-50/50">
+              <DialogTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <SlidersHorizontal className="size-4 text-[#e30019]" />
+                <span>Bảng thông số kỹ thuật chi tiết</span>
+              </DialogTitle>
+            </DialogHeader>
 
-          {/* Body */}
-          <DialogContent className="p-5 overflow-y-auto space-y-5 text-xs sm:text-sm">
-            {Object.entries(groupedSpecs).map(([groupName, items]) => (
-              <div key={groupName} className="space-y-2">
-                <h4 className="font-bold text-xs uppercase tracking-wider text-[#e30019] border-b border-red-100 pb-1">
-                  {groupName}
-                </h4>
-                <Table>
-                  <TableBody>
-                    {items.map((item, i) => (
-                      <TableRow
-                        key={i}
-                        className={i % 2 === 0 ? 'bg-slate-50/70' : 'bg-white'}
-                      >
-                        <TableCell className="w-2/5 p-2.5 font-medium text-slate-600 border-r border-slate-100 text-xs">
-                          {item.key}
-                        </TableCell>
-                        <TableCell className="w-3/5 p-2.5 text-slate-900 font-semibold break-words text-xs">
-                          {typeof item.value === 'object' && item.value !== null ? JSON.stringify(item.value) : String(item.value ?? '')}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            ))}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+              {Object.entries(groupedSpecs).map(([groupTitle, groupItems]) => (
+                <div key={groupTitle} className="space-y-2">
+                  <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wide px-1">
+                    {groupTitle}
+                  </h4>
+                  <div className="rounded-[6px] border border-slate-200 overflow-hidden">
+                    <Table>
+                      <TableBody>
+                        {groupItems.map((spec, sIdx) => (
+                          <TableRow
+                            key={sIdx}
+                            className={sIdx % 2 === 0 ? 'bg-slate-50/50' : 'bg-white'}
+                          >
+                            <TableCell className="py-2.5 px-3.5 text-xs text-slate-600 font-medium w-1/3 border-r border-slate-200">
+                              {spec.key}
+                            </TableCell>
+                            <TableCell className="py-2.5 px-3.5 text-xs text-slate-900 font-semibold w-2/3 font-mono tabular-nums">
+                              {spec.value}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="p-3 border-t border-slate-200 bg-slate-50 flex justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setIsOpen(false)}
+                className="text-xs font-semibold rounded-[6px]"
+              >
+                Đóng
+              </Button>
+            </div>
           </DialogContent>
-
-          {/* Footer */}
-          <div className="px-5 py-3 border-t border-slate-200 bg-slate-50 flex justify-end">
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => setIsOpen(false)}
-              className="px-4 h-8 rounded-[6px] bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800 active:scale-[0.98]"
-            >
-              Đóng
-            </Button>
-          </div>
-        </div>
-      </Dialog>
+        </Dialog>
+      )}
     </Card>
   );
 }

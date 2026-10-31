@@ -1,20 +1,30 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Eye, EyeOff, Check, AlertCircle, Loader2, X } from 'lucide-react';
-import { Input } from '../ui/input';
-import { Button } from '../ui/button';
-import { Label } from '../ui/label';
-import { Alert, AlertDescription } from '../ui/alert';
+import { Eye, EyeOff, Check, AlertCircle, Loader2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import authService from '@/services/auth.service';
-import { useToast } from '../ui/toast';
+import { useToast } from '@/components/ui/toast';
 
 export default function PasswordModal({
   open,
+  isOpen,
   onOpenChange,
+  onClose,
   isSetPassword = false,
   onSuccess,
 }) {
+  const isModalOpen = Boolean(isOpen !== undefined ? isOpen : open);
+  const handleClose = () => {
+    if (onClose) onClose();
+    if (onOpenChange) onOpenChange(false);
+  };
+
   const { toast } = useToast();
 
   const [currentPassword, setCurrentPassword] = useState('');
@@ -29,9 +39,8 @@ export default function PasswordModal({
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
 
-  // Reset form khi mở modal
   useEffect(() => {
-    if (open) {
+    if (isModalOpen) {
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
@@ -41,9 +50,8 @@ export default function PasswordModal({
       setShowNew(false);
       setShowConfirm(false);
     }
-  }, [open]);
+  }, [isModalOpen]);
 
-  // Các tiêu chí an toàn mật khẩu
   const rules = [
     { label: 'Tối thiểu 8 ký tự', ok: newPassword.length >= 8 },
     { label: 'Chữ in hoa (A-Z)', ok: /[A-Z]/.test(newPassword) },
@@ -54,7 +62,6 @@ export default function PasswordModal({
 
   const passedRulesCount = rules.filter((r) => r.ok).length;
 
-  // Thanh đo độ mạnh tối giản (1 - 4 vạch)
   const getStrengthData = () => {
     if (!newPassword) return { bars: 0, text: 'Chưa nhập', color: 'bg-slate-200', textColor: 'text-slate-400' };
     if (passedRulesCount <= 2) {
@@ -114,7 +121,7 @@ export default function PasswordModal({
       }
 
       if (onSuccess) onSuccess();
-      onOpenChange(false);
+      handleClose();
     } catch (err) {
       const msg =
         err.response?.data?.message ||
@@ -126,50 +133,28 @@ export default function PasswordModal({
     }
   };
 
-  if (!open) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-black/60 transition-opacity"
-        onClick={() => !loading && onOpenChange(false)}
-      />
+    <Dialog open={isModalOpen} onOpenChange={(val) => !val && !loading && handleClose()}>
+      <DialogContent className="max-w-md p-0 rounded-[6px] overflow-hidden">
+        <DialogHeader className="p-4 sm:p-5 border-b border-slate-100 bg-white">
+          <DialogTitle className="text-sm font-bold text-slate-900">
+            {isSetPassword ? 'Tạo mật khẩu' : 'Đổi mật khẩu'}
+          </DialogTitle>
+          <DialogDescription className="text-xs text-slate-500">
+            {isSetPassword
+              ? 'Thiết lập mật khẩu riêng để đăng nhập bằng email hoặc số điện thoại'
+              : 'Nhập mật khẩu hiện tại và mật khẩu mới để thay đổi'}
+          </DialogDescription>
+        </DialogHeader>
 
-      {/* Modal Dialog */}
-      <div className="relative z-10 w-full max-w-md bg-white rounded-[6px] border border-slate-200 shadow-sm overflow-hidden animate-fadeIn">
-        {/* Modal Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-white">
-          <div className="space-y-0.5">
-            <h3 className="font-bold text-sm text-slate-900">
-              {isSetPassword ? 'Tạo mật khẩu' : 'Đổi mật khẩu'}
-            </h3>
-            <p className="text-xs text-slate-500">
-              {isSetPassword
-                ? 'Thiết lập mật khẩu riêng để đăng nhập bằng email hoặc số điện thoại'
-                : 'Nhập mật khẩu hiện tại và mật khẩu mới để thay đổi'}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => onOpenChange(false)}
-            disabled={loading}
-            className="w-7 h-7 rounded-[4px] border border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-50 flex items-center justify-center cursor-pointer transition active:scale-[0.98]"
-          >
-            <X size={14} />
-          </button>
-        </div>
-
-        {/* Modal Form */}
-        <form onSubmit={handleSubmit} className="p-5 space-y-4">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-5 space-y-4">
           {errorMsg && (
             <Alert variant="destructive" className="py-2 px-3 text-xs rounded-[6px]">
-              <AlertCircle className="h-4 w-4 shrink-0" />
+              <AlertCircle className="size-4 shrink-0" />
               <AlertDescription className="text-xs">{errorMsg}</AlertDescription>
             </Alert>
           )}
 
-          {/* Mật khẩu hiện tại (chỉ khi đổi mật khẩu) */}
           {!isSetPassword && (
             <div className="space-y-1">
               <Label htmlFor="curr-pass" className="text-xs font-medium text-slate-700">
@@ -185,18 +170,19 @@ export default function PasswordModal({
                   placeholder="Nhập mật khẩu hiện tại"
                   className="h-9 pr-9 rounded-[6px] text-xs bg-white border-slate-200"
                 />
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="icon-xs"
                   onClick={() => setShowCurrent(!showCurrent)}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer transition"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                 >
                   {showCurrent ? <EyeOff size={14} /> : <Eye size={14} />}
-                </button>
+                </Button>
               </div>
             </div>
           )}
 
-          {/* Mật khẩu mới */}
           <div className="space-y-1">
             <Label htmlFor="new-pass" className="text-xs font-medium text-slate-700">
               Mật khẩu mới
@@ -211,16 +197,17 @@ export default function PasswordModal({
                 placeholder="Tối thiểu 8 ký tự"
                 className="h-9 pr-9 rounded-[6px] text-xs bg-white border-slate-200"
               />
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="icon-xs"
                 onClick={() => setShowNew(!showNew)}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer transition"
+                className="absolute right-1 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
               >
                 {showNew ? <EyeOff size={14} /> : <Eye size={14} />}
-              </button>
+              </Button>
             </div>
 
-            {/* Thanh đo độ mạnh mật khẩu */}
             {newPassword && (
               <div className="pt-1.5 space-y-1">
                 <div className="flex items-center justify-between text-[11px]">
@@ -241,7 +228,6 @@ export default function PasswordModal({
             )}
           </div>
 
-          {/* Xác nhận mật khẩu */}
           <div className="space-y-1">
             <Label htmlFor="confirm-pass" className="text-xs font-medium text-slate-700">
               Nhập lại mật khẩu mới
@@ -258,13 +244,15 @@ export default function PasswordModal({
                   confirmPassword && !isMatch ? 'border-rose-400' : ''
                 }`}
               />
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="icon-xs"
                 onClick={() => setShowConfirm(!showConfirm)}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer transition"
+                className="absolute right-1 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
               >
                 {showConfirm ? <EyeOff size={14} /> : <Eye size={14} />}
-              </button>
+              </Button>
             </div>
             {confirmPassword && !isMatch && (
               <p className="text-[11px] text-rose-500 font-medium">
@@ -273,7 +261,6 @@ export default function PasswordModal({
             )}
           </div>
 
-          {/* Tiêu chí mật khẩu */}
           <div className="rounded-[6px] border border-slate-100 bg-slate-50/50 p-3">
             <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
               Yêu cầu mật khẩu:
@@ -287,14 +274,14 @@ export default function PasswordModal({
                   }`}
                 >
                   <div
-                    className={`w-3.5 h-3.5 rounded-full flex items-center justify-center shrink-0 ${
+                    className={`size-3.5 rounded-full flex items-center justify-center shrink-0 ${
                       rule.ok ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-400'
                     }`}
                   >
                     {rule.ok ? (
                       <Check size={9} strokeWidth={3} />
                     ) : (
-                      <span className="w-1 h-1 rounded-full bg-slate-400" />
+                      <span className="size-1 rounded-full bg-slate-400" />
                     )}
                   </div>
                   <span>{rule.label}</span>
@@ -303,30 +290,30 @@ export default function PasswordModal({
             </div>
           </div>
 
-          {/* Checkbox đăng xuất thiết bị khác */}
           {!isSetPassword && (
-            <label className="flex items-start gap-2 pt-1 cursor-pointer select-none">
-              <input
-                type="checkbox"
+            <div className="flex items-center space-x-2 pt-1">
+              <Checkbox
+                id="logout-other-devices"
                 checked={logoutOtherDevices}
-                onChange={(e) => setLogoutOtherDevices(e.target.checked)}
-                className="mt-0.5 rounded-[3px] border-slate-300 text-slate-900 focus:ring-0 cursor-pointer"
+                onCheckedChange={setLogoutOtherDevices}
               />
-              <span className="text-xs text-slate-600 leading-snug">
+              <Label
+                htmlFor="logout-other-devices"
+                className="text-xs text-slate-600 font-normal leading-none cursor-pointer"
+              >
                 Đăng xuất khỏi tất cả các thiết bị khác sau khi hoàn tất
-              </span>
-            </label>
+              </Label>
+            </div>
           )}
 
-          {/* Modal Actions */}
           <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
             <Button
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => onOpenChange(false)}
+              onClick={handleClose}
               disabled={loading}
-              className="h-8 px-4 text-xs rounded-[6px] border-slate-200 text-slate-700 hover:bg-slate-50 active:scale-[0.98]"
+              className="h-8 px-4 text-xs rounded-[6px] border-slate-200 text-slate-700 hover:bg-slate-50"
             >
               Hủy
             </Button>
@@ -334,7 +321,7 @@ export default function PasswordModal({
               type="submit"
               size="sm"
               disabled={loading || !isFormValid}
-              className="h-8 px-4 text-xs rounded-[6px] bg-slate-900 hover:bg-slate-800 text-white font-semibold active:scale-[0.98] transition-transform"
+              className="h-8 px-4 text-xs rounded-[6px] bg-slate-900 hover:bg-slate-800 text-white font-semibold"
             >
               {loading ? (
                 <>
@@ -349,7 +336,7 @@ export default function PasswordModal({
             </Button>
           </div>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

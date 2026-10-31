@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Eye, EyeOff, CheckCircle2, AlertCircle, KeyRound, ShieldCheck, Check } from 'lucide-react';
+import { Eye, EyeOff, CheckCircle2, AlertCircle, Check } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../ui/card';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
@@ -29,7 +29,7 @@ export default function AccountChangePasswordTab({
   const isFormValid = rules.every((r) => r.ok) && newPw === passwordForm.confirmPassword && passwordForm.currentPassword;
 
   return (
-    <Card className="animate-fadeIn">
+    <Card className="animate-fadeIn shadow-none border-slate-200">
       <CardHeader>
         <CardTitle>Đổi mật khẩu</CardTitle>
         <CardDescription>
@@ -51,7 +51,6 @@ export default function AccountChangePasswordTab({
         )}
 
         <form onSubmit={handleChangePassword} className="space-y-4 max-w-md">
-          {/* Current Password */}
           <div className="space-y-1.5">
             <Label htmlFor="currentPassword">
               Mật khẩu hiện tại <span className="text-[#e30019]">*</span>
@@ -74,7 +73,7 @@ export default function AccountChangePasswordTab({
               <Button
                 type="button"
                 variant="ghost"
-                size="icon-sm"
+                size="icon-xs"
                 onClick={() =>
                   setShowPassword({
                     ...showPassword,
@@ -88,7 +87,6 @@ export default function AccountChangePasswordTab({
             </div>
           </div>
 
-          {/* New Password */}
           <div className="space-y-1.5">
             <Label htmlFor="newPassword">
               Mật khẩu mới <span className="text-[#e30019]">*</span>
@@ -111,7 +109,7 @@ export default function AccountChangePasswordTab({
               <Button
                 type="button"
                 variant="ghost"
-                size="icon-sm"
+                size="icon-xs"
                 onClick={() =>
                   setShowPassword({
                     ...showPassword,
@@ -125,7 +123,6 @@ export default function AccountChangePasswordTab({
             </div>
           </div>
 
-          {/* Password Checklist */}
           <div className="rounded-[6px] border border-slate-200 bg-slate-50/50 p-3 space-y-1.5">
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono">
               Yêu cầu mật khẩu an toàn:
@@ -153,7 +150,6 @@ export default function AccountChangePasswordTab({
             </div>
           </div>
 
-          {/* Confirm Password */}
           <div className="space-y-1.5">
             <Label htmlFor="confirmPassword">
               Xác nhận mật khẩu mới <span className="text-[#e30019]">*</span>
@@ -176,7 +172,7 @@ export default function AccountChangePasswordTab({
               <Button
                 type="button"
                 variant="ghost"
-                size="icon-sm"
+                size="icon-xs"
                 onClick={() =>
                   setShowPassword({
                     ...showPassword,

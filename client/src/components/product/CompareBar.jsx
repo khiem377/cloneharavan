@@ -19,7 +19,6 @@ export const CompareBar = () => {
 
   const compareUrl = `/so-sanh?products=${productIds}`;
 
-  // If collapsed: show floating trigger button on bottom left
   if (!isOpen) {
     return (
       <div className="fixed bottom-4 left-4 z-50 animate-fadeIn">
@@ -37,11 +36,9 @@ export const CompareBar = () => {
     );
   }
 
-  // Expanded Compare Bar at bottom
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-slate-200 shadow-lg py-3 px-4 sm:px-8 animate-in slide-in-from-bottom duration-200">
       <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-        {/* Left: Product Slots */}
         <div className="flex items-center gap-3 overflow-x-auto no-scrollbar w-full md:w-auto py-1">
           {comparedProducts.map((p) => {
             const id = p._id || p.id;
@@ -55,15 +52,16 @@ export const CompareBar = () => {
                 key={id}
                 className="relative flex items-center gap-2.5 p-2 rounded-[6px] border border-slate-200 bg-white shadow-2xs shrink-0 max-w-[200px] sm:max-w-[220px]"
               >
-                {/* Remove button */}
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="icon"
                   onClick={() => removeProduct(id)}
-                  className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-slate-700 hover:bg-[#e30019] text-white flex items-center justify-center text-[10px] shadow-2xs transition cursor-pointer"
-                  title="Xóa khỏi so sánh"
+                  className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-slate-700 hover:bg-[#e30019] text-white p-0 shadow-2xs"
+                  aria-label="Xóa khỏi so sánh"
                 >
                   <X size={11} />
-                </button>
+                </Button>
 
                 <div className="w-12 h-12 bg-white rounded-[4px] shrink-0 flex items-center justify-center p-1 border border-slate-100">
                   <img src={thumb} alt="" className="w-full h-full object-contain" />
@@ -83,7 +81,6 @@ export const CompareBar = () => {
             );
           })}
 
-          {/* Empty slot placeholder if < 4 */}
           {comparedProducts.length < 4 && (
             <div className="hidden sm:flex items-center justify-center w-36 h-[66px] rounded-[6px] border border-dashed border-slate-300 text-slate-400 text-xs text-center px-2">
               <span>+ Thêm SP ({comparedProducts.length}/4)</span>
@@ -91,7 +88,6 @@ export const CompareBar = () => {
           )}
         </div>
 
-        {/* Right: Actions */}
         <div className="flex items-center gap-2.5 shrink-0 w-full md:w-auto justify-end border-t md:border-t-0 pt-2 md:pt-0 border-slate-100">
           <Button
             type="button"
@@ -131,3 +127,4 @@ export const CompareBar = () => {
 };
 
 export default CompareBar;
+

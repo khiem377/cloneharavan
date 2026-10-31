@@ -25,12 +25,10 @@ export default function CartFixedBottomBar({
   const formatPrice = (val) =>
     new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val || 0);
 
-  // Danh sách các sản phẩm còn hàng
   const availableItems = items.filter(
     (i) => !i.isOutOfStock && (i.availableStock === undefined || i.availableStock > 0)
   );
 
-  // Sản phẩm bị hết hàng
   const outOfStockItems = items.filter(
     (i) => Boolean(i.isOutOfStock) || (i.availableStock !== undefined && i.availableStock <= 0)
   );
@@ -41,7 +39,6 @@ export default function CartFixedBottomBar({
 
   const selectedCount = selectedItemIds.length;
 
-  // Tính tổng tiền các sản phẩm ĐƯỢC CHỌN (mặc định = 0 đ)
   const selectedSubtotal = items
     .filter((i) => selectedItemIds.includes(i._id))
     .reduce(
@@ -53,13 +50,11 @@ export default function CartFixedBottomBar({
       0
     );
 
-  // Tính tổng thanh toán sau khi trừ voucher (nếu có)
   const finalTotal =
     selectedCount === 0
       ? 0
       : Math.max(0, selectedSubtotal - (couponDiscount || 0));
 
-  // Xử lý chuyển sang trang Checkout
   const handleProceedCheckout = () => {
     if (selectedCount === 0) {
       toast('Vui lòng chọn ít nhất 1 sản phẩm để mua hàng', { type: 'warning' });
@@ -81,7 +76,6 @@ export default function CartFixedBottomBar({
     }
   };
 
-  // Lưu các sản phẩm đã chọn vào danh sách yêu thích
   const handleSaveToWishlist = () => {
     if (selectedCount === 0) {
       toast('Vui lòng chọn sản phẩm cần lưu vào mục Đã thích', { type: 'warning' });
@@ -90,7 +84,6 @@ export default function CartFixedBottomBar({
     toast(`Đã lưu ${selectedCount} sản phẩm vào mục Đã thích!`, { type: 'success' });
   };
 
-  // Mở Popup Modal xác nhận xóa chuẩn Shopee
   const handleDeleteSelected = async () => {
     if (selectedCount === 0) {
       toast('Vui lòng chọn sản phẩm cần xóa', { type: 'warning' });
@@ -116,8 +109,7 @@ export default function CartFixedBottomBar({
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-200/90 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
-      {/* TẦNG 1: DÒNG VOUCHER ƯU ĐÃI (CHUẨN HARAVAN) */}
+    <div className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-200 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
       <div className="border-b border-dashed border-slate-200 bg-white">
         <div className="container mx-auto px-3 sm:px-4 max-w-7xl h-10 flex items-center justify-between text-xs">
           <div className="flex items-center gap-2">
@@ -130,20 +122,20 @@ export default function CartFixedBottomBar({
             )}
           </div>
 
-          <button
+          <Button
             type="button"
+            variant="link"
+            size="sm"
             onClick={onOpenVoucherModal}
-            className="text-xs font-semibold text-[#284ea1] hover:text-[#1e3b82] hover:underline flex items-center gap-1 cursor-pointer transition-colors"
+            className="h-auto p-0 text-xs font-semibold text-[#284ea1] hover:text-[#1e3b82]"
           >
             <span>{appliedCouponCode ? 'Đổi mã voucher khác' : 'Chọn hoặc nhập mã >'}</span>
-          </button>
+          </Button>
         </div>
       </div>
 
-      {/* TẦNG 2: THAO TÁC HÀNG LOẠT VÀ NÚT ĐẶT HÀNG - CHUẨN PHỐI MÀU HARAVAN */}
       <div className="bg-white">
         <div className="container mx-auto px-3 sm:px-4 max-w-7xl py-2.5 sm:py-3 flex items-center justify-between gap-3 sm:gap-4 select-none">
-          {/* Cụm trái: Checkbox chọn tất cả, Xóa, Lưu vào đã thích */}
           <div className="flex items-center gap-3 sm:gap-6 text-xs text-slate-700 shrink-0">
             <div className="flex items-center gap-2">
               <Checkbox
@@ -161,44 +153,45 @@ export default function CartFixedBottomBar({
               </label>
             </div>
 
-            {/* Nút Xóa các sản phẩm đã chọn */}
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="sm"
               onClick={handleDeleteSelected}
               disabled={selectedCount === 0 || isUpdating}
-              className="text-xs text-slate-600 hover:text-red-600 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors font-medium whitespace-nowrap"
+              className="h-7 px-2 text-xs text-slate-600 hover:text-red-600 font-medium whitespace-nowrap"
             >
               Xóa {selectedCount > 0 ? `(${selectedCount})` : ''}
-            </button>
+            </Button>
 
-            {/* Nút bỏ sản phẩm không hoạt động nếu có */}
             {outOfStockItems.length > 0 && onClearOutOfStock && (
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="sm"
                 onClick={onClearOutOfStock}
-                className="hover:text-red-600 text-slate-500 cursor-pointer hidden lg:inline-block transition-colors whitespace-nowrap"
+                className="h-7 px-2 text-xs hover:text-red-600 text-slate-500 hidden lg:inline-flex whitespace-nowrap"
               >
                 Bỏ SP hết hàng ({outOfStockItems.length})
-              </button>
+              </Button>
             )}
 
-            {/* Nút Lưu vào mục Đã thích */}
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="sm"
               onClick={handleSaveToWishlist}
               disabled={selectedCount === 0 || isUpdating}
-              className="text-[#284ea1] hover:text-[#1e3b82] font-semibold disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors flex items-center gap-1 whitespace-nowrap"
+              className="h-7 px-2 text-xs text-[#284ea1] hover:text-[#1e3b82] font-semibold gap-1 whitespace-nowrap"
             >
               <Heart size={13} className="shrink-0" />
               <span>
                 <span className="hidden sm:inline">Lưu vào mục </span>Đã thích
               </span>
-            </button>
+            </Button>
           </div>
 
-          {/* Cụm phải: Tổng cộng xếp trên, Giá tiền màu xanh Haravan, nút Tiếp tục & Đặt hàng */}
           <div className="ml-auto flex items-center justify-end gap-2.5 sm:gap-4 shrink-0">
-            {/* Khối giá tiền: 2 dòng dọc (Tổng cộng ở trên, Số tiền xanh dương ở dưới) */}
             <div className="text-right whitespace-nowrap flex flex-col items-end justify-center leading-tight">
               <span className="text-[11px] sm:text-xs text-slate-600 font-medium">
                 Tổng cộng ({selectedCount} sản phẩm):
@@ -213,12 +206,11 @@ export default function CartFixedBottomBar({
               )}
             </div>
 
-            {/* Nút Đặt hàng ngay (Cam Amber Haravan) */}
             <Button
               type="button"
               onClick={handleProceedCheckout}
               disabled={selectedCount === 0 || isUpdating || checkoutLoading}
-              className="h-10 sm:h-11 px-6 sm:px-8 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs sm:text-sm rounded-[6px] shadow-xs disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap"
+              className="h-10 sm:h-11 px-6 sm:px-8 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs sm:text-sm rounded-[6px] shadow-xs active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 shrink-0 whitespace-nowrap"
             >
               {checkoutLoading ? (
                 <div className="flex items-center gap-1.5">

@@ -5,15 +5,17 @@ import { cn } from '../../lib/utils';
 
 const buttonVariants = ({ variant = 'default', size = 'default', className = '' } = {}) => {
   const base =
-    'inline-flex items-center justify-center whitespace-nowrap rounded-[6px] text-xs sm:text-sm font-medium transition-all active:scale-[0.98] focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-red-600 disabled:pointer-events-none disabled:opacity-50 cursor-pointer select-none';
+    'inline-flex items-center justify-center whitespace-nowrap rounded-[6px] text-xs sm:text-sm font-medium transition-all active:scale-[0.98] focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-brand disabled:pointer-events-none disabled:opacity-50 cursor-pointer select-none';
 
   const variants = {
-    default: 'bg-red-600 text-white hover:bg-red-700 shadow-xs',
-    destructive: 'bg-red-600 text-white hover:bg-red-700 shadow-xs',
+    default: 'bg-brand text-white hover:bg-brand-hover shadow-xs',
+    brand: 'bg-brand text-white hover:bg-brand-hover shadow-xs',
+    accent: 'bg-accent text-white hover:bg-accent-hover shadow-xs',
+    destructive: 'bg-accent text-white hover:bg-accent-hover shadow-xs',
     outline: 'border border-slate-200 bg-white hover:bg-slate-50 text-slate-800 hover:text-slate-900 shadow-2xs',
     secondary: 'bg-slate-100 text-slate-800 hover:bg-slate-200',
     ghost: 'hover:bg-slate-100 text-slate-700 hover:text-slate-900',
-    link: 'text-red-600 underline-offset-4 hover:underline active:scale-100',
+    link: 'text-brand underline-offset-4 hover:underline active:scale-100',
   };
 
   const sizes = {

@@ -25,7 +25,6 @@ export default function ProductPromotions({ deals, product, currentPrice = 0 }) 
     }, 2000);
   };
 
-  // Gom toàn bộ danh sách ưu đãi quà tặng & khuyến mãi thành danh sách phẳng
   const allGiftItems = [];
 
   giftPrograms.forEach((gift) => {
@@ -68,7 +67,6 @@ export default function ProductPromotions({ deals, product, currentPrice = 0 }) 
     }
   });
 
-  // Bổ sung các chương trình khuyến mãi nếu có
   promotions.forEach((promo) => {
     allGiftItems.push({
       type: 'promo',
@@ -89,11 +87,8 @@ export default function ProductPromotions({ deals, product, currentPrice = 0 }) 
 
   return (
     <div className="flex flex-col gap-3">
-
-      {/* 1. KHỐI ƯU ĐÃI ĐI KÈM (QUÀ TẶNG & KHUYẾN MÃI THỰC TẾ) */}
       {hasGifts && (
-        <div className="rounded-[6px] border border-red-200/90 bg-[#FFF5F5] p-3 sm:p-3.5 shadow-none">
-          {/* Header */}
+        <Card className="rounded-[6px] border-red-200 bg-[#FFF5F5] p-3 sm:p-3.5 shadow-none">
           <div className="flex items-center gap-2 mb-2.5">
             <span className="w-5 h-5 rounded-[4px] border border-red-500 text-red-600 flex items-center justify-center text-[11px] font-bold shrink-0">
               %
@@ -103,14 +98,12 @@ export default function ProductPromotions({ deals, product, currentPrice = 0 }) 
             </h3>
           </div>
 
-          {/* Hộp nội dung quà tặng màu trắng */}
           <div className="bg-white rounded-[6px] p-3 border border-red-100 divide-y divide-red-100">
             {visibleGiftItems.map((item, idx) => (
               <div
                 key={`gift-item-${idx}`}
                 className="flex items-start gap-2.5 py-2.5 first:pt-0 last:pb-0"
               >
-                {/* Icon hộp quà màu đỏ */}
                 <Gift className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
 
                 <div className="text-xs sm:text-[13px] text-slate-800 leading-snug">
@@ -150,12 +143,13 @@ export default function ProductPromotions({ deals, product, currentPrice = 0 }) 
             ))}
           </div>
 
-          {/* Nút Xem thêm / Thu gọn khi có hơn 2 ưu đãi */}
           {remainingCount > 0 && (
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="sm"
               onClick={() => setIsExpanded(!isExpanded)}
-              className="w-full flex items-center justify-center gap-1 mt-2.5 pt-0.5 text-xs font-medium text-red-600 hover:text-red-700 transition-colors cursor-pointer active:scale-[0.98]"
+              className="w-full h-8 mt-2 text-xs font-semibold text-red-600 hover:text-red-700 hover:bg-red-50/50 gap-1"
             >
               <span>
                 {isExpanded
@@ -163,18 +157,17 @@ export default function ProductPromotions({ deals, product, currentPrice = 0 }) 
                   : `Xem thêm ${remainingCount} ưu đãi`}
               </span>
               {isExpanded ? (
-                <ChevronUp className="w-3.5 h-3.5" />
+                <ChevronUp className="size-3.5" />
               ) : (
-                <ChevronDown className="w-3.5 h-3.5" />
+                <ChevronDown className="size-3.5" />
               )}
-            </button>
+            </Button>
           )}
-        </div>
+        </Card>
       )}
 
-      {/* 2. KHỐI COUPONS / MÃ GIẢM GIÁ (SHADCN CARD) */}
       {hasCoupons && (
-        <Card className="rounded-[6px] border border-slate-200 bg-white shadow-none overflow-hidden">
+        <Card className="rounded-[6px] border-slate-200 bg-white shadow-none overflow-hidden">
           <CardHeader className="p-3 pb-2 border-b border-slate-100">
             <div className="flex items-center justify-between">
               <CardTitle className="text-xs font-bold text-slate-800 uppercase tracking-wide">

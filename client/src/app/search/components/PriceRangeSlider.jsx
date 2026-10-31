@@ -65,7 +65,7 @@ export default function PriceRangeSlider({
       <div className="relative w-full h-6 flex items-center select-none py-2">
         <div className="absolute w-full h-1.5 bg-slate-200 rounded-full" />
         <div
-          className="absolute h-1.5 bg-[#e30019] rounded-full"
+          className="absolute h-1.5 bg-brand rounded-full"
           style={{
             left: `${minPercent}%`,
             width: `${Math.max(0, maxPercent - minPercent)}%`,
@@ -128,7 +128,7 @@ export default function PriceRangeSlider({
         type="button"
         size="sm"
         onClick={handleApply}
-        className="w-full text-xs font-semibold bg-[#e30019] hover:bg-[#c40015] text-white rounded-[6px] h-8 shadow-xs active:scale-[0.98]"
+        className="w-full text-xs font-semibold bg-brand hover:bg-brand-hover text-white rounded-[6px] h-8 shadow-xs active:scale-[0.98] cursor-pointer"
       >
         Áp dụng khoảng giá
       </Button>
@@ -140,7 +140,7 @@ export default function PriceRangeSlider({
           height: 16px;
           border-radius: 50%;
           background: #ffffff;
-          border: 2.5px solid #e30019;
+          border: 2.5px solid var(--brand, #284ea1);
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
           pointer-events: auto;
           cursor: pointer;
@@ -154,7 +154,7 @@ export default function PriceRangeSlider({
           height: 16px;
           border-radius: 50%;
           background: #ffffff;
-          border: 2.5px solid #e30019;
+          border: 2.5px solid var(--brand, #284ea1);
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
           pointer-events: auto;
           cursor: pointer;

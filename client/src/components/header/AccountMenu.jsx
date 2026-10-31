@@ -14,8 +14,8 @@ import {
   IconLogout,
 } from '../account/AccountIcons';
 
-export const AccountMenu = () => {
-  const { user, isAuthenticated, clearAuth } = useAuthStore();
+export const AccountMenu = ({ initialUser = null }) => {
+  const { user, clearAuth } = useAuthStore();
   const [isOpen, setIsOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const menuRef = useRef(null);
@@ -38,14 +38,12 @@ export const AccountMenu = () => {
     router.push('/login');
   };
 
-  const isUserAuthenticated =
-    typeof isAuthenticated === 'function'
-      ? isAuthenticated()
-      : !!isAuthenticated || !!user;
+  const activeUser = mounted ? user : (user || initialUser);
 
-  if (mounted && isUserAuthenticated) {
-    const displayName = user?.fullName || user?.name || user?.email?.split('@')[0] || 'Tài khoản';
+  if (activeUser) {
+    const displayName = activeUser?.fullName || activeUser?.name || activeUser?.email?.split('@')[0] || 'Tài khoản';
     const initial = displayName.charAt(0).toUpperCase();
+    const avatarSrc = activeUser?.avatar?.url || (typeof activeUser?.avatar === 'string' ? activeUser.avatar : null);
 
     return (
       <div className="relative" ref={menuRef}>
@@ -55,9 +53,9 @@ export const AccountMenu = () => {
           className="flex items-center gap-2 px-2.5 py-1.5 rounded-[6px] bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 hover:border-slate-300 transition cursor-pointer text-left shadow-xs h-9 active:scale-[0.98]"
           title={displayName}
         >
-          {user?.avatar?.url ? (
+          {avatarSrc ? (
             <img
-              src={user.avatar.url}
+              src={avatarSrc}
               alt={displayName}
               referrerPolicy="no-referrer"
               className="w-5 h-5 rounded-full object-cover shrink-0 border border-slate-200 shadow-2xs"
@@ -78,17 +76,15 @@ export const AccountMenu = () => {
 
         {isOpen && (
           <div className="absolute right-0 top-full mt-1.5 w-64 bg-white rounded-[6px] shadow-sm border border-slate-200 py-1.5 z-[200] animate-fadeIn text-xs">
-            {/* Header info */}
             <div className="px-3.5 py-2 border-b border-slate-100">
               <div className="font-bold text-slate-900 truncate text-xs">
-                {user?.fullName || user?.name || 'Khách hàng'}
+                {activeUser?.fullName || activeUser?.name || 'Khách hàng'}
               </div>
               <div className="text-[11px] text-slate-400 truncate mt-0.5 font-normal">
-                {getDisplayAccountIdentifier(user)}
+                {getDisplayAccountIdentifier(activeUser)}
               </div>
             </div>
 
-            {/* Menu Links */}
             <div className="py-1">
               <Link
                 href="/tai-khoan?tab=profile"
@@ -129,7 +125,6 @@ export const AccountMenu = () => {
 
             <div className="border-t border-slate-100 my-1" />
 
-            {/* Logout button */}
             <button
               type="button"
               onClick={handleLogout}

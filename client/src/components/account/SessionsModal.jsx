@@ -9,20 +9,30 @@ import {
   LogOut,
   RefreshCw,
   Loader2,
-  X,
 } from 'lucide-react';
-import { Button } from '../ui/button';
-import { Badge } from '../ui/badge';
-import { useToast } from '../ui/toast';
-import { confirm } from '../ui/confirm-dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/components/ui/toast';
+import { confirm } from '@/components/ui/confirm-dialog';
 import authService from '@/services/auth.service';
 
 export default function SessionsModal({
   open,
+  isOpen,
   onOpenChange,
+  onClose,
   sessions = [],
   onRefreshSessions,
+  onRevokeSession,
+  onRevokeAllOtherSessions,
 }) {
+  const isModalOpen = Boolean(isOpen !== undefined ? isOpen : open);
+  const handleClose = () => {
+    if (onClose) onClose();
+    if (onOpenChange) onOpenChange(false);
+  };
+
   const { toast } = useToast();
   const [internalSessions, setInternalSessions] = useState(sessions);
   const [loading, setLoading] = useState(false);
@@ -37,20 +47,19 @@ export default function SessionsModal({
       setInternalSessions(list);
       if (onRefreshSessions) await onRefreshSessions();
     } catch (err) {
-      console.error('Lỗi khi làm mới phiên đăng nhập:', err);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (open) {
+    if (isModalOpen) {
       if (sessions && sessions.length > 0) {
         setInternalSessions(sessions);
       }
       fetchSessionData();
     }
-  }, [open]);
+  }, [isModalOpen]);
 
   useEffect(() => {
     if (sessions && sessions.length > 0) {
@@ -58,9 +67,14 @@ export default function SessionsModal({
     }
   }, [sessions]);
 
-  if (!open) return null;
+  if (!isModalOpen) return null;
 
   const handleLogoutSession = async (sessionId) => {
+    if (onRevokeSession) {
+      await onRevokeSession(sessionId);
+      await fetchSessionData();
+      return;
+    }
     const isConfirmed = await confirm({
       title: 'Đăng xuất thiết bị?',
       description: 'Bạn có chắc chắn muốn đăng xuất khỏi thiết bị này?',
@@ -83,6 +97,11 @@ export default function SessionsModal({
   };
 
   const handleLogoutOthers = async () => {
+    if (onRevokeAllOtherSessions) {
+      await onRevokeAllOtherSessions();
+      await fetchSessionData();
+      return;
+    }
     const isConfirmed = await confirm({
       title: 'Đăng xuất các thiết bị khác?',
       description:
@@ -105,7 +124,6 @@ export default function SessionsModal({
     }
   };
 
-  // Icon thiết bị phẳng, tối giản
   const getDeviceIcon = (deviceType = '', browser = '') => {
     const dt = (deviceType || '').toLowerCase();
     const br = (browser || '').toLowerCase();
@@ -118,7 +136,6 @@ export default function SessionsModal({
     return <Monitor size={16} className="text-slate-600" />;
   };
 
-  // Định dạng thời gian thân thiện chuẩn F8: "Hoạt động 12 giây trước", "Hoạt động 5 phút trước"
   const formatTimeAgo = (dateStr) => {
     if (!dateStr) return 'Vừa xong';
     const d = new Date(dateStr);
@@ -141,45 +158,31 @@ export default function SessionsModal({
   const otherSessionsCount = activeSessionsList.filter((s) => !s.isCurrent).length;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-black/60 transition-opacity"
-        onClick={() => onOpenChange(false)}
-      />
-
-      {/* Modal Dialog */}
-      <div className="relative z-10 w-full max-w-lg bg-white rounded-[6px] border border-slate-200 shadow-sm overflow-hidden animate-fadeIn">
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-white">
+    <Dialog open={isModalOpen} onOpenChange={(val) => !val && handleClose()}>
+      <DialogContent className="max-w-lg p-0 rounded-[6px] overflow-hidden">
+        <DialogHeader className="p-4 sm:p-5 border-b border-slate-100 flex flex-row items-center justify-between">
           <div className="space-y-0.5">
-            <h3 className="font-bold text-sm text-slate-900">Phiên đăng nhập</h3>
+            <DialogTitle className="text-sm font-bold text-slate-900">
+              Phiên đăng nhập
+            </DialogTitle>
             <p className="text-xs text-slate-500">
               Bạn đang sử dụng {activeSessionsList.length || 1} phiên đăng nhập trên các thiết bị.
             </p>
           </div>
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={fetchSessionData}
-              disabled={loading}
-              title="Làm mới danh sách"
-              className="w-7 h-7 rounded-[4px] border border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-50 flex items-center justify-center cursor-pointer transition active:scale-[0.98]"
-            >
-              <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
-            </button>
-            <button
-              type="button"
-              onClick={() => onOpenChange(false)}
-              className="w-7 h-7 rounded-[4px] border border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-50 flex items-center justify-center cursor-pointer transition active:scale-[0.98]"
-            >
-              <X size={14} />
-            </button>
-          </div>
-        </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon-xs"
+            onClick={fetchSessionData}
+            disabled={loading}
+            title="Làm mới danh sách"
+            className="rounded-[4px] border-slate-200"
+          >
+            <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
+          </Button>
+        </DialogHeader>
 
-        {/* Sessions List */}
-        <div className="p-5 max-h-[65vh] overflow-y-auto space-y-3">
+        <div className="p-4 sm:p-5 max-h-[60vh] overflow-y-auto space-y-3">
           {loading && activeSessionsList.length === 0 ? (
             <div className="py-12 flex flex-col items-center justify-center gap-2 text-xs text-slate-400">
               <Loader2 size={18} className="animate-spin text-slate-500" />
@@ -246,7 +249,7 @@ export default function SessionsModal({
                       size="sm"
                       onClick={() => handleLogoutSession(session.sessionId)}
                       disabled={loggingOutId === session.sessionId}
-                      className="h-7 px-2.5 text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 border border-slate-200 rounded-[6px] active:scale-[0.98] shrink-0"
+                      className="h-7 px-2.5 text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 border border-slate-200 rounded-[6px] shrink-0"
                     >
                       {loggingOutId === session.sessionId ? (
                         <Loader2 size={12} className="animate-spin" />
@@ -261,9 +264,8 @@ export default function SessionsModal({
           )}
         </div>
 
-        {/* Modal Footer */}
         {otherSessionsCount > 0 && (
-          <div className="px-5 py-3 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between">
+          <div className="px-4 sm:px-5 py-3 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between">
             <span className="text-xs text-slate-500">
               Có {otherSessionsCount} thiết bị khác đang kết nối
             </span>
@@ -273,7 +275,7 @@ export default function SessionsModal({
               size="sm"
               onClick={handleLogoutOthers}
               disabled={loggingOutOthers}
-              className="h-8 px-3 text-xs text-rose-600 hover:bg-rose-50 hover:text-rose-700 border-slate-200 rounded-[6px] active:scale-[0.98]"
+              className="h-8 px-3 text-xs text-rose-600 hover:bg-rose-50 hover:text-rose-700 border-slate-200 rounded-[6px]"
             >
               {loggingOutOthers ? (
                 <Loader2 size={12} className="animate-spin mr-1.5" />
@@ -284,7 +286,7 @@ export default function SessionsModal({
             </Button>
           </div>
         )}
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

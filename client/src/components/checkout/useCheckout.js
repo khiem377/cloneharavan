@@ -291,26 +291,26 @@ export function useCheckout() {
         const raw = localStorage.getItem('checkoutItemIds') || sessionStorage.getItem('checkoutItemIds');
         if (raw) {
           const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed) && parsed.length > 0) ids = parsed;
+          if (Array.isArray(parsed) && parsed.length > 0) ids = parsed.map(String);
         }
       } catch (_) {}
     }
     if (ids.length === 0 && selectedItemIds && selectedItemIds.length > 0) {
-      ids = selectedItemIds;
+      ids = selectedItemIds.map(String);
     }
 
     // Nếu cartItems đã được nạp, kiểm tra ID hợp lệ
     if (cartItems && cartItems.length > 0) {
       if (ids.length > 0) {
         const validItemIds = new Set(cartItems.map((i) => String(i._id)));
-        const filtered = ids.filter((id) => validItemIds.has(String(id)));
+        const filtered = ids.map(String).filter((id) => validItemIds.has(id));
         if (filtered.length > 0) return filtered;
       }
       // Nếu chưa chọn hoặc ID lưu trữ cũ, mặc định lấy toàn bộ món còn hàng
-      return cartItems.filter((i) => !i.isOutOfStock).map((i) => i._id);
+      return cartItems.filter((i) => !i.isOutOfStock).map((i) => String(i._id));
     }
 
-    return ids;
+    return ids.map(String);
   };
 
   // 4. Preview Order

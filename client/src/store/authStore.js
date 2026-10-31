@@ -11,6 +11,26 @@ const generateAnonymousId = () => {
   });
 };
 
+export const syncAuthCookie = (user) => {
+  if (typeof document === 'undefined') return;
+  if (!user) {
+    document.cookie = 'client_user=; path=/; max-age=0; SameSite=Lax';
+    return;
+  }
+  try {
+    const payload = {
+      _id: user._id || user.id,
+      fullName: user.fullName || user.name || '',
+      email: user.email || '',
+      phone: user.phone || '',
+      avatar: user.avatar || null,
+      role: user.role || 'customer',
+    };
+    const encoded = encodeURIComponent(JSON.stringify(payload));
+    document.cookie = `client_user=${encoded}; path=/; max-age=2592000; SameSite=Lax`;
+  } catch (_) {}
+};
+
 const getInitialState = () => {
   if (typeof window !== 'undefined') {
     try {
@@ -18,6 +38,9 @@ const getInitialState = () => {
       if (raw) {
         const parsed = JSON.parse(raw)?.state;
         if (parsed) {
+          if (parsed.user) {
+            syncAuthCookie(parsed.user);
+          }
           const directId = localStorage.getItem('cart_anonymous_id') || parsed.anonymousId;
           if (directId && !localStorage.getItem('cart_anonymous_id')) {
             localStorage.setItem('cart_anonymous_id', directId);
@@ -61,15 +84,22 @@ const useAuthStore = create(
       refreshToken: initial.refreshToken,
       anonymousId: initial.anonymousId,
 
-      setAuth: ({ user, accessToken, refreshToken }) =>
-        set({ user, accessToken, refreshToken }),
+      setAuth: ({ user, accessToken, refreshToken }) => {
+        syncAuthCookie(user);
+        set({ user, accessToken, refreshToken });
+      },
 
-      setUser: (user) => set({ user }),
+      setUser: (user) => {
+        syncAuthCookie(user);
+        set({ user });
+      },
 
       setAccessToken: (accessToken) => set({ accessToken }),
 
-      clearAuth: () =>
-        set({ user: null, accessToken: null, refreshToken: null }),
+      clearAuth: () => {
+        syncAuthCookie(null);
+        set({ user: null, accessToken: null, refreshToken: null });
+      },
 
       getOrCreateAnonymousId: () => {
         const current = get().anonymousId;

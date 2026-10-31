@@ -13,7 +13,7 @@ const CompareBar = dynamic(() => import('@/components/product/CompareBar'), { ss
 // Các path không cần header/footer/chatbot
 const AUTH_PATHS = ['/login', '/register', '/forgot-password', '/reset-password', '/auth'];
 
-export default function LayoutShell({ children, initialFooterMenu }) {
+export default function LayoutShell({ children, initialFooterMenu, initialUser = null }) {
   const pathname = usePathname() || '';
   const isAuthPage = AUTH_PATHS.some(
     (p) => pathname === p || pathname.startsWith(p + '/') || pathname.startsWith(p + '?')
@@ -21,7 +21,7 @@ export default function LayoutShell({ children, initialFooterMenu }) {
 
   return (
     <>
-      {!isAuthPage && <Header />}
+      {!isAuthPage && <Header initialUser={initialUser} />}
       <main className="flex-1 w-full max-w-full overflow-x-hidden">{children}</main>
       {!isAuthPage && <Footer initialMenu={initialFooterMenu} />}
       {!isAuthPage && (

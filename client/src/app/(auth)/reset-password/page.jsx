@@ -110,10 +110,8 @@ function FormDatLaiMatKhau() {
                 <CheckCircle2 size={18} />
               </div>
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-widest text-emerald-600 font-mono">
-                  Thành công
-                </p>
                 <h1 className="text-base font-bold text-slate-900 leading-tight">Mật khẩu đã được đặt lại</h1>
+                <p className="text-xs text-emerald-600 font-medium mt-0.5">Thành công</p>
               </div>
             </div>
 
@@ -139,7 +137,7 @@ function FormDatLaiMatKhau() {
             <div className="space-y-1.5">
               <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-[#e30019] rounded-full transition-all duration-1000 ease-linear"
+                  className="h-full bg-brand rounded-full transition-all duration-1000 ease-linear"
                   style={{ width: `${(demNguoc / 5) * 100}%` }}
                 />
               </div>
@@ -150,7 +148,7 @@ function FormDatLaiMatKhau() {
 
             <Button
               asChild
-              className="w-full bg-[#e30019] hover:bg-[#c40015] text-white text-xs font-semibold rounded-[6px] h-9 shadow-xs active:scale-[0.98]"
+              className="w-full bg-brand hover:bg-brand-hover text-white text-xs font-semibold rounded-[6px] h-9 shadow-xs active:scale-[0.98] cursor-pointer"
             >
               <Link href="/login">
                 Đăng nhập ngay
@@ -174,7 +172,7 @@ function FormDatLaiMatKhau() {
             <div className="flex flex-col gap-2 pt-2">
               <Button
                 asChild
-                className="w-full bg-[#e30019] hover:bg-[#c40015] text-white text-xs font-semibold rounded-[6px] h-9 shadow-xs active:scale-[0.98]"
+                className="w-full bg-brand hover:bg-brand-hover text-white text-xs font-semibold rounded-[6px] h-9 shadow-xs active:scale-[0.98] cursor-pointer"
               >
                 <Link href="/forgot-password">
                   Gửi lại yêu cầu khôi phục
@@ -298,7 +296,7 @@ function FormDatLaiMatKhau() {
                 id="dat-lai-mat-khau-btn"
                 type="submit"
                 disabled={dangGui || !token}
-                className="w-full bg-[#e30019] hover:bg-[#c40015] text-white text-xs font-semibold rounded-[6px] h-9 shadow-xs active:scale-[0.98] disabled:opacity-50"
+                className="w-full bg-brand hover:bg-brand-hover text-white text-xs font-semibold rounded-[6px] h-9 shadow-xs active:scale-[0.98] cursor-pointer disabled:opacity-50"
               >
                 {dangGui ? (
                   <>
@@ -313,7 +311,7 @@ function FormDatLaiMatKhau() {
 
             <div className="text-center text-xs text-slate-500 pt-3 border-t border-slate-100">
               Nhớ mật khẩu?{' '}
-              <Link href="/login" className="font-semibold text-[#e30019] hover:underline">
+              <Link href="/login" className="font-semibold text-brand hover:underline">
                 Đăng nhập ngay
               </Link>
             </div>

@@ -111,7 +111,7 @@ export default async function BlogDetailPage({ params }) {
   const primaryCategorySlug = post.categories?.[0]?.slug || '';
 
   return (
-    <div className="w-full bg-[#f8fafc] min-h-screen">
+    <div className="w-full bg-[#f8fafc] min-h-[100dvh]">
       {/* Category sub-navigation bar */}
       <BlogSubNav categories={categories} />
 

@@ -26,7 +26,7 @@ export default function CartEmptyState() {
         <Link href="/collections/all">
           <Button
             size="lg"
-            className="w-full sm:w-auto h-11 px-8 2xl:h-12 2xl:px-10 bg-red-600 hover:bg-red-700 text-white font-bold text-xs 2xl:text-sm flex items-center justify-center rounded-[6px] active:scale-[0.98] transition-all cursor-pointer shadow-xs"
+            className="w-full sm:w-auto h-11 px-8 2xl:h-12 2xl:px-10 bg-brand hover:bg-brand-hover text-white font-bold text-xs 2xl:text-sm flex items-center justify-center rounded-[6px] active:scale-[0.98] transition-all cursor-pointer shadow-xs"
           >
             KHÁM PHÁ SẢN PHẨM NGAY
           </Button>

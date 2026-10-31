@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from '../../../../components/ui/toast';
 import { authService } from '../../../../services/auth.service';
 import useAuthStore from '../../../../store/authStore';
@@ -33,6 +33,7 @@ const formatDisplayError = (rawError, provider = 'TikTok') => {
 };
 
 function TikTokCallbackContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const { setAuth, anonymousId, getOrCreateAnonymousId } = useAuthStore();
   const hasProcessedRef = useRef(false);
@@ -172,7 +173,7 @@ function TikTokCallbackContent() {
           }
 
           toast.success(res.message || 'Đăng nhập TikTok thành công!');
-          window.location.replace(targetRedirect);
+          router.replace(targetRedirect);
         } else {
           const errMsg = formatDisplayError(res.message || 'Xác thực tài khoản TikTok không thành công.', 'TikTok');
           redirectToError(errMsg);

@@ -10,7 +10,7 @@ import AccountMenu from './AccountMenu';
 import useCartStore from '@/store/cartStore';
 import { formatLogoUrl } from '@/utils/imageUtils';
 
-export const HeaderTop = ({ onOpenCategoryDrawer, storeSetting = null }) => {
+export const HeaderTop = ({ onOpenCategoryDrawer, storeSetting = null, initialUser = null }) => {
   const { items, totalItems, fetchCart, initialized } = useCartStore();
 
   useEffect(() => {
@@ -61,7 +61,7 @@ export const HeaderTop = ({ onOpenCategoryDrawer, storeSetting = null }) => {
             <span>LIVE</span>
           </Link>
 
-          <AccountMenu />
+          <AccountMenu initialUser={initialUser} />
 
           {/* Mobile Cart Pill Button */}
           <Link
@@ -90,7 +90,7 @@ export const HeaderTop = ({ onOpenCategoryDrawer, storeSetting = null }) => {
           <span>LIVE</span>
         </Link>
 
-        <AccountMenu />
+        <AccountMenu initialUser={initialUser} />
 
         {/* NÚT GIỎ HÀNG PILL ĐỒNG BỘ THEME #284ea1 */}
         <Link

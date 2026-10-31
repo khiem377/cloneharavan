@@ -82,7 +82,7 @@ export default function CheckoutPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 py-6 px-3 sm:px-6 lg:px-8">
+    <div className="min-h-[100dvh] bg-slate-50 py-6 px-3 sm:px-6 lg:px-8">
       <div className="max-w-6xl mx-auto space-y-4">
         {/* Quay lại giỏ hàng */}
         <div className="flex items-center justify-between pb-1">

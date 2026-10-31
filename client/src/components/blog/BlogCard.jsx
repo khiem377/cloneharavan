@@ -2,7 +2,8 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Card } from '../ui/card';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 
 const formatDate = (dateStr) => {
   if (!dateStr) return '';
@@ -30,9 +31,9 @@ export const BlogCard = ({ post, viewMode = 'grid' }) => {
 
   if (viewMode === 'horizontal') {
     return (
-      <Card className="overflow-hidden border border-slate-200 rounded-[6px] hover:border-slate-300 hover:shadow-xs transition-all duration-200 bg-white group shadow-xs">
+      <Card className="overflow-hidden border border-slate-200 rounded-[6px] hover:border-slate-300 transition-all duration-200 bg-white group shadow-none">
         <Link href={`/blogs/${post.slug}`} className="flex flex-col sm:flex-row gap-4 p-4">
-          <div className="relative w-full sm:w-56 md:w-64 aspect-[16/10] shrink-0 rounded-[4px] overflow-hidden bg-slate-100 shadow-2xs">
+          <div className="relative w-full sm:w-56 md:w-64 aspect-[16/10] shrink-0 rounded-[4px] overflow-hidden bg-slate-100">
             <img
               src={thumbnail}
               alt={post.title}
@@ -40,9 +41,9 @@ export const BlogCard = ({ post, viewMode = 'grid' }) => {
               loading="lazy"
             />
             <div className="absolute top-2.5 left-2.5">
-              <span className="inline-flex items-center px-2.5 py-1 rounded-[4px] text-[11px] font-bold bg-[#284ea1] text-white shadow-sm">
+              <Badge className="bg-[#284ea1] text-white text-[11px] font-bold rounded-[4px]">
                 {category}
-              </span>
+              </Badge>
             </div>
           </div>
 
@@ -80,9 +81,8 @@ export const BlogCard = ({ post, viewMode = 'grid' }) => {
     );
   }
 
-  // Default Grid Card
   return (
-    <Card className="overflow-hidden border border-slate-200 rounded-[6px] hover:border-slate-300 hover:shadow-xs transition-all duration-200 bg-white group flex flex-col h-full shadow-xs">
+    <Card className="overflow-hidden border border-slate-200 rounded-[6px] hover:border-slate-300 transition-all duration-200 bg-white group flex flex-col h-full shadow-none">
       <Link href={`/blogs/${post.slug}`} className="block relative aspect-[16/10] overflow-hidden bg-slate-100 rounded-t-[6px]">
         <img
           src={thumbnail}
@@ -91,19 +91,17 @@ export const BlogCard = ({ post, viewMode = 'grid' }) => {
           loading="lazy"
         />
         <div className="absolute top-3 left-3">
-          <span className="inline-flex items-center px-2 py-0.5 rounded-[4px] text-[11px] font-bold bg-[#284ea1] text-white shadow-xs">
+          <Badge className="bg-[#284ea1] text-white text-[11px] font-bold rounded-[4px]">
             {category}
-          </span>
+          </Badge>
         </div>
       </Link>
 
       <div className="p-4 sm:p-5 flex flex-col justify-between flex-1">
         <div>
-          <Link href={`/blogs/${post.slug}`}>
-            <h3 className="text-sm sm:text-base font-bold text-slate-900 group-hover:text-[#284ea1] transition-colors line-clamp-2 leading-snug mb-2">
-              {post.title}
-            </h3>
-          </Link>
+          <h3 className="text-sm sm:text-base font-bold text-slate-900 group-hover:text-[#284ea1] transition-colors line-clamp-2 leading-snug mb-2">
+            {post.title}
+          </h3>
           {post.excerpt && (
             <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed mb-4">
               {post.excerpt}
@@ -111,19 +109,13 @@ export const BlogCard = ({ post, viewMode = 'grid' }) => {
           )}
         </div>
 
-        <div className="flex items-center justify-between text-[11px] sm:text-xs text-slate-400 pt-3 border-t border-slate-100 font-medium">
-          <div className="flex items-center gap-1.5 truncate">
-            <span>{formatDate(post.publishedAt || post.createdAt)}</span>
-            {post.minRead && (
-              <>
-                <span>•</span>
-                <span>{post.minRead} phút đọc</span>
-              </>
-            )}
-          </div>
+        <div className="flex items-center flex-wrap gap-y-1 gap-x-2 text-xs text-slate-400 font-medium pt-3 border-t border-slate-100">
+          <span className="text-slate-700 font-semibold truncate max-w-[120px]">{authorName}</span>
+          <span>•</span>
+          <span>{formatDate(post.publishedAt || post.createdAt)}</span>
           {typeof post.viewsCount === 'number' && (
-            <span className="shrink-0 text-slate-400 font-mono tabular-nums" suppressHydrationWarning>
-              {post.viewsCount.toLocaleString('vi-VN')} xem
+            <span className="ml-auto text-slate-400 font-mono tabular-nums" suppressHydrationWarning>
+              {post.viewsCount.toLocaleString('vi-VN')}
             </span>
           )}
         </div>
