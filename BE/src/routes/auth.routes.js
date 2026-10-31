@@ -42,7 +42,7 @@ const {
   deletePasskey,
 } = require('../controllers/auth.controller');
 
-const { protect } = require('../middleware/auth.middleware');
+const { protect, optionalAuth } = require('../middleware/auth.middleware');
 const { validate } = require('../middleware/validate.middleware');
 const {
   registerSchema,
@@ -57,7 +57,7 @@ const {
 
 // Auth cơ bản
 router.post('/register', validate(registerSchema), register);
-router.post('/register-admin', validate(registerAdminSchema), registerAdmin);
+router.post('/register-admin', optionalAuth, validate(registerAdminSchema), registerAdmin);
 router.post('/login', validate(loginSchema), login);
 router.post('/google', googleLogin);
 router.get('/tiktok/auth-url', getTikTokAuthUrl);

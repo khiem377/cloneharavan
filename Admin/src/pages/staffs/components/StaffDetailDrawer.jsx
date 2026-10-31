@@ -9,6 +9,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { RoleAdminIcon, RoleKeyCustomIcon } from './RoleCustomIcons';
 
 /**
  * Slide-over Drawer to inspect staff details, permissions matrix and manage custom permissions
@@ -36,17 +37,16 @@ export default function StaffDetailDrawer({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-xl h-full bg-card border-l border-border p-6 shadow-2xl flex flex-col gap-4 overflow-y-auto"
+        className="w-full max-w-xl h-full bg-card border-l border-border p-6 shadow-sm flex flex-col gap-4 overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Drawer Header */}
         <div className="flex items-center justify-between border-b border-border pb-3">
           <div className="flex items-center gap-2">
-            <ShieldCheck size={20} className="text-primary" />
+            <RoleAdminIcon size={18} className="text-primary" />
             <h3 className="text-base font-semibold text-foreground">Hồ Sơ & Quyền Hạn Nhân Sự</h3>
           </div>
           <button
-            className="size-7 inline-flex items-center justify-center rounded-[6px] text-muted-foreground hover:bg-accent cursor-pointer transition-colors"
+            className="size-7 inline-flex items-center justify-center rounded-[6px] text-muted-foreground hover:bg-accent active:scale-[0.98] cursor-pointer transition-all"
             onClick={onClose}
           >
             <XCircle size={18} />
@@ -128,7 +128,7 @@ export default function StaffDetailDrawer({
           <div className="flex flex-col gap-3 flex-1 overflow-y-auto pr-1">
             {drawerStaff.role === 'administrator' || drawerStaff.role === 'admin' ? (
               <div className="p-4 rounded-[6px] border border-emerald-500/30 bg-emerald-500/5 text-xs text-emerald-700 dark:text-emerald-400 font-medium leading-relaxed flex items-start gap-2">
-                <CheckCircle2 size={16} className="text-emerald-600 shrink-0 mt-0.5" />
+                <RoleAdminIcon size={16} className="text-emerald-600 shrink-0 mt-0.5" />
                 <span>
                   Nhân viên này giữ vai trò Administrator tối cao (Toàn quyền tuyệt đối bypass trên tất cả quyền hệ thống).
                 </span>
@@ -228,7 +228,7 @@ export default function StaffDetailDrawer({
         {drawerTab === 'custom_perms' && (
           <div className="flex flex-col gap-3 flex-1 overflow-y-auto pr-1">
             <div className="p-3 rounded-[6px] border border-blue-500/20 bg-blue-500/5 text-xs text-blue-700 dark:text-blue-400 leading-relaxed flex items-start gap-2">
-              <ShieldCheck size={16} className="text-blue-600 shrink-0 mt-0.5" />
+              <RoleKeyCustomIcon size={16} className="text-blue-600 shrink-0 mt-0.5" />
               <div>
                 <strong>Cấp quyền riêng biệt (Custom Permissions):</strong> Bổ sung thêm các quyền đặc thù cho nhân viên này ngoài các quyền mặc định từ vai trò.
               </div>

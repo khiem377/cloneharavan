@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import useAuthStore from '@/store/authStore';
 import { authService } from '@/services/auth.service';
 import { useMyPermissions } from '@/hooks/useRoles';
@@ -12,16 +12,51 @@ import ActiveSessionsTab from './components/ActiveSessionsTab';
 import UserPermissionsTab from './components/UserPermissionsTab';
 import SocialAccountsTab from './components/SocialAccountsTab';
 
+const TAB_ALIASES = {
+  profile: 'profile',
+  info: 'profile',
+  password: 'password',
+  pass: 'password',
+  changepass: 'password',
+  'change-password': 'password',
+  security: 'password',
+  passkey: 'passkey',
+  sessions: 'sessions',
+  session: 'sessions',
+  permissions: 'permissions',
+  perms: 'permissions',
+  social: 'social',
+};
+
 /**
  * Admin Profile & Account Security Management Page
  */
 export default function AdminProfilePage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const user = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
   const clearAuth = useAuthStore((s) => s.clearAuth);
 
-  const [activeTab, setActiveTab] = useState('profile');
+  const rawTab = searchParams.get('tab') || searchParams.get('section') || 'profile';
+  const resolvedTab = TAB_ALIASES[rawTab.toLowerCase()] || 'profile';
+  const [activeTab, setActiveTab] = useState(resolvedTab);
+
+  useEffect(() => {
+    const currentParam = searchParams.get('tab') || searchParams.get('section');
+    if (currentParam) {
+      const mapped = TAB_ALIASES[currentParam.toLowerCase()];
+      if (mapped && mapped !== activeTab) {
+        setActiveTab(mapped);
+      }
+    }
+  }, [searchParams]);
+
+  const handleSelectTab = useCallback((tabId) => {
+    setActiveTab(tabId);
+    setSearchParams({ tab: tabId }, { replace: true });
+  }, [setSearchParams]);
+
   const avatarInputRef = useRef(null);
   const [avatarLoading, setAvatarLoading] = useState(false);
 
@@ -156,7 +191,7 @@ export default function AdminProfilePage() {
           <ProfileSidebar
             user={user}
             activeTab={activeTab}
-            onSelectTab={setActiveTab}
+            onSelectTab={handleSelectTab}
             onLogout={handleLogout}
             avatarLoading={avatarLoading}
             avatarInputRef={avatarInputRef}

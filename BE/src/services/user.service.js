@@ -541,6 +541,7 @@ const toggleUserStatus = async (adminUserId, targetUserId, isActive) => {
   // Nếu tài khoản bị khóa
   if (!user.isActive) {
     user.refreshToken = null; // Xóa refreshToken
+    user.refreshTokens = []; // Xóa toàn bộ phiên đa thiết bị
     // Gửi realtime SSE Force Logout tới tất cả thiết bị của user này
     sseService.sendToUser(targetUserId.toString(), {
       type: 'FORCE_LOGOUT',
@@ -663,6 +664,7 @@ const createAdminUser = async (data) => {
   const userObj = newAdmin.toObject();
   delete userObj.password;
   delete userObj.refreshToken;
+  delete userObj.refreshTokens;
   delete userObj.resetPasswordToken;
   delete userObj.resetPasswordExpires;
   delete userObj.emailVerificationToken;
@@ -712,7 +714,7 @@ const bulkToggleUserStatus = async (adminUserId, userIds, isActive) => {
   const validIds = userIds.filter((id) => id.toString() !== adminUserId.toString());
   await User.updateMany(
     { _id: { $in: validIds } },
-    { $set: { isActive, ...(isActive ? {} : { refreshToken: null }) } }
+    { $set: { isActive, ...(isActive ? {} : { refreshToken: null, refreshTokens: [] }) } }
   );
 
   if (!isActive) {
@@ -741,6 +743,7 @@ const resetUserPassword = async (adminUserId, targetUserId, newPassword) => {
 
   user.password = newPassword;
   user.refreshToken = null;
+  user.refreshTokens = [];
   await user.save();
 
   // Đăng xuất các phiên cũ để bắt buộc đăng nhập với mật khẩu mới

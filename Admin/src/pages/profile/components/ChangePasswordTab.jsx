@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Eye, EyeOff, Check, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Check, X, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,9 +8,6 @@ import { authService } from '@/services/auth.service';
 import { toast } from '@/providers/ToastProvider';
 import { cn } from '@/lib/utils';
 
-/**
- * Change Password Tab Component with Security Validation
- */
 export default function ChangePasswordTab() {
   const [passForm, setPassForm] = useState({
     currentPassword: '',
@@ -57,6 +54,16 @@ export default function ChangePasswordTab() {
       setPassLoading(false);
     }
   };
+
+  const hasTypedNew = Boolean(passForm.newPassword && passForm.newPassword.length > 0);
+  const rules = [
+    { label: 'Tối thiểu 8 ký tự', ok: passForm.newPassword.length >= 8 },
+    { label: 'Chứa chữ in hoa (A-Z)', ok: /[A-Z]/.test(passForm.newPassword) },
+    { label: 'Chứa chữ in thường (a-z)', ok: /[a-z]/.test(passForm.newPassword) },
+    { label: 'Chứa chữ số (0-9)', ok: /[0-9]/.test(passForm.newPassword) },
+    { label: 'Chứa ký tự đặc biệt (!@#$...)', ok: /[^A-Za-z0-9]/.test(passForm.newPassword) },
+  ];
+  const passedCount = rules.filter((r) => r.ok).length;
 
   return (
     <Card className="rounded-[6px] border border-border bg-card shadow-xs">
@@ -119,47 +126,110 @@ export default function ChangePasswordTab() {
             </div>
           ))}
 
-          {/* Password Rules Checklist */}
-          <div className="rounded-[6px] border border-border bg-muted/20 p-3 space-y-2">
-            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider font-mono">
-              Yêu cầu mật khẩu an toàn:
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-xs">
-              {[
-                { label: 'Tối thiểu 8 ký tự', ok: passForm.newPassword.length >= 8 },
-                { label: 'Chứa chữ in hoa (A-Z)', ok: /[A-Z]/.test(passForm.newPassword) },
-                { label: 'Chứa chữ in thường (a-z)', ok: /[a-z]/.test(passForm.newPassword) },
-                { label: 'Chứa chữ số (0-9)', ok: /[0-9]/.test(passForm.newPassword) },
-                { label: 'Chứa ký tự đặc biệt (!@#$...)', ok: /[^A-Za-z0-9]/.test(passForm.newPassword) },
-              ].map((rule, idx) => (
-                <div
-                  key={idx}
+          <div className="rounded-[6px] border border-border bg-muted/20 p-3 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <p className="text-[10.5px] font-bold text-muted-foreground uppercase tracking-wider font-mono">
+                Yêu cầu mật khẩu mới:
+              </p>
+              {hasTypedNew && (
+                <span
                   className={cn(
-                    'flex items-center gap-1.5 text-[11px]',
-                    rule.ok ? 'text-emerald-600 font-medium' : 'text-muted-foreground'
+                    'text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-[4px] border',
+                    passedCount === 5
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      : passedCount >= 3
+                      ? 'bg-amber-50 text-amber-700 border-amber-200'
+                      : 'bg-rose-50 text-rose-700 border-rose-200'
                   )}
                 >
+                  {passedCount}/5 đạt
+                </span>
+              )}
+            </div>
+
+            {hasTypedNew && (
+              <div className="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
+                <div
+                  className={cn(
+                    'h-full transition-all duration-300',
+                    passedCount === 5
+                      ? 'bg-emerald-500 w-full'
+                      : passedCount >= 3
+                      ? 'bg-amber-500 w-3/5'
+                      : 'bg-rose-500 w-1/5'
+                  )}
+                />
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-xs">
+              {rules.map((rule, idx) => {
+                const isPass = rule.ok;
+                const isFail = hasTypedNew && !rule.ok;
+
+                return (
                   <div
+                    key={idx}
                     className={cn(
-                      'size-3.5 rounded-[3px] border flex items-center justify-center shrink-0',
-                      rule.ok
-                        ? 'bg-emerald-500 border-emerald-500 text-white'
-                        : 'border-border bg-background'
+                      'flex items-center gap-1.5 text-[11px] transition-colors',
+                      isPass
+                        ? 'text-emerald-600 font-medium'
+                        : isFail
+                        ? 'text-rose-600 font-medium'
+                        : 'text-muted-foreground'
                     )}
                   >
-                    {rule.ok && <Check size={10} />}
+                    <div
+                      className={cn(
+                        'size-3.5 rounded-[3px] border flex items-center justify-center shrink-0 transition-colors',
+                        isPass
+                          ? 'bg-emerald-500 border-emerald-500 text-white'
+                          : isFail
+                          ? 'bg-rose-50 border-rose-400 text-rose-600'
+                          : 'border-border bg-background'
+                      )}
+                    >
+                      {isPass ? (
+                        <Check size={10} strokeWidth={3} />
+                      ) : isFail ? (
+                        <X size={10} strokeWidth={3} />
+                      ) : null}
+                    </div>
+                    <span>{rule.label}</span>
                   </div>
-                  <span>{rule.label}</span>
-                </div>
-              ))}
+                );
+              })}
             </div>
+
+            {passForm.confirmPassword && (
+              <div
+                className={cn(
+                  'pt-1.5 border-t border-border flex items-center gap-1.5 text-[11px] font-medium',
+                  passForm.newPassword === passForm.confirmPassword
+                    ? 'text-emerald-600'
+                    : 'text-rose-600'
+                )}
+              >
+                {passForm.newPassword === passForm.confirmPassword ? (
+                  <>
+                    <Check size={11} strokeWidth={3} className="text-emerald-500 shrink-0" />
+                    <span>Mật khẩu xác nhận trùng khớp</span>
+                  </>
+                ) : (
+                  <>
+                    <X size={11} strokeWidth={3} className="text-rose-500 shrink-0" />
+                    <span>Mật khẩu xác nhận chưa trùng khớp</span>
+                  </>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="pt-4 border-t border-border flex justify-end">
             <Button
               type="submit"
               disabled={passLoading}
-              className="h-9 px-5 rounded-[6px] text-xs font-semibold active:scale-[0.98] shadow-xs cursor-pointer"
+              className="h-9 px-5 rounded-[6px] text-xs font-semibold bg-[#e30019] hover:bg-[#c40015] text-white active:scale-[0.98] shadow-xs cursor-pointer"
             >
               {passLoading && <Loader2 size={13} className="animate-spin mr-1.5" />}
               Cập nhật mật khẩu

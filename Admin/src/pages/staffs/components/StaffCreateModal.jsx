@@ -1,4 +1,4 @@
-import { ShieldCheck } from '@/components/ui/Icons';
+import React from 'react';
 import { Warehouse } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,6 +9,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import { RoleAdminIcon } from './RoleCustomIcons';
 
 const validateStaffPassword = (pw) => {
   if (!pw || pw.length < 8) return false;
@@ -19,9 +20,6 @@ const validateStaffPassword = (pw) => {
   return hasUpper && hasLower && hasDigit && hasSpecial;
 };
 
-/**
- * Modal to Create New Staff / Admin Member
- */
 export default function StaffCreateModal({
   open,
   onOpenChange,
@@ -45,7 +43,7 @@ export default function StaffCreateModal({
       <DialogContent className="max-w-lg rounded-[6px] border border-border p-6">
         <DialogHeader className="border-b border-border pb-3">
           <DialogTitle className="text-base font-semibold text-foreground flex items-center gap-2">
-            <ShieldCheck size={18} className="text-primary" /> Thêm Nhân Viên / Quản Trị Mới
+            <RoleAdminIcon size={18} className="text-primary" /> Thêm Nhân Viên / Quản Trị Mới
           </DialogTitle>
         </DialogHeader>
 

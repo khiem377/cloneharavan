@@ -1,5 +1,4 @@
 import React from 'react';
-import { Shield } from '@/components/ui/Icons';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -8,10 +7,8 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import { RoleAdminIcon } from './RoleCustomIcons';
 
-/**
- * Modal to change Staff Role
- */
 export default function StaffEditRoleModal({
   user,
   onClose,
@@ -26,7 +23,7 @@ export default function StaffEditRoleModal({
       <DialogContent className="max-w-md rounded-[6px] border border-border p-6">
         <DialogHeader className="border-b border-border pb-3">
           <DialogTitle className="text-base font-semibold text-foreground flex items-center gap-2">
-            <Shield size={18} className="text-primary" /> Thay Đổi Vai Trò
+            <RoleAdminIcon size={18} className="text-primary" /> Thay Đổi Vai Trò
           </DialogTitle>
         </DialogHeader>
 

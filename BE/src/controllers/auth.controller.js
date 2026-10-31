@@ -244,7 +244,7 @@ const refreshToken = async (req, res, next) => {
       throw new AppError('Tài khoản khách hàng không có quyền truy cập trang quản trị', 403);
     }
 
-    const { accessToken, refreshToken: newRefreshToken } = await buildTokenResponse(user, res, false, req);
+    const { accessToken, refreshToken: newRefreshToken } = await buildTokenResponse(user, res, false, req, token);
 
     res.json({
       status: 'success',
@@ -386,7 +386,16 @@ const logoutOtherSessionsController = async (req, res, next) => {
 
 const logout = async (req, res, next) => {
   try {
-    await logoutUser(req.user._id);
+    const isFromAdmin =
+      req.body?.isAdminPortal === true ||
+      req.headers['x-admin-portal'] === 'true' ||
+      req.headers.origin?.includes('5173') ||
+      req.headers.referer?.includes('5173');
+    const token =
+      req.body?.refreshToken ||
+      (isFromAdmin ? req.cookies?.adminRefreshToken : req.cookies?.refreshToken);
+
+    await logoutUser(req.user._id, token);
     res.clearCookie('refreshToken', COOKIE_OPTIONS);
     res.clearCookie('adminRefreshToken', COOKIE_OPTIONS);
 
@@ -498,7 +507,7 @@ const verifyPhone = async (req, res, next) => {
 
 const registerAdmin = async (req, res, next) => {
   try {
-    const user = await registerAdminService(req.body);
+    const user = await registerAdminService(req.body, req.user);
     const { accessToken, refreshToken } = await buildTokenResponse(user, res);
 
     res.status(201).json({

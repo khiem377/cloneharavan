@@ -87,6 +87,15 @@ const PERMISSIONS = [
   { code: 'stock_audit.manage', name: 'Quản lý kiểm kê kho', module: 'stock_audits', description: 'Tạo đợt kiểm kê và cân bằng số lượng tồn kho' },
   { code: 'stock_movement.view', name: 'Xem biến động kho', module: 'stock_movements', description: 'Xem thẻ kho, lịch sử xuất/nhập/tồn chi tiết' },
 
+  // Orders & Shipments
+  { code: 'order.view', name: 'Xem đơn hàng & Vận chuyển', module: 'orders', description: 'Xem danh sách và chi tiết đơn hàng, vận đơn' },
+  { code: 'order.manage', name: 'Quản lý & Xử lý đơn hàng', module: 'orders', description: 'Xác nhận đơn, chuyển trạng thái giao hàng, đối soát COD' },
+  { code: 'order.delete', name: 'Hủy & Xóa đơn hàng', module: 'orders', description: 'Hủy hoặc xóa đơn hàng khỏi hệ thống' },
+
+  // Customer Groups
+  { code: 'customer_group.view', name: 'Xem nhóm khách hàng', module: 'customer_groups', description: 'Xem danh sách các nhóm phân loại khách hàng' },
+  { code: 'customer_group.manage', name: 'Quản lý nhóm khách hàng', module: 'customer_groups', description: 'Thêm, sửa, xóa điều kiện phân loại nhóm khách hàng' },
+
   // Settings & System Configuration
   { code: 'setting.view', name: 'Xem cài đặt hệ thống', module: 'settings', description: 'Xem cấu hình thông tin cửa hàng, vận chuyển, cổng thanh toán' },
   { code: 'setting.manage', name: 'Quản lý cài đặt hệ thống', module: 'settings', description: 'Cập nhật cấu hình cửa hàng, tích hợp đối tác vận chuyển và kết nối cổng thanh toán' },
@@ -104,9 +113,10 @@ const PRESET_ROLES = [
     name: 'Quản lý cửa hàng (Manager)',
     code: 'manager',
     isSystem: false,
-    description: 'Quản lý sản phẩm, danh mục, khuyến mãi, kho bãi, bài viết và nhân viên',
+    description: 'Quản lý toàn diện: đơn hàng, sản phẩm, danh mục, khuyến mãi, kho bãi và nhân viên',
     permissions: [
       'dashboard.view',
+      'order.view', 'order.manage', 'order.delete',
       'product.view', 'product.create', 'product.edit', 'product.delete', 'product.import', 'product.sync_images',
       'product_variant.view', 'product_variant.create', 'product_variant.edit', 'product_variant.delete',
       'category.view', 'category.create', 'category.edit', 'category.delete', 'category.manage',
@@ -115,7 +125,7 @@ const PRESET_ROLES = [
       'blog.view', 'blog.create', 'blog.edit', 'blog.delete', 'blog_category.manage', 'tag.manage',
       'media.view', 'media.upload', 'media.delete', 'media.manage', 'folder.manage',
       'banner.view', 'banner.manage', 'menu.view', 'menu.manage',
-      'user.view', 'user.create', 'user.edit',
+      'user.view', 'user.create', 'user.edit', 'customer_group.view', 'customer_group.manage',
       'supplier.view', 'supplier.manage',
       'purchase_order.view', 'purchase_order.create', 'purchase_order.manage',
       'stock_export.view', 'stock_export.manage',
@@ -123,6 +133,19 @@ const PRESET_ROLES = [
       'stock_movement.view',
       'audit_log.view',
       'setting.view', 'setting.manage',
+    ],
+  },
+  {
+    name: 'Quản lý đơn hàng & Vận chuyển (Order Manager)',
+    code: 'order_manager',
+    isSystem: false,
+    description: 'Chuyên trách xử lý đơn hàng, điều phối đóng gói giao vận và đối soát tiền COD',
+    permissions: [
+      'dashboard.view',
+      'order.view', 'order.manage',
+      'product.view', 'product_variant.view',
+      'user.view', 'customer_group.view',
+      'stock_movement.view',
     ],
   },
   {
@@ -144,17 +167,47 @@ const PRESET_ROLES = [
     ],
   },
   {
+    name: 'Thủ kho (Warehouse Clerk)',
+    code: 'warehouse_clerk',
+    isSystem: false,
+    description: 'Thực hiện nhập kho, xuất kho, kiểm đếm và ghi nhận biến động thẻ kho',
+    permissions: [
+      'product.view', 'product_variant.view',
+      'supplier.view',
+      'purchase_order.view',
+      'stock_export.view', 'stock_export.manage',
+      'stock_audit.view',
+      'stock_movement.view',
+    ],
+  },
+  {
     name: 'Nhân viên bán hàng (Staff)',
     code: 'staff',
     isSystem: false,
-    description: 'Xem thông tin sản phẩm, áp dụng khuyến mãi, theo dõi biến động kho',
+    description: 'Xem thông tin sản phẩm, tạo và theo dõi đơn hàng, áp dụng khuyến mãi',
     permissions: [
       'dashboard.view',
+      'order.view', 'order.manage',
       'product.view', 'product_variant.view',
       'category.view', 'brand.view',
       'promotion.view',
       'stock_movement.view',
       'media.view',
+    ],
+  },
+  {
+    name: 'Chăm sóc khách hàng (Customer Care)',
+    code: 'customer_care',
+    isSystem: false,
+    description: 'Tra cứu thông tin khách hàng, đơn hàng, chính sách khuyến mãi và hỗ trợ giải đáp',
+    permissions: [
+      'dashboard.view',
+      'order.view',
+      'user.view', 'customer_group.view',
+      'product.view', 'product_variant.view',
+      'category.view', 'brand.view',
+      'promotion.view',
+      'blog.view',
     ],
   },
   {
@@ -171,20 +224,8 @@ const PRESET_ROLES = [
       'menu.view', 'menu.manage',
     ],
   },
-  {
-    name: 'Chăm sóc khách hàng (Customer Care)',
-    code: 'customer_care',
-    isSystem: false,
-    description: 'Tra cứu thông tin sản phẩm, chính sách khuyến mãi và hỗ trợ khách hàng',
-    permissions: [
-      'dashboard.view',
-      'product.view', 'product_variant.view',
-      'category.view', 'brand.view',
-      'promotion.view',
-      'blog.view',
-    ],
-  },
 ];
+
 
 const seedFullPermissions = async (exitOnFinish = false) => {
   let isStandaloneConnection = false;

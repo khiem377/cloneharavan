@@ -1,12 +1,5 @@
 import { useState, useMemo } from 'react';
 import {
-  ShieldCheck,
-  Plus,
-  Mail,
-  Download,
-  RefreshCw,
-} from '@/components/ui/Icons';
-import {
   useUsers,
   useUserStats,
   useToggleUserStatus,
@@ -17,19 +10,13 @@ import {
 import { useRoles, usePermissions } from '@/hooks/useRoles';
 import { useWarehouses } from '@/hooks/useInventory';
 import useColumnVisibility from '@/hooks/useColumnVisibility';
-import Can from '@/components/auth/Can';
 import useAuthStore from '@/store/authStore';
-import { Button } from '@/components/ui/button';
-import ConfirmDialog from '@/components/ui/ConfirmDialog';
-import InviteMemberModal from '@/components/common/InviteMemberModal';
 
+import StaffHeaderActions from './components/StaffHeaderActions';
 import StaffStatsGrid from './components/StaffStatsGrid';
 import StaffToolbar from './components/StaffToolbar';
 import StaffTable from './components/StaffTable';
-import StaffCreateModal from './components/StaffCreateModal';
-import StaffEditRoleModal from './components/StaffEditRoleModal';
-import StaffResetPasswordModal from './components/StaffResetPasswordModal';
-import StaffDetailDrawer from './components/StaffDetailDrawer';
+import StaffModalsContainer from './components/StaffModalsContainer';
 
 const STAFF_COLUMNS = [
   { id: 'staff', label: 'Nhân Viên', defaultVisible: true, alwaysVisible: true },
@@ -42,9 +29,6 @@ const STAFF_COLUMNS = [
   { id: 'actions', label: 'Thao Tác', defaultVisible: true, alwaysVisible: true },
 ];
 
-/**
- * Staff & Administrator Management Page
- */
 export default function StaffListPage() {
   const currentAdminUser = useAuthStore((s) => s.user);
 
@@ -54,7 +38,6 @@ export default function StaffListPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  // Modals & Drawers state
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [createForm, setCreateForm] = useState({
@@ -82,12 +65,10 @@ export default function StaffListPage() {
   const columnVisibility = useColumnVisibility('admin_staffs_columns', STAFF_COLUMNS);
   const { isColumnVisible } = columnVisibility;
 
-  // Roles & Permissions & Warehouses Queries (React Query)
   const { data: roles = [] } = useRoles();
   const { data: permissionsGrouped = {} } = usePermissions();
   const { data: warehouses = [] } = useWarehouses();
 
-  // Stats Query
   const { data: statsRes, refetch: refetchStats } = useUserStats('staff');
   const stats = statsRes?.data || { total: 0, active: 0, inactive: 0, roleDistribution: {} };
   const roleDist = stats.roleDistribution || {};
@@ -259,73 +240,20 @@ export default function StaffListPage() {
 
   return (
     <div className="space-y-4 max-w-7xl mx-auto pb-10">
-      {/* 1. Header & Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
-            <ShieldCheck className="size-6 text-primary" />
-            <span>Quản Lý Nhân Sự & Quản Trị Viên</span>
-          </h1>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Quản lý tài khoản nhân viên, cấp phát vai trò RBAC và phân bổ quyền hạn chuyên sâu trên hệ thống.
-          </p>
-        </div>
+      <StaffHeaderActions
+        onRefresh={() => {
+          refetch();
+          refetchStats();
+        }}
+        isFetching={isFetching}
+        onExportCSV={handleExportCSV}
+        hasStaffs={Boolean(staffs.length)}
+        onOpenInvite={() => setInviteModalOpen(true)}
+        onOpenCreate={() => setCreateModalOpen(true)}
+      />
 
-        <div className="flex items-center gap-2 flex-wrap">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              refetch();
-              refetchStats();
-            }}
-            disabled={isFetching}
-            className="h-8 px-2.5 text-xs rounded-[6px] cursor-pointer"
-            title="Tải lại danh sách"
-          >
-            <RefreshCw className={`size-3.5 ${isFetching ? 'animate-spin' : ''}`} />
-          </Button>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExportCSV}
-            disabled={!staffs.length}
-            className="h-8 text-xs rounded-[6px] gap-1.5 cursor-pointer"
-          >
-            <Download className="size-3.5" />
-            <span className="hidden sm:inline">Xuất CSV</span>
-          </Button>
-
-          <Can permission="user.create">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setInviteModalOpen(true)}
-              className="h-8 text-xs rounded-[6px] gap-1.5 border-primary/40 text-primary hover:bg-primary/5 cursor-pointer"
-            >
-              <Mail className="size-3.5" />
-              <span>Mời Qua Email</span>
-            </Button>
-          </Can>
-
-          <Can permission="user.create">
-            <Button
-              size="sm"
-              onClick={() => setCreateModalOpen(true)}
-              className="h-8 text-xs rounded-[6px] gap-1.5 font-semibold active:scale-[0.98] shadow-xs cursor-pointer"
-            >
-              <Plus className="size-3.5" />
-              <span>Thêm Nhân Viên</span>
-            </Button>
-          </Can>
-        </div>
-      </div>
-
-      {/* 2. Stat Cards */}
       <StaffStatsGrid stats={stats} departmentCounts={departmentCounts} />
 
-      {/* 3. Toolbar */}
       <StaffToolbar
         keyword={keyword}
         setKeyword={setKeyword}
@@ -338,7 +266,6 @@ export default function StaffListPage() {
         columnVisibility={columnVisibility}
       />
 
-      {/* 4. Table */}
       <StaffTable
         staffs={staffs}
         isLoading={isLoading}
@@ -356,10 +283,9 @@ export default function StaffListPage() {
         onToggleStatus={handleToggleClick}
       />
 
-      {/* 5. Detail Drawer */}
-      <StaffDetailDrawer
+      <StaffModalsContainer
         drawerStaff={drawerStaff}
-        onClose={() => setDrawerStaff(null)}
+        onCloseDrawer={() => setDrawerStaff(null)}
         drawerTab={drawerTab}
         setDrawerTab={setDrawerTab}
         customPermIds={customPermIds}
@@ -372,63 +298,32 @@ export default function StaffListPage() {
           setDrawerStaff(null);
           handleToggleClick(user);
         }}
-        isPending={updateRoleMut.isPending}
+        isUpdatingRole={updateRoleMut.isPending}
         currentAdminUser={currentAdminUser}
-      />
-
-      {/* 6. Edit Role Modal */}
-      <StaffEditRoleModal
-        user={editRoleUser}
-        onClose={() => setEditRoleUser(null)}
-        roles={roles}
+        editRoleUser={editRoleUser}
+        onCloseEditRole={() => setEditRoleUser(null)}
         selectedRoleId={selectedRoleId}
         setSelectedRoleId={setSelectedRoleId}
-        onSave={handleSaveRole}
-        isPending={updateRoleMut.isPending}
-      />
-
-      {/* 7. Reset Password Modal */}
-      <StaffResetPasswordModal
-        user={resetPassUser}
-        onClose={() => setResetPassUser(null)}
+        onSaveRole={handleSaveRole}
+        resetPassUser={resetPassUser}
+        onCloseResetPass={() => setResetPassUser(null)}
         newPassword={newPassword}
         setNewPassword={setNewPassword}
-        onSubmit={handleConfirmResetPassword}
-        isPending={resetPassMut.isPending}
-      />
-
-      {/* 8. Create Staff Modal */}
-      <StaffCreateModal
-        open={createModalOpen}
-        onOpenChange={setCreateModalOpen}
+        onSubmitResetPassword={handleConfirmResetPassword}
+        isResettingPass={resetPassMut.isPending}
+        createModalOpen={createModalOpen}
+        setCreateModalOpen={setCreateModalOpen}
         createForm={createForm}
         setCreateForm={setCreateForm}
-        onSubmit={handleCreateSubmit}
-        isPending={createStaffMut.isPending}
-        roles={roles}
+        onSubmitCreate={handleCreateSubmit}
+        isCreatingStaff={createStaffMut.isPending}
         warehouses={warehouses}
-      />
-
-      {/* 9. Confirm Toggle Status Dialog */}
-      <ConfirmDialog
-        open={!!confirmTarget}
-        title={confirmTarget?.nextStatus ? 'Mở khóa tài khoản nhân viên' : 'Khóa tài khoản nhân viên'}
-        description={
-          confirmTarget?.nextStatus
-            ? `Bạn có chắc muốn mở khóa cho tài khoản "${confirmTarget?.user?.email}"? Nhân viên sẽ có thể đăng nhập lại trang quản trị.`
-            : `CẢNH BÁO CƯỠNG CHẾ: Bạn sắp khóa tài khoản "${confirmTarget?.user?.email}". Ngay lập tức khi xác nhận, toàn bộ phiên đăng nhập của nhân viên này trên TẤT CẢ THIẾT BỊ sẽ bị cưỡng chế văng ra ngoài qua SSE!`
-        }
-        confirmText={confirmTarget?.nextStatus ? 'Mở khóa' : 'Khóa & Force Logout'}
-        confirmVariant={confirmTarget?.nextStatus ? 'primary' : 'destructive'}
-        onConfirm={handleConfirmToggle}
-        onCancel={() => setConfirmTarget(null)}
-      />
-
-      {/* 10. Invite Member Modal */}
-      <InviteMemberModal
-        isOpen={inviteModalOpen}
-        onClose={() => setInviteModalOpen(false)}
-        onSuccess={() => refetchStats()}
+        confirmTarget={confirmTarget}
+        onConfirmToggle={handleConfirmToggle}
+        onCancelConfirmToggle={() => setConfirmTarget(null)}
+        inviteModalOpen={inviteModalOpen}
+        setInviteModalOpen={setInviteModalOpen}
+        onInviteSuccess={() => refetchStats()}
       />
     </div>
   );

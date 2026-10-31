@@ -249,6 +249,11 @@ const userSchema = new mongoose.Schema(
       type: String,
       select: false,
     },
+    refreshTokens: {
+      type: [String],
+      select: false,
+      default: [],
+    },
 
     sessions: [
       {

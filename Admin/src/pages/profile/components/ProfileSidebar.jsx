@@ -82,7 +82,6 @@ export default function ProfileSidebar({
           </button>
         </div>
 
-        {/* User Info */}
         <div className="space-y-1 min-w-0 w-full">
           <h2 className="font-bold text-sm text-foreground truncate">
             {user?.fullName || 'Quản trị viên'}
@@ -93,7 +92,7 @@ export default function ProfileSidebar({
               : (user?.email || 'admin@shop.vn')}
           </p>
           <div className="pt-1 flex items-center justify-center gap-1.5">
-            <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="size-2 rounded-full bg-emerald-500" />
             <span className="text-[11px] font-mono text-emerald-600 font-medium">
               Đang hoạt động
             </span>
@@ -101,7 +100,6 @@ export default function ProfileSidebar({
         </div>
       </div>
 
-      {/* Navigation Tabs */}
       <nav className="pt-4 space-y-1">
         {PROFILE_TABS.map((tab) => {
           const Icon = tab.icon;

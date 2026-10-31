@@ -40,11 +40,31 @@ const COOKIE_OPTIONS_SESSION = {
 // Legacy alias giữ cho các chỗ khác import
 const COOKIE_OPTIONS = COOKIE_OPTIONS_PERSISTENT;
 
-const buildTokenResponse = async (user, res, rememberMe = false, req = null) => {
+const buildTokenResponse = async (user, res, rememberMe = false, req = null, oldRefreshToken = null) => {
   const accessToken = generateAccessToken(user._id);
   const refreshToken = generateRefreshToken(user._id);
 
-  await User.findByIdAndUpdate(user._id, { refreshToken });
+  // Đa thiết bị (Multi-Device Sessions):
+  // Cập nhật mảng refreshTokens để cho phép đăng nhập đồng thời trên nhiều máy tính/điện thoại
+  const dbUser = await User.findById(user._id).select('+refreshTokens +refreshToken');
+  let tokens = Array.isArray(dbUser?.refreshTokens) ? [...dbUser.refreshTokens] : [];
+  if (dbUser?.refreshToken && !tokens.includes(dbUser.refreshToken)) {
+    tokens.push(dbUser.refreshToken);
+  }
+
+  if (oldRefreshToken) {
+    tokens = tokens.filter((t) => t !== oldRefreshToken);
+  }
+  tokens.push(refreshToken);
+  // Giữ tối đa 10 phiên token gần nhất
+  if (tokens.length > 10) {
+    tokens = tokens.slice(-10);
+  }
+
+  await User.findByIdAndUpdate(user._id, {
+    refreshToken,
+    refreshTokens: tokens,
+  });
 
   if (res && typeof res.cookie === 'function') {
     const isStaffOrAdmin =
@@ -273,8 +293,17 @@ const loginUser = async (email, password, req = null) => {
 const rotateRefreshToken = async (token) => {
   const decoded = verifyRefreshToken(token);
 
-  const user = await User.findById(decoded.id).select('+refreshToken');
-  if (!user || user.refreshToken !== token) {
+  const user = await User.findById(decoded.id).select('+refreshToken +refreshTokens');
+  if (!user) {
+    throw new AppError('Không tìm thấy người dùng', 401);
+  }
+
+  // Chấp nhận nếu token nằm trong mảng refreshTokens đa thiết bị HOẶC khớp legacy refreshToken
+  const isValid =
+    (Array.isArray(user.refreshTokens) && user.refreshTokens.includes(token)) ||
+    user.refreshToken === token;
+
+  if (!isValid) {
     throw new AppError('Refresh token không hợp lệ hoặc đã hết hạn', 401);
   }
 
@@ -545,8 +574,23 @@ const changeUserPassword = async (userId, currentPassword, newPassword, logoutOt
   return { message: 'Đổi mật khẩu thành công!' };
 };
 
-const logoutUser = async (userId) => {
-  await User.findByIdAndUpdate(userId, { refreshToken: null });
+const logoutUser = async (userId, token = null) => {
+  if (token) {
+    // Chỉ hủy phiên của thiết bị hiện tại, các thiết bị/máy tính khác vẫn hoạt động bình thường
+    const user = await User.findById(userId).select('+refreshTokens +refreshToken');
+    if (user) {
+      let tokens = Array.isArray(user.refreshTokens)
+        ? user.refreshTokens.filter((t) => t !== token)
+        : [];
+      await User.findByIdAndUpdate(userId, {
+        refreshTokens: tokens,
+        refreshToken: tokens[tokens.length - 1] || null,
+      });
+      return;
+    }
+  }
+  // Nếu không chỉ định token hoặc gọi logout toàn bộ: Xóa sạch toàn bộ phiên
+  await User.findByIdAndUpdate(userId, { refreshToken: null, refreshTokens: [] });
 };
 
 /**
@@ -554,9 +598,16 @@ const logoutUser = async (userId) => {
  */
 const forgotPassword = async (email) => {
   const normalizedEmail = (email || '').toLowerCase().trim();
+  if (!normalizedEmail) {
+    throw new AppError('Vui lòng cung cấp địa chỉ email hợp lệ', 400);
+  }
+
   const user = await User.findOne({ email: normalizedEmail });
+  // OWASP Anti-User Enumeration: Không tiết lộ email có tồn tại hay không
   if (!user) {
-    throw new AppError('Không tìm thấy tài khoản với email này', 404);
+    return {
+      message: 'Nếu địa chỉ email tồn tại trên hệ thống, email hướng dẫn đặt lại mật khẩu đã được gửi đến hộp thư của bạn.',
+    };
   }
 
   // Chống Spam gửi email liên tục (Cooldown 60 giây)
@@ -578,7 +629,7 @@ const forgotPassword = async (email) => {
   try {
     await sendResetPasswordEmail(user.email, resetToken);
     return {
-      message: 'Email hướng dẫn đặt lại mật khẩu đã được gửi đến hộp thư của bạn.',
+      message: 'Nếu địa chỉ email tồn tại trên hệ thống, email hướng dẫn đặt lại mật khẩu đã được gửi đến hộp thư của bạn.',
     };
   } catch (error) {
     user.resetPasswordToken = undefined;
@@ -713,9 +764,9 @@ const verifyPhoneOtp = async (userId, otp) => {
 };
 
 /**
- * Đăng ký tài khoản Admin (qua secret key hoặc khi chưa có admin nào trong DB)
+ * Đăng ký tài khoản Admin (qua secret key khi khởi tạo hệ thống, hoặc chỉ admin hiện tại mới tạo thêm được)
  */
-const registerAdmin = async (data) => {
+const registerAdmin = async (data, currentUser = null) => {
   const configuredSecret = process.env.ADMIN_SECRET_KEY;
   if (!configuredSecret) {
     throw new AppError('Chức năng đăng ký Admin tạm khóa do chưa cấu hình ADMIN_SECRET_KEY trong môi trường', 403);
@@ -724,6 +775,25 @@ const registerAdmin = async (data) => {
   // Luôn bắt buộc adminSecretKey chuẩn xác
   if (!data.adminSecretKey || !safeStringCompare(data.adminSecretKey, configuredSecret)) {
     throw new AppError('Mã bí mật tạo Admin (adminSecretKey) không chính xác hoặc bị thiếu', 403);
+  }
+
+  // Kiểm tra xem hệ thống đã có tài khoản Quản trị viên (Admin/Administrator) nào chưa
+  const existingAdminCount = await User.countDocuments({
+    role: { $in: ['admin', 'administrator'] },
+  });
+
+  // Nếu hệ thống ĐÃ có tài khoản Admin, người gọi API bắt buộc phải là một Admin đã đăng nhập
+  if (existingAdminCount > 0) {
+    if (!currentUser) {
+      throw new AppError(
+        'Hệ thống đã có Quản trị viên. Yêu cầu đăng nhập bằng tài khoản Quản trị cấp cao để tạo thêm tài khoản Admin mới',
+        401
+      );
+    }
+    const currentRole = String(currentUser.role || '').toLowerCase();
+    if (currentRole !== 'admin' && currentRole !== 'administrator') {
+      throw new AppError('Chỉ có Quản trị viên cấp cao mới có quyền tạo thêm tài khoản Admin', 403);
+    }
   }
 
   const emailTaken = await User.findOne({ email: data.email.toLowerCase().trim() });
@@ -1714,7 +1784,6 @@ const requestAdminLoginOtp = async (email) => {
   return {
     email: user.email,
     hasPasskey,
-    otp: process.env.NODE_ENV === 'development' ? otp : undefined,
   };
 };
 

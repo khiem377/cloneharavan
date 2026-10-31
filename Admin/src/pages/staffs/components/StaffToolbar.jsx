@@ -1,12 +1,16 @@
 import React from 'react';
-import { Search } from '@/components/ui/Icons';
+import { Search } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import ColumnToggleDropdown from '@/components/ui/ColumnToggleDropdown';
 
-/**
- * Filter & Column Visibility Toolbar for Staff Management
- */
 export default function StaffToolbar({
   keyword,
   setKeyword,
@@ -19,12 +23,11 @@ export default function StaffToolbar({
   columnVisibility,
 }) {
   return (
-    <Card className="rounded-[6px] border border-border shadow-none">
-      <CardContent className="p-3 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+    <Card className="rounded-[6px] border border-border shadow-xs bg-card">
+      <CardContent className="p-2.5 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
         <div className="flex flex-1 flex-wrap items-center gap-2">
-          {/* Search box */}
           <div className="relative flex-1 min-w-[200px] max-w-sm">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground z-10 pointer-events-none" />
             <Input
               placeholder="Tìm theo tên, email, SĐT nhân viên..."
               value={keyword}
@@ -32,40 +35,46 @@ export default function StaffToolbar({
                 setKeyword(e.target.value);
                 setPage(1);
               }}
-              className="h-9 pl-8 rounded-[6px] text-xs font-sans"
+              className="h-8 pl-8 rounded-[6px] text-xs font-sans border-border"
             />
           </div>
 
-          {/* Role select */}
-          <select
+          <Select
             value={roleFilter}
-            onChange={(e) => {
-              setRoleFilter(e.target.value);
+            onValueChange={(val) => {
+              setRoleFilter(val);
               setPage(1);
             }}
-            className="h-9 rounded-[6px] border border-input bg-background px-3 text-xs outline-none focus:border-ring cursor-pointer transition-colors"
           >
-            <option value="all">Tất cả vai trò</option>
-            {roles.map((r) => (
-              <option key={r._id} value={r.code}>
-                {r.name}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="h-8 w-44 rounded-[6px] text-xs border-border">
+              <SelectValue placeholder="Tất cả vai trò" />
+            </SelectTrigger>
+            <SelectContent className="rounded-[6px]">
+              <SelectItem value="all">Tất cả vai trò</SelectItem>
+              {roles.map((r) => (
+                <SelectItem key={r._id} value={r.code}>
+                  {r.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-          {/* Status select */}
-          <select
+          <Select
             value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
+            onValueChange={(val) => {
+              setStatusFilter(val);
               setPage(1);
             }}
-            className="h-9 rounded-[6px] border border-input bg-background px-3 text-xs outline-none focus:border-ring cursor-pointer transition-colors"
           >
-            <option value="all">Tất cả trạng thái</option>
-            <option value="active">Đang hoạt động</option>
-            <option value="inactive">Đã bị khóa</option>
-          </select>
+            <SelectTrigger className="h-8 w-36 rounded-[6px] text-xs border-border">
+              <SelectValue placeholder="Tất cả trạng thái" />
+            </SelectTrigger>
+            <SelectContent className="rounded-[6px]">
+              <SelectItem value="all">Tất cả trạng thái</SelectItem>
+              <SelectItem value="active">Đang hoạt động</SelectItem>
+              <SelectItem value="inactive">Đã bị khóa</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="flex items-center gap-2">

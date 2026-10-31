@@ -19,12 +19,26 @@ const useAuthStore = create(
       user: null,
       accessToken: null,
       refreshToken: null,
+      // isServerVerified: Cờ xác thực từ máy chủ Backend trong phiên RAM hiện tại.
+      // Tuyệt đối KHÔNG lưu trong localStorage (Zero-Trust Client Storage) để chống giả mạo localStorage.setItem.
+      isServerVerified: false,
+
       // anonymousId: browser UUID dùng làm sessionId cho guest tracking
-      // Được tạo 1 lần và giữ nguyên suốt vòng đời của browser session
       anonymousId: generateAnonymousId(),
 
       setAuth: ({ user, accessToken, refreshToken }) =>
-        set({ user, accessToken, refreshToken }),
+        set({
+          user,
+          accessToken,
+          refreshToken,
+          isServerVerified: Boolean(accessToken && user && user.role !== 'user'),
+        }),
+
+      markServerVerified: (freshUser) =>
+        set({
+          user: freshUser,
+          isServerVerified: Boolean(freshUser && freshUser.role !== 'user'),
+        }),
 
       setUser: (user) => set({ user }),
 
@@ -33,9 +47,14 @@ const useAuthStore = create(
 
       setAccessToken: (accessToken) => set({ accessToken }),
 
-      clearAuth: () =>
-        set({ user: null, accessToken: null, refreshToken: null }),
-        // Giữ lại anonymousId khi logout để tiếp tục track nếu user quay lại
+      clearAuth: () => {
+        try {
+          localStorage.removeItem('admin-auth');
+          localStorage.removeItem('admin');
+          sessionStorage.removeItem('admin-auth');
+        } catch {}
+        set({ user: null, accessToken: null, refreshToken: null, isServerVerified: false });
+      },
 
       // Lấy anonymousId hiện tại, tạo mới nếu chưa có
       getOrCreateAnonymousId: () => {
@@ -46,11 +65,13 @@ const useAuthStore = create(
         return newId;
       },
 
-      isAuthenticated: () => !!get().accessToken,
+      isAuthenticated: () => Boolean(get().accessToken && get().isServerVerified),
 
       hasPermission: (permCode) => {
-        const user = get().user;
-        if (!user) return false;
+        const state = get();
+        const user = state.user;
+        // Bắt buộc phải có user, đã xác thực bởi server, và tuyệt đối không phải khách hàng thường
+        if (!user || !state.isServerVerified || user.role === 'user') return false;
         if (user.role === 'administrator' || user.role === 'admin' || user.permissions?.includes('*')) {
           return true;
         }
@@ -58,8 +79,9 @@ const useAuthStore = create(
       },
 
       hasAnyPermission: (permCodes = []) => {
-        const user = get().user;
-        if (!user) return false;
+        const state = get();
+        const user = state.user;
+        if (!user || !state.isServerVerified || user.role === 'user') return false;
         if (user.role === 'administrator' || user.role === 'admin' || user.permissions?.includes('*')) {
           return true;
         }
@@ -74,10 +96,12 @@ const useAuthStore = create(
         accessToken:  state.accessToken,
         refreshToken: state.refreshToken,
         anonymousId:  state.anonymousId, // persist anonymousId qua reload
+        // Tuyệt đối KHÔNG persist isServerVerified -> Buộc ProtectedRoute phải verify với server
       }),
     }
   )
 );
+
 
 export default useAuthStore;
 

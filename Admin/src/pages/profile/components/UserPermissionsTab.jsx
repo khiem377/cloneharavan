@@ -1,12 +1,9 @@
 import React, { useState } from 'react';
-import { ShieldCheck, CheckCircle2, Lock, Search, Check, Loader2 } from 'lucide-react';
+import { ShieldCheck, CheckCircle2, Lock, Search, Check, Loader2, RoleAdminIcon, RoleKeyCustomIcon } from '@/components/ui/Icons';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 
-/**
- * User Permissions Matrix Tab (Read-only view)
- */
 export default function UserPermissionsTab({
   isSuperAdmin,
   totalGrantedPerms,
@@ -33,10 +30,9 @@ export default function UserPermissionsTab({
         </div>
       </CardHeader>
       <CardContent className="p-6 space-y-4">
-        {/* Notice Banner */}
         {isSuperAdmin ? (
           <div className="p-3.5 rounded-[6px] border border-emerald-500/30 bg-emerald-500/5 flex items-start gap-2.5 text-xs text-emerald-700 dark:text-emerald-400">
-            <CheckCircle2 size={16} className="shrink-0 mt-0.5 text-emerald-600" />
+            <RoleAdminIcon size={16} className="shrink-0 mt-0.5 text-emerald-600" />
             <div>
               <p className="font-semibold">Tài khoản Quản trị viên Tối cao (Super Administrator)</p>
               <p className="text-[11px] opacity-90">
@@ -46,7 +42,7 @@ export default function UserPermissionsTab({
           </div>
         ) : (
           <div className="p-3.5 rounded-[6px] border border-border bg-muted/20 flex items-start gap-2.5 text-xs text-muted-foreground">
-            <Lock size={15} className="shrink-0 mt-0.5 text-primary" />
+            <RoleKeyCustomIcon size={15} className="shrink-0 mt-0.5 text-primary" />
             <div>
               <p className="font-semibold text-foreground">
                 Vai trò hiện tại: {myPermsData?.role?.name || user?.roleId?.name || user?.role || 'Nhân viên'}
