@@ -1,48 +1,18 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  Bell,
-  Check,
-  CheckCheck,
-  Package,
-  AlertCircle,
-  Clock,
-  ExternalLink,
-  Loader2,
-  Trash2,
-} from '@/components/ui/Icons';
+import { Bell, CheckCheck, ArrowRight, Inbox } from 'lucide-react';
 import { notificationService } from '@/services/notification.service';
 import { getSocket } from '@/services/socket.service';
 import { toast } from '@/providers/ToastProvider';
+import { playNotificationSound } from '@/utils/notificationAudio';
+import NotificationDropdownItem from './NotificationDropdownItem';
 
-// Tạo âm thanh "Ting" tinh tế bằng Web Audio API
-const playNotificationSound = () => {
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(880, ctx.currentTime); // Note A5
-    osc.frequency.exponentialRampToValueAtTime(1320, ctx.currentTime + 0.15); // Note E6
-    gain.gain.setValueAtTime(0.12, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start();
-    osc.stop(ctx.currentTime + 0.35);
-  } catch (_) {}
-};
-
-const formatTimeAgo = (dateStr) => {
-  if (!dateStr) return '';
-  const now = new Date();
-  const date = new Date(dateStr);
-  const diffSec = Math.floor((now - date) / 1000);
-  if (diffSec < 45) return 'Vừa xong';
-  if (diffSec < 3600) return `${Math.floor(diffSec / 60)} phút trước`;
-  if (diffSec < 86400) return `${Math.floor(diffSec / 3600)} giờ trước`;
-  return `${Math.floor(diffSec / 86400)} ngày trước`;
-};
+const TABS = [
+  { id: 'all', label: 'Tất cả' },
+  { id: 'unread', label: 'Chưa đọc' },
+  { id: 'orders', label: 'Đơn hàng' },
+  { id: 'system', label: 'Kho & Hệ thống' },
+];
 
 export default function NotificationDropdown() {
   const navigate = useNavigate();
@@ -50,9 +20,10 @@ export default function NotificationDropdown() {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState('all');
   const dropdownRef = useRef(null);
 
-  // Đóng popover khi click ra ngoài
+  // Close on click outside
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -63,17 +34,16 @@ export default function NotificationDropdown() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // 1. Tải danh sách thông báo và số lượng chưa đọc ban đầu
   const fetchNotifications = async () => {
     try {
       setLoading(true);
-      const res = await notificationService.getNotifications({ limit: 15 });
+      const res = await notificationService.getNotifications({ limit: 30 });
       if (res?.success) {
         setNotifications(res.data || []);
         setUnreadCount(res.unreadCount || 0);
       }
     } catch (err) {
-      console.warn('Lỗi lấy thông báo:', err.message);
+      console.warn('[NotificationDropdown] Lỗi tải thông báo:', err.message);
     } finally {
       setLoading(false);
     }
@@ -83,37 +53,25 @@ export default function NotificationDropdown() {
     fetchNotifications();
   }, []);
 
-  // 2. Lắng nghe Socket.io Realtime sự kiện notification:new
+  // Realtime Socket.io listener
   useEffect(() => {
     const socket = getSocket();
     if (!socket) return;
 
-    const handleNewNotification = (newNotif) => {
-      console.log('⚡ [NotificationDropdown] Nhận thông báo realtime:', newNotif);
-
-      // Phát âm thanh Ting
+    const handleNew = (newNotif) => {
       playNotificationSound();
-
-      // Hiện toast thông báo nhỏ ở góc
       toast.info(newNotif.message || newNotif.title, {
         title: newNotif.title || 'Thông báo mới',
-        description: newNotif.message ? undefined : undefined,
-        duration: 6000,
+        duration: 5000,
       });
-
-      // Cập nhật state realtime
       setNotifications((prev) => [newNotif, ...prev]);
       setUnreadCount((c) => c + 1);
     };
 
-    socket.on('notification:new', handleNewNotification);
-
-    return () => {
-      socket.off('notification:new', handleNewNotification);
-    };
+    socket.on('notification:new', handleNew);
+    return () => socket.off('notification:new', handleNew);
   }, []);
 
-  // 3. Đánh dấu tất cả đã đọc
   const handleMarkAllRead = async () => {
     try {
       await notificationService.markAllAsRead();
@@ -123,27 +81,26 @@ export default function NotificationDropdown() {
     } catch (_) {}
   };
 
-  // 4. Click vào một thông báo
-  const handleItemClick = async (notif) => {
+  const handleMarkSingleRead = async (id) => {
+    try {
+      await notificationService.markAsRead(id);
+      setNotifications((prev) =>
+        prev.map((n) => (n._id === id ? { ...n, isRead: true } : n))
+      );
+      setUnreadCount((c) => Math.max(0, c - 1));
+    } catch (_) {}
+  };
+
+  const handleItemClick = (notif) => {
     if (!notif.isRead) {
-      try {
-        await notificationService.markAsRead(notif._id);
-        setNotifications((prev) =>
-          prev.map((n) => (n._id === notif._id ? { ...n, isRead: true } : n))
-        );
-        setUnreadCount((c) => Math.max(0, c - 1));
-      } catch (_) {}
+      handleMarkSingleRead(notif._id);
     }
-
     setOpen(false);
-
-    // Ưu tiên điều hướng thẳng vào trang chi tiết đơn hàng
     const targetOrderId = notif.metadata?.orderId || notif.metadata?.orderCode;
     if (targetOrderId) {
       navigate(`/orders/${targetOrderId}`);
     } else if (notif.link && notif.link.includes('code=')) {
-      const code = notif.link.split('code=')[1];
-      navigate(`/orders/${code}`);
+      navigate(`/orders/${notif.link.split('code=')[1]}`);
     } else if (notif.link) {
       navigate(notif.link);
     } else {
@@ -151,35 +108,31 @@ export default function NotificationDropdown() {
     }
   };
 
-  const getIcon = (type) => {
-    switch (type) {
-      case 'ORDER_NEW':
-        return <Package className="size-4 text-blue-600" />;
-      case 'ORDER_CANCELLED':
-        return <AlertCircle className="size-4 text-rose-500" />;
-      case 'STOCK_LOW':
-        return <AlertCircle className="size-4 text-amber-500" />;
-      default:
-        return <Bell className="size-4 text-primary" />;
-    }
-  };
+  const filteredList = useMemo(() => {
+    return notifications.filter((n) => {
+      if (activeTab === 'unread') return !n.isRead;
+      if (activeTab === 'orders') return n.type === 'ORDER_NEW' || n.type === 'ORDER_CANCELLED' || n.type === 'ORDER_STATUS';
+      if (activeTab === 'system') return n.type === 'STOCK_LOW' || n.type === 'SYSTEM';
+      return true;
+    });
+  }, [notifications, activeTab]);
 
   return (
     <div className="relative" ref={dropdownRef}>
-      {/* Nút Chuông Trigger */}
+      {/* Trigger Button */}
       <button
         type="button"
         onClick={() => {
           setOpen((prev) => !prev);
           if (!open) fetchNotifications();
         }}
-        className="size-8 flex items-center justify-center rounded-[6px] border border-border bg-card text-muted-foreground hover:text-foreground hover:bg-accent transition-colors active:scale-[0.98] cursor-pointer relative"
-        title="Thông báo"
+        className="size-8.5 flex items-center justify-center rounded-[6px] border border-border bg-card text-muted-foreground hover:text-foreground hover:bg-accent transition-colors active:scale-[0.98] cursor-pointer relative"
+        title="Thông báo hệ thống"
         aria-label="Thông báo hệ thống"
       >
         <Bell size={15} />
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 flex h-4 min-w-[16px] px-1 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white font-mono tabular-nums leading-none animate-in zoom-in-50 duration-200">
+          <span className="absolute -top-1 -right-1 flex h-4 min-w-[16px] px-1 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white font-mono tabular-nums leading-none">
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
@@ -187,14 +140,14 @@ export default function NotificationDropdown() {
 
       {/* Popover Dropdown */}
       {open && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-[6px] border border-border bg-card shadow-lg z-50 overflow-hidden animate-in fade-in-50 slide-in-from-top-2 duration-150">
+        <div className="absolute right-0 mt-2 w-80 sm:w-[410px] rounded-[6px] border border-border bg-card shadow-sm z-50 overflow-hidden animate-in fade-in-50 slide-in-from-top-2 duration-150">
           {/* Header */}
-          <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-border bg-muted/30">
+          <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-border bg-muted/20">
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold text-foreground">Thông báo</span>
               {unreadCount > 0 && (
                 <span className="px-1.5 py-0.5 rounded-[4px] bg-rose-500/10 text-rose-600 dark:text-rose-400 text-[10.5px] font-bold font-mono tabular-nums">
-                  {unreadCount}
+                  {unreadCount} mới
                 </span>
               )}
             </div>
@@ -203,66 +156,68 @@ export default function NotificationDropdown() {
               <button
                 type="button"
                 onClick={handleMarkAllRead}
-                className="text-[11px] font-medium text-primary hover:underline flex items-center gap-1 cursor-pointer"
+                className="text-[11px] font-medium text-primary hover:underline flex items-center gap-1 cursor-pointer transition active:scale-[0.98]"
               >
-                <CheckCheck className="size-3" />
-                <span>Đánh dấu tất cả là đã đọc</span>
+                <CheckCheck size={13} />
+                <span>Đã đọc tất cả</span>
               </button>
             )}
           </div>
 
-          {/* Danh sách thông báo */}
-          <div className="max-h-[380px] overflow-y-auto divide-y divide-border">
+          {/* Segmented Filter Tabs */}
+          <div className="flex items-center gap-1 p-1.5 border-b border-border bg-muted/10 overflow-x-auto no-scrollbar">
+            {TABS.map((tab) => {
+              const isSelected = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`text-[11px] h-6.5 px-2.5 rounded-[4px] font-medium shrink-0 transition active:scale-[0.98] cursor-pointer ${
+                    isSelected
+                      ? 'bg-background text-foreground font-bold border border-border shadow-2xs'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Notifications List */}
+          <div className="max-h-[380px] overflow-y-auto divide-y divide-border/60">
             {loading && notifications.length === 0 ? (
-              <div className="flex items-center justify-center py-8 text-xs text-muted-foreground gap-2">
-                <Loader2 className="size-4 animate-spin" />
-                <span>Đang tải thông báo...</span>
+              <div className="p-2 space-y-2">
+                {[1, 2, 3].map((idx) => (
+                  <div key={idx} className="p-3 flex items-start gap-3 animate-pulse">
+                    <div className="size-8 rounded-[6px] bg-muted shrink-0" />
+                    <div className="flex-1 space-y-1.5">
+                      <div className="h-2.5 bg-muted rounded-[4px] w-1/4" />
+                      <div className="h-3 bg-muted rounded-[4px] w-3/4" />
+                      <div className="h-2.5 bg-muted rounded-[4px] w-1/2" />
+                    </div>
+                  </div>
+                ))}
               </div>
-            ) : notifications.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
-                <Bell className="size-7 text-muted-foreground/40 mb-2" />
-                <p className="text-xs font-semibold text-foreground">Chưa có thông báo nào</p>
+            ) : filteredList.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-10 px-4 text-center">
+                <div className="size-10 rounded-[6px] bg-muted/50 flex items-center justify-center text-muted-foreground/50 mb-2">
+                  <Inbox size={20} />
+                </div>
+                <p className="text-xs font-semibold text-foreground">Bạn đã xem hết thông báo!</p>
                 <p className="text-[11px] text-muted-foreground mt-0.5">
-                  Các thông báo về đơn hàng và kho vận sẽ hiển thị tại đây theo thời gian thực.
+                  Không có thông báo mới nào thuộc danh mục này.
                 </p>
               </div>
             ) : (
-              notifications.map((item) => (
-                <div
+              filteredList.map((item) => (
+                <NotificationDropdownItem
                   key={item._id}
-                  onClick={() => handleItemClick(item)}
-                  className={`p-3 flex items-start gap-2.5 transition-colors cursor-pointer text-left hover:bg-muted/40 ${
-                    !item.isRead ? 'bg-primary/5 dark:bg-primary/10' : ''
-                  }`}
-                >
-                  <div className="size-7 rounded-[4px] bg-background border border-border flex items-center justify-center shrink-0 mt-0.5">
-                    {getIcon(item.type)}
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-1">
-                      <p
-                        className={`text-xs truncate ${
-                          !item.isRead ? 'font-bold text-foreground' : 'font-medium text-foreground/80'
-                        }`}
-                      >
-                        {item.title}
-                      </p>
-                      {!item.isRead && (
-                        <span className="size-1.5 rounded-full bg-primary shrink-0" />
-                      )}
-                    </div>
-
-                    <p className="text-[11.5px] text-muted-foreground line-clamp-2 mt-0.5 leading-relaxed">
-                      {item.message}
-                    </p>
-
-                    <div className="flex items-center gap-1 text-[10px] text-muted-foreground/70 mt-1 font-mono tabular-nums">
-                      <Clock className="size-2.5" />
-                      <span>{formatTimeAgo(item.createdAt)}</span>
-                    </div>
-                  </div>
-                </div>
+                  item={item}
+                  onClick={handleItemClick}
+                  onMarkRead={handleMarkSingleRead}
+                />
               ))
             )}
           </div>
@@ -275,10 +230,10 @@ export default function NotificationDropdown() {
                 setOpen(false);
                 navigate('/notifications');
               }}
-              className="text-xs font-semibold text-primary hover:underline inline-flex items-center gap-1.5 cursor-pointer py-1"
+              className="text-xs font-semibold text-primary hover:underline inline-flex items-center gap-1.5 cursor-pointer py-0.5 transition active:scale-[0.98]"
             >
-              <span>Xem tất cả thông báo</span>
-              <ExternalLink className="size-3" />
+              <span>Xem toàn bộ thông báo trong trang quản lý</span>
+              <ArrowRight size={13} />
             </button>
           </div>
         </div>

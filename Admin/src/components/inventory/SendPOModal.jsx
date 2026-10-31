@@ -8,7 +8,7 @@ import SearchableSelect from '@/components/ui/SearchableSelect';
 import { sanitizeHtml } from '@/utils/sanitizeHtml';
 
 export default function SendPOModal({ isOpen, onClose, po, onSuccess }) {
-  const [activeTab, setActiveTab] = useState('email'); // 'email' | 'manual'
+  const [activeTab, setActiveTab] = useState('email');
   const [recipientEmail, setRecipientEmail] = useState('');
   const [subject, setSubject] = useState('');
   const [customNote, setCustomNote] = useState('');
@@ -29,7 +29,6 @@ export default function SendPOModal({ isOpen, onClose, po, onSuccess }) {
       setManualChannel('Zalo');
       setManualNote(`Đã chốt qua Zalo/Điện thoại với đại diện ${po.supplierId?.name || 'Nhà cung cấp'}`);
 
-      // Fetch live email HTML preview from backend
       fetchPreviewHtml(po._id);
     }
   }, [isOpen, po]);
@@ -89,16 +88,15 @@ export default function SendPOModal({ isOpen, onClose, po, onSuccess }) {
 
   return (
     <>
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-        <div className="flex w-full max-w-2xl flex-col rounded-2xl border border-border bg-card shadow-2xl overflow-hidden text-card-foreground">
-          {/* Header */}
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="flex w-full max-w-2xl flex-col rounded-[6px] border border-border bg-card shadow-sm overflow-hidden text-card-foreground">
           <div className="flex items-center justify-between border-b border-border bg-muted/40 px-6 py-4">
             <div className="flex items-center gap-2.5">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <div className="flex h-9 w-9 items-center justify-center rounded-[6px] bg-primary/10 text-primary">
                 <Send className="h-5 w-5" />
               </div>
               <div>
-                <h2 className="text-lg font-bold tracking-tight text-foreground">
+                <h2 className="text-base font-bold tracking-tight text-foreground">
                   Gửi Đơn Nhập Kho {po.poNumber} Cho NCC
                 </h2>
                 <p className="text-xs text-muted-foreground">
@@ -108,30 +106,28 @@ export default function SendPOModal({ isOpen, onClose, po, onSuccess }) {
             </div>
             <button
               onClick={onClose}
-              className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+              className="rounded-[6px] p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground active:scale-[0.98] transition-all cursor-pointer"
             >
               <X className="h-5 w-5" />
             </button>
           </div>
 
-          {/* Supplier summary card */}
           <div className="bg-muted/20 px-6 py-3 border-b border-border flex items-center justify-between text-xs">
             <div className="flex items-center gap-2 text-foreground font-medium">
               <Building2 className="h-4 w-4 text-primary" />
               <span>{po.supplierId?.name || 'Nhà cung cấp'}</span>
             </div>
-            <div className="text-muted-foreground font-mono">
+            <div className="text-muted-foreground font-mono tabular-nums">
               Tổng tiền đơn: <span className="font-bold text-emerald-600 dark:text-emerald-400">{(po.totalAmount || 0).toLocaleString('vi-VN')} đ</span>
             </div>
           </div>
 
-          {/* Tab Selector */}
           <div className="flex border-b border-border bg-muted/10 p-2 gap-2">
             <button
               type="button"
               onClick={() => setActiveTab('email')}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-semibold transition-all cursor-pointer ${activeTab === 'email'
-                ? 'bg-primary text-primary-foreground shadow-sm'
+              className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-[6px] text-xs font-semibold active:scale-[0.98] transition-all cursor-pointer ${activeTab === 'email'
+                ? 'bg-primary text-primary-foreground shadow-xs'
                 : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                 }`}
             >
@@ -141,8 +137,8 @@ export default function SendPOModal({ isOpen, onClose, po, onSuccess }) {
             <button
               type="button"
               onClick={() => setActiveTab('manual')}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-semibold transition-all cursor-pointer ${activeTab === 'manual'
-                ? 'bg-primary text-primary-foreground shadow-sm'
+              className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-[6px] text-xs font-semibold active:scale-[0.98] transition-all cursor-pointer ${activeTab === 'manual'
+                ? 'bg-primary text-primary-foreground shadow-xs'
                 : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                 }`}
             >
@@ -151,7 +147,6 @@ export default function SendPOModal({ isOpen, onClose, po, onSuccess }) {
             </button>
           </div>
 
-          {/* Tab Body */}
           <form onSubmit={handleSubmitDispatch} className="p-6 space-y-4">
             {activeTab === 'email' ? (
               <div className="space-y-4">
@@ -166,7 +161,7 @@ export default function SendPOModal({ isOpen, onClose, po, onSuccess }) {
                       value={recipientEmail}
                       onChange={(e) => setRecipientEmail(e.target.value)}
                       placeholder="sales@supplier.com..."
-                      className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      className="w-full rounded-[6px] border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
                     />
                   </div>
 
@@ -179,7 +174,7 @@ export default function SendPOModal({ isOpen, onClose, po, onSuccess }) {
                       required
                       value={subject}
                       onChange={(e) => setSubject(e.target.value)}
-                      className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      className="w-full rounded-[6px] border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
                     />
                   </div>
                 </div>
@@ -193,20 +188,19 @@ export default function SendPOModal({ isOpen, onClose, po, onSuccess }) {
                     value={customNote}
                     onChange={(e) => setCustomNote(e.target.value)}
                     placeholder="VD: Đề nghị giao hàng trước 10h sáng ngày 28/08..."
-                    className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    className="w-full rounded-[6px] border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
                   />
                 </div>
 
-                {/* Email Live Preview Bar */}
-                <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-xs font-medium text-primary">
-                    <FileText className="h-4 w-4" />
+                <div className="rounded-[6px] border border-border bg-muted/30 p-3 flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs font-medium text-foreground">
+                    <FileText className="h-4 w-4 text-primary" />
                     Mẫu Thư HTML Chuẩn Doanh Nghiệp Đã Được Dựng Sẵn
                   </div>
                   <button
                     type="button"
                     onClick={() => setShowPreviewModal(true)}
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-primary/10 border border-primary/30 px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary/20 transition-colors"
+                    className="inline-flex items-center gap-1.5 rounded-[6px] bg-background border border-border px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted active:scale-[0.98] transition-all cursor-pointer"
                   >
                     <Eye className="h-3.5 w-3.5" /> Xem Trước Thư Email
                   </button>
@@ -242,25 +236,24 @@ export default function SendPOModal({ isOpen, onClose, po, onSuccess }) {
                     value={manualNote}
                     onChange={(e) => setManualNote(e.target.value)}
                     placeholder="VD: Đã chốt số lượng và giá qua Zalo với anh Nam đại diện..."
-                    className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    className="w-full rounded-[6px] border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
                   />
                 </div>
               </div>
             )}
 
-            {/* Footer Buttons */}
             <div className="flex items-center justify-end gap-3 pt-3 border-t border-border">
               <button
                 type="button"
                 onClick={onClose}
-                className="rounded-lg border border-input bg-background px-4 py-2 text-xs font-medium text-foreground hover:bg-muted transition-colors"
+                className="rounded-[6px] border border-input bg-background px-4 py-2 text-xs font-medium text-foreground hover:bg-muted active:scale-[0.98] transition-all cursor-pointer"
               >
                 Hủy
               </button>
               <button
                 type="submit"
                 disabled={isSending}
-                className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2 text-xs font-bold text-primary-foreground shadow hover:bg-primary/90 transition-colors disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-[6px] bg-primary px-5 py-2 text-xs font-bold text-primary-foreground shadow-xs hover:bg-primary/90 active:scale-[0.98] transition-all disabled:opacity-50 cursor-pointer"
               >
                 {isSending ? (
                   <>
@@ -281,10 +274,9 @@ export default function SendPOModal({ isOpen, onClose, po, onSuccess }) {
         </div>
       </div>
 
-      {/* Live Email HTML Preview Sub-Modal */}
       {showPreviewModal && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/70 p-4">
-          <div className="flex h-[85vh] w-full max-w-4xl flex-col rounded-2xl border border-border bg-card shadow-2xl overflow-hidden">
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/50 p-4">
+          <div className="flex h-[85vh] w-full max-w-4xl flex-col rounded-[6px] border border-border bg-card shadow-sm overflow-hidden">
             <div className="flex items-center justify-between border-b border-border bg-muted/40 px-6 py-3">
               <div className="flex items-center gap-2 text-sm font-bold text-foreground">
                 <Eye className="h-4 w-4 text-primary" />
@@ -292,7 +284,7 @@ export default function SendPOModal({ isOpen, onClose, po, onSuccess }) {
               </div>
               <button
                 onClick={() => setShowPreviewModal(false)}
-                className="rounded-lg p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                className="rounded-[6px] p-1 text-muted-foreground hover:bg-muted hover:text-foreground active:scale-[0.98] transition-all cursor-pointer"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -306,7 +298,7 @@ export default function SendPOModal({ isOpen, onClose, po, onSuccess }) {
                 </div>
               ) : (
                 <div
-                  className="mx-auto bg-white rounded-xl shadow border border-border overflow-hidden"
+                  className="mx-auto bg-white rounded-[6px] shadow-xs border border-border overflow-hidden"
                   dangerouslySetInnerHTML={{ __html: sanitizeHtml(previewHtml) }}
                 />
               )}
@@ -316,7 +308,7 @@ export default function SendPOModal({ isOpen, onClose, po, onSuccess }) {
               <button
                 type="button"
                 onClick={() => setShowPreviewModal(false)}
-                className="rounded-lg bg-primary px-4 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90"
+                className="rounded-[6px] bg-primary px-4 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90 active:scale-[0.98] transition-all cursor-pointer"
               >
                 Đóng Xem Trước
               </button>

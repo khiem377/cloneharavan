@@ -21,11 +21,11 @@ export default function MediaUsageModal({ mediaItems, usages, onForceDelete, onC
   };
 
   return (
-    <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-lg rounded-2xl border border-border bg-card shadow-2xl overflow-hidden flex flex-col" style={{ maxHeight: '85vh' }}>
+    <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/50 p-4">
+      <div className="w-full max-w-lg rounded-[6px] border border-border bg-card shadow-sm overflow-hidden flex flex-col" style={{ maxHeight: '85vh' }}>
         <div className="flex items-start justify-between gap-3 px-5 py-4 border-b border-border shrink-0">
           <div className="flex items-center gap-3">
-            <div className={`flex h-9 w-9 items-center justify-center rounded-full shrink-0 ${viewOnly ? 'bg-primary/15' : 'bg-amber-500/15'}`}>
+            <div className={`flex h-9 w-9 items-center justify-center rounded-[6px] shrink-0 ${viewOnly ? 'bg-primary/15' : 'bg-amber-500/15'}`}>
               {viewOnly
                 ? <Info size={18} className="text-primary" />
                 : <AlertTriangle size={18} className="text-amber-500" />}
@@ -40,7 +40,7 @@ export default function MediaUsageModal({ mediaItems, usages, onForceDelete, onC
               </p>
             </div>
           </div>
-          <button onClick={onCancel} className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer shrink-0 mt-0.5">
+          <button onClick={onCancel} className="p-1 rounded-[6px] text-muted-foreground hover:bg-muted hover:text-foreground active:scale-[0.98] transition-all cursor-pointer shrink-0 mt-0.5">
             <X size={18} />
           </button>
         </div>
@@ -52,22 +52,22 @@ export default function MediaUsageModal({ mediaItems, usages, onForceDelete, onC
                 <img
                   src={item.url}
                   alt={item.filename}
-                  className="h-9 w-9 rounded-md object-cover border border-border shrink-0"
+                  className="h-9 w-9 rounded-[6px] object-cover border border-border shrink-0"
                 />
                 <span className="text-xs font-medium text-foreground truncate">{item.filename}</span>
               </div>
               <div className="flex flex-col gap-1.5 pl-11">
                 {usages[item._id].map((usage, idx) => (
-                  <div key={idx} className="flex items-center justify-between gap-2 rounded-lg border border-border bg-muted/30 px-3 py-2">
+                  <div key={idx} className="flex items-center justify-between gap-2 rounded-[6px] border border-border bg-muted/30 px-3 py-2">
                     <div className="flex items-center gap-2 min-w-0">
-                      <span className={`inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${BADGE_COLORS[usage.displayName] || 'bg-muted text-muted-foreground border-border'}`}>
+                      <span className={`inline-flex shrink-0 items-center rounded-[6px] border px-2 py-0.5 text-[10px] font-semibold ${BADGE_COLORS[usage.displayName] || 'bg-muted text-muted-foreground border-border'}`}>
                         {usage.displayName}
                       </span>
                       <span className="text-xs text-foreground truncate">{usage.entityName}</span>
                     </div>
                     <button
                       onClick={() => handleNavigate(usage.adminUrl)}
-                      className="shrink-0 inline-flex items-center gap-1 text-[11px] text-primary hover:text-primary/80 font-medium transition-colors cursor-pointer"
+                      className="shrink-0 inline-flex items-center gap-1 text-[11px] text-primary hover:text-primary/80 font-medium active:scale-[0.98] transition-all cursor-pointer"
                     >
                       Đến trang <ExternalLink size={11} />
                     </button>
@@ -81,18 +81,18 @@ export default function MediaUsageModal({ mediaItems, usages, onForceDelete, onC
         <div className="flex items-center justify-end gap-3 px-5 py-4 border-t border-border shrink-0 bg-muted/10">
           <button
             onClick={onCancel}
-            className="h-9 px-4 rounded-lg border border-border text-sm font-medium text-foreground hover:bg-accent transition-colors cursor-pointer"
+            className="h-9 px-4 rounded-[6px] border border-border text-sm font-medium text-foreground hover:bg-accent active:scale-[0.98] transition-all cursor-pointer"
           >
-            {viewOnly ? 'Dong' : 'Huy'}
+            {viewOnly ? 'Đóng' : 'Hủy'}
           </button>
           {!viewOnly && (
             <button
               onClick={onForceDelete}
               disabled={isDeleting}
-              className="h-9 px-4 rounded-lg bg-destructive text-destructive-foreground text-sm font-medium hover:bg-destructive/90 transition-colors cursor-pointer disabled:opacity-60 inline-flex items-center gap-1.5"
+              className="h-9 px-4 rounded-[6px] bg-destructive text-destructive-foreground text-sm font-medium hover:bg-destructive/90 active:scale-[0.98] transition-all cursor-pointer disabled:opacity-60 inline-flex items-center gap-1.5"
             >
               <Trash2 size={14} />
-              {isDeleting ? 'Dang xoa...' : `Van xoa vinh vien (${mediaItems.length})`}
+              {isDeleting ? 'Đang xóa...' : `Vẫn xóa vĩnh viễn (${mediaItems.length})`}
             </button>
           )}
         </div>

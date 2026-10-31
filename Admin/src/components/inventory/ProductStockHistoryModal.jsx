@@ -90,11 +90,11 @@ export default function ProductStockHistoryModal({ isOpen, onClose, product }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 animate-in fade-in duration-200">
-      <div className="relative w-full max-w-4xl rounded-2xl border border-border bg-card shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="relative w-full max-w-4xl rounded-[6px] border border-border bg-card shadow-sm overflow-hidden flex flex-col max-h-[90vh]">
         {/* Modal Header */}
         <div className="flex items-center justify-between border-b border-border bg-muted/40 p-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <div className="flex h-10 w-10 items-center justify-center rounded-[6px] bg-primary/10 text-primary">
               <History className="h-5 w-5" />
             </div>
             <div>
@@ -108,7 +108,7 @@ export default function ProductStockHistoryModal({ isOpen, onClose, product }) {
           </div>
           <button
             onClick={onClose}
-            className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
+            className="rounded-[6px] p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-all cursor-pointer active:scale-[0.98]"
           >
             <X className="h-5 w-5" />
           </button>
@@ -116,33 +116,32 @@ export default function ProductStockHistoryModal({ isOpen, onClose, product }) {
 
         {/* 4 Metrics Summary */}
         <div className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-4 bg-muted/20 border-b border-border text-xs">
-          <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3">
+          <div className="rounded-[6px] border border-emerald-500/20 bg-emerald-500/5 p-3">
             <span className="text-muted-foreground font-semibold">Tổng Nhập PO</span>
-            <div className="text-base font-extrabold text-emerald-600 dark:text-emerald-400 mt-0.5">
+            <div className="text-base font-extrabold text-emerald-600 dark:text-emerald-400 mt-0.5 font-mono tabular-nums">
               +{totalImport} <span className="text-xs font-normal text-muted-foreground">cái</span>
             </div>
           </div>
-          <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3">
+          <div className="rounded-[6px] border border-amber-500/20 bg-amber-500/5 p-3">
             <span className="text-muted-foreground font-semibold">Tổng Xuất Bán</span>
-            <div className="text-base font-extrabold text-amber-600 dark:text-amber-400 mt-0.5">
+            <div className="text-base font-extrabold text-amber-600 dark:text-amber-400 mt-0.5 font-mono tabular-nums">
               -{totalExport} <span className="text-xs font-normal text-muted-foreground">cái</span>
             </div>
           </div>
-          <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-3">
+          <div className="rounded-[6px] border border-destructive/20 bg-destructive/5 p-3">
             <span className="text-muted-foreground font-semibold">Tổng Trả NCC</span>
-            <div className="text-base font-extrabold text-destructive mt-0.5">
+            <div className="text-base font-extrabold text-destructive mt-0.5 font-mono tabular-nums">
               -{totalReturn} <span className="text-xs font-normal text-muted-foreground">cái</span>
             </div>
           </div>
-          <div className="rounded-xl border border-primary/20 bg-primary/5 p-3">
+          <div className="rounded-[6px] border border-primary/20 bg-primary/5 p-3">
             <span className="text-muted-foreground font-semibold">Tồn Thực Tế</span>
-            <div className="text-base font-extrabold text-primary mt-0.5">
+            <div className="text-base font-extrabold text-primary mt-0.5 font-mono tabular-nums">
               {product.stock || 0} <span className="text-xs font-normal text-muted-foreground">cái</span>
             </div>
           </div>
         </div>
 
-        {/* Log Table */}
         <div className="flex-1 overflow-y-auto p-4">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
@@ -156,7 +155,7 @@ export default function ProductStockHistoryModal({ isOpen, onClose, product }) {
             </button>
           </div>
 
-          <div className="rounded-xl border border-border overflow-hidden">
+          <div className="rounded-[6px] border border-border overflow-hidden">
             <table className="w-full text-left text-xs border-collapse">
               <thead className="bg-muted/50 font-semibold text-muted-foreground border-b border-border">
                 <tr>
@@ -227,11 +226,10 @@ export default function ProductStockHistoryModal({ isOpen, onClose, product }) {
           </div>
         </div>
 
-        {/* Modal Footer */}
         <div className="flex justify-end border-t border-border bg-muted/30 p-3">
           <button
             onClick={onClose}
-            className="rounded-xl border border-input bg-background px-4 py-2 text-xs font-semibold text-foreground hover:bg-muted transition-colors cursor-pointer"
+            className="rounded-[6px] border border-input bg-background px-4 py-2 text-xs font-semibold text-foreground hover:bg-muted active:scale-[0.98] transition-all cursor-pointer"
           >
             Đóng
           </button>
