@@ -176,12 +176,16 @@ export default function BrandPage() {
       {/* 3. Pagination */}
       {pagination && (
         <DataTablePagination
-          pagination={pagination}
+          page={page}
+          pageSize={limit}
+          total={pagination.total}
+          totalPages={pagination.totalPages}
           onPageChange={setPage}
-          onLimitChange={(l) => {
-            setLimit(l);
+          onPageSizeChange={(newLimit) => {
+            setLimit(newLimit);
             setPage(1);
           }}
+          pageSizeOptions={[10, 20, 50, 100]}
         />
       )}
 

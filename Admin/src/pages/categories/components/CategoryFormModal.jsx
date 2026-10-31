@@ -34,7 +34,7 @@ export default function CategoryFormModal({
         onClick={onClose}
       >
         <div
-          className="flex w-full max-w-lg flex-col overflow-hidden rounded-[6px] border border-border bg-card shadow-lg text-card-foreground"
+          className="flex w-full max-w-lg flex-col overflow-hidden rounded-[6px] border border-border bg-card shadow-sm text-card-foreground"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}

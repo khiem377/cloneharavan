@@ -115,7 +115,7 @@ function InUseDialog({ posts, onClose }) {
   const navigate = useNavigate();
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-      <Card className="rounded-[6px] border border-border w-full max-w-md shadow-lg">
+      <Card className="rounded-[6px] border border-border w-full max-w-md shadow-sm">
         <CardHeader className="p-4 border-b border-border flex flex-row items-center justify-between space-y-0">
           <CardTitle className="text-sm font-semibold text-foreground">Không thể xóa danh mục</CardTitle>
           <Button variant="ghost" size="icon" onClick={onClose} className="h-7 w-7 rounded-[4px]">
@@ -352,7 +352,7 @@ export default function BlogCategoryPage() {
 
       {modal && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-          <Card className="rounded-[6px] border border-border w-full max-w-md shadow-lg">
+          <Card className="rounded-[6px] border border-border w-full max-w-md shadow-sm">
             <CardHeader className="p-4 border-b border-border flex flex-row items-center justify-between space-y-0">
               <CardTitle className="text-sm font-semibold text-foreground">
                 {modal === 'create' ? 'Tạo danh mục mới' : 'Chỉnh sửa danh mục'}

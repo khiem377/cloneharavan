@@ -1,6 +1,15 @@
-import { Plus, RefreshCw, Trash2, Search, X, Filter } from 'lucide-react';
+import React from 'react';
+import { Plus, RefreshCw, Trash2, Search, X } from 'lucide-react';
 import Can from '@/components/auth/Can';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import ColumnToggleDropdown from '@/components/ui/ColumnToggleDropdown';
 import DateRangePicker from '@/components/ui/DateRangePicker';
 
@@ -29,7 +38,7 @@ export default function BlogToolbar({
         <div>
           <div className="flex items-center gap-2.5">
             <h1 className="text-xl font-bold tracking-tight text-foreground">Tin tức</h1>
-            <span className="text-xs font-mono text-muted-foreground bg-secondary px-2 py-0.5 rounded-[4px] border border-border">
+            <span className="text-xs font-mono tabular-nums text-muted-foreground bg-secondary px-2 py-0.5 rounded-[4px] border border-border">
               {totalCount || 0} bài viết
             </span>
           </div>
@@ -55,7 +64,7 @@ export default function BlogToolbar({
             <Button
               size="sm"
               onClick={onCreateNew}
-              className="h-8 px-3.5 rounded-[6px] gap-1.5 text-xs font-semibold shadow-2xs active:scale-[0.98]"
+              className="h-8 px-3.5 rounded-[6px] gap-1.5 text-xs font-semibold shadow-none active:scale-[0.98]"
             >
               <Plus className="size-3.5" />
               <span>Viết bài mới</span>
@@ -67,47 +76,55 @@ export default function BlogToolbar({
       {/* 2. Filter Controls */}
       <div className="flex flex-wrap items-center justify-between gap-2.5">
         <form onSubmit={onSearchSubmit} className="relative w-full sm:w-64">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
-          <input
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground z-10" />
+          <Input
             type="text"
             placeholder="Tìm theo tiêu đề, slug..."
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
-            className="w-full h-8 pl-8 pr-3 rounded-[6px] border border-border bg-card text-xs text-foreground placeholder:text-muted-foreground outline-none focus:border-ring focus:ring-1 focus:ring-ring transition-colors"
+            className="w-full h-8 pl-8 pr-3 rounded-[6px] text-xs"
           />
         </form>
 
         <div className="flex flex-wrap items-center gap-2">
           {/* Status Filter */}
-          <select
-            value={query.status || ''}
-            onChange={(e) =>
-              setQuery((q) => ({ ...q, status: e.target.value || undefined, page: 1 }))
+          <Select
+            value={query.status || 'ALL'}
+            onValueChange={(val) =>
+              setQuery((q) => ({ ...q, status: val === 'ALL' ? undefined : val, page: 1 }))
             }
-            className="h-8 px-2.5 rounded-[6px] border border-border bg-card text-xs text-foreground outline-none focus:border-ring transition-colors cursor-pointer"
           >
-            <option value="">Tất cả trạng thái</option>
-            <option value="published">Đã đăng</option>
-            <option value="draft">Bản nháp</option>
-            <option value="pending_review">Chờ duyệt</option>
-            <option value="archived">Lưu trữ</option>
-          </select>
+            <SelectTrigger className="h-8 w-36 rounded-[6px] text-xs">
+              <SelectValue placeholder="Trạng thái" />
+            </SelectTrigger>
+            <SelectContent className="rounded-[6px]">
+              <SelectItem value="ALL">Tất cả trạng thái</SelectItem>
+              <SelectItem value="published">Đã đăng</SelectItem>
+              <SelectItem value="draft">Bản nháp</SelectItem>
+              <SelectItem value="pending_review">Chờ duyệt</SelectItem>
+              <SelectItem value="archived">Lưu trữ</SelectItem>
+            </SelectContent>
+          </Select>
 
           {/* Category Filter */}
-          <select
-            value={query.categoryId || ''}
-            onChange={(e) =>
-              setQuery((q) => ({ ...q, categoryId: e.target.value || undefined, page: 1 }))
+          <Select
+            value={query.categoryId || 'ALL'}
+            onValueChange={(val) =>
+              setQuery((q) => ({ ...q, categoryId: val === 'ALL' ? undefined : val, page: 1 }))
             }
-            className="h-8 px-2.5 rounded-[6px] border border-border bg-card text-xs text-foreground outline-none focus:border-ring transition-colors cursor-pointer"
           >
-            <option value="">Tất cả danh mục</option>
-            {categoriesList.map((c) => (
-              <option key={c._id} value={c._id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="h-8 w-44 rounded-[6px] text-xs">
+              <SelectValue placeholder="Danh mục" />
+            </SelectTrigger>
+            <SelectContent className="rounded-[6px]">
+              <SelectItem value="ALL">Tất cả danh mục</SelectItem>
+              {categoriesList.map((c) => (
+                <SelectItem key={c._id} value={c._id}>
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
           {/* Date range picker */}
           <DateRangePicker

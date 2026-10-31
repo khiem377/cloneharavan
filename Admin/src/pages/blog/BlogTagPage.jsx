@@ -228,7 +228,7 @@ export default function BlogTagPage() {
 
       {modal && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-          <Card className="rounded-[6px] border border-border w-full max-w-md shadow-lg">
+          <Card className="rounded-[6px] border border-border w-full max-w-md shadow-sm">
             <CardHeader className="p-4 border-b border-border flex flex-row items-center justify-between space-y-0">
               <CardTitle className="text-sm font-semibold text-foreground">
                 {modal === 'create' ? 'Tạo tag mới' : 'Chỉnh sửa tag'}

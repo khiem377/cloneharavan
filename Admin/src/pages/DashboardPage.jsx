@@ -3,17 +3,13 @@ import { useDashboardOverview, useDashboardInventoryStats } from '@/hooks/useDas
 import { toast } from '@/providers/ToastProvider';
 
 import DashboardHeader from './dashboard/components/DashboardHeader';
-import DashboardShortcuts from './dashboard/components/DashboardShortcuts';
 import DashboardKpiCards from './dashboard/components/DashboardKpiCards';
-import DashboardSecondaryMetrics from './dashboard/components/DashboardSecondaryMetrics';
-import DashboardGrowthChart from './dashboard/components/DashboardGrowthChart';
+import DashboardRevenueChart from './dashboard/components/DashboardRevenueChart';
+import DashboardRecentOrders from './dashboard/components/DashboardRecentOrders';
 import DashboardStockDonut from './dashboard/components/DashboardStockDonut';
-import DashboardInventoryMovement from './dashboard/components/DashboardInventoryMovement';
 import DashboardLowStockAlerts from './dashboard/components/DashboardLowStockAlerts';
 import DashboardTopProducts from './dashboard/components/DashboardTopProducts';
-import DashboardRecentCustomers from './dashboard/components/DashboardRecentCustomers';
-import DashboardRecentProducts from './dashboard/components/DashboardRecentProducts';
-import DashboardRecentBlogPosts from './dashboard/components/DashboardRecentBlogPosts';
+import DashboardInventoryMovement from './dashboard/components/DashboardInventoryMovement';
 
 export default function DashboardPage() {
   const [period, setPeriod] = useState('30days');
@@ -25,25 +21,24 @@ export default function DashboardPage() {
   const handleRefresh = async () => {
     try {
       await refetch();
-      toast.success('Đã làm mới dữ liệu thống kê');
+      toast.success('Đã cập nhật số liệu mới nhất');
     } catch {
-      toast.error('Không thể tải dữ liệu. Thử lại sau.');
+      toast.error('Không thể làm mới dữ liệu. Thử lại sau.');
     }
   };
 
   const {
     stats = {},
     topProducts = [],
+    revenueGrowthTrend = [],
+    recentOrders = [],
     userGrowthTrend = [],
     productGrowthTrend = [],
-    recentProducts = [],
-    recentBlogPosts = [],
-    recentCustomers = [],
   } = data || {};
 
   return (
-    <div className="space-y-6 max-w-full overflow-x-hidden pb-12 antialiased">
-      {/* 1. Header & Global Controls */}
+    <div className="space-y-5 max-w-full overflow-x-hidden pb-12 antialiased">
+      {/* 1. Header & Controls */}
       <DashboardHeader
         period={period}
         setPeriod={setPeriod}
@@ -51,46 +46,44 @@ export default function DashboardPage() {
         isFetching={isFetching}
       />
 
-      {/* 2. Quick Operations Navigation */}
-      <DashboardShortcuts />
-
-      {/* 3. Executive KPI Cards */}
+      {/* 2. Executive 4 KPI Cards (Revenue, Orders, Inventory, Customers) */}
       <DashboardKpiCards stats={stats} isLoading={isLoading || isFetching} />
 
-      {/* 4. Secondary Operations Metrics */}
-      <DashboardSecondaryMetrics stats={stats} />
+      {/* 3. Golden Ratio Operational Grid (8 cols Left / 4 cols Right) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+        {/* Left Column (8 / 12) — Financial Trends & Live Order Pipeline */}
+        <div className="lg:col-span-8 space-y-5">
+          {/* Revenue & Growth Area Chart */}
+          <DashboardRevenueChart
+            revenueGrowthTrend={revenueGrowthTrend}
+            userGrowthTrend={userGrowthTrend}
+            productGrowthTrend={productGrowthTrend}
+          />
 
-      {/* 5. Growth Area Chart + Stock Allocation Donut */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <DashboardGrowthChart
-          userGrowthTrend={userGrowthTrend}
-          productGrowthTrend={productGrowthTrend}
-        />
-        <DashboardStockDonut stats={stats} />
-      </div>
+          {/* Recent Orders Processing Table */}
+          <DashboardRecentOrders recentOrders={recentOrders} />
 
-      {/* 6. Inventory Flow Movement + Low Stock Alerts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <DashboardInventoryMovement
-          invMonthlyData={invData?.monthlyData || []}
-          invRange={invRange}
-          setInvRange={setInvRange}
-        />
-        <DashboardLowStockAlerts
-          lowStockVariants={invData?.lowStockVariants || []}
-        />
-      </div>
+          {/* Warehouse Movement Flow */}
+          <DashboardInventoryMovement
+            invMonthlyData={invData?.monthlyData || []}
+            invRange={invRange}
+            setInvRange={setInvRange}
+          />
+        </div>
 
-      {/* 7. Product Performance & Customer Acquisition */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <DashboardTopProducts topProducts={topProducts} />
-        <DashboardRecentCustomers recentCustomers={recentCustomers} />
-      </div>
+        {/* Right Column (4 / 12) — Actionable Pipeline, Stock Health & Top Items */}
+        <div className="lg:col-span-4 space-y-5">
+          {/* Urgent Low Stock Alerts */}
+          <DashboardLowStockAlerts
+            lowStockVariants={invData?.lowStockVariants || []}
+          />
 
-      {/* 8. Recent Products & Tech Blog Feeds */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <DashboardRecentProducts recentProducts={recentProducts} />
-        <DashboardRecentBlogPosts recentBlogPosts={recentBlogPosts} />
+          {/* Stock Allocation SVG Donut */}
+          <DashboardStockDonut stats={stats} />
+
+          {/* Top Products */}
+          <DashboardTopProducts topProducts={topProducts} />
+        </div>
       </div>
     </div>
   );

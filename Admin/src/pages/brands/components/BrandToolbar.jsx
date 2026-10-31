@@ -1,6 +1,7 @@
 import { Plus, RefreshCw, Trash2 } from '@/components/ui/Icons';
 import Can from '@/components/auth/Can';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 export default function BrandToolbar({
   keyword,
@@ -45,8 +46,8 @@ export default function BrandToolbar({
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <input
-          className="h-8 w-full sm:w-64 rounded-[6px] border border-border bg-card px-3 text-xs text-foreground outline-none focus:border-ring focus:ring-1 focus:ring-ring placeholder:text-muted-foreground transition-colors"
+        <Input
+          className="h-8 w-full sm:w-64 rounded-[6px] text-xs"
           placeholder="Tìm kiếm thương hiệu..."
           value={keyword}
           onChange={(e) => setKeyword(e.target.value)}
